@@ -1,11 +1,13 @@
 import Foundation
 import WorkbenchCore
 
+/// A host's SSH control channel, on demand. Features like the command-line
+/// island multiplex over this master instead of paying a handshake per shell.
+/// It carries no remote daemon state: `online` means the master is usable.
 @MainActor
 final class HostConnection: ObservableObject, Identifiable {
     @Published private(set) var host: SSHHost
     nonisolated let id: UUID
-    @Published private(set) var snapshot: Snapshot?
     @Published private var stateMessage: String.LocalizationValue = "未连接"
     var state: String { L(stateMessage) }
     func state(locale: Locale) -> String { L(stateMessage, locale: locale) }
@@ -13,14 +15,11 @@ final class HostConnection: ObservableObject, Identifiable {
     @Published private(set) var online = false
     @Published private(set) var wantsConnection = false
     @Published private(set) var updatedAt: Date?
-    private(set) var binary = "herdr"
     private(set) var controlPath = ""
-    private var socketPath = ""
     private var directory: URL?
     private var process: Process?
     private var task: Task<Void, Never>?
     private var generation = UUID()
-    var onSnapshot: (() -> Void)?
 
     init(host: SSHHost) { self.host = host; self.id = host.id }
     func updateHost(_ host: SSHHost) { self.host = host }
@@ -40,11 +39,10 @@ final class HostConnection: ObservableObject, Identifiable {
                 do {
                     try await self.establish(token: token)
                     delay = 1
+                    // No polling: the master exiting is the liveness signal.
                     while !Task.isCancelled && self.generation == token {
-                        try await self.refresh(token: token)
-                        // Metadata only, through an existing SSH tunnel. Terminal bytes
-                        // stream separately and never pass through SwiftUI state.
-                        try await Task.sleep(for: .seconds(3))
+                        if self.process?.isRunning != true { throw WorkbenchError(L("SSH 隧道已退出")) }
+                        try await Task.sleep(for: .seconds(2))
                     }
                 } catch is CancellationError { break }
                 catch {
@@ -81,29 +79,19 @@ final class HostConnection: ObservableObject, Identifiable {
     private func establish(token: UUID) async throws {
         try SSHCommand.validateDestination(host.destination)
         stateMessage = "连接中"
-        let data = try await SetupCommandRunner.run("/usr/bin/ssh", RemoteSetup.sshArguments(host.destination,
-            command: "herdr status --json"))
-        try Task.checkCancellation()
-        guard generation == token else { throw CancellationError() }
-        let status = try JSONDecoder().decode(RemoteStatus.self, from: data)
-        guard status.server.running, let remoteSocket = status.server.socket else {
-            throw WorkbenchError(L("远端 Herdr 未运行，请先在远端终端启动 Herdr。"))
-        }
-        binary = status.client.binary
         let folder = URL(fileURLWithPath: "/tmp/awb-\(UUID().uuidString.prefix(12))")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: false,
                                               attributes: [.posixPermissions: 0o700])
         directory = folder
-        socketPath = folder.appendingPathComponent("rpc").path
         controlPath = folder.appendingPathComponent("ssh").path
         let tunnel = Process()
         tunnel.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
         tunnel.arguments = ["-N", "-T", "-M", "-S", controlPath,
                             "-o", "ControlPersist=no",
                             "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
-                            "-o", "ConnectTimeout=10", "-o", "ExitOnForwardFailure=yes",
+                            "-o", "ConnectTimeout=10",
                             "-o", "ServerAliveInterval=10", "-o", "ServerAliveCountMax=2",
-                            "-L", "\(socketPath):\(remoteSocket)", host.destination]
+                            host.destination]
         tunnel.standardInput = FileHandle.nullDevice
         tunnel.standardOutput = FileHandle.nullDevice
         let errors = Pipe()
@@ -117,71 +105,21 @@ final class HostConnection: ObservableObject, Identifiable {
                 let message = String(decoding: errors.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
                 throw WorkbenchError(message.isEmpty ? L("SSH 隧道已退出") : message)
             }
-            if FileManager.default.fileExists(atPath: socketPath) { return }
+            if FileManager.default.fileExists(atPath: controlPath) {
+                // The socket file predates authentication; one round trip proves
+                // the master actually works before anything multiplexes over it.
+                let probe = try? await ProcessRunner.run("/usr/bin/ssh", ["-T", "-o", "BatchMode=yes",
+                    "-o", "StrictHostKeyChecking=yes", "-o", "ConnectTimeout=5",
+                    "-S", controlPath, host.destination, "true"])
+                if probe != nil {
+                    online = true
+                    stateMessage = "已连接"
+                    updatedAt = Date()
+                    return
+                }
+            }
             try await Task.sleep(for: .milliseconds(100))
         }
         throw WorkbenchError(L("SSH 转发建立超时"))
     }
-
-    func refresh() async {
-        do { try await refresh(token: generation) }
-        catch { self.error = error.localizedDescription }
-    }
-
-    private func refresh(token: UUID) async throws {
-        let path = socketPath
-        let result = try await Task.detached {
-            let data = try await JSONSocket.request(path: path, method: "session.snapshot")
-            return try Wire.decode(SnapshotResult.self, from: data).snapshot
-        }.value
-        try Task.checkCancellation()
-        guard generation == token else { throw CancellationError() }
-        applySnapshot(result)
-    }
-
-    func applySnapshot(_ result: Snapshot) {
-        let changed = snapshot != result
-        let reconnected = !online
-        if changed { snapshot = result }
-        if reconnected {
-            online = true
-            stateMessage = "已连接"
-        }
-        if error != nil { error = nil }
-        updatedAt = Date()
-        if changed || reconnected { onSnapshot?() }
-    }
-
-    func closeTerminal(_ terminalID: String) async throws {
-        guard online else { throw WorkbenchError(L("请先连接远端")) }
-        let token = generation
-        try await refresh(token: token)
-        guard let pane = snapshot?.panes.first(where: { $0.terminalID == terminalID }) else { throw WorkbenchError(L("此终端已不在远端列表中")) }
-        let command = "exec \(SSHCommand.quote(binary)) pane close \(SSHCommand.quote(pane.paneID))"
-        let data = try await ProcessRunner.run("/usr/bin/ssh", ["-T", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", "-o", "ConnectTimeout=10", "-S", controlPath, host.destination, command])
-        _ = try Wire.decode(JSONValue.self, from: data)
-        try await refresh(token: token)
-    }
-
-    func createTerminal(workspaceID: String, cwd: String, label: String) async throws -> Pane {
-        guard online else { throw WorkbenchError(L("请先连接远端")) }
-        let token = generation
-        let path = socketPath
-        let created = try await Task.detached {
-            let data = try await JSONSocket.request(path: path, method: "tab.create", params: [
-                "workspace_id": workspaceID, "cwd": cwd, "label": label, "focus": false
-            ])
-            return try Wire.decode(CreatedTerminalResult.self, from: data)
-        }.value
-        try await refresh(token: token)
-        var pane = created.rootPane
-        pane.tabLabel = created.tab.label
-        return pane
-    }
-}
-
-private struct CreatedTerminalResult: Decodable {
-    let rootPane: Pane
-    let tab: Tab
-    enum CodingKeys: String, CodingKey { case rootPane = "root_pane", tab }
 }

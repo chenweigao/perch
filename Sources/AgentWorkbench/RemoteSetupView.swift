@@ -8,12 +8,12 @@ struct AddHostSheet: View {
     @State private var saveError: String?
     @State private var showFolders = false
     private var onReady: ((TaskLaunchDefaults) -> Void)?
-    private var providers: [SessionKind] { RemoteSetup.agents.filter { onReady == nil || $0 != .terminal } }
+    private var providers: [SessionKind] { RemoteSetup.agents }
 
     init(model: WorkbenchModel, host: SSHHost? = nil, initialProvider: SessionKind? = nil, onReady: ((TaskLaunchDefaults) -> Void)? = nil) {
         self.model = model; self.onReady = onReady
         let controller = RemoteSetupController(host: host, initialProvider: initialProvider)
-        if onReady != nil && controller.provider == .terminal {
+        if controller.provider == .terminal {
             controller.provider = host?.enabledAgents.first(where: { $0 != .terminal }) ?? .kimi
         }
         _setup = StateObject(wrappedValue: controller)

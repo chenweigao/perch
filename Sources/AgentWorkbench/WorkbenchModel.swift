@@ -1,7 +1,6 @@
 import AppKit
 import Combine
 import Observation
-import GhosttyTerminal
 import SwiftUI
 import WorkbenchCore
 
@@ -28,7 +27,6 @@ final class WorkbenchModel {
         set { navigationState.tabs = newValue }
     }
     private(set) var openedSessions: [SavedTerminal] = []
-    private(set) var terminals: [AttachedTerminal] = []
     var showDashboard: Bool {
         get { navigationState.showDashboard }
         set { navigationState.showDashboard = newValue }
@@ -111,14 +109,9 @@ final class WorkbenchModel {
     var setupProvider: SessionKind?
     var launchAfterSetup: TaskLaunchDefaults?
     var pendingSetupLaunch = false
-    var showNewTerminal = false
     /// Inline new-task draft covering the detail area; selection underneath is kept.
-    var draftingNewTask = false {
-        didSet { updateVisibility() }
-    }
+    var draftingNewTask = false
     var newTaskProject: SidebarProjectLocation?
-    var showRenderReport = false
-    var renderReport = ""
     var showGroupEditor = false
     var editingGroup: WorkItemGroup?
     var editingGroupSessionsOnly = false
@@ -223,7 +216,6 @@ final class WorkbenchModel {
         if let reference = selectedReference { navigation.visit(reference.id) }
         taskNotifications.start(onOpen: { [weak self] id in self?.openNotifiedTask(id) },
                                 onOpenDashboard: { [weak self] in self?.showHome() })
-        for connection in connections { observe(connection) }
         wireFileAvailability()
         if !hosts.isEmpty { registerEnvironment(kimi: kimi, native: native) }
         for host in hosts where host.id != kimi.host.id {
@@ -332,15 +324,11 @@ final class WorkbenchModel {
         kimiEnvironments[hostID]?.disconnect()
         nativeEnvironments[hostID]?.disconnect()
     }
-    func disconnectHerdr(_ hostID: UUID) {
-        connections.first { $0.id == hostID }?.disconnect()
-        terminals.removeAll { $0.hostID == hostID }
-    }
-    func setAutoConnect(_ enabled: Bool, for hostID: UUID, herdr: Bool) {
+    func setAutoConnect(_ enabled: Bool, for hostID: UUID) {
         guard let index = connections.firstIndex(where: { $0.id == hostID }) else { return }
         let connection = connections[index]
         var host = connection.host
-        if herdr { host.autoConnectHerdr = enabled } else { host.autoConnectSSH = enabled }
+        host.autoConnectSSH = enabled
         var saved = connections.map(\.host)
         saved[index] = host
         do {
@@ -348,17 +336,10 @@ final class WorkbenchModel {
             connection.updateHost(host)
             kimiEnvironments[hostID]?.updateHost(host)
             nativeEnvironments[hostID]?.updateHost(host)
-            if herdr {
-                if enabled {
-                    if started, host.enabledAgents.contains(.terminal) { connection.connect() }
-                }
-                else { disconnectHerdr(hostID) }
-            } else {
-                if enabled {
-                    if started { connectSSH(hostID) }
-                }
-                else { disconnectSSH(hostID) }
+            if enabled {
+                if started { connectSSH(hostID) }
             }
+            else { disconnectSSH(hostID) }
         } catch { workspaceError = error.localizedDescription }
     }
     func startNewTask(in project: SidebarProjectLocation? = nil) {
@@ -387,11 +368,10 @@ final class WorkbenchModel {
         if let connection = connections.first(where: { $0.id == host.id }) {
             connection.updateHost(host)
             kimiEnvironments[host.id]?.updateHost(host); nativeEnvironments[host.id]?.updateHost(host)
-            if !host.enabledAgents.contains(.terminal) { disconnectHerdr(host.id) }
             if !host.enabledAgents.contains(.kimi) { kimiEnvironments[host.id]?.disconnect() }
             if !host.hasNativeAgents { nativeEnvironments[host.id]?.disconnect() }
         } else {
-            let connection = HostConnection(host: host); observe(connection); connections.append(connection)
+            let connection = HostConnection(host: host); connections.append(connection)
             registerEnvironment(kimi: KimiConnection(host: host), native: NativeAgentConnection(host: host))
         }
         UserDefaults.standard.set(data, forKey: "hosts")
@@ -400,7 +380,6 @@ final class WorkbenchModel {
         showHome(groupID: selectedGroupID)
         if started {
             if host.autoConnectSSH { connectSSH(host.id) }
-            if host.autoConnectHerdr, host.enabledAgents.contains(.terminal) { selectedConnection?.connect() }
         }
         if let launch {
             let key = "new.task.defaults." + (selectedGroupID?.uuidString ?? "global")
@@ -413,8 +392,7 @@ final class WorkbenchModel {
         setupHost = nil; setupProvider = nil
         guard pendingSetupLaunch else { return }
         pendingSetupLaunch = false
-        if launchAfterSetup?.provider == .terminal { showNewTerminal = true }
-        else { draftingNewTask = true }
+        draftingNewTask = true
     }
     func reconnectSelectedEnvironment() {
         if showKimi { kimi.connect() }
@@ -424,10 +402,8 @@ final class WorkbenchModel {
     var selectedReference: SessionReference? { openedSessions.first { $0.session.id == tabs.selectedID }?.session }
     var showNative: Bool { !showDashboard && [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(selectedReference?.kind) }
     var showKimi: Bool { !showDashboard && selectedReference?.kind == .kimi }
-    var selectedTerminalID: String? { selectedReference?.kind == .terminal ? tabs.selectedID : nil }
     var previewTerminalID: String? { tabs.previewID }
     var selectedConnection: HostConnection? { connections.first { $0.id == selectedHostID } }
-    var selectedTerminal: AttachedTerminal? { terminals.first { $0.id == selectedTerminalID } }
     /// The quick shell follows the selected session's host and directory. The
     /// dashboard and the new-task draft have no resolvable target.
     var commandLineTarget: CommandLineIslandState.Target? {
@@ -556,26 +532,6 @@ final class WorkbenchModel {
     func refreshLocalizedCatalog() { rebuildCatalog() }
 
     private func rebuildCatalog() {
-        let terminalSessions = connections.flatMap { connection in
-            (connection.snapshot?.panes ?? []).map { pane in
-                let reference = SessionReference(hostID: connection.id, terminalID: pane.id)
-                let review = workspace.needsReview(pane, on: connection.id)
-                let section: WorkQueueSection = pane.status == "blocked" ? .attention : pane.status == "working" ? .running : review ? .review : .other
-                let detail: String
-                switch pane.status {
-                case "blocked": detail = L("等待处理")
-                case "working": detail = L("运行中")
-                case "done": detail = review ? L("结果待查看") : L("结果已查看")
-                case "idle": detail = L("空闲")
-                default: detail = L("状态未知")
-                }
-                return WorkspaceSession(reference: reference,
-                    title: workspace.displayTitle(pane.displayTitle, for: reference), directory: pane.directory, hostName: connection.host.name,
-                    detail: "\(pane.agent ?? L("终端")) · \(detail)", online: connection.online, section: section,
-                    canMarkReviewed: review && pane.revision != nil,
-                    archived: workspace.archivedTerminals.contains(SessionReference(hostID: connection.id, terminalID: pane.id)))
-            }
-        }
         let conversations = kimiEnvironments.values.flatMap { kimi in kimi.sessions.map { session in
             let reference = SessionReference(hostID: kimi.host.id, terminalID: session.id, kind: .kimi)
             let section = workspace.kimiSection(session, on: kimi.host.id)
@@ -594,7 +550,7 @@ final class WorkbenchModel {
                 canMarkReviewed: section == .review, archived: archiveOverrides[reference.id] ?? session.archived, updatedAt: session.updated)
         }
         }
-        let next = ((conversations + agents) + terminalSessions).sorted { $0.updatedAt == $1.updatedAt ? $0.id < $1.id : $0.updatedAt > $1.updatedAt }
+        let next = (conversations + agents).sorted { $0.updatedAt == $1.updatedAt ? $0.id < $1.id : $0.updatedAt > $1.updatedAt }
         allSessions = next
     }
     /// User-triggered list mutations (pin, archive) animate the row move;
@@ -611,10 +567,6 @@ final class WorkbenchModel {
     }
     var scopedSessions: [WorkspaceSession] { sessionScope.sessions }
 
-    private func observe(_ connection: HostConnection) {
-        connection.onSnapshot = { [weak self] in self?.snapshotUpdated() }
-        connection.$online.removeDuplicates().sink { [weak self] _ in Task { @MainActor in self?.catalogChanged() } }.store(in: &subscriptions)
-    }
     func removeHost(_ host: SSHHost) {
         guard let index = connections.firstIndex(where: { $0.id == host.id }) else { return }
         conversationPresentations.remove(prefix: host.id.uuidString + ":")
@@ -623,10 +575,8 @@ final class WorkbenchModel {
         kimiEnvironments.removeValue(forKey: host.id); nativeEnvironments.removeValue(forKey: host.id)
         connections.remove(at: index)
         for saved in openedSessions where saved.session.hostID == host.id { close(saved.session.id) }
-        terminals.removeAll { $0.hostID == host.id }
         let fallback = connections.first?.host.id ?? SSHHost.unconfigured.id
         if selectedHostID == host.id { selectedHostID = fallback }
-        // A terminal on a surviving machine remains the target of host actions.
         if kimi.host.id == host.id || native.host.id == host.id { activateAgentEnvironment(selectedHostID) }
         if connections.isEmpty {
             kimi = KimiConnection(host: .unconfigured); native = NativeAgentConnection(host: .unconfigured)
@@ -650,9 +600,6 @@ final class WorkbenchModel {
         }
         rebuildCatalog(); saveWorkspace()
     }
-    func open(_ pane: Pane, on connection: HostConnection, pinned: Bool = false) {
-        openReference(SessionReference(hostID: connection.id, terminalID: pane.id), title: pane.displayTitle, pinned: pinned)
-    }
     func open(_ item: WorkspaceSession, pinned: Bool = false) {
         guard item.online, !item.archived else { return }
         openReference(item.reference, title: item.title, pinned: pinned)
@@ -660,7 +607,6 @@ final class WorkbenchModel {
     private func openReference(_ reference: SessionReference, title: String, pinned: Bool) {
         tabs.open(reference.id, pinned: true)
         openedSessions.removeAll { !tabs.ids.contains($0.session.id) }
-        terminals.removeAll { !tabs.ids.contains($0.id) }
         if !openedSessions.contains(where: { $0.session == reference }) {
             openedSessions.append(SavedTerminal(session: reference, title: title))
         }
@@ -677,14 +623,14 @@ final class WorkbenchModel {
         if !navigatingHistory { navigation.visit(identity) }
         tabs.select(identity); showDashboard = false; draftingNewTask = false
         if let reference = selectedReference {
-            if reference.kind != .terminal { activateAgentEnvironment(reference.hostID) }
+            activateAgentEnvironment(reference.hostID)
             selectedHostID = reference.hostID
             if let group = selectedGroup, !group.sessions.contains(reference) { selectedGroupID = nil }
             if let group = selectedGroup { workspace.lastSessionByGroup[group.id.uuidString] = reference.id }
             if [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(reference.kind) { native.select(reference.terminalID) }
             if reference.kind == .kimi, kimi.online { kimi.select(reference.terminalID) }
         }
-        updateVisibility(focus: true); saveWorkspace()
+        saveWorkspace()
     }
     private var navigableSessionIDs: Set<String> {
         Set(openedSessions.map { $0.session.id }).union(allSessions.filter { $0.online && !$0.archived }.map(\.id))
@@ -707,27 +653,18 @@ final class WorkbenchModel {
         let index = items.firstIndex(where: { $0.id == selectedReference?.id }) ?? -1
         open(items[(index + 1) % items.count])
     }
-    private func updateVisibility(focus: Bool = false) {
-        for terminal in terminals { terminal.context.isSurfaceVisible = !showDashboard && !draftingNewTask && terminal.id == selectedTerminalID }
-        if focus && !showDashboard && !showKimi && !draftingNewTask { selectedTerminal?.context.requestFocus() }
-    }
     func close(_ identity: String) {
-        tabs.close(identity); openedSessions.removeAll { $0.session.id == identity }; terminals.removeAll { $0.id == identity }
+        tabs.close(identity); openedSessions.removeAll { $0.session.id == identity }
         if let selected = tabs.selectedID, !showDashboard { select(selected) }
-        else { showDashboard = true; updateVisibility(); saveWorkspace() }
-    }
-    func reconnectTerminal(_ terminal: AttachedTerminal) {
-        terminals.removeAll { $0.id == terminal.id }
-        restoreAvailableSessions()
+        else { showDashboard = true; saveWorkspace() }
     }
     func start() {
         guard !started else { return }
-        if let reference = selectedReference, reference.kind != .terminal { activateAgentEnvironment(reference.hostID) }
+        if let reference = selectedReference { activateAgentEnvironment(reference.hostID) }
         started = true
         startFollowUpLoop()
         for connection in connections {
             if connection.host.autoConnectSSH { connectSSH(connection.id) }
-            if connection.host.autoConnectHerdr, connection.host.enabledAgents.contains(.terminal) { connection.connect() }
         }
     }
     func showHome(groupID: UUID? = nil) {
@@ -741,7 +678,7 @@ final class WorkbenchModel {
             workspace.groups[index].lastOpenedAt = Date().timeIntervalSince1970
         }
         showDashboard = true
-        tabs.showOverview(); updateVisibility(); saveWorkspace()
+        tabs.showOverview(); saveWorkspace()
     }
     func showInbox(groupID: UUID? = nil) { showHome(groupID: groupID); onlyAttention = true }
     func showAllSessions() { showHome(); showSessionDirectory = true }
@@ -825,9 +762,6 @@ final class WorkbenchModel {
         }
         if ref.kind == .kimi, let c = kimiEnvironments[ref.hostID], let session = c.sessions.first(where: { $0.id == ref.terminalID }) {
             revision = item.section == .review ? session.updatedAt : session.pendingInteraction ?? session.lastTurnReason ?? ""
-        } else if ref.kind == .terminal {
-            let pane = connections.first { $0.id == ref.hostID }?.snapshot?.panes.first { $0.id == ref.terminalID }
-            revision = pane?.revision.map(String.init) ?? ""
         } else if let session = nativeEnvironments[ref.hostID]?.sessions.first(where: { $0.id == ref.terminalID }) {
             revision = item.section == .review ? String(session.completed) : "\(session.completed):\(session.pending):\(session.error ?? "")"
         }
@@ -874,9 +808,6 @@ final class WorkbenchModel {
             workspace.reviewedKimiUpdates[item.id] = String(session.completed)
         } else if item.reference.kind == .kimi, let session = kimi.sessions.first(where: { $0.id == item.reference.terminalID }) {
             workspace.markReviewed(session, on: kimi.host.id)
-        } else if let connection = connections.first(where: { $0.id == item.reference.hostID }),
-                  let pane = connection.snapshot?.panes.first(where: { $0.id == item.reference.terminalID }) {
-            workspace.markReviewed(pane, on: connection.id)
         }
         rebuildCatalog(); saveWorkspace()
     }
@@ -898,7 +829,7 @@ final class WorkbenchModel {
         showSessionDirectory = false; search = ""
         showArchived = true; onlyAttention = false
         selectedGroupID = nil; clearScope(); showDashboard = true
-        tabs.showOverview(); updateVisibility(); saveWorkspace()
+        tabs.showOverview(); saveWorkspace()
     }
     func toggleStar(_ reference: SessionReference) {
         animateCatalogChange { workspace.toggleStar(reference) }
@@ -946,17 +877,15 @@ final class WorkbenchModel {
                                   reviewed: item.section != .review, queuedMessages: queued,
                                   hasCompletionSignal: session.lastTurnReason != nil)
         }
-        let pane = connections.first { $0.id == item.reference.hostID }?
-            .snapshot?.panes.first { $0.id == item.reference.terminalID }
-        // A shell reporting idle has finished no turn, so only an explicit done
-        // status carries completion for a terminal.
+        // Anything that is neither Kimi nor a native agent no longer exists;
+        // the neutral fallback marks it non-busy without a completion signal.
         return ArchiveSubject(reference: item.reference,
-                              fingerprint: pane?.revision.map(String.init) ?? "unknown",
-                              archived: item.archived, online: item.online, busy: pane?.status == "working",
-                              pendingInteraction: pane?.status == "blocked", failed: false, stopped: false,
-                              starred: starred, completedTurns: pane?.status == "done" ? 1 : 0,
+                              fingerprint: "unknown",
+                              archived: item.archived, online: item.online, busy: false,
+                              pendingInteraction: false, failed: false, stopped: false,
+                              starred: starred, completedTurns: 0,
                               reviewed: item.section != .review, queuedMessages: 0,
-                              hasCompletionSignal: pane?.status == "done")
+                              hasCompletionSignal: false)
     }
     /// The inbox narrowing lives in `SessionCatalog.scope`, so the dashboard never
     /// filters the same sections a second time with different rules.
@@ -1180,7 +1109,7 @@ final class WorkbenchModel {
             connection.updateHost(host)
             kimiEnvironments[host.id]?.updateHost(host); nativeEnvironments[host.id]?.updateHost(host)
         } else {
-            let connection = HostConnection(host: host); observe(connection); connections.append(connection)
+            let connection = HostConnection(host: host); connections.append(connection)
             registerEnvironment(kimi: KimiConnection(host: host), native: NativeAgentConnection(host: host))
         }
         UserDefaults.standard.set(data, forKey: "hosts")
@@ -1274,7 +1203,6 @@ final class WorkbenchModel {
     }
     func canArchive(_ item: WorkspaceSession) -> Bool {
         guard let kimi = kimiEnvironments[item.reference.hostID], let native = nativeEnvironments[item.reference.hostID] else { return false }
-        if item.reference.kind == .terminal { return true }
         if [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(item.reference.kind) { return native.online && native.sessions.first(where: { $0.id == item.reference.terminalID })?.busy == false }
         return kimi.online && kimi.sessions.first(where: { $0.id == item.reference.terminalID })?.busy == false
     }
@@ -1282,17 +1210,6 @@ final class WorkbenchModel {
         guard let kimi = kimiEnvironments[item.reference.hostID], let native = nativeEnvironments[item.reference.hostID] else { return }
         guard canArchive(item), !managing.contains(item.id) else { return }
         managementError = nil
-        if item.reference.kind == .terminal {
-            animateCatalogChange {
-                if archived { workspace.archivedTerminals.insert(item.reference) }
-                else { workspace.archivedTerminals.remove(item.reference) }
-                if archived { workspace.starred.removeAll { $0 == item.reference } }
-                rebuildCatalog()
-            }
-            if archived, tabs.ids.contains(item.id) { close(item.id) }
-            saveWorkspace()
-            return
-        }
         managing.insert(item.id)
         // Optimistic: the row moves with the click; a failure animates it back.
         archiveOverrides[item.id] = archived
@@ -1322,7 +1239,6 @@ final class WorkbenchModel {
             do {
                 if item.reference.kind == .kimi { try await kimi.deleteSession(item.reference.terminalID) }
                 else if [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(item.reference.kind) { try await native.action(item.reference.terminalID, "delete") }
-                else if let connection = connections.first(where: { $0.id == item.reference.hostID }) { try await connection.closeTerminal(item.reference.terminalID) }
                 if tabs.ids.contains(item.id) { close(item.id) }
                 workspace.removeSession(item.reference)
                 let kind = item.reference.kind == .kimi ? "kimi" : "native"
@@ -1473,9 +1389,6 @@ final class WorkbenchModel {
             if item.reference.kind == .kimi {
                 let session = kimi.sessions.first { $0.id == item.reference.terminalID }
                 completion = session?.lastTurnReason == "completed" ? session?.updatedAt : nil
-            } else if item.reference.kind == .terminal {
-                let pane = connections.first { $0.id == item.reference.hostID }?.snapshot?.panes.first { $0.id == item.reference.terminalID }
-                completion = pane?.status == "done" ? pane?.revision.map(String.init) : nil
             } else {
                 let count = native.sessions.first { $0.id == item.reference.terminalID }?.completed ?? 0
                 completion = count > 0 ? String(count) : nil
@@ -1494,33 +1407,9 @@ final class WorkbenchModel {
             if let host = id.split(separator: ":").first.flatMap({ UUID(uuidString: String($0)) }) { activateAgentEnvironment(host) }
         }
     }
-    private func snapshotUpdated() {
-        var reviewed = workspace.reviewedRevisions
-        var changed = false
-        for connection in connections where connection.online {
-            for pane in connection.snapshot?.panes ?? [] where pane.status != "done" {
-                let id = SessionReference(hostID: connection.id, terminalID: pane.id).id
-                if reviewed.removeValue(forKey: id) != nil { changed = true }
-            }
-        }
-        if changed { workspace.reviewedRevisions = reviewed }
-        catalogChanged()
-        if changed { saveWorkspace() }
-    }
     private func restoreAvailableSessions() {
-        var attachedSelection = false
-        for saved in openedSessions where saved.session.kind == .terminal {
-            guard !terminals.contains(where: { $0.id == saved.session.id }),
-                  let connection = connections.first(where: { $0.id == saved.session.hostID }), connection.online,
-                  let pane = connection.snapshot?.panes.first(where: { $0.id == saved.session.terminalID }) else { continue }
-            let terminal = AttachedTerminal(id: saved.session.id, pane: pane, connection: connection)
-            terminal.onInput = { [weak self] in self?.pin(saved.session.id) }
-            terminals.append(terminal)
-            if terminal.id == selectedTerminalID { attachedSelection = true }
-        }
         if showNative, let reference = selectedReference, let connection = nativeEnvironments[reference.hostID], connection.sessions.contains(where: { $0.id == reference.terminalID }) { connection.select(reference.terminalID) }
         if showKimi, let reference = selectedReference, let connection = kimiEnvironments[reference.hostID], connection.online, connection.sessions.contains(where: { $0.id == reference.terminalID }) { connection.select(reference.terminalID) }
-        updateVisibility(focus: attachedSelection)
     }
     func flushDrafts() throws { for connection in kimiEnvironments.values { try connection.flushDrafts() }; for connection in nativeEnvironments.values { try connection.flushDrafts() } }
     func shutdown() {
@@ -1532,33 +1421,7 @@ final class WorkbenchModel {
         try? flushDrafts()
         saveWorkspace()
         if canSaveWorkspace { do { try workspaceWriter.flush(workspace) } catch { workspaceError = error.localizedDescription } }
-        kimiEnvironments.values.forEach { $0.disconnect() }; nativeEnvironments.values.forEach { $0.disconnect() }; terminals.removeAll(); connections.forEach { $0.disconnect() }
-    }
-    func inspectRendering() {
-        guard let terminal = selectedTerminal, let view = terminal.context.attachedPlatformView,
-              let grid = terminal.context.surfaceSize else { return }
-        let backing = view.convertToBacking(view.bounds)
-        let scale = view.window?.backingScaleFactor ?? 0
-        let matches = abs(backing.width - Double(grid.widthPixels)) < 1 && abs(backing.height - Double(grid.heightPixels)) < 1
-        // Measurements keep their plain text form; only the labels around them are looked up.
-        let scaleText = "\(scale)", logical = "\(view.bounds.width) × \(view.bounds.height)"
-        let backingSize = "\(backing.width) × \(backing.height)", surface = "\(grid.widthPixels) × \(grid.heightPixels)"
-        let cells = "\(grid.columns) × \(grid.rows)", consistent = matches ? L("是") : L("否")
-        renderReport = L("Menlo 14 pt\n窗口 backingScaleFactor: \(scaleText)\n视图逻辑尺寸: \(logical) pt\n视图 backing 尺寸: \(backingSize) px\nGhostty surface: \(surface) px\n终端网格: \(cells)\n像素尺寸一致: \(consistent)")
-        if let resources = GhosttyRuntimeResources.directoryURL?.path {
-            renderReport += "\n\n" + L("Ghostty 资源: \(resources)")
-        } else {
-            renderReport += "\n\n" + L("Ghostty 资源: 未找到")
-        }
-        if let layer = view.layer {
-            let layerType = "\(type(of: layer))", layerScale = "\(layer.contentsScale)", rasterized = "\(layer.shouldRasterize)"
-            renderReport += "\n\n" + L("图层: \(layerType)\ncontentsScale: \(layerScale)\nshouldRasterize: \(rasterized)")
-            for child in layer.sublayers ?? [] {
-                let childType = "\(type(of: child))", childScale = "\(child.contentsScale)", childFrame = "\(child.frame)"
-                renderReport += "\n" + L("子图层: \(childType), scale=\(childScale), frame=\(childFrame)")
-            }
-        }
-        showRenderReport = true
+        kimiEnvironments.values.forEach { $0.disconnect() }; nativeEnvironments.values.forEach { $0.disconnect() }; connections.forEach { $0.disconnect() }
     }
 
 }

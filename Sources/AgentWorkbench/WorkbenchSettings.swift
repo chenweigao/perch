@@ -324,17 +324,9 @@ private struct HostConnectionControls: View {
             if connection.host.enabledAgents.contains(.kimi) || connection.host.hasNativeAgents {
                 connectionRow(connection.host.isLocal ? L("本机 Agent") : "SSH Agent", online: sshOnline, requested: sshRequested,
                               autoConnect: Binding(get: { connection.host.autoConnectSSH },
-                                  set: { model.setAutoConnect($0, for: connection.id, herdr: false) })) {
+                                  set: { model.setAutoConnect($0, for: connection.id) })) {
                     if sshRequested { model.disconnectSSH(connection.id) }
                     else { model.connectSSH(connection.id) }
-                }
-            }
-            if connection.host.enabledAgents.contains(.terminal) {
-                connectionRow("Herdr", online: connection.online, requested: connection.wantsConnection,
-                              autoConnect: Binding(get: { connection.host.autoConnectHerdr },
-                                  set: { model.setAutoConnect($0, for: connection.id, herdr: true) })) {
-                    if connection.wantsConnection { model.disconnectHerdr(connection.id) }
-                    else { connection.connect() }
                 }
             }
         }.padding(.leading, 36)

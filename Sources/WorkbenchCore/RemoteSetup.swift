@@ -52,7 +52,7 @@ public struct KimiServiceEndpoint: Equatable, Sendable {
 
 /// Saved endpoints contain routing information only. Agent credentials stay remote.
 public enum RemoteSetup {
-    public static let agents: [SessionKind] = [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex, .claude, .terminal]
+    public static let agents: [SessionKind] = [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex, .claude]
 
     /// The bridge protocol this build speaks. It must match SERVICE_VERSION in
     /// remote/native-agent-service.py; scripts/check-version.py enforces that.

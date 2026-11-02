@@ -33,7 +33,7 @@ Fresh installations have no preset host.
    If a fingerprint or login needs attention, the error explains the next step
    and opens Terminal on that host. Ports, jump hosts and keys remain in your
    system SSH configuration. Perch does not store SSH passwords or bypass host-key checks.
-2. **Prepare agent.** Choose Kimi, OMP, Qoder CN, Qoder, DeepSeek, Codex, Claude Code or Herdr terminals, then
+2. **Prepare agent.** Choose Kimi, OMP, Qoder CN, Qoder, DeepSeek, Codex or Claude Code, then
    click **Check agent**. Each check displays its result and repair actions.
    CLI installation and login open in Terminal; the displayed install commands
    use the documented tested versions. Agent credentials stay on the server.
@@ -62,7 +62,6 @@ Host my-server
 | Qoder | Install CLI (`curl -fsSL https://qoder.com/install | bash`), sign in, install bridge and SDK | CLI version, Node and SDK presence, bridge health, CLI login and the international SDK model catalog |
 | Claude Code | Install CLI, sign in, install bridge and SDK | CLI version, Node and SDK presence, bridge health; login is verified on the first message |
 | DeepSeek | Install bridge with bundled dsh runtime; configure remote `DEEPSEEK_API_KEY` | Runtime version and credential presence in the bridge environment; models are read during the first ACP session handshake |
-| Herdr terminal | Install and start Herdr | Runtime and Unix socket forwarding; CLI agents inside terminals manage their own models |
 
 Checks do not send model prompts or prove successful model inference. For Qoder,
 the selected regional SDK catalog confirms CLI login without running a model turn.
@@ -93,7 +92,7 @@ returns to the empty setup screen without stopping remote tasks.
 
 The environment menu and task composer display connection errors directly and
 provide **Check and repair connection**. Only configured native agents are shown
-in the task composer. Kimi does not require Herdr.
+in the task composer.
 
 See [Kimi details](KIMI.md) and [native bridge details](NATIVE-AGENTS.md) for protocol
 versions and recovery boundaries.
@@ -115,9 +114,9 @@ agents are shown as installed without offering local execution. See [Local agent
 for setup and acceptance scope. File viewing and read-only Git diff are
 experimental. Configure models and credentials in each agent's CLI.
 
-Closing a local view disconnects the client. Ending a remote terminal or deleting
+Closing a local view disconnects the client. Deleting
 history is a separate explicit action. Perch does not take over another attached
-Herdr client or enable permission bypass automatically.
+client or enable permission bypass automatically.
 
 Workspace layout is saved locally. Drafts and pending attachments currently live
 only for the current App process. Remote session survival depends on its runtime;

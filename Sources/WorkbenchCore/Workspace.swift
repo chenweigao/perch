@@ -1,6 +1,8 @@
 import Foundation
 
 public enum SessionKind: String, Codable, Sendable {
+    // terminal stays only for decoding hosts/sessions saved while Herdr panes
+    // existed; nothing produces it anymore.
     case terminal, kimi, omp, qoder, qoderintl, dsh, codex, claude
     public var symbol: String {
         [Self.terminal: "terminal", .kimi: "sparkles", .omp: "bolt", .qoder: "curlybraces", .qoderintl: "curlybraces",
@@ -200,17 +202,6 @@ public struct LocalWorkspace: Codable, Equatable, Sendable {
         // A catalog can already know about a newer completion than the displayed transcript.
         if let previous = reviewedKimiUpdates[id].flatMap(Int.init), snapshot.completed <= previous { return }
         reviewedKimiUpdates[id] = String(snapshot.completed)
-    }
-
-    public func needsReview(_ pane: Pane, on hostID: UUID) -> Bool {
-        guard pane.status == "done" else { return false }
-        guard let revision = pane.revision else { return true }
-        return reviewedRevisions[SessionReference(hostID: hostID, terminalID: pane.id).id] != revision
-    }
-
-    public mutating func markReviewed(_ pane: Pane, on hostID: UUID) {
-        guard pane.status == "done", let revision = pane.revision else { return }
-        reviewedRevisions[SessionReference(hostID: hostID, terminalID: pane.id).id] = revision
     }
 }
 

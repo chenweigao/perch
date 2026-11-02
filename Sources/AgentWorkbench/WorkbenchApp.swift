@@ -45,8 +45,6 @@ struct WorkbenchApp: App {
             CommandGroup(replacing: .newItem) {
                 Button(L("新建会话")) { model.startNewTask() }.keyboardShortcut("n")
                 Button(L("添加机器…")) { model.configureHost() }.keyboardShortcut("n", modifiers: [.command, .shift])
-                Button(L("新建远端终端…")) { model.showNewTerminal = true }.keyboardShortcut("t")
-                    .disabled(model.selectedConnection?.online != true)
             }
             CommandMenu(L("Conversation")) {
                 Button(L("搜索项目与会话")) { CompanionWindowController.shared.showMain(); model.showSessionSearch = true }.keyboardShortcut("k")
@@ -78,9 +76,6 @@ struct WorkbenchApp: App {
                 Button(L("Forward")) { model.navigate(1) }.keyboardShortcut("]", modifiers: .command).disabled(!model.canNavigate(1))
                 Button(L("下一个待处理会话")) { model.nextAttentionTask() }.keyboardShortcut("j", modifiers: [.command, .shift])
             }
-            CommandGroup(after: .help) {
-                Button(L("终端显示信息…")) { model.inspectRendering() }.disabled(model.selectedTerminal == nil)
-            }
             CommandGroup(after: .sidebar) {
                 Button(L("切换当前会话置顶")) {
                     if let reference = model.selectedReference { model.toggleStar(reference) }
@@ -90,13 +85,12 @@ struct WorkbenchApp: App {
                     if let id = model.tabs.selectedID { model.close(id) }
                 }.keyboardShortcut("w", modifiers: [.command, .shift])
                 Divider()
-                // Off while a terminal is in front, so its own font keys keep working.
                 Button(L("放大正文")) { ReadingBodySize.shared.step(1) }
-                    .keyboardShortcut("=", modifiers: .command).disabled(model.selectedTerminal != nil)
+                    .keyboardShortcut("=", modifiers: .command)
                 Button(L("缩小正文")) { ReadingBodySize.shared.step(-1) }
-                    .keyboardShortcut("-", modifiers: .command).disabled(model.selectedTerminal != nil)
+                    .keyboardShortcut("-", modifiers: .command)
                 Button(L("正文默认大小")) { ReadingBodySize.shared.set(ReadingBodySize.standard) }
-                    .keyboardShortcut("0", modifiers: .command).disabled(model.selectedTerminal != nil)
+                    .keyboardShortcut("0", modifiers: .command)
             }
         }
         MenuBarExtra("Perch", systemImage: "bird") {

@@ -64,13 +64,6 @@ struct WorkbenchHeaderActions: View {
                     Menu {
                         if model.showKimi { Button("同步会话") { kimi.reloadSelected() }.disabled(!kimi.online || kimi.loading) }
                         else if model.showNative { Button("重新连接") { native.connect() } }
-                        else {
-                            Button(model.selectedConnection?.wantsConnection == true ? L("断开本地连接") : L("连接终端")) {
-                                if model.selectedConnection?.wantsConnection == true { model.selectedConnection?.disconnect() }
-                                else { model.selectedConnection?.connect() }
-                            }
-                            Button("新建远端终端…") { model.showNewTerminal = true }
-                        }
                         if let item { Divider(); SessionActionsMenu(model: model, item: item) }
                     } label: { WorkbenchToolbarSymbol(name: "ellipsis") }
                         .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
@@ -110,7 +103,6 @@ struct WorkbenchHeaderActions: View {
                     }
                     Menu {
                         Button("会话…") { model.startNewTask() }
-                        Button("远端终端…") { model.showNewTerminal = true }.disabled(model.selectedConnection?.online != true)
                         Button("任务组…") { model.editGroup() }
                     } label: { WorkbenchToolbarSymbol(name: "plus") }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
                         .frame(width: WorkbenchChrome.controlSize, height: WorkbenchChrome.controlSize).help("新建").accessibilityLabel("新建")
