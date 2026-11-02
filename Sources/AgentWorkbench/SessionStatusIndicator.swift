@@ -27,15 +27,16 @@ struct SidebarAgentIndicator: View {
     }
 }
 
-/// The compact rows' status: offline (the same symbol as the full indicator),
-/// waiting for input, or unread. Other states show the agent mark alone.
+/// The compact rows' status: waiting for input or unread. Offline is said once, by
+/// the row itself (dimmed, with a trailing symbol); other states show the agent
+/// mark alone.
 private struct SidebarStatusBadge: View {
-    private enum Kind { case offline, attention, review }
+    private enum Kind { case attention, review }
     private let kind: Kind
 
     init?(_ item: WorkspaceSession) {
-        if !item.online { kind = .offline }
-        else if item.section == .attention { kind = .attention }
+        guard item.online else { return nil }
+        if item.section == .attention { kind = .attention }
         else if item.section == .review { kind = .review }
         else { return nil }
     }
@@ -43,8 +44,6 @@ private struct SidebarStatusBadge: View {
     var body: some View {
         Group {
             switch kind {
-            case .offline:
-                Image(systemName: "wifi.slash").foregroundStyle(.secondary)
             case .attention:
                 Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.orange)
             case .review:

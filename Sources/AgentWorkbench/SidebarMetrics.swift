@@ -16,8 +16,9 @@ enum SidebarMetrics {
     static let navigationSize: CGFloat = 13
     /// Session rows that carry a status line (offline, waiting for input).
     static let subtitleRowHeight: CGFloat = 50
-    /// Conversation titles may occupy two lines without being squeezed by actions.
-    static let sessionMinimumHeight: CGFloat = 44
+    /// Conversation rows grow with their title (up to two lines) and keep the same
+    /// space above and below it, so one- and two-line rows read evenly.
+    static let sessionVerticalPadding: CGFloat = 10
     /// Inside the shell's 10 pt list padding.
     static let rowInset: CGFloat = 8
     static let iconWidth: CGFloat = 18
@@ -36,11 +37,16 @@ enum SidebarMetrics {
     /// Leading offset of row titles, for secondary rows that carry no icon.
     static let titleOffset: CGFloat = rowInset + iconWidth + labelSpacing
 
-    /// Section headers: small semibold labels starting at the icon column. Darker
-    /// than secondary text, so headers such as 置顶 never read as disabled.
-    static let sectionTitleSize: CGFloat = WorkbenchTheme.Typography.title
+    /// Section headers: small semibold labels starting at the icon column, a step
+    /// below the 14 pt session titles they group. Darker than secondary text, so
+    /// headers such as 置顶 never read as disabled.
+    static let sectionTitleSize: CGFloat = WorkbenchTheme.Typography.caption
     static let sectionTitleOpacity: Double = 0.62
     static let sectionHeaderHeight: CGFloat = 24
+    /// Trailing actions of headers and project rows (+, filter, retry): one quiet
+    /// glyph size and one hit target.
+    static let actionSize: CGFloat = 24
+    static let actionGlyphSize: CGFloat = 12
     static let sectionTopSpacing: CGFloat = 12
     static let sectionBottomSpacing: CGFloat = 2
     /// "显示全部", "更多会话" and the pin invitation: quieter than a session row.
@@ -90,14 +96,18 @@ struct SidebarHighlight: View {
 }
 
 /// A section header title in the shared style, with an optional count and, after
-/// it, the disclosure chevron of a folding section or the ellipsis of a header
-/// that opens a menu.
+/// it, the disclosure chevron of a folding section or the up-down chevron of a
+/// header that opens a menu, as on a pop-up button.
 struct SidebarSectionTitle: View {
     let title: Text
     var count: Int? = nil
     var expanded: Bool? = nil
+    /// Folding headers show their chevron only while it is useful; it keeps its
+    /// width either way, so the title and count never shift.
+    var showsDisclosure = true
     /// The header opens a menu instead of folding its section.
     var menu = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         HStack(spacing: 4) {
             title.font(.system(size: SidebarMetrics.sectionTitleSize, weight: .semibold))
@@ -110,13 +120,26 @@ struct SidebarSectionTitle: View {
             if let expanded {
                 Image(systemName: expanded ? "chevron.down" : "chevron.right")
                     .font(.system(size: 8, weight: .semibold)).foregroundStyle(.tertiary)
+                    .opacity(showsDisclosure ? 1 : 0)
+                    .animation(reduceMotion ? nil : .easeOut(duration: SidebarMetrics.highlightDuration), value: showsDisclosure)
                     .accessibilityHidden(true)
             }
             if menu {
-                Image(systemName: "ellipsis")
-                    .font(.system(size: SidebarMetrics.sectionTitleSize, weight: .semibold)).foregroundStyle(.tertiary)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 8, weight: .semibold)).foregroundStyle(.tertiary)
                     .accessibilityHidden(true)
             }
         }
+    }
+}
+
+/// The glyph of a header or project-row action (+, filter, retry): quiet, one size,
+/// one hit target, so no action looks more or less available than another.
+struct SidebarActionGlyph: View {
+    let systemName: String
+    var body: some View {
+        Image(systemName: systemName)
+            .font(.system(size: SidebarMetrics.actionGlyphSize, weight: .medium)).foregroundStyle(.secondary)
+            .frame(width: SidebarMetrics.actionSize, height: SidebarMetrics.actionSize).contentShape(Rectangle())
     }
 }

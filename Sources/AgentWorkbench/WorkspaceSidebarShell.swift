@@ -43,12 +43,16 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                             .fixedSize(horizontal: true, vertical: false)
                             .padding(.horizontal, SidebarMetrics.rowInset)
                             .frame(height: SidebarMetrics.navigationHeight).contentShape(Rectangle())
-                    }.buttonStyle(SidebarNavigationStyle()).help("搜索项目与会话")
+                    }.buttonStyle(SidebarNavigationStyle()).help("搜索项目与会话 · ⌘K")
                         .accessibilityLabel("搜索项目与会话")
                         .accessibilityIdentifier("sidebar.search")
                 }.padding(.bottom, 2)
                 navigation("工作台", symbol: "square.grid.2x2", selected: page == .home, action: onHome)
                 navigation("待处理", symbol: "tray", selected: page == .inbox, count: attentionCount, action: onInbox)
+                if let onAllSessions {
+                    navigation("全部会话", symbol: "bubble.left.and.bubble.right", selected: page == .sessions, action: onAllSessions)
+                        .accessibilityIdentifier("sidebar.allSessions")
+                }
             }.font(.system(size: SidebarMetrics.navigationSize))
                 .padding(.horizontal, 10).padding(.top, 0).padding(.bottom, 2)
             if scrollRows {
@@ -69,15 +73,14 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                 }
             }
             } else { rows.padding(.horizontal, 10).padding(.bottom, 10) }
+            // No rule above the footer: the list's soft bottom edge already separates
+            // it, and a hard line reads as a seam on the window glass. Shortcuts live
+            // in the rows' tooltips; only the menu-like popover lists them.
             VStack(spacing: 2) {
-                if let onAllSessions {
-                    navigation("全部会话", symbol: "bubble.left.and.bubble.right", selected: page == .sessions, action: onAllSessions)
-                        .accessibilityIdentifier("sidebar.allSessions")
-                }
-                Divider().padding(.vertical, 6)
                 if let onAddMachine {
                     // First run: adding a machine is one visible row, not only ⚙ → 环境管理 → +.
-                    navigation("添加机器…", symbol: "server.rack", shortcut: "⇧⌘N", action: onAddMachine)
+                    navigation("添加机器…", symbol: "server.rack", action: onAddMachine)
+                        .help("添加机器… · ⇧⌘N")
                         .accessibilityIdentifier("sidebar.addMachine")
                 }
                 Button {
@@ -92,14 +95,21 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                                     Circle().fill(.orange).frame(width: 6, height: 6)
                                 }
                             }
-                        Text("设置与环境"); Spacer(); shortcutHint("⌘,")
+                        Text("设置与环境"); Spacer()
                     }.padding(.horizontal, SidebarMetrics.rowInset).frame(height: SidebarMetrics.navigationHeight).contentShape(Rectangle())
                 }.buttonStyle(SidebarNavigationStyle())
                     .accessibilityIdentifier("sidebar.settings")
                     .accessibilityValue(environmentNeedsAttention ? Text("环境需要处理") : Text(""))
                     .popover(isPresented: $showSettings, arrowEdge: .trailing) {
                         if showEnvironments {
-                            environments
+                            // The environments page replaces the menu in place, so it
+                            // leads back to it like any pushed page.
+                            VStack(alignment: .leading, spacing: 0) {
+                                navigation("设置与环境", symbol: "chevron.left") { showEnvironments = false }
+                                    .accessibilityIdentifier("sidebar.settings.back")
+                                    .padding([.horizontal, .top], 10)
+                                environments
+                            }.font(.system(size: WorkbenchTheme.Typography.body))
                         } else {
                             VStack(spacing: 3) {
                                 navigation("环境管理", symbol: "server.rack") { showEnvironments = true }
@@ -121,7 +131,7 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                         }
                     }
             }.font(.system(size: SidebarMetrics.navigationSize)).foregroundStyle(.secondary)
-                .padding(.horizontal, 10).padding(.bottom, 10)
+                .padding(.horizontal, 10).padding(.top, 4).padding(.bottom, 10)
         }.font(.system(size: WorkbenchTheme.Typography.body)).frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
@@ -200,7 +210,7 @@ struct SidebarProjectHeader: View {
                     .opacity(hovered || focused != nil ? 0 : 1).accessibilityHidden(true)
                 Button(action: onNew) {
                     // Fills the 28 pt trailing column; the row stays taller than the button.
-                    Image(systemName: "plus").font(.system(size: 11, weight: .semibold)).frame(width: 28, height: 28)
+                    SidebarActionGlyph(systemName: "plus").frame(width: 28, height: 28).contentShape(Rectangle())
                 }
                     .buttonStyle(SidebarNavigationStyle()).disabled(!canCreate)
                     .focused($focused, equals: .create)
@@ -219,6 +229,34 @@ private struct SidebarPressStyle: ButtonStyle {
     @Binding var pressed: Bool
     func makeBody(configuration: Configuration) -> some View {
         configuration.label.onChange(of: configuration.isPressed) { _, isPressed in pressed = isPressed }
+    }
+}
+
+/// The header of a folding section. The whole row toggles; like Finder's sidebar,
+/// the chevron appears on hover or keyboard focus, and stays while the section is
+/// folded so hidden rows are never a surprise. Hover state lives here, not in the
+/// sidebar body.
+struct SidebarFoldHeader: View {
+    let title: Text
+    var count: Int? = nil
+    @Binding var expanded: Bool
+    let id: String
+    @State private var hovered = false
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        Button { expanded.toggle() } label: {
+            HStack(spacing: 0) {
+                SidebarSectionTitle(title: title, count: count, expanded: expanded,
+                                    showsDisclosure: hovered || focused || !expanded)
+                Spacer(minLength: 0)
+            }.padding(.horizontal, SidebarMetrics.rowInset)
+                .frame(height: SidebarMetrics.sectionHeaderHeight).contentShape(Rectangle())
+        }.buttonStyle(SidebarNavigationStyle()).focused($focused)
+            .onHover { hovered = $0 }
+            .accessibilityLabel(title)
+            .accessibilityValue(expanded ? Text("已展开") : Text("已收起"))
+            .accessibilityIdentifier("sidebar.section.\(id)")
     }
 }
 
@@ -243,16 +281,7 @@ struct SidebarSection<Content: View, Actions: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 0) {
-                Button { isExpanded.toggle() } label: {
-                    HStack(spacing: 0) {
-                        SidebarSectionTitle(title: Text(title), expanded: isExpanded)
-                        Spacer(minLength: 0)
-                    }.padding(.horizontal, SidebarMetrics.rowInset)
-                        .frame(height: SidebarMetrics.sectionHeaderHeight).contentShape(Rectangle())
-                }.buttonStyle(SidebarNavigationStyle())
-                    .accessibilityLabel(Text(title))
-                    .accessibilityValue(isExpanded ? Text("已展开") : Text("已收起"))
-                    .accessibilityIdentifier("sidebar.section.\(id)")
+                SidebarFoldHeader(title: Text(title), expanded: $isExpanded, id: id)
                 actions
             }.font(.system(size: SidebarMetrics.sectionTitleSize)).foregroundStyle(.secondary)
                 .padding(.top, SidebarMetrics.sectionTopSpacing).padding(.bottom, SidebarMetrics.sectionBottomSpacing)

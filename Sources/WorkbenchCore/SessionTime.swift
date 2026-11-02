@@ -5,19 +5,33 @@ import Foundation
 /// last update everywhere else. A source that reports no timestamp returns nil
 /// instead of a fabricated "just now".
 public enum SessionTime {
-    /// Sidebar chrome has one compact time slot; full wording stays in previews.
+    /// Sidebar chrome has one compact time slot; full wording stays in previews. Like
+    /// Mail, it names the moment rather than the age: the time today, then 昨天, the
+    /// weekday within a week, and a locale-ordered date beyond, so 3/26 never reads as
+    /// a day/month puzzle. The label changes only when the day does.
     public static func compactLabel(since timestamp: Double, now: Date = Date(),
-                                    locale: Locale = AppLanguage.current.resolvedLocale) -> String? {
+                                    locale: Locale = AppLanguage.current.resolvedLocale,
+                                    timeZone: TimeZone = .current) -> String? {
         guard timestamp > 0 else { return nil }
-        let minutes = Int(max(0, now.timeIntervalSince1970 - timestamp) / 60)
-        if minutes == 0 { return L("刚刚", locale: locale) }
-        if minutes < 60 { return L("\(minutes)分", locale: locale) }
-        if minutes < 1440 { return L("\(minutes / 60)时", locale: locale) }
-        if minutes < 1440 * 100 { return L("\(minutes / 1440)天", locale: locale) }
+        // A remote clock can run ahead of this Mac; a future update reads as now.
+        let date = Date(timeIntervalSince1970: min(timestamp, now.timeIntervalSince1970))
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: date),
+                                           to: calendar.startOfDay(for: now)).day ?? 0
+        // Relative date formatting compares against the real clock, not `now`.
+        if days == 1 { return L("昨天", locale: locale) }
         let formatter = DateFormatter()
         formatter.locale = locale
-        formatter.dateFormat = "yy/MM"
-        return formatter.string(from: Date(timeIntervalSince1970: timestamp))
+        formatter.timeZone = timeZone
+        switch days {
+        case 0: formatter.setLocalizedDateFormatFromTemplate("jm")
+        case 2..<7: formatter.setLocalizedDateFormatFromTemplate("EEE")
+        default:
+            let thisYear = calendar.component(.year, from: date) == calendar.component(.year, from: now)
+            formatter.setLocalizedDateFormatFromTemplate(thisYear ? "Md" : "yM")
+        }
+        return formatter.string(from: date)
     }
 
     public static func label(since timestamp: Double, waiting: Bool, now: Date = Date(),
