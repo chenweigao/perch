@@ -37,6 +37,9 @@ final class CommandLineIslandState {
             if connection.host.isLocal || connection.online { spawn(connection: connection) }
         }
         visible = true
+        // Opening is a deliberate action; the shell takes the keyboard. A request
+        // ahead of the surface attaching replays on attach.
+        context?.requestFocus()
     }
 
     func hide() { visible = false }
@@ -51,6 +54,7 @@ final class CommandLineIslandState {
         self.target = target; ended = false
         context = connection.host.isLocal || connection.online ? makeContext(target: target, connection: connection) : nil
         visible = true
+        context?.requestFocus()
     }
 
     /// Reopens the shell on the same target after it exited.
@@ -59,6 +63,7 @@ final class CommandLineIslandState {
         ended = false
         context = connection.host.isLocal || connection.online ? makeContext(target: target, connection: connection) : nil
         visible = true
+        context?.requestFocus()
     }
 
     private func spawn(connection: HostConnection) {
