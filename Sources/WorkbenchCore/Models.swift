@@ -51,7 +51,7 @@ public struct SSHHost: Codable, Identifiable, Equatable, Sendable {
                                             name: "", destination: "", enabledAgents: [])
 }
 
-public struct Snapshot: Decodable, Sendable {
+public struct Snapshot: Decodable, Equatable, Sendable {
     public let version: String
     public let workspaces: [Workspace]
     public let tabs: [Tab]
@@ -74,7 +74,7 @@ public struct Snapshot: Decodable, Sendable {
     }
 }
 
-public struct Workspace: Decodable, Identifiable, Sendable {
+public struct Workspace: Decodable, Identifiable, Equatable, Sendable {
     public let workspaceID: String
     public let label: String
     public var id: String { workspaceID }
@@ -83,7 +83,7 @@ public struct Workspace: Decodable, Identifiable, Sendable {
     }
 }
 
-public struct Tab: Decodable, Identifiable, Sendable {
+public struct Tab: Decodable, Identifiable, Equatable, Sendable {
     public let tabID: String
     public let workspaceID: String
     public let label: String
@@ -93,7 +93,7 @@ public struct Tab: Decodable, Identifiable, Sendable {
     }
 }
 
-public struct Pane: Decodable, Identifiable, Sendable {
+public struct Pane: Decodable, Identifiable, Equatable, Sendable {
     public let revision: UInt64?
     public let paneID: String
     public let terminalID: String

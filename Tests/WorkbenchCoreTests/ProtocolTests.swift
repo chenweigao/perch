@@ -6,6 +6,9 @@ struct ProtocolTests {
     static func main() async throws {
         setbuf(stdout, nil)
         switch ProcessInfo.processInfo.environment["WORKBENCH_BENCH"] {
+        case "json-socket":
+            try await checkJSONSocket()
+            return
         case "1":
             try benchPresentationUpdate()
             return
@@ -64,6 +67,7 @@ struct ProtocolTests {
         try checkKimiTranscript()
         try await checkKimiAPILifecycle()
         try await checkWebSocketHeartbeat()
+        try await checkJSONSocket()
         try checkKimiPrompts()
         try checkUnifiedWorkspace()
         try checkSessionManagement()

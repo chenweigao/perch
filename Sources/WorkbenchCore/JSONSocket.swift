@@ -2,16 +2,31 @@ import Darwin
 import Foundation
 
 /// Newline-delimited JSON over Herdr's forwarded Unix socket. Blocking I/O
-/// runs off the main thread; the timeout also bounds a silent broken tunnel.
+/// runs on a Dispatch queue, never on Swift's cooperative executor. The timeout
+/// bounds a silent broken tunnel; cancellation is checked before and after I/O.
 public enum JSONSocket {
-    public static func request(path: String, method: String, params: [String: Any] = [:]) throws -> Data {
+    private static let ioQueue = DispatchQueue(label: "dev.agentworkbench.json-socket", qos: .utility, attributes: .concurrent)
+
+    public static func request(path: String, method: String, params: [String: Any] = [:]) async throws -> Data {
+        try Task.checkCancellation()
+        var packet = try JSONSerialization.data(withJSONObject: ["id": UUID().uuidString, "method": method, "params": params])
+        packet.append(10)
+        let requestPacket = packet
+        let result: Data = try await withCheckedThrowingContinuation { continuation in
+            ioQueue.async {
+                continuation.resume(with: Result { try requestBlocking(path: path, packet: requestPacket) })
+            }
+        }
+        try Task.checkCancellation()
+        return result
+    }
+
+    private static func requestBlocking(path: String, packet: Data) throws -> Data {
         let fd = try connect(path: path)
         defer { Darwin.close(fd) }
         var timeout = timeval(tv_sec: 8, tv_usec: 0)
         setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
         setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
-        var packet = try JSONSerialization.data(withJSONObject: ["id": UUID().uuidString, "method": method, "params": params])
-        packet.append(10)
         try packet.withUnsafeBytes { bytes in
             var offset = 0
             while offset < bytes.count {
