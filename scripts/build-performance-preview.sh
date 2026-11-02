@@ -68,7 +68,7 @@ fi
 if [[ -z "$theme_ref" ]] || git cat-file -e "$theme_ref:Sources/AgentWorkbench/ActivitySummaryController.swift" 2>/dev/null; then
     app_files+=(Sources/AgentWorkbench/ActivitySummarySettings.swift Sources/AgentWorkbench/ActivitySummaryController.swift)
 fi
-# Revisions before the activity bar's hop indicator do not carry the file.
+# Revisions before the activity bar's Perch indicator do not carry the file.
 if [[ -z "$theme_ref" ]] || git cat-file -e "$theme_ref:Sources/AgentWorkbench/PerchBusyIndicator.swift" 2>/dev/null; then
     app_files+=(Sources/AgentWorkbench/PerchBusyIndicator.swift)
 fi

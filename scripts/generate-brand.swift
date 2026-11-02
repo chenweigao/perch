@@ -7,19 +7,19 @@ let output = root.appendingPathComponent("Resources/Brand")
 let iconset = root.appendingPathComponent("build/Perch.iconset")
 try FileManager.default.createDirectory(at: iconset, withIntermediateDirectories: true)
 
-// Approved identity (2026-10 redesign): a sunset orb perched on a white branch.
-// The branch is tangent to the orb; both sit on a near-black tile.
+// Approved identity (2026-11 line redesign): a sun ring floating over a white
+// branch, both lines, on a flat graphite tile. Same composition as the in-app
+// PerchLineMark (Sources/AgentWorkbench/PerchBusyIndicator.swift) at icon weight:
+// the sun left of centre, one gap between the ring and the branch.
 let tile = NSRect(x: 100, y: 100, width: 824, height: 824)
-let branch = (from: NSPoint(x: 296, y: 640), to: NSPoint(x: 728, y: 640))
-let branchWidth: CGFloat = 84
-let orb = (center: NSPoint(x: 430, y: 476), radius: CGFloat(122))
+let lineWidth: CGFloat = 64
+let branch = (from: NSPoint(x: 282, y: 700), to: NSPoint(x: 742, y: 700))
+let sun = (center: NSPoint(x: 440, y: 470), radius: CGFloat(140))
 
-let backgroundTop = "#1B1E26", backgroundBottom = "#121419"
+// One ink, one brand hue, no gradients.
+let tileColor = "#16191F"
 let branchColor = "#FAFAF7"
-let orbTop = "#FFD98E", orbBottom = "#FF7A59"
-// Solid tone used where a gradient is unavailable (Icon Composer layer fill).
-// Slightly deeper than the flat icon's mid-tone: the glass pipeline lightens it.
-let orbSolid = "#FF8455"
+let sunColor = "#FF7A59"
 
 func color(_ hex: String) -> NSColor {
     let value = UInt32(hex.dropFirst(), radix: 16)!
@@ -29,15 +29,8 @@ func color(_ hex: String) -> NSColor {
 }
 func cgColor(_ hex: String) -> CGColor { color(hex).cgColor }
 
-func gradientDef(id: String, top: String, bottom: String, x1: Int, y1: Int, x2: Int, y2: Int) -> String {
-    """
-    <linearGradient id="\(id)" gradientUnits="userSpaceOnUse" x1="\(x1)" y1="\(y1)" x2="\(x2)" y2="\(y2)">
-      <stop offset="0" stop-color="\(top)"/><stop offset="1" stop-color="\(bottom)"/>
-    </linearGradient>
-    """
-}
-let branchLine = "<line x1=\"\(Int(branch.from.x))\" y1=\"\(Int(branch.from.y))\" x2=\"\(Int(branch.to.x))\" y2=\"\(Int(branch.to.y))\" stroke-width=\"\(Int(branchWidth))\" stroke-linecap=\"round\""
-let orbCircle = "<circle cx=\"\(Int(orb.center.x))\" cy=\"\(Int(orb.center.y))\" r=\"\(Int(orb.radius))\""
+let branchLine = "<line x1=\"\(Int(branch.from.x))\" y1=\"\(Int(branch.from.y))\" x2=\"\(Int(branch.to.x))\" y2=\"\(Int(branch.to.y))\" stroke-width=\"\(Int(lineWidth))\" stroke-linecap=\"round\""
+let sunRing = "<circle cx=\"\(Int(sun.center.x))\" cy=\"\(Int(sun.center.y))\" r=\"\(Int(sun.radius))\" fill=\"none\" stroke-width=\"\(Int(lineWidth))\""
 
 func svg(icon: Bool) -> String {
     // Mono mark: everything in one ink color, on transparency.
@@ -46,19 +39,15 @@ func svg(icon: Bool) -> String {
         return """
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Perch">
           \(branchLine) stroke="\(ink)"/>
-          \(orbCircle) fill="\(ink)"/>
+          \(sunRing) stroke="\(ink)"/>
         </svg>
         """
     }
     return """
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Perch">
-    <defs>
-      \(gradientDef(id: "tile", top: backgroundTop, bottom: backgroundBottom, x1: 512, y1: 100, x2: 512, y2: 924))
-      \(gradientDef(id: "orb", top: orbTop, bottom: orbBottom, x1: 430, y1: 354, x2: 430, y2: 598))
-    </defs>
-      <rect x="100" y="100" width="824" height="824" rx="170" fill="url(#tile)"/>
+      <rect x="100" y="100" width="824" height="824" rx="170" fill="\(tileColor)"/>
       \(branchLine) stroke="\(branchColor)"/>
-      \(orbCircle) fill="url(#orb)"/>
+      \(sunRing) stroke="\(sunColor)"/>
     </svg>
     """
 }
@@ -77,8 +66,8 @@ func layerSVG(_ shapes: [String]) -> String {
 let iconPackage = output.appendingPathComponent("Perch.icon")
 let iconAssets = iconPackage.appendingPathComponent("Assets")
 try FileManager.default.createDirectory(at: iconAssets, withIntermediateDirectories: true)
-try layerSVG(["\(orbCircle) fill=\"\(orbSolid)\"/>"])
-    .write(to: iconAssets.appendingPathComponent("orb.svg"), atomically: true, encoding: .utf8)
+try layerSVG(["\(sunRing) stroke=\"\(sunColor)\"/>"])
+    .write(to: iconAssets.appendingPathComponent("sun.svg"), atomically: true, encoding: .utf8)
 try layerSVG(["\(branchLine) stroke=\"\(branchColor)\"/>"])
     .write(to: iconAssets.appendingPathComponent("branch.svg"), atomically: true, encoding: .utf8)
 
@@ -99,11 +88,11 @@ func glassLayer(name: String, file: String, fill: [String: String]) -> [String: 
     ]
 }
 let iconJSON: [String: Any] = [
-    "fill": ["solid": srgb(backgroundTop)],
+    "fill": ["solid": srgb(tileColor)],
     "groups": [
         [
             "layers": [
-                glassLayer(name: "orb", file: "orb.svg", fill: ["solid": srgb("#FF8455")]),
+                glassLayer(name: "sun", file: "sun.svg", fill: ["solid": srgb(sunColor)]),
                 glassLayer(name: "branch", file: "branch.svg", fill: ["solid": srgb(branchColor)]),
             ],
             "shadow": ["kind": "neutral", "opacity": 0.2],
@@ -128,32 +117,21 @@ func png(pixels: Int) -> Data {
     cg.translateBy(x: 0, y: 1024)
     cg.scaleBy(x: 1, y: -1)
 
-    func fillVertical(_ path: CGPath, _ top: String, _ bottom: String, _ bbox: CGRect) {
-        cg.saveGState()
-        cg.addPath(path)
-        cg.clip()
-        let gradient = CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
-                                  colors: [cgColor(top), cgColor(bottom)] as CFArray, locations: [0, 1])!
-        cg.drawLinearGradient(gradient, start: CGPoint(x: bbox.midX, y: bbox.minY),
-                              end: CGPoint(x: bbox.midX, y: bbox.maxY),
-                              options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
-        cg.restoreGState()
-    }
-
     let tilePath = CGPath(roundedRect: tile, cornerWidth: 170, cornerHeight: 170, transform: nil)
-    fillVertical(tilePath, backgroundTop, backgroundBottom, tile)
+    cg.addPath(tilePath)
+    cg.setFillColor(cgColor(tileColor))
+    cg.fillPath()
 
-    color(branchColor).setStroke()
-    let branchPath = NSBezierPath()
-    branchPath.move(to: branch.from)
-    branchPath.line(to: branch.to)
-    branchPath.lineWidth = branchWidth
-    branchPath.lineCapStyle = .round
-    branchPath.stroke()
+    cg.setLineWidth(lineWidth)
+    cg.setLineCap(.round)
+    cg.setStrokeColor(cgColor(branchColor))
+    cg.move(to: branch.from)
+    cg.addLine(to: branch.to)
+    cg.strokePath()
 
-    let orbPath = CGPath(ellipseIn: CGRect(x: orb.center.x - orb.radius, y: orb.center.y - orb.radius,
-                                           width: orb.radius * 2, height: orb.radius * 2), transform: nil)
-    fillVertical(orbPath, orbTop, orbBottom, orbPath.boundingBox)
+    cg.setStrokeColor(cgColor(sunColor))
+    cg.strokeEllipse(in: CGRect(x: sun.center.x - sun.radius, y: sun.center.y - sun.radius,
+                                width: sun.radius * 2, height: sun.radius * 2))
 
     context.flushGraphics()
     NSGraphicsContext.restoreGraphicsState()

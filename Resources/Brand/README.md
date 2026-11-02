@@ -2,27 +2,31 @@
 
 **A home for your agents.**
 
-Approved identity (2026-10 redesign): a sunset orb perched on a white branch —
-Perch, literally. The branch is tangent to the orb. No letterform, no terminal
-glyph, no house.
+Approved identity (2026-11 line redesign): a sun ring floating over a branch,
+both drawn as lines — Perch, literally. One gap separates the ring from the
+branch; the sun sits left of centre. No letterform, no terminal glyph, no house.
+It replaces the 2026-10 mark (a gradient orb tangent to a thick white branch).
 
 - `Perch.svg`: editable app icon, transparent outer margin.
-- `Perch-mark.svg`: monochrome mark (branch + orb in one ink) on transparency.
+- `Perch-mark.svg`: monochrome mark (branch + ring in one ink) on transparency.
 - `Perch-1024.png`: 1024 px app icon.
 - `Perch.icns`: macOS icon with 16, 32, 128, 256 and 512 point sizes at 1× and 2×.
 - `Perch.icon/`: Liquid Glass Icon Composer document; one full-canvas SVG per
-  layer (`Assets/`), flat solid fills, backplate is the near-black tile.
-- `scripts/generate-brand.swift`: canonical geometry shared by SVG, raster
+  layer (`Assets/sun.svg`, `Assets/branch.svg`), flat solid fills, backplate is
+  the graphite tile.
+- `scripts/generate-brand.swift`: canonical icon geometry shared by SVG, raster
   exports and the `.icon` layers.
 
-Colors: tile `#1B1E26`→`#121419` (vertical), branch `#FAFAF7`,
-orb `#FFD98E`→`#FF7A59` (vertical, sun low on the branch). Where a gradient is
-unavailable (Icon Composer layer fill), the orb uses the solid `#FF8455`, which
-is deeper than the flat mid-tone because the glass pipeline lightens it.
-Keep the orb/branch tangency and the orb left of center. The app icon has a
-transparent 100 px outer margin in a 1024 px canvas for the macOS Dock. Use the
-standalone mark on light backgrounds. Name and tagline are live text, not part
-of the icon.
+Colors: one ink and one brand hue, no gradients. Tile `#16191F`, branch
+`#FAFAF7`, sun `#FF7A59`. Icon canvas 1024, line width 64: branch
+(282, 700)→(742, 700) with round caps, ring centre (440, 470), radius 140.
+
+In the app the mark is drawn from `PerchLineMark`
+(`Sources/AgentWorkbench/PerchBusyIndicator.swift`) on the 24-unit glyph grid
+the agent marks use (line width 1.75). The status bar fits it to its 16 pt slot,
+runs a chasing arc in the body ink while a turn runs and rests in the quiet ink;
+the home mark (`PerchMark`) draws the branch in `ink` and the ring in the brand
+hue. Keep the ring/branch gap: at 16 pt touching strokes merge into an Ω.
 
 Regenerate from the repository root on macOS:
 
@@ -38,8 +42,6 @@ the glass (shadow, translucency, per-appearance fills), open `Perch.icon` in
 Icon Composer, then mirror the changes back into `generate-brand.swift` so the
 document stays reproducible.
 
-The approved concept was explored with the built-in image-generation tool; these
-production assets are deterministic geometry, not cropped from the concept board.
 The public app name is Perch. The internal executable, bundle identifier, stored
 workspace paths and remote service names keep their existing identities so that
 branding does not fork or migrate sessions and preferences.

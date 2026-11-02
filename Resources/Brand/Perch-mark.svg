@@ -1,4 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Perch">
-  <line x1="296" y1="640" x2="728" y2="640" stroke-width="84" stroke-linecap="round" stroke="#292D37"/>
-  <circle cx="430" cy="476" r="122" fill="#292D37"/>
+  <line x1="282" y1="700" x2="742" y2="700" stroke-width="64" stroke-linecap="round" stroke="#292D37"/>
+  <circle cx="440" cy="470" r="140" fill="none" stroke-width="64" stroke="#292D37"/>
 </svg>
