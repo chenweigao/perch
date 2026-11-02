@@ -101,7 +101,40 @@ private struct WorkbenchDetail: View {
     @Bindable var model: WorkbenchModel
 
     var body: some View {
-        conversation.environment(\.conversationPresentations, model.conversationPresentations)
+        GeometryReader { geo in
+            conversation
+                .padding(.bottom, commandLinePresented ? Self.islandHeight(in: geo.size) + Self.islandMargin + 6 : 0)
+                .frame(minWidth: WorkspaceLayoutMetrics.inspectorReadingMinimumWidth, maxWidth: .infinity, maxHeight: .infinity)
+                .background(WorkbenchTheme.contentBackground)
+                .overlay(alignment: .bottom) { commandLineIsland(in: geo.size) }
+        }
+        .environment(\.conversationPresentations, model.conversationPresentations)
+        .animation(.easeInOut(duration: 0.18), value: commandLinePresented)
+    }
+
+    /// A live shell stays mounted (hidden) until closed, so hiding the island
+    /// or leaving the session never kills what runs in it.
+    private var commandLinePresented: Bool { model.commandLineIsland.visible && model.commandLineTarget != nil }
+
+    private static func islandHeight(in size: CGSize) -> CGFloat { min(460, max(260, size.height * 0.4)) }
+    /// A narrow float margin keeps the rounded card readable while the island
+    /// otherwise spans the full reader width.
+    private static let islandMargin: CGFloat = 8
+
+    @ViewBuilder private func commandLineIsland(in size: CGSize) -> some View {
+        if let target = model.commandLineIsland.target {
+            CommandLineIslandView(
+                state: model.commandLineIsland,
+                connection: model.connections.first { $0.id == target.hostID },
+                currentTarget: model.commandLineTarget,
+                onRetarget: { model.retargetCommandLineIsland() },
+                onRestart: { model.restartCommandLineIsland() })
+                .frame(height: Self.islandHeight(in: size))
+                .padding(.horizontal, Self.islandMargin).padding(.bottom, Self.islandMargin)
+                .opacity(commandLinePresented ? 1 : 0)
+                .allowsHitTesting(commandLinePresented)
+                .accessibilityHidden(!commandLinePresented)
+        }
     }
 
     @ViewBuilder private var conversation: some View {
@@ -121,7 +154,14 @@ private struct WorkbenchDetail: View {
             if !model.draftingNewTask && model.showConversationFind && (model.showKimi || model.showNative) {
                 ConversationFindBar(model: model, kimi: model.kimi, native: model.native)
             }
-            ZStack {
+            detailContent(index: index)
+        }
+    }
+
+    // Kept as a separate expression: the branch set is heavy enough that the
+    // compiler's expression timer trips when it is inlined into `conversation`.
+    @ViewBuilder private func detailContent(index: SessionGroupIndex) -> some View {
+        ZStack {
                 if model.draftingNewTask {
                     NewTaskView(model: model, native: model.native, kimi: model.kimi)
                 } else if model.showDashboard {
@@ -187,8 +227,6 @@ private struct WorkbenchDetail: View {
                         .accessibilityHidden(model.showDashboard || model.draftingNewTask || model.selectedTerminalID != terminal.id)
                 }
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
-        }.frame(minWidth: WorkspaceLayoutMetrics.inspectorReadingMinimumWidth, maxWidth: .infinity, maxHeight: .infinity)
-            .background(WorkbenchTheme.contentBackground)
     }
 
     private var unavailableSession: some View {

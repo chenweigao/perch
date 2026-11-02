@@ -489,6 +489,14 @@ struct NativeDirectoryProbe: NSViewRepresentable {
         self.window = window
         Task {
             model.open(fixture.sessions[0])
+            // Design-review hook: float the command-line island over the fixture
+            // session, backed by a real local shell in the home directory.
+            if ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_COMMAND_LINE_ISLAND"] == "1" {
+                let local = HostConnection(host: SSHHost(id: ExecutionEnvironment.localHostID, name: "本机", destination: ""))
+                model.connections.append(local)
+                model.commandLineIsland.show(target: .init(hostID: local.id, hostName: local.host.name,
+                                                           directory: NSHomeDirectory()), connection: local)
+            }
             guard let mode = ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] else { return }
             await NativeAcceptanceRunner(model: model, fixture: fixture).run(mode)
         }

@@ -50,6 +50,8 @@ struct WorkbenchApp: App {
             }
             CommandMenu(L("Conversation")) {
                 Button(L("搜索项目与会话")) { CompanionWindowController.shared.showMain(); model.showSessionSearch = true }.keyboardShortcut("k")
+                Button(L("命令行")) { model.toggleCommandLineIsland() }
+                    .keyboardShortcut("j").disabled(model.commandLineTarget == nil)
                 Button(L("Find in conversation")) {
                     if model.fileWindow.window?.isKeyWindow == true {
                         NotificationCenter.default.post(name: .init("PerchFindInFile"), object: nil)

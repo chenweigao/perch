@@ -53,6 +53,13 @@ struct WorkbenchHeaderActions: View {
                             .help("查看文件（只读）").accessibilityLabel("查看文件")
                             .accessibilityValue(model.taskContextWindow.isShowing(.files) ? "已展开" : "已收起")
                         TaskContextButton(model: model)
+                        Button { model.toggleCommandLineIsland() } label: {
+                            WorkbenchToolbarSymbol(name: "terminal")
+                                .foregroundStyle(model.commandLineIsland.visible ? WorkbenchTheme.accent : .secondary)
+                        }.buttonStyle(WorkbenchToolbarButtonStyle(selected: model.commandLineIsland.visible))
+                            .help("命令行").accessibilityLabel("命令行")
+                            .accessibilityValue(model.commandLineIsland.visible ? "已展开" : "已收起")
+                            .disabled(model.commandLineTarget == nil)
                     }
                     Menu {
                         if model.showKimi { Button("同步会话") { kimi.reloadSelected() }.disabled(!kimi.online || kimi.loading) }
