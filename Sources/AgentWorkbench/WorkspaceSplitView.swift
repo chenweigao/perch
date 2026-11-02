@@ -622,6 +622,10 @@ final class WorkbenchDetailController: NSViewController {
         guard visible != isIslandVisible, let islandCard, let islandShadow else { return }
         isIslandVisible = visible
         if visible { updateIslandHeight() }
+        if !visible, let responder = view.window?.firstResponder as? NSView, responder.isDescendant(of: islandCard) {
+            // A hidden terminal must not keep eating keys.
+            view.window?.makeFirstResponder(nil)
+        }
         cardBottomDirect?.isActive = !visible
         cardBottomToIsland?.isActive = visible
         islandCard.isHidden = !visible
@@ -643,7 +647,11 @@ final class WorkbenchDetailController: NSViewController {
     }
 
     private static func islandHeight(forCanvasHeight height: CGFloat) -> CGFloat {
-        min(460, max(260, height * 0.4))
+        let proposed = min(460, max(260, height * 0.4))
+        // The reading sheet keeps a usable 240pt even on short windows.
+        let budget = height - WorkspaceLayoutMetrics.contentTopInset -
+            WorkspaceLayoutMetrics.frameInset - WorkspaceLayoutMetrics.sheetGutter - 240
+        return max(160, min(proposed, budget))
     }
 }
 
