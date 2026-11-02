@@ -986,6 +986,72 @@ class CodexProtocolTests(unittest.TestCase):
         self.assertEqual(fake.responses[-1][1],{'action':'accept','content':{'enabled':True,'tags':['one','two']}})
         s.codex_adapter.frame(fake,{'id':8,'method':'future/request','params':{'threadId':'native-thread'}})
         self.assertEqual(fake.responses[-1],(8,None,{'code':-32601,'message':'unsupported by the Perch bridge'}))
+    def async_question(self,s,item_id='call-1',questions=None):
+        s.codex_adapter.item({'type':'agentMessage','id':item_id,'text':'是否允许这样恢复？\n- 允许短暂断开并重连\n- 保留现有 SSH 会话',
+            'delivery':'async','questions':questions if questions is not None else [
+                {'title':'是否允许这样恢复？','options':['允许短暂断开并重连','保留现有 SSH 会话']}]},True)
+    def test_async_question_survives_its_turn_and_answers_in_the_reply_envelope(self):
+        s,fake=self.session()
+        self.async_question(s)
+        interaction=next(x for x in s.state['interactions'] if x['id']=='codex-asyncq:call-1')
+        self.assertEqual((interaction['name'],interaction['title']),('AskUserQuestion','Codex 提问'))
+        self.assertEqual([o['label'] for o in interaction['input']['questions'][0]['options']],['允许短暂断开并重连','保留现有 SSH 会话'])
+        s.state['busy']=True; s.state['turnId']='turn-native'
+        s.codex_adapter.frame(fake,{'method':'turn/completed','params':{'threadId':'native-thread','turn':{'id':'turn-native','status':'completed'}}})
+        self.assertIn('codex-asyncq:call-1',[x['id'] for x in s.state['interactions']])
+        s.codex_adapter.answer('codex-asyncq:call-1',{'allow':True,'answers':{'是否允许这样恢复？':'允许短暂断开并重连'}})
+        method,params=next(call for call in fake.calls if call[0]=='turn/start')
+        text=params['input'][0]['text']
+        self.assertTrue(text.startswith('<send_user_message_question_reply>') and text.endswith('</send_user_message_question_reply>'))
+        self.assertEqual(json.loads(text[len('<send_user_message_question_reply>'):-len('</send_user_message_question_reply>')]),
+                         [{'questionItemId':'call-1','question':'是否允许这样恢复？','answer':'允许短暂断开并重连'}])
+        self.assertNotIn('codex-asyncq:call-1',[x['id'] for x in s.state['interactions']])
+        shown=s.state['messages'][-1]
+        self.assertEqual(shown['role'],'user'); self.assertEqual(shown['content'][0]['text'],'> 是否允许这样恢复？\n\n允许短暂断开并重连')
+    def test_async_question_answer_steers_a_running_turn(self):
+        s,fake=self.session()
+        self.async_question(s)
+        s.state['busy']=True; s.state['turnId']='turn-native'
+        s.codex_adapter.answer('codex-asyncq:call-1',{'allow':True,'answers':{'是否允许这样恢复？':'保留现有 SSH 会话'}})
+        method,params=next(call for call in fake.calls if call[0]=='turn/steer')
+        self.assertEqual(params['expectedTurnId'],'turn-native')
+        self.assertIn('保留现有 SSH 会话',params['input'][0]['text'])
+    def test_async_question_requires_every_answer(self):
+        s,fake=self.session()
+        self.async_question(s,questions=[{'title':'第一问','options':['好']},{'title':'第二问'}])
+        with self.assertRaises(ValueError):
+            s.codex_adapter.answer('codex-asyncq:call-1',{'allow':True,'answers':{'第一问':'好'}})
+        self.assertIn('codex-asyncq:call-1',[x['id'] for x in s.state['interactions']])
+        self.assertEqual([q['options'] for q in s.state['interactions'][0]['input']['questions']],[[{'label':'好','description':''}],[]])
+    def test_async_questions_do_not_return_from_history(self):
+        s,fake=self.session()
+        self.async_question(s)
+        s.codex_adapter.clear_async_questions()
+        self.assertEqual(s.state['interactions'],[])
+        self.async_question(s)
+        s.codex_adapter.item({'type':'agentMessage','id':'call-old','text':'旧问题','delivery':'async',
+                              'questions':[{'title':'旧问题','options':['好']}]},True,history=True)
+        self.assertNotIn('codex-asyncq:call-old',[x['id'] for x in s.state['interactions']])
+    def test_follow_up_supersedes_pending_async_questions(self):
+        s,fake=self.session()
+        self.async_question(s)
+        s.prompt({'requestId':'r-2','text':'继续'})
+        self.assertEqual([x for x in s.state['interactions'] if x.get('asyncQuestion')],[])
+        self.assertEqual(s.codex_adapter.interactions,{})
+    def test_question_reply_envelope_reads_as_its_answers(self):
+        s,fake=self.session()
+        envelope=('<send_user_message_question_reply>'
+                  +json.dumps({'questionItemId':'call-1','question':'继续？','answer':'继续'},ensure_ascii=False)
+                  +'</send_user_message_question_reply>')
+        s.codex_adapter.item({'type':'userMessage','id':'u-1','clientId':'foreign-1','content':[{'type':'text','text':envelope}]},True)
+        self.assertEqual(s.state['messages'][-1]['content'][0]['text'],'> 继续？\n\n继续')
+        self.assertIsNone(broker.codex_async_reply_display('普通消息'))
+    def test_thread_name_update_renames_the_session(self):
+        s,fake=self.session()
+        s.codex_adapter.frame(fake,{'method':'thread/name/updated','params':{'threadId':'native-thread','threadName':'修复 SSH 转发'}})
+        self.assertEqual(s.state['title'],'修复 SSH 转发')
+        s.codex_adapter.frame(fake,{'method':'thread/name/updated','params':{'threadId':'native-thread'}})
+        self.assertEqual(s.state['title'],'修复 SSH 转发')
 
 class CodexHandlerContractTests(unittest.TestCase):
     def setUp(self):
