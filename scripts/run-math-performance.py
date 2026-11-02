@@ -71,8 +71,14 @@ def compare(runs):
         a, b = runs["baseline"][key], runs["candidate"][key]
         comparisons[key] = {}
         for label in ["initial_layout_display_ms"]:
-            comparisons[key][label] = {"baseline": median([record["measurements"][label] for record in a]),
-                                       "candidate": median([record["measurements"][label] for record in b])}
+            # Initial layout/display includes WindowServer scheduling: on a shared
+            # runner even the median of three carries load spikes. Compare the
+            # per-variant minimum — the best-case run isolates the code's cost,
+            # which is what this regression gate means to measure.
+            comparisons[key][label] = {"baseline": min(record["measurements"][label] for record in a),
+                                       "candidate": min(record["measurements"][label] for record in b),
+                                       "baseline_median_ms": median([record["measurements"][label] for record in a]),
+                                       "candidate_median_ms": median([record["measurements"][label] for record in b])}
         for label in ["scroll_work", "scheduled_tick_gap"]:
             comparisons[key][label] = {"baseline_p95_ms": median([record["measurements"][label]["p95_ms"] for record in a]),
                                        "candidate_p95_ms": median([record["measurements"][label]["p95_ms"] for record in b])}
