@@ -131,16 +131,25 @@ final class HostConnection: ObservableObject, Identifiable {
     private func refresh(token: UUID) async throws {
         let path = socketPath
         let result = try await Task.detached {
-            let data = try JSONSocket.request(path: path, method: "session.snapshot")
+            let data = try await JSONSocket.request(path: path, method: "session.snapshot")
             return try Wire.decode(SnapshotResult.self, from: data).snapshot
         }.value
+        try Task.checkCancellation()
         guard generation == token else { throw CancellationError() }
-        snapshot = result
-        online = true
-        stateMessage = "已连接"
-        error = nil
+        applySnapshot(result)
+    }
+
+    func applySnapshot(_ result: Snapshot) {
+        let changed = snapshot != result
+        let reconnected = !online
+        if changed { snapshot = result }
+        if reconnected {
+            online = true
+            stateMessage = "已连接"
+        }
+        if error != nil { error = nil }
         updatedAt = Date()
-        onSnapshot?()
+        if changed || reconnected { onSnapshot?() }
     }
 
     func closeTerminal(_ terminalID: String) async throws {
@@ -159,7 +168,7 @@ final class HostConnection: ObservableObject, Identifiable {
         let token = generation
         let path = socketPath
         let created = try await Task.detached {
-            let data = try JSONSocket.request(path: path, method: "tab.create", params: [
+            let data = try await JSONSocket.request(path: path, method: "tab.create", params: [
                 "workspace_id": workspaceID, "cwd": cwd, "label": label, "focus": false
             ])
             return try Wire.decode(CreatedTerminalResult.self, from: data)
