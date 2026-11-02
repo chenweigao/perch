@@ -14,12 +14,16 @@ extension AgentMarkKind {
 struct AgentMark: View {
     let kind: SessionKind
     var size: CGFloat = 14
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         if let mark = AgentMarkKind(kind) {
+            // Line tints differ per appearance; reading the scheme here redraws
+            // the Canvas when it changes.
+            let dark = colorScheme == .dark
             Canvas { context, canvasSize in
                 context.withCGContext { cg in
-                    AgentMarkArtwork.draw(mark, in: CGRect(origin: .zero, size: canvasSize), context: cg)
+                    AgentMarkArtwork.draw(mark, in: CGRect(origin: .zero, size: canvasSize), dark: dark, context: cg)
                 }
             }
             .frame(width: size, height: size)
@@ -37,7 +41,9 @@ struct AgentMark: View {
 /// Native menus are NSMenu-backed and only retain color from non-template
 /// NSImages (see HostIdentityIcon.menuImage). Menu *labels* also flatten
 /// Canvas content to nothing, so menu faces must use this image too.
-/// Everywhere else uses the vector view above.
+/// Everywhere else uses the vector view above. The handler resolves the
+/// appearance it is drawn in, as ReplyMathView's adaptive images do, so one
+/// cached image serves light and dark menus.
 enum AgentMarkMenuImage {
     private static let cache = NSCache<NSString, NSImage>()
 
@@ -49,7 +55,8 @@ enum AgentMarkMenuImage {
             nsImage = cached
         } else {
             nsImage = NSImage(size: NSSize(width: size, height: size), flipped: true) { rect in
-                AgentMarkArtwork.draw(mark, in: rect, context: NSGraphicsContext.current!.cgContext)
+                let dark = NSAppearance.currentDrawing().bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                AgentMarkArtwork.draw(mark, in: rect, dark: dark, context: NSGraphicsContext.current!.cgContext)
                 return true
             }
             nsImage.isTemplate = false
