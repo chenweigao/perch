@@ -16,6 +16,8 @@ enum WorkspaceLayoutMetrics {
     /// The reading sheet floats just below the unified window toolbar.
     static let frameInset: CGFloat = 12
     static let contentTopInset: CGFloat = WorkbenchChrome.headerHeight + 4
+    /// The gap between the reading sheet and its subordinate command-line sheet.
+    static let sheetGutter: CGFloat = 6
     /// Keep a usable reading lane beside the integrated inspector in narrow windows.
     static let inspectorReadingMinimumWidth: CGFloat = 320
     static let sidebarInset: CGFloat = frameInset
@@ -76,6 +78,10 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
     let header: Header
     let actions: Actions
     let inspector: AnyView?
+    /// The command line is the reader's subordinate sheet: installed once, then
+    /// only shown or hidden, so a live shell survives being hidden.
+    let commandLine: AnyView?
+    let commandLineVisible: Bool
     let content: Content
 
     init(newConversation: @escaping () -> Void,
@@ -92,6 +98,8 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         self.header = header()
         self.actions = actions()
         inspector = nil
+        commandLine = nil
+        commandLineVisible = false
         self.content = content()
     }
 
@@ -99,6 +107,8 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
                           canNavigate: @escaping (Int) -> Bool = { _ in false },
                           navigate: @escaping (Int) -> Void = { _ in },
                           inspectorVisible: Bool,
+                          commandLineVisible: Bool = false,
+                          commandLine: (() -> AnyView)? = nil,
                           @ViewBuilder sidebar: () -> Sidebar,
                           @ViewBuilder header: () -> Header,
                           @ViewBuilder actions: () -> Actions,
@@ -112,6 +122,8 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         self.header = header()
         self.actions = actions()
         self.inspector = AnyView(inspector())
+        self.commandLineVisible = commandLineVisible
+        self.commandLine = commandLine?()
         self.content = content()
     }
 
@@ -138,6 +150,9 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         controller.installFloatingSidebar(coordinator.sidebarHost, detailController: detailController)
         if let inspectorHost = coordinator.inspectorHost {
             controller.installFloatingInspector(inspectorHost, visible: inspectorVisible)
+        }
+        if let commandLineHost = coordinator.commandLineHost {
+            controller.installCommandLineIsland(commandLineHost, visible: commandLineVisible)
         }
 
         // Retire the saved trailing spacer: actions belong at the window edge.
@@ -177,6 +192,19 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
                 controller.installFloatingInspector(host, visible: true)
             }
         }
+        if let commandLine {
+            let root = WorkspaceFloatingPanelRoot(content: commandLine, locale: locale)
+            if let host = coordinator.commandLineHost {
+                host.rootView = root
+            } else {
+                let host = NSHostingView(rootView: root)
+                host.sizingOptions = []
+                host.safeAreaRegions = []
+                coordinator.commandLineHost = host
+                controller.installCommandLineIsland(host, visible: commandLineVisible)
+            }
+        }
+        coordinator.setCommandLineIslandVisible(commandLineVisible)
         coordinator.setInspectorVisible(inspectorVisible)
         coordinator.updateToolbarLanguage()
     }
@@ -192,6 +220,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         let headerHost: WorkbenchToolbarTitleHost<WorkspaceLocalizedRoot<Header>>
         let actionsHost: NSHostingView<WorkspaceLocalizedRoot<Actions>>
         var inspectorHost: NSHostingView<WorkspaceInspectorPanelRoot<AnyView>>?
+        var commandLineHost: NSHostingView<WorkspaceFloatingPanelRoot<AnyView>>?
         weak var controller: WorkbenchSplitController?
         var locale: Locale
         var newConversation: () -> Void
@@ -220,6 +249,9 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             inspectorHost = (view.inspectorVisible ? view.inspector : nil).map {
                 NSHostingView(rootView: WorkspaceInspectorPanelRoot(content: $0, locale: view.locale))
             }
+            commandLineHost = view.commandLine.map {
+                NSHostingView(rootView: WorkspaceFloatingPanelRoot(content: $0, locale: view.locale))
+            }
             locale = view.locale
             newConversation = view.newConversation
             canNavigate = view.canNavigate
@@ -230,6 +262,8 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             contentHost.sizingOptions = []
             inspectorHost?.sizingOptions = []
             inspectorHost?.safeAreaRegions = []
+            commandLineHost?.sizingOptions = []
+            commandLineHost?.safeAreaRegions = []
             headerHost.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             headerHost.setContentHuggingPriority(.defaultLow, for: .horizontal)
             headerHost.didLayout = { [weak self] in self?.scheduleTitleAlignment() }
@@ -237,6 +271,10 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
 
         func setInspectorVisible(_ visible: Bool) {
             controller?.setInspectorDesiredVisible(visible)
+        }
+
+        func setCommandLineIslandVisible(_ visible: Bool) {
+            controller?.setCommandLineIslandVisible(visible)
         }
 
         func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -436,6 +474,12 @@ final class WorkbenchDetailController: NSViewController {
     private(set) var contentTrailingInset: CGFloat = 0
     private var card: WorkbenchContentCardView?
     private var cardShadow: WorkbenchPanelShadowView?
+    private var islandCard: WorkbenchContentCardView?
+    private var islandShadow: WorkbenchPanelShadowView?
+    private var islandHeightConstraint: NSLayoutConstraint?
+    private var cardBottomDirect: NSLayoutConstraint?
+    private var cardBottomToIsland: NSLayoutConstraint?
+    private(set) var isIslandVisible = false
     var cardView: NSView? { card }
 
     init(content: NSViewController) {
@@ -461,13 +505,15 @@ final class WorkbenchDetailController: NSViewController {
         let inset = WorkspaceLayoutMetrics.frameInset
         let leading = card.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: inset)
         let trailing = card.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -inset)
+        let cardBottom = card.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -inset)
         cardLeadingConstraint = leading
         cardTrailingConstraint = trailing
+        cardBottomDirect = cardBottom
         NSLayoutConstraint.activate([
             card.topAnchor.constraint(equalTo: view.topAnchor, constant: WorkspaceLayoutMetrics.contentTopInset),
             leading,
             trailing,
-            card.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -inset),
+            cardBottom,
             detail.topAnchor.constraint(equalTo: card.topAnchor),
             detail.leadingAnchor.constraint(equalTo: card.leadingAnchor),
             detail.bottomAnchor.constraint(equalTo: card.bottomAnchor),
@@ -528,6 +574,76 @@ final class WorkbenchDetailController: NSViewController {
     func setCornerRadius(_ radius: CGFloat) {
         card?.cornerRadius = radius
         cardShadow?.cornerRadius = radius
+        islandCard?.cornerRadius = radius
+        islandShadow?.cornerRadius = radius
+    }
+
+    /// The command line is the reading sheet's subordinate sheet: the same opaque
+    /// surface family, directly below it, with the window glass showing in the
+    /// gap. Installed once; afterwards only shown or hidden so a live shell
+    /// survives being hidden.
+    func installIsland(_ island: NSView) {
+        guard islandCard == nil, let card else { return }
+        let islandCard = WorkbenchContentCardView()
+        islandCard.cornerRadius = card.cornerRadius
+        islandCard.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(islandCard)
+        let shadow = WorkbenchPanelShadowView.install(behind: islandCard, in: view)
+        shadow.cornerRadius = islandCard.cornerRadius
+        islandShadow = shadow
+        island.translatesAutoresizingMaskIntoConstraints = false
+        island.clipsToBounds = true
+        islandCard.addSubview(island)
+        let inset = WorkspaceLayoutMetrics.frameInset
+        let height = islandCard.heightAnchor.constraint(
+            equalToConstant: Self.islandHeight(forCanvasHeight: view.bounds.height))
+        let toIsland = card.bottomAnchor.constraint(equalTo: islandCard.topAnchor,
+                                                    constant: -WorkspaceLayoutMetrics.sheetGutter)
+        NSLayoutConstraint.activate([
+            // Pinned to the reading sheet, not the canvas, so the island follows
+            // the card when the floating sidebar pushes its leading edge right.
+            islandCard.leadingAnchor.constraint(equalTo: card.leadingAnchor),
+            islandCard.trailingAnchor.constraint(equalTo: card.trailingAnchor),
+            islandCard.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -inset),
+            height,
+            island.topAnchor.constraint(equalTo: islandCard.topAnchor),
+            island.leadingAnchor.constraint(equalTo: islandCard.leadingAnchor),
+            island.trailingAnchor.constraint(equalTo: islandCard.trailingAnchor),
+            island.bottomAnchor.constraint(equalTo: islandCard.bottomAnchor),
+        ])
+        islandHeightConstraint = height
+        cardBottomToIsland = toIsland
+        self.islandCard = islandCard
+        islandCard.isHidden = !isIslandVisible
+        shadow.isHidden = !isIslandVisible
+    }
+
+    func setIslandVisible(_ visible: Bool) {
+        guard visible != isIslandVisible, let islandCard, let islandShadow else { return }
+        isIslandVisible = visible
+        if visible { updateIslandHeight() }
+        cardBottomDirect?.isActive = !visible
+        cardBottomToIsland?.isActive = visible
+        islandCard.isHidden = !visible
+        islandShadow.isHidden = !visible
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.18
+            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            view.animator().layoutSubtreeIfNeeded()
+        }
+    }
+
+    override func viewDidLayout() {
+        super.viewDidLayout()
+        if isIslandVisible { updateIslandHeight() }
+    }
+
+    private func updateIslandHeight() {
+        islandHeightConstraint?.constant = Self.islandHeight(forCanvasHeight: view.bounds.height)
+    }
+
+    private static func islandHeight(forCanvasHeight height: CGFloat) -> CGFloat {
+        min(460, max(260, height * 0.4))
     }
 }
 
@@ -866,6 +982,16 @@ final class WorkbenchSplitController: NSSplitViewController {
         panel.isHidden = !visible
         handle.isHidden = !visible
         updateWorkspaceLayout()
+    }
+
+    /// The command-line sheet lives beside the reading sheet, not inside it.
+    func installCommandLineIsland(_ island: NSView, visible: Bool) {
+        detailController?.installIsland(island)
+        detailController?.setIslandVisible(visible)
+    }
+
+    func setCommandLineIslandVisible(_ visible: Bool) {
+        detailController?.setIslandVisible(visible)
     }
 
     override func viewDidLayout() {
