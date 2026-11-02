@@ -6,7 +6,7 @@ import WorkbenchCore
 /// bar turns on its branch, so "running" looks the same everywhere. CoreAnimation
 /// only; the transcript graph is never invalidated.
 struct ConversationBusyIndicator: View {
-    var body: some View { PerchBusyIndicator(showsBranch: false) }
+    var body: some View { PerchBusyIndicator(style: .sun) }
 }
 
 /// Kept outside the transcript; only the clock subview refreshes every second.

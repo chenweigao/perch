@@ -23,10 +23,10 @@ Colors: one ink and one brand hue, no gradients. Tile `#16191F`, branch
 
 In the app the mark is drawn from `PerchLineMark`
 (`Sources/AgentWorkbench/PerchBusyIndicator.swift`) on the 24-unit glyph grid
-the agent marks use (line width 1.75). The status bar draws it in the quiet ink
-and turns the ring while a turn runs; the home mark (`PerchMark`) draws the
-branch in `ink` and the ring in the brand hue. Keep the ring/branch gap: at
-16 pt touching strokes merge into an Ω.
+the agent marks use (line width 1.75). The status bar fits it to its 16 pt slot,
+runs a chasing arc in the body ink while a turn runs and rests in the quiet ink;
+the home mark (`PerchMark`) draws the branch in `ink` and the ring in the brand
+hue. Keep the ring/branch gap: at 16 pt touching strokes merge into an Ω.
 
 Regenerate from the repository root on macOS:
 
