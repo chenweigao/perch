@@ -278,6 +278,7 @@ struct TaskContextView: View {
                 }
             }
         }
+        TaskTurnSection(model: model, item: item, snapshot: value)
         if !value.files.isEmpty {
             VStack(alignment: .leading, spacing: 4) {
                 sectionTitle("文档与产物", icon: "doc.text", count: value.files.count)
@@ -330,6 +331,12 @@ struct TaskContextView: View {
                     }
                 }
             }
+            #if PERCH_ACCEPTANCE
+            // The subagents fixture reads the roster here, folded rows included.
+            .background(NativeSubagentRosterProbe(rows: value.tasks.filter { !value.listedTaskIDs.contains($0.id) }.map {
+                "\($0.id)|\($0.status)|\($0.stoppable == true)|\(model.native.subagents.stopping.contains($0.id))"
+            }))
+            #endif
         }
         if !value.tools.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
@@ -348,7 +355,7 @@ struct TaskContextView: View {
             }
         }
         if value.files.isEmpty && value.tasks.isEmpty && value.tools.isEmpty &&
-            value.requests.isEmpty && value.failure == nil {
+            value.requests.isEmpty && value.failure == nil && value.todos.isEmpty && value.edits == nil {
             emptyState(value.busy ? "hourglass" : "tray",
                        value.busy ? "任务正在进行，文件和工具活动会显示在这里。" : "此任务暂时没有文件或工具活动。")
         }

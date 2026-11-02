@@ -95,7 +95,6 @@ func benchStreamingDelta() throws {
 
     let handle = ConversationPresentationHandle()
     let cache = ConversationPresentationCache()
-    let editStats = SessionEditStatsCache()
     let findBar = ConversationSearch()
     var findStage: [Double] = []
     let key = "host:kimi:s"
@@ -114,13 +113,13 @@ func benchStreamingDelta() throws {
         _ = conversation.apply(event)
         let apply = ms(t)
 
-        // KimiWorkspaceView: the activity bar's summary of the whole loaded window.
+        // KimiWorkspaceView: the status line's summary of the latest turn.
         t = CACurrentMediaTime()
         let workspaceMessages = conversation.displayMessages
         let display1 = ms(t)
         t = CACurrentMediaTime()
         let activity = ConversationActivity(messages: workspaceMessages, isRunning: true, liveTools: [], online: true,
-                                            isThinking: true, isResponding: false, editStats: editStats)
+                                            isThinking: true, isResponding: false)
         let activityMs = ms(t)
 
         // KimiTimeline + ConversationTranscript.
@@ -153,7 +152,8 @@ func benchStreamingDelta() throws {
                 for folded in row.foldedRows ?? [] { map[folded.entry.id] = row.entry.id }
             }
             precondition(presented.rows == reference && presented.foldParents == parents, "presented must equal displayedRows + fold")
-            precondition(activity.edits?.total == SessionEditStats.derive(from: workspaceMessages)?.total)
+            let turn = workspaceMessages.lastIndex(where: \.isUserPrompt) ?? 0
+            precondition(activity.edits?.total == SessionEditStats.derive(from: Array(workspaceMessages[turn...]))?.total)
             entryCount = snapshot.rows.count
         }
         guard update >= 5 else { continue }
@@ -190,7 +190,7 @@ func benchStreamingDelta() throws {
         let presented = snapshot.presented(activity: [:], foldsProcess: true, isRunning: true)
         let presentedMs = ms(t)
         t = CACurrentMediaTime()
-        _ = ConversationActivity(messages: messages, isRunning: true, isThinking: true, editStats: editStats)
+        _ = ConversationActivity(messages: messages, isRunning: true, isThinking: true)
         let activityMs = ms(t)
         paged.append(presentation + presentedMs + activityMs)
         let reference = ConversationPresentationModel(key: key).update(input)

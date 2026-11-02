@@ -10,6 +10,7 @@ public enum AttentionEvent: String, CaseIterable, Sendable {
         case .completed: self = .completed
         case .needsInput: self = .needsInput
         case .failed: self = .failed
+        case .stalled: self = .stalled
         }
     }
 

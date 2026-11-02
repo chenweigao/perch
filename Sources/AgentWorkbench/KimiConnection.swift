@@ -748,7 +748,7 @@ final class KimiConnection {
             requests: value.pendingApprovals.map { TaskContextRequest(id: "approval:" + $0.id, title: $0.action) } +
                 value.pendingQuestions.map { TaskContextRequest(id: "question:" + $0.id, title: $0.questions.map(\.question).joined(separator: "\n")) },
             failure: value.session.lastTurnReason == "failed" ? L("任务执行失败，请查看会话。") : nil,
-            messages: Array(messages.suffix(160)), live: live, tasks: board.subagents + board.backgroundTasks)
+            messages: messages, live: live, tasks: board.subagents + board.backgroundTasks)
         result.taskError = taskError
         result.listedTaskIDs = Set(board.backgroundTasks.map(\.id))
         return result

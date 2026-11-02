@@ -150,14 +150,16 @@ results.
 While the reader is away from the latest transcript position, already-published row
 text and ownership state (anchor, open, or closed) stay frozen; new rows may initialize.
 The deferred projection is published in one update when the reader returns to the
-latest position. The bottom activity bar continues to show the live narrative while
-the turn runs.
+latest position. The status line continues to show a short live narrative as its
+headline while the turn runs; the task panel's 本轮 section shows the full one with
+its phase and source.
 
 ## Completed-task Recap
 
 A completed Kimi or native-bridge task with no pending interaction exposes a compact
-**Recap** action in the bottom activity bar. Generation starts only after the user opens
-that popover; it never runs for an active task or merely because historical sessions
+**Recap** action on the status line's result (while it shows) and in the task panel's
+本轮 section of the open session. Generation starts only after the user opens that
+popover; it never runs for an active task or merely because historical sessions
 were loaded. The popover shows loading and retry states, a structured outcome, changes,
 validation, remaining work and next steps, plus copy and regenerate actions.
 

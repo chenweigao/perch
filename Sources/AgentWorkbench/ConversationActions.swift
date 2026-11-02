@@ -2,8 +2,8 @@ import AppKit
 import SwiftUI
 import WorkbenchCore
 
-/// What a transcript row can ask for. Copy stays local to the row; everything
-/// else routes to the connection that owns the session.
+/// What a transcript row or the status line can ask for. Copy stays local to
+/// the row; everything else routes to the model or the connection that owns the session.
 enum ConversationMessageAction {
     case quote(String)
     case editAndResend(String)
@@ -13,6 +13,11 @@ enum ConversationMessageAction {
     case regenerate(before: String)
     /// Opens the transcript of the subagent an Agent/Task tool call started.
     case openSubagent(toolCallId: String)
+    /// The status line: this turn in the task panel, the working-tree changes,
+    /// and a suspected stall for the reminder settings.
+    case showTurnDetails
+    case showChanges
+    case turnStalled(minutes: Int)
 }
 
 /// Which session a transcript row belongs to. Rows are deep inside a native

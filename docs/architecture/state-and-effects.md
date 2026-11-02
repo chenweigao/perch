@@ -185,8 +185,8 @@ snapshots. Reuse is refused whenever it could differ from a complete recomputati
 a tool identity of the latest turn that also occurs earlier, a remembered live tool
 resolved in an earlier turn, a running ID or connection change affecting earlier
 tools, an entry identity shared across the split, or a locale/epoch change. The
-activity bar's whole-session edit tally is kept the same way by a view-owned
-`SessionEditStatsCache`.
+status line's edit tally covers the latest turn only (`ConversationActivity.edits`,
+the process fold's figure), so it needs no cache of earlier turns.
 
 When the earlier turns themselves change — a page of older messages prepended
 while scrolling up, or a new prompt moving the latest turn into the history —

@@ -4,13 +4,20 @@ import Foundation
 public struct ConversationActivity {
     public let tools: [VisibleTool]
     public let todos: [ConversationTodo]
-    /// Whole-session edit churn from the session's own edit-class tool calls;
-    /// nil when nothing resolved, so the bar stays hidden rather than showing zeros.
+    /// This turn's edit churn from its own edit-class tool calls, the figure the
+    /// transcript's process fold shows; nil when nothing resolved, so nothing
+    /// shows zeros.
     public let edits: (perFile: [String: SessionEditStat], total: SessionEditStat)?
+    /// Changes whenever the turn shows progress: a new or longer message, a
+    /// tool starting, reporting or finishing, a plan step. Stable within a
+    /// process only; the status line times a suspected stall from its last change.
+    public let progressSignature: Int
     public let title: String
     public let operationDescription: String?
     public let symbol: String
     public let needsAttention: Bool
+    /// A stop was requested and nothing outranks it (a lost connection or a pending decision).
+    public let isStopping: Bool
     public let animates: Bool
     /// What a running turn is doing, for the status bar's motion; nil unless it animates.
     /// Same precedence as the title: an active tool, then thinking, then the reply.
@@ -29,11 +36,16 @@ public struct ConversationActivity {
     public var activeTools: [VisibleTool] { tools.filter { $0.status == .running } }
     public var attentionTools: [VisibleTool] { tools.filter { $0.staysVisible && $0.status != .running } }
     public var completedSteps: Int { todos.filter { $0.status == .done }.count }
+    /// The plan item in progress: the most specific name for what the turn does.
+    public var currentStep: String? {
+        guard let title = todos.first(where: { $0.status == .inProgress })?.title
+            .trimmingCharacters(in: .whitespacesAndNewlines), !title.isEmpty else { return nil }
+        return title
+    }
 
     public init(messages: [KimiMessage], isRunning: Bool, liveTools: [KimiLiveTool] = [],
                 running: Set<String> = [], online: Bool = true, isThinking: Bool = false,
-                isResponding: Bool = false, pendingCount: Int = 0, isStopping: Bool = false,
-                editStats: SessionEditStatsCache? = nil) {
+                isResponding: Bool = false, pendingCount: Int = 0, isStopping: Bool = false) {
         let start = messages.lastIndex { $0.isUserPrompt } ?? 0
         let current = Array(messages.dropFirst(start))
         let projection = ToolVisibilityProjection().update(current, sessionID: "activity", live: liveTools,
@@ -41,13 +53,30 @@ public struct ConversationActivity {
         tools = projection.messages.flatMap(\.content).filter { $0.type == "tool_use" }
             .compactMap { projection.tools[$0.toolCallId ?? ""] }
         todos = ConversationTodo.floating(in: current, isRunning: isRunning)
-        if let editStats { edits = editStats.derive(from: messages) } else { edits = SessionEditStats.derive(from: messages) }
+        edits = SessionEditStats.derive(from: current)
+        var progress = Hasher()
+        progress.combine(current.count)
+        if let last = current.last {
+            progress.combine(last.id)
+            progress.combine(last.content.count)
+            if let part = last.content.last {
+                progress.combine(part.text?.utf16.count ?? 0)
+                progress.combine(part.thinking?.utf16.count ?? 0)
+            }
+        }
+        for tool in tools {
+            progress.combine(tool.id)
+            progress.combine(tool.status)
+            if tool.status == .running { progress.combine(tool.progress?.display.utf16.count ?? -1) }
+        }
+        progressSignature = progress.finalize()
         let active = tools.filter { $0.status == .running }
         let description = active.first?.input?["description"].string?.trimmingCharacters(in: .whitespacesAndNewlines)
         operationDescription = online && isRunning && pendingCount == 0 && !isStopping && description?.isEmpty == false
             ? description : nil
         let uncertain = tools.contains { $0.staysVisible && $0.status != .running }
         needsAttention = !online || pendingCount > 0 || uncertain
+        self.isStopping = online && pendingCount == 0 && isStopping
         animates = online && isRunning && pendingCount == 0 && !isStopping
         if !animates { phase = nil }
         else if let tool = active.first { phase = ToolPresentation.isExploration(tool.name) ? .reading : .working }
@@ -80,7 +109,7 @@ public struct ConversationActivity {
     public static func status(of tool: VisibleTool) -> String {
         status(of: tool, exitCode: tool.exitCodeReport)
     }
-    /// The tool card's words, shared by the activity details. The card resolves
+    /// The tool card's words, shared by the task panel's tool rows. The card resolves
     /// the exit code once per body evaluation and passes it in.
     public static func status(of tool: VisibleTool, exitCode: Int?) -> String {
         let state: String

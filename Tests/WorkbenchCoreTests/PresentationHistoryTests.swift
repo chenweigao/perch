@@ -198,35 +198,6 @@ func checkConversationPresentationHistory() throws {
     print("PASS: presentation history reuse matches complete recomputation across tokens, paging, crossings, language, epoch and overlays")
 }
 
-func checkSessionEditStatsCache() throws {
-    var clock = 0
-    func edit(_ id: String, path: String, old: String, new: String) -> [String: Any] {
-        clock += 1
-        return ["id": id, "role": "assistant", "created_at": String(clock), "content": [
-            ["type": "tool_use", "tool_call_id": id, "tool_name": "Edit",
-             "input": ["file_path": path, "old_string": old, "new_string": new]]]]
-    }
-    func user(_ id: String) -> [String: Any] {
-        clock += 1
-        return ["id": id, "role": "user", "created_at": String(clock), "content": [["type": "text", "text": id]]]
-    }
-    func decode(_ raw: [[String: Any]]) throws -> [KimiMessage] {
-        try KimiWire.decoder().decode([KimiMessage].self, from: JSONSerialization.data(withJSONObject: raw))
-    }
-    let first = try decode([user("u1"), edit("e1", path: "a.swift", old: "a\nb", new: "a\nc\nd")])
-    let second = try decode([user("u2"), edit("e2", path: "a.swift", old: "x", new: "y"), edit("e3", path: "b.swift", old: "", new: "1\n2")])
-    let revised = try decode([user("u1"), edit("e1", path: "a.swift", old: "a\nb", new: "z")])
-    let older = try decode([user("u0"), edit("e0", path: "c.swift", old: "q", new: "")])
-    let cache = SessionEditStatsCache()
-    for messages in [first, first + second, first + second + Array(second.suffix(1)), revised + second,
-                     older + revised + second, older + revised + second, Array(second.prefix(1)), [], first] {
-        let cached = cache.derive(from: messages), reference = SessionEditStats.derive(from: messages)
-        precondition(cached?.perFile == reference?.perFile && cached?.total == reference?.total,
-                     "Cached session edit tallies must equal a complete derivation")
-    }
-    print("PASS: session edit tallies reuse earlier turns only while they are unchanged")
-}
-
 /// Scrolling up prepends pages that start anywhere in a turn, and a new prompt
 /// moves the latest turn into the history. The model then reuses the earlier
 /// turns that did not change. Every snapshot must equal a complete
@@ -321,7 +292,6 @@ func checkConversationPresentationPaging() throws {
 
     var metrics: ConversationPresentationUpdateMetrics?
     let model = Model(key: "host:kimi:paging", metricsHandler: { metrics = $0 })
-    let editStats = SessionEditStatsCache()
     let search = ConversationSearch()
     let queries: [(String, ConversationFindOptions)] = [("第", .init()), ("进度", .init(role: .assistant)), ("make", .init(role: .tool)),
                                                          ("完成$", .init(regex: true)), ("BASE", .init(caseSensitive: true)), ("提醒", .init())]
@@ -379,8 +349,6 @@ func checkConversationPresentationPaging() throws {
         _ = oracle.update(.init(messages: [], live: Array(remembered.values), epoch: "one", language: language))
         _ = oracle.update(input)
         precondition(model.retainedPayloadCost == oracle.retainedPayloadCost, "\(trace): payload admission cost")
-        let stats = editStats.derive(from: input.messages), expectedStats = SessionEditStats.derive(from: input.messages)
-        precondition(stats?.perFile == expectedStats?.perFile && stats?.total == expectedStats?.total, "\(trace): edit tallies")
         let (query, findOptions) = queries[(index / 7) % queries.count]
         precondition(search.hits(in: input.messages, query: query, running: true, options: findOptions)
                      == ConversationSearch().hits(in: input.messages, query: query, running: true, options: findOptions),

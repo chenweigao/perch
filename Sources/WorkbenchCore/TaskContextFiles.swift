@@ -96,6 +96,10 @@ public struct TaskContextSnapshot {
     public let tools: [VisibleTool]
     public let tasks: [KimiTask]
     public let files: [TaskContextFile]
+    /// The latest turn's plan in any state, and its edit churn by file: the
+    /// 本轮 section's facts that the status line leaves out.
+    public let todos: [ConversationTodo]
+    public let edits: (perFile: [String: SessionEditStat], total: SessionEditStat)?
     public var taskError: String? = nil
     /// Ids of `tasks` that come from Kimi's persisted task list.
     public var listedTaskIDs: Set<String> = []
@@ -108,6 +112,8 @@ public struct TaskContextSnapshot {
             running: native ? ToolVisibilityProjection.runningIDs(in: messages, busy: busy) : [],
             pendingCount: requests.count)
         tools = activity.tools
+        edits = activity.edits
+        todos = ConversationTodo.current(in: Array(messages[(messages.lastIndex(where: \.isUserPrompt) ?? 0)...]))
         files = TaskContextFiles.collect(messages: messages, tools: activity.tools, directory: directory)
     }
 }

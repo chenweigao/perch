@@ -128,10 +128,11 @@ struct WorkbenchSettings: View {
             attentionLevelPicker("一轮结束", event: .completed)
             attentionLevelPicker("需要确认或回答", event: .needsInput)
             attentionLevelPicker("执行失败", event: .failed)
+            attentionLevelPicker("疑似卡住", event: .stalled)
         } header: {
             Text("提醒方式")
         } footer: {
-            Text("Perch 在前台时，只有需要你处理的事会播放提示音；一轮结束只在 Perch 处于后台时提示。完成通知会合并。可在会话右键菜单中单独静音。")
+            Text("Perch 在前台时，只有需要你处理的事会播放提示音；一轮结束只在 Perch 处于后台时提示。完成通知会合并。可在会话右键菜单中单独静音。疑似卡住只对正在打开的会话判断：3 分钟没有新进展（有工具运行时 10 分钟）。")
         }
     }
 

@@ -1,7 +1,7 @@
 import Foundation
 
 public struct VisibleTool: Identifiable, Equatable {
-    public enum Status: Equatable { case running, succeeded, returned, failed, missingResult, disconnected, awaitingApproval }
+    public enum Status: Hashable { case running, succeeded, returned, failed, missingResult, disconnected, awaitingApproval }
     public let id: String
     public let name: String
     public let input: JSONValue?

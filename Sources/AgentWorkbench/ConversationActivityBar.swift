@@ -9,22 +9,41 @@ struct ConversationBusyIndicator: View {
     var body: some View { PerchBusyIndicator(style: .sun) }
 }
 
-/// Kept outside the transcript; only the clock subview refreshes every second.
-/// Every state uses the same transparent row height, so a run starting, waiting
-/// for input or failing never resizes the transcript above it. Attention adds
-/// color and an explicit action instead of a filled strip.
+/// Results the reader has moved on from, by session and end time. In memory only:
+/// a relaunch starts with no results, because it watched no turn end.
+@MainActor enum TurnResultMemory {
+    private static var dismissed: Set<String> = []
+    private static var order: [String] = []
+    static func contains(_ key: String) -> Bool { dismissed.contains(key) }
+    static func dismiss(_ key: String) {
+        guard dismissed.insert(key).inserted else { return }
+        order.append(key)
+        if order.count > 500 { dismissed.remove(order.removeFirst()) }
+    }
+}
+
+/// The status line between the transcript and the composer. It answers three
+/// questions only (`TurnStatus`): is the turn alive, what is it doing, what does
+/// it need from the reader. Everything else (plan, edits by file, timing,
+/// subagents and background tasks) is in the task panel's 本轮 section, which a
+/// click on the line opens. Every visible state shares one transparent row
+/// height, so a run starting, waiting or failing never resizes the transcript;
+/// an idle session takes no space. Only the clock redraws on its own, once a
+/// second for the first minute and once a minute after.
 struct ConversationActivityBar: View {
     static let height: CGFloat = 32
     let activity: ConversationActivity
     let isRunning: Bool
     var timing: ConversationTiming? = nil
     var online = true
-    /// Last connection error; the details and the reconnect tooltip show it.
+    /// Last connection error; the reconnect tooltip shows it.
     var offlineDetail: String? = nil
     var pendingCount = 0
+    /// What the agent waits for, in its own words.
+    var request: TurnRequest? = nil
+    /// The session's reading key: its narratives and its remembered result.
     var narrativeSession: String? = nil
     var narrativeOverride: ActivityNarrative? = nil
-    var externalFailureOverride: String? = nil
     var recapKey: String? = nil
     var recapMessages: (@MainActor () async throws -> [KimiMessage])? = nil
     var recapStateOverride: TaskRecapState? = nil
@@ -32,138 +51,126 @@ struct ConversationActivityBar: View {
     var onRecapGenerateOverride: ((Bool) -> Void)? = nil
     var onReview: () -> Void = {}
     var onReconnect: () -> Void = {}
-    var onRetryExternal: (() -> Void)? = nil
-    /// The subagent roster and background task list: Kimi's, and the native
-    /// roster of bridge protocol 7 (subagents only). Without either the
-    /// sections stay hidden.
-    var board: KimiTaskBoard = KimiTaskBoard()
-    var loadingTaskOutput: Set<String> = []
-    var stoppingTasks: Set<String> = []
-    var taskListError: String? = nil
-    var onTaskOutput: (KimiTask) -> Void = { _ in }
-    var onTaskStop: (KimiTask) -> Void = { _ in }
-    var onTasksRefresh: () -> Void = {}
-    var onOpenTranscript: (KimiTask) -> Void = { _ in }
-    /// Stops one subagent on its own, for rows marked stoppable. nil keeps the
-    /// subagent rows read-only (Kimi: the conversation's Stop covers them).
-    var onSubagentStop: ((KimiTask) -> Void)? = nil
-    /// Why stopping a subagent failed, by task id.
-    var taskStopErrors: [String: String] = [:]
+    /// Opens this turn in the task panel.
+    var onDetails: () -> Void = {}
+    /// Opens the working-tree changes; nil hides 查看改动.
+    var onChanges: (() -> Void)? = nil
+    /// Once per quiet stretch past the stall threshold, with its minutes.
+    var onStall: (Int) -> Void = { _ in }
     @UILocalization private var L
-    @State private var expanded = false
     @State private var recapPresented = false
-    @State private var pointerAnchor: CGRect?
+    @State private var progress = TurnProgressClock()
+    @State private var stalledMinutes: Int?
+    @State private var highlight = false
     @ObservedObject var narrativeStore = ActivityNarrativeStore.shared
-    @ObservedObject private var recapStore = TaskRecapStore.shared
-    @ObservedObject private var summarySettings = ActivitySummarySettings.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.locale) private var locale
 
     private var narrative: ActivityNarrative? {
         narrativeOverride ?? narrativeSession.flatMap { narrativeStore.narrative(session: $0) }
     }
-    private var externalFailure: String? {
-        externalFailureOverride ?? narrativeSession.flatMap { narrativeStore.failure(session: $0)?.message }
+    /// The result this line shows once the turn ends, by session and end time.
+    private var resultKey: String? {
+        guard let narrativeSession, let end = timing?.endedAt else { return nil }
+        return "\(narrativeSession):\(end.timeIntervalSinceReferenceDate)"
     }
-    private var canRetryExternal: Bool {
-        if externalFailureOverride != nil { return onRetryExternal != nil }
-        return narrativeSession.map { narrativeStore.canRetry(session: $0) } ?? false
+    private var status: TurnStatus {
+        TurnStatus(activity: activity, isRunning: isRunning, online: online, pendingCount: pendingCount,
+                   request: request, timing: timing, narrativeHeadline: isRunning ? narrative?.headline : nil,
+                   stalledMinutes: activity.animates ? stalledMinutes : nil,
+                   resultDismissed: resultKey.map { TurnResultMemory.contains($0) } ?? false, locale: locale)
     }
-    private func retryExternal() {
-        if let onRetryExternal { onRetryExternal() }
-        else if let narrativeSession { narrativeStore.retry(session: narrativeSession, settings: summarySettings) }
+    private var progressKey: TurnProgressClock.Key {
+        TurnProgressClock.Key(signature: activity.progressSignature, toolRunning: !activity.activeTools.isEmpty)
     }
-
-    /// A lost connection and a pending decision stop progress and own the tone.
-    private var blocking: Bool { !online || pendingCount > 0 }
-    /// `activity.title` carries untranslated keys; compare the key itself.
-    private var stopping: Bool { activity.title == "Stopping…" }
-    private var turnEnded: Bool {
-        !isRunning && (timing?.endedAt != nil || narrative != nil || recapKey != nil || activity.edits != nil)
-    }
-    /// Uncertain tool results: failed without an exit code, missing, disconnected
-    /// or unconfirmed. A running agent may still recover, so they add a count
-    /// rather than recoloring the current action. Blocking states supersede them.
-    private var reviewCount: Int { blocking ? 0 : activity.attentionTools.count }
 
     var body: some View {
+        let status = self.status
         ZStack {
-            if activity.isVisible || timing != nil || narrative != nil || !board.isEmpty || taskListError != nil || recapKey != nil || activity.edits != nil {
+            if status.state != .hidden {
                 HStack(spacing: 8) {
-                    summaryButton
-                    actions
+                    line(status)
+                    actions(status)
                 }.font(.system(size: WorkbenchTheme.Reading.labelSize))
                     .foregroundStyle(WorkbenchTheme.quiet)
                     .padding(.horizontal, 2).frame(height: Self.height)
                     .transition(reduceMotion ? .identity : .opacity)
             }
         }
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: activity.isVisible)
-        #if PERCH_ACCEPTANCE
-        // The subagents fixture opens and closes the details popover without a pointer.
-        .onReceive(NotificationCenter.default.publisher(for: .init("PerchAcceptanceActivityDetails"))) { notice in
-            pointerAnchor = nil
-            expanded = notice.object as? Bool ?? true
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: status.state == .hidden)
+        // A reference write per update: progress never invalidates this body.
+        .onChange(of: progressKey, initial: true) { _, key in
+            progress.mark(key)
+            if stalledMinutes != nil { stalledMinutes = nil }
         }
-        #endif
+        .task(id: activity.animates) { await watchStall(running: activity.animates) }
+        .onChange(of: status.state) { old, new in
+            // One soft emphasis when a watched turn ends, never a loop.
+            guard new == .done, old == .running, !reduceMotion else { return }
+            highlight = true
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(250))
+                withAnimation(.easeOut(duration: 0.9)) { highlight = false }
+            }
+        }
+        // Switching away is moving on: the result collapses until the next turn.
+        .onDisappear {
+            if status.state == .done, let resultKey { TurnResultMemory.dismiss(resultKey) }
+        }
     }
 
-    /// Priority from left to right: the current action, then elapsed time; plan
-    /// steps, session edits and concurrency fold away first in a narrow window.
-    /// The details popover always lists everything.
-    private var summaryButton: some View {
-        Button { pointerAnchor = nil; expanded.toggle() } label: {
+    /// Checks every 15 s while the turn runs; progress resets the clock.
+    private func watchStall(running: Bool) async {
+        guard running else {
+            if stalledMinutes != nil { stalledMinutes = nil }
+            return
+        }
+        while !Task.isCancelled {
+            try? await Task.sleep(for: .seconds(15))
+            guard !Task.isCancelled else { return }
+            let minutes = progress.stalledMinutes(now: Date())
+            if minutes != stalledMinutes { stalledMinutes = minutes }
+            if let minutes, !progress.reported {
+                progress.reported = true
+                onStall(minutes)
+            }
+        }
+    }
+
+    /// The whole line opens the details; a pending decision goes to its card.
+    private func line(_ status: TurnStatus) -> some View {
+        Button { status.state == .waiting ? onReview() : onDetails() } label: {
             HStack(spacing: 8) {
-                indicator
-                titleRow.layoutPriority(1)
-                if reviewCount > 0 {
-                    Text("\(reviewCount) 项需关注").foregroundStyle(Color.orange).fixedSize()
-                }
-                // Lowest priority: the spacer takes only what the metrics leave.
-                // Facts stay right-aligned, so a changing title never shifts them.
-                Spacer(minLength: 6).layoutPriority(-2)
-                // The zero-size last candidate always fits. EmptyView would add no
-                // candidate, and ViewThatFits shows its last child when none fits.
+                indicator(status)
                 ViewThatFits(in: .horizontal) {
-                    metrics(upTo: 3)
-                    metrics(upTo: 2)
-                    metrics(upTo: 1)
-                    Color.clear.frame(width: 0, height: 0)
-                }.font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(WorkbenchTheme.quiet).layoutPriority(-1)
-                if let timing {
-                    ActivityTurnClock(timing: timing).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
+                    headline(status, level: 2)
+                    headline(status, level: 1)
+                    headline(status, level: 0)
+                }.layoutPriority(1)
+                if status.state == .running && status.attention > 0 {
+                    // A running agent may still recover: a count, not a new color for the action.
+                    Text("\(status.attention) 项需关注").foregroundStyle(Color.orange).fixedSize()
                 }
-                Image(systemName: "chevron.down").font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(WorkbenchTheme.quiet).accessibilityHidden(true)
+                Spacer(minLength: 6).layoutPriority(-2)
+                facts(status)
             }.padding(.horizontal, 6).frame(height: 28).contentShape(Rectangle())
         }.buttonStyle(WorkbenchDisclosureButtonStyle())
-            .accessibilityLabel(Text("本轮活动"))
-            .accessibilityValue(Text(verbatim: accessibilityValue))
-            .accessibilityHint(Text("查看本轮活动与计划"))
-            .help("查看本轮活动与计划")
-            .highPriorityGesture(SpatialTapGesture().onEnded { value in
-                pointerAnchor = CGRect(x: value.location.x, y: value.location.y, width: 1, height: 1)
-                expanded.toggle()
-            })
-            .popover(isPresented: $expanded,
-                     attachmentAnchor: .rect(pointerAnchor.map { .rect($0) } ?? .bounds),
-                     arrowEdge: .top) { details }
+            .accessibilityLabel(Text("本轮状态"))
+            .accessibilityValue(Text(verbatim: accessibilityValue(status)))
+            .accessibilityHint(status.state == .waiting ? Text("查看等待你确认的事项") : Text("在任务面板查看本轮详情"))
+            .help(status.state == .waiting ? Text(verbatim: status.headline) : Text("在任务面板查看本轮详情"))
     }
 
-    /// The Perch mark carries execution: its sun turns while a turn runs and closes
-    /// into the resting mark when the turn ends cleanly. One view for both, so the
-    /// end animates. Every other state names itself with a symbol.
-    private var showsPerch: Bool {
-        activity.animates || (turnEnded && reviewCount == 0 && !blocking && !stopping)
-    }
-    @ViewBuilder private var indicator: some View {
+    /// The Perch mark carries execution: its sun turns while a turn runs and
+    /// closes into the resting mark when the turn ends cleanly. It stays mounted
+    /// in every state, so a run's end closes this same arc even when a native
+    /// agent reports the end time after the run state.
+    private func indicator(_ status: TurnStatus) -> some View {
         ZStack {
-            // Mounted in every state, so a run's end closes this same arc. Native
-            // agents report the run state and the turn's end time separately; a
-            // conditional view would be replaced in between and land at rest.
-            PerchBusyIndicator(running: activity.animates, motion: motion).opacity(showsPerch ? 1 : 0)
-            if !showsPerch {
+            PerchBusyIndicator(running: activity.animates, motion: motion).opacity(status.symbol == nil ? 1 : 0)
+            if let symbol = status.symbol {
                 Image(systemName: symbol).font(.system(size: WorkbenchTheme.Reading.labelSize)).frame(width: 16, height: 16)
-                    .foregroundStyle(blocking || (reviewCount > 0 && !isRunning) ? Color.orange : WorkbenchTheme.quiet)
+                    .foregroundStyle(status.needsReader ? Color.orange : WorkbenchTheme.quiet)
                     .accessibilityHidden(true)
             }
         }.frame(width: 16, height: 16)
@@ -177,217 +184,155 @@ struct ConversationActivityBar: View {
         case .working, nil: .working
         }
     }
-    private var symbol: String {
-        if blocking || stopping { return activity.symbol }
-        // A clean end shows the resting mark (`showsPerch`); this is the one that needs a look.
-        if turnEnded { return "exclamationmark.circle" }
-        return activity.symbol
-    }
 
-    private var titleRow: some View {
-        HStack(spacing: 6) {
-            Text(verbatim: title).fontWeight(blocking ? .medium : .regular)
-                .foregroundStyle(blocking ? Color.orange : WorkbenchTheme.quiet)
+    /// Level 2 says everything; level 1 drops the result's words; level 0 is the
+    /// headline alone, which truncates last.
+    private func headline(_ status: TurnStatus, level: Int) -> some View {
+        HStack(spacing: status.result == nil ? 6 : 4) {
+            Text(verbatim: status.headline).fontWeight(status.isBlocking ? .medium : .regular)
+                .foregroundStyle(status.needsReader ? Color.orange : highlight ? Color.primary : WorkbenchTheme.quiet)
                 .lineLimit(1).truncationMode(.tail).layoutPriority(1)
-            if let target = actionTarget {
-                Text(verbatim: target).foregroundStyle(WorkbenchTheme.quiet)
+            if let detail = status.detail, level > 0 {
+                Text(verbatim: detail).foregroundStyle(WorkbenchTheme.quiet)
                     .lineLimit(1).truncationMode(.middle)
             }
+            if let result = status.result, level > 0 { resultFacts(result, words: level > 1) }
         }.contentTransition(.opacity)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: title)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: status.headline)
+    }
+    private func resultFacts(_ result: TurnStatus.Result, words: Bool) -> some View {
+        HStack(spacing: 4) {
+            if result.files > 0 {
+                Text(verbatim: "·")
+                if words { Text("改了 \(result.files) 个文件") }
+                EditStatText(stat: SessionEditStat(additions: result.additions, deletions: result.deletions))
+            }
+            if let duration = result.duration {
+                Text(verbatim: "·")
+                let value = TurnStatus.clock(duration, chinese: chinese)
+                if result.observedOnly { Text("观察时长 \(value)") } else { Text("用时 \(value)") }
+            }
+        }.fixedSize()
     }
 
-    /// One localized title for the row, the details fallback and VoiceOver.
-    private var title: String {
-        if !online { return L(key: activity.title) }
-        if pendingCount > 0 { return L("等待你确认 · \(pendingCount) 项") }
-        if stopping { return L(key: activity.title) }
-        if turnEnded { return L("本轮结束") }
-        // Long assistant progress can contain a whole Markdown reply. Keep it
-        // in the details instead of duplicating the transcript in this one line.
-        if isRunning, let narrative, narrative.headline.count <= 48 { return narrative.headline }
-        if let description = activity.operationDescription { return description }
-        return L(key: activity.title)
+    /// Progress facts for work in flight or a plan left over; a state that needs
+    /// the reader shows only its action. Plan steps fold away before the clock.
+    @ViewBuilder private func facts(_ status: TurnStatus) -> some View {
+        let clock = status.state == .running || status.state == .stopping ? timing : nil
+        let progress = [.running, .stopping, .plan].contains(status.state) ? status.progress : nil
+        if progress != nil || clock != nil {
+            ViewThatFits(in: .horizontal) {
+                factsRow(progress, clock: clock)
+                factsRow(nil, clock: clock)
+                Color.clear.frame(width: 0, height: 0)
+            }.font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
+                .layoutPriority(-1)
+        }
+    }
+    private func factsRow(_ progress: TurnStatus.Progress?, clock: ConversationTiming?) -> some View {
+        HStack(spacing: 10) {
+            if let progress { Text(verbatim: "\(progress.done) / \(progress.total)") }
+            if let clock { TurnClock(timing: clock) }
+        }.fixedSize().monospacedDigit()
     }
 
-    /// A generic running title names what the current tool touches, so the
-    /// action stays understandable without opening the details.
-    private var actionTarget: String? {
-        guard online, isRunning, pendingCount == 0, !stopping, narrative == nil,
-              activity.operationDescription == nil, let tool = activity.activeTools.first else { return nil }
-        let target = ToolPresentation.compactTarget(tool)
-        return target.isEmpty || target == tool.name ? nil : target
-    }
+    private var chinese: Bool { locale.language.languageCode?.identifier == "zh" }
 
-    private var accessibilityValue: String {
-        var parts = [title]
-        if let actionTarget { parts.append(actionTarget) }
-        if reviewCount > 0 { parts.append(L("\(reviewCount) 项需关注")) }
-        if !activity.todos.isEmpty { parts.append(L("\(activity.completedSteps)/\(activity.todos.count) 步")) }
+    private func accessibilityValue(_ status: TurnStatus) -> String {
+        var parts = [status.headline]
+        if let detail = status.detail { parts.append(detail) }
+        if status.state == .running && status.attention > 0 { parts.append(L("\(status.attention) 项需关注")) }
+        if let progress = status.progress { parts.append(L("\(progress.done)/\(progress.total) 步")) }
+        if let result = status.result, result.files > 0 {
+            parts.append(L("改了 \(result.files) 个文件") + " +\(result.additions) −\(result.deletions)")
+        }
         return parts.joined(separator: ", ")
     }
 
-    @ViewBuilder private var actions: some View {
-        if let recapKey, !isRunning, pendingCount == 0 {
-            Button { recapPresented = true } label: {
-                Label("Recap", systemImage: "sparkles")
-            }.buttonStyle(.borderless).controlSize(.small)
-                .help("总结本次任务，不会向 Agent 发送消息")
-                .popover(isPresented: $recapPresented, arrowEdge: .top) {
-                    TaskRecapPopover(key: recapKey, messages: recapMessages,
-                                     stateOverride: recapStateOverride,
-                                     configuredOverride: recapConfiguredOverride,
-                                     onGenerateOverride: onRecapGenerateOverride)
-                }
-        }
-        if !online {
+    @ViewBuilder private func actions(_ status: TurnStatus) -> some View {
+        switch status.state {
+        case .offline:
             Button("重新连接", action: onReconnect).buttonStyle(.bordered).controlSize(.small).tint(.orange)
                 .help(offlineDetail.map { Text(verbatim: $0) } ?? Text("重新连接"))
-        } else if pendingCount > 0 {
-            Button("查看") { onReview() }.buttonStyle(.bordered).controlSize(.small).tint(.orange)
+        case .waiting:
+            Button("查看") { onReview() }.buttonStyle(.borderedProminent).controlSize(.small).tint(.orange)
                 .help("查看等待你确认的事项").accessibilityHint(Text("查看等待你确认的事项"))
-        } else if reviewCount > 0 && !isRunning {
-            Button("查看") { pointerAnchor = nil; expanded = true }
-                .buttonStyle(.bordered).controlSize(.small).tint(.orange)
-                .help("查看需要关注的工具结果").accessibilityHint(Text("查看需要关注的工具结果"))
-        }
-    }
-
-    /// Facts in fold order: plan steps, then session edits, then concurrency.
-    private func metrics(upTo level: Int) -> some View {
-        HStack(spacing: 10) {
-            if level >= 1, !activity.todos.isEmpty {
-                Text("\(activity.completedSteps)/\(activity.todos.count) 步")
+        case .review:
+            Button("查看", action: onDetails).buttonStyle(.bordered).controlSize(.small).tint(.orange)
+                .help("在任务面板查看需要关注的工具结果").accessibilityHint(Text("在任务面板查看需要关注的工具结果"))
+        case .done:
+            if let onChanges, (status.result?.files ?? 0) > 0 {
+                Button("查看改动", action: onChanges).buttonStyle(.borderless).controlSize(.small)
+                    .help("在右栏查看工作区改动")
             }
-            if level >= 2, let edits = activity.edits {
-                // Odometer roll as the tally grows (ccgui RollingStat) —
-                // SwiftUI's numericText transition is the native equivalent.
-                EditStatText(stat: edits.total)
-                    .contentTransition(.numericText())
-                    .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: edits.total)
+            if let recapKey {
+                Button { recapPresented = true } label: {
+                    Label("Recap", systemImage: "sparkles")
+                }.buttonStyle(.borderless).controlSize(.small)
+                    .help("总结本次任务，不会向 Agent 发送消息")
+                    .popover(isPresented: $recapPresented, arrowEdge: .top) {
+                        TaskRecapPopover(key: recapKey, messages: recapMessages,
+                                         stateOverride: recapStateOverride,
+                                         configuredOverride: recapConfiguredOverride,
+                                         onGenerateOverride: onRecapGenerateOverride)
+                    }
             }
-            if level >= 3 {
-                // One running tool is already named by the title.
-                if activity.activeTools.count > 1 { Text("\(activity.activeTools.count) 个工具") }
-                if board.runningCount > 0 { Text("\(board.runningCount) 运行中") }
-            }
-        }.fixedSize().monospacedDigit()
-    }
-    private var details: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Label("本轮活动", systemImage: "list.bullet.rectangle").font(.system(size: WorkbenchTheme.Reading.secondarySize, weight: .semibold))
-                Spacer()
-                Button { expanded = false } label: { Image(systemName: "xmark").frame(width: 28, height: 28).contentShape(Rectangle()) }
-                    .buttonStyle(.plain).help("关闭活动详情").accessibilityLabel(Text("关闭活动详情"))
-            }
-            if !online {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("连接已断开，以下为最后收到的工具状态。").foregroundStyle(WorkbenchTheme.quiet)
-                    if let offlineDetail, !offlineDetail.isEmpty {
-                        Text(verbatim: offlineDetail).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
-                            .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                Button("重新连接") { expanded = false; onReconnect() }.buttonStyle(.bordered).tint(.orange)
-            } else if pendingCount > 0 {
-                Label { Text("等待你确认 · \(pendingCount) 项") } icon: { Image(systemName: "hand.raised") }
-                    .foregroundStyle(.orange)
-                Button("查看") { expanded = false; onReview() }.buttonStyle(.bordered).tint(.orange)
-            }
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 14) {
-                    if let narrative {
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text(narrative.headline).font(.system(size: WorkbenchTheme.Reading.secondarySize, weight: .semibold)).textSelection(.enabled)
-                            if let detail = narrative.detail, !detail.isEmpty {
-                                Text(detail).foregroundStyle(WorkbenchTheme.quiet).textSelection(.enabled)
-                            }
-                            Text("\(narrative.phase.label) · \(narrative.source.label) · \(narrative.lifecycle == .streaming ? L("正在更新") : L("阶段已完成"))")
-                                .font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
-                            let evidence = narrative.evidenceIDs.compactMap { id in activity.tools.first { $0.id == id } }
-                            if !evidence.isEmpty {
-                                Text("依据").font(.system(size: WorkbenchTheme.Reading.captionSize, weight: .semibold)).foregroundStyle(WorkbenchTheme.quiet)
-                                ForEach(evidence) { tool in
-                                    Text("• \(ToolPresentation.action(tool.name)) \(ToolPresentation.compactTarget(tool))")
-                                        .font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(WorkbenchTheme.quiet).lineLimit(1)
-                                }
-                            }
-                        }
-                    }
-                    if !activity.attentionTools.isEmpty {
-                        Text("需要处理").fontWeight(.semibold).foregroundStyle(.orange)
-                        ForEach(activity.attentionTools) { tool in ActivityToolDetails(tool: tool) }
-                    }
-                    if !activity.activeTools.isEmpty {
-                        Text("当前操作").fontWeight(.semibold)
-                        ForEach(activity.activeTools) { tool in ActivityToolDetails(tool: tool) }
-                    } else if narrative == nil && online && pendingCount == 0 && activity.attentionTools.isEmpty {
-                        Text(verbatim: title).foregroundStyle(WorkbenchTheme.quiet)
-                    }
-                    if !activity.todos.isEmpty {
-                        HStack {
-                            Text("任务计划").fontWeight(.semibold)
-                            Spacer()
-                            Text("\(activity.completedSteps)/\(activity.todos.count)").monospacedDigit().foregroundStyle(WorkbenchTheme.quiet)
-                        }
-                        ForEach(activity.todos) { item in
-                            HStack(alignment: .top, spacing: 9) {
-                                Image(systemName: item.status == .done ? "checkmark.circle.fill" : item.status == .inProgress ? "circle.lefthalf.filled" : "circle")
-                                    .foregroundStyle(item.status == .inProgress ? WorkbenchTheme.accent : WorkbenchTheme.quiet)
-                                Text(item.title).fontWeight(item.status == .inProgress ? .medium : .regular)
-                                    .foregroundStyle(item.status == .done ? .secondary : .primary)
-                            }.accessibilityElement(children: .combine)
-                                .accessibilityLabel(Text(verbatim: "\(todoState(item.status)): \(item.title)"))
-                        }
-                    }
-                    if let edits = activity.edits {
-                        HStack {
-                            Text("编辑文件").fontWeight(.semibold)
-                            Spacer()
-                            EditStatText(stat: edits.total)
-                        }
-                        ForEach(edits.perFile.keys.sorted(), id: \.self) { path in
-                            HStack {
-                                Text((path as NSString).lastPathComponent).lineLimit(1).truncationMode(.middle)
-                                Spacer()
-                                EditStatText(stat: edits.perFile[path]!)
-                            }.help(path)
-                        }
-                    }
-                    KimiTaskSections(board: board, loadingOutput: loadingTaskOutput, stopping: stoppingTasks,
-                                     listError: taskListError, onLoadOutput: onTaskOutput,
-                                     onStop: onTaskStop, onRefresh: onTasksRefresh,
-                                     onOpenTranscript: onOpenTranscript,
-                                     onSubagentStop: onSubagentStop, stopErrors: taskStopErrors)
-                }.frame(maxWidth: .infinity, alignment: .leading).padding(.trailing, 4)
-            }.frame(maxHeight: 300)
-            if let externalFailure {
-                Divider()
-                VStack(alignment: .leading, spacing: 7) {
-                    Text("外部摘要更新失败：\(externalFailure)").foregroundStyle(.orange).textSelection(.enabled)
-                    if canRetryExternal {
-                        Button("重试外部摘要", action: retryExternal).buttonStyle(.borderless)
-                    }
-                }
-            }
-            if let timing {
-                Divider()
-                ActivityTurnClock(timing: timing, showsDetails: true)
-            }
-        }.font(.system(size: WorkbenchTheme.Reading.labelSize)).padding(16).frame(width: 390)
-    }
-    private func todoState(_ status: ConversationTodo.Status) -> String {
-        switch status {
-        case .done: return L("Completed")
-        case .inProgress: return L("In progress")
-        case .pending: return L("Pending")
+        case .running, .stopping, .plan, .hidden:
+            EmptyView()
         }
     }
 }
 
-/// +/− tally in the quiet palette; shared by the bar pill and the per-file rows.
-private struct EditStatText: View {
+/// When the turn last showed progress. The status line writes it on every
+/// change without invalidating its body; only the stall check reads it.
+final class TurnProgressClock {
+    struct Key: Equatable {
+        let signature: Int
+        let toolRunning: Bool
+    }
+    private var key: Key?
+    private var since = Date()
+    /// The current quiet stretch was already reported.
+    var reported = false
+    func mark(_ next: Key) {
+        guard next != key else { return }
+        key = next; since = Date(); reported = false
+    }
+    func stalledMinutes(now: Date) -> Int? {
+        TurnStatus.stalledMinutes(quietFor: now.timeIntervalSince(since), toolRunning: key?.toolRunning ?? false)
+    }
+}
+
+/// The running turn's clock: seconds for the first minute, then minutes, and it
+/// redraws only when the reading changes.
+private struct TurnClock: View {
+    let timing: ConversationTiming
+    @Environment(\.locale) private var locale
+    var body: some View {
+        TimelineView(TurnClockSchedule(start: timing.startedAt)) { context in
+            Text(verbatim: TurnStatus.clock(timing.elapsed(at: context.date),
+                                            chinese: locale.language.languageCode?.identifier == "zh"))
+        }.monospacedDigit().fixedSize()
+            .help(timing.observedOnly
+                  ? Text("从客户端首次观察到本轮开始计时，包含等待；此前用时未知。")
+                  : Text("从提交本轮请求到现在的经过时间，包含通信、工具调用和等待。"))
+    }
+}
+
+private struct TurnClockSchedule: TimelineSchedule {
+    let start: Date
+    func entries(from startDate: Date, mode: TimelineScheduleMode) -> AnyIterator<Date> {
+        var next = startDate
+        return AnyIterator {
+            let current = next
+            next = current.addingTimeInterval(max(0.05, TurnStatus.nextClockChange(after: current.timeIntervalSince(start))))
+            return current
+        }
+    }
+}
+
+/// +/− tally in the quiet palette; shared by the result line and the task panel.
+struct EditStatText: View {
     let stat: SessionEditStat
     var body: some View {
         HStack(spacing: 4) {
@@ -528,9 +473,9 @@ struct TaskRecapPopover: View {
     }
 }
 
-private struct ActivityTurnClock: View {
+/// A turn's wall time with its breakdown, for the task panel's 本轮 section.
+struct TurnTimingDetails: View {
     let timing: ConversationTiming
-    var showsDetails = false
     @Environment(\.locale) private var locale
     var body: some View {
         Group {
@@ -546,17 +491,15 @@ private struct ActivityTurnClock: View {
     private func duration(_ value: TimeInterval) -> String {
         ConversationTiming.duration(value, chinese: locale.language.languageCode?.identifier == "zh")
     }
-    @ViewBuilder private func content(at now: Date) -> some View {
-        let total = timing.elapsed(at: now)
-        if showsDetails {
-            VStack(alignment: .leading, spacing: 6) {
-                label(duration(total))
-                Text("处理与工具调用：\(duration(total - timing.waiting(at: now)))")
-                Text("等待确认：\(duration(timing.waiting(at: now)))")
-                Text("阶段时长按客户端收到的状态估算，包含通信与调度。")
-                    .font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
-            }
-        } else { label(duration(total)).fixedSize() }
+    private func content(at now: Date) -> some View {
+        let total = timing.elapsed(at: now), waiting = timing.waiting(at: now)
+        return VStack(alignment: .leading, spacing: 4) {
+            label(duration(total))
+            Text("处理与工具调用：\(duration(total - waiting))").foregroundStyle(WorkbenchTheme.quiet)
+            Text("等待确认：\(duration(waiting))").foregroundStyle(WorkbenchTheme.quiet)
+            Text("阶段时长按客户端收到的状态估算，包含通信与调度。")
+                .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet)
+        }
     }
     @ViewBuilder private func label(_ duration: String) -> some View {
         if timing.observedOnly {
@@ -564,256 +507,6 @@ private struct ActivityTurnClock: View {
             else { Text("观察时长 \(duration)") }
         } else if timing.endedAt == nil { Text("已用时 \(duration)") }
         else { Text("用时 \(duration)") }
-    }
-}
-
-private struct ActivityToolDetails: View {
-    let tool: VisibleTool
-    @State private var expanded = false
-    var body: some View {
-        DisclosureGroup(isExpanded: $expanded) {
-            if expanded {
-                VStack(alignment: .leading, spacing: 8) {
-                    if let input = tool.input { Text("Input").fontWeight(.medium); Text(input.display).textSelection(.enabled) }
-                    if let progress = tool.progress { Text("Latest update").fontWeight(.medium); Text(progress.display).textSelection(.enabled) }
-                    if let output = tool.output { Text("Result").fontWeight(.medium); Text(output.display).textSelection(.enabled) }
-                }.font(.system(size: WorkbenchTheme.Reading.captionSize, design: .monospaced)).frame(maxWidth: .infinity, alignment: .leading).padding(.top, 6)
-            }
-        } label: {
-            VStack(alignment: .leading, spacing: 3) {
-                HStack {
-                    Text(tool.name).fontWeight(.medium)
-                    Spacer()
-                    Text(verbatim: ConversationActivity.status(of: tool))
-                        .foregroundStyle(tool.staysVisible && tool.status != .running ? Color.orange : WorkbenchTheme.quiet)
-                }
-                let summary = ConversationActivity.summary(of: tool)
-                if summary != tool.name { Text(summary).lineLimit(2).foregroundStyle(WorkbenchTheme.quiet) }
-                if let progress = tool.progress { Text(progress.display).lineLimit(2).foregroundStyle(WorkbenchTheme.quiet) }
-            }
-        }.disclosureGroupStyle(WorkbenchDisclosureStyle())
-    }
-}
-
-/// Subagent roster and background tasks of the selected session, inside the
-/// activity popover. Presentation plus the two actions the task API offers:
-/// reading an output tail and stopping one task.
-struct KimiTaskSections: View {
-    let board: KimiTaskBoard
-    var loadingOutput: Set<String> = []
-    var stopping: Set<String> = []
-    var listError: String? = nil
-    var onLoadOutput: (KimiTask) -> Void = { _ in }
-    var onStop: (KimiTask) -> Void = { _ in }
-    var onRefresh: () -> Void = {}
-    var onOpenTranscript: (KimiTask) -> Void = { _ in }
-    /// Stops one subagent row on its own; nil leaves the roster read-only.
-    var onSubagentStop: ((KimiTask) -> Void)? = nil
-    var stopErrors: [String: String] = [:]
-
-    var body: some View {
-        let backgroundTasks = board.backgroundTasks
-        LazyVStack(alignment: .leading, spacing: 14) {
-            if !board.subagents.isEmpty {
-                section("子 Agent", tasks: board.subagents, readsOutput: false)
-            }
-            if !backgroundTasks.isEmpty {
-                section("后台任务", tasks: backgroundTasks, readsOutput: true)
-            }
-            if let listError {
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(listError).foregroundStyle(.orange).textSelection(.enabled)
-                    Button("重试读取任务") { onRefresh() }.buttonStyle(.borderless)
-                }
-            }
-        }
-        #if PERCH_ACCEPTANCE
-        .background(NativeSubagentRosterProbe(rows: board.subagents.map {
-            "\($0.id)|\($0.status)|\($0.stoppable == true)|\(stopping.contains($0.id))"
-        }))
-        #endif
-    }
-
-    private func section(_ title: LocalizedStringKey, tasks: [KimiTask], readsOutput: Bool) -> some View {
-        LazyVStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(title).fontWeight(.semibold)
-                Spacer()
-                let running = tasks.filter(\.isRunning).count
-                if running > 0 { Text("\(running) 运行中").monospacedDigit().foregroundStyle(WorkbenchTheme.quiet) }
-                if readsOutput {
-                    Button { onRefresh() } label: { Image(systemName: "arrow.clockwise") }
-                        .buttonStyle(.plain).accessibilityLabel(Text("刷新后台任务"))
-                        .help("重新读取后台任务列表")
-                }
-            }
-            ForEach(tasks) { task in
-                KimiTaskRow(task: task, output: board.output(of: task),
-                            isLoadingOutput: loadingOutput.contains(task.id),
-                            isStopping: stopping.contains(task.id), readsOutput: readsOutput,
-                            onLoadOutput: { onLoadOutput(task) }, onStop: { onStop(task) },
-                            onOpenTranscript: { onOpenTranscript(task) },
-                            onSubagentStop: subagentStop(task, readsOutput: readsOutput),
-                            stopError: readsOutput ? nil : stopErrors[task.id])
-            }
-        }
-    }
-
-    /// Only roster rows the runtime marks stoppable stop on their own.
-    private func subagentStop(_ task: KimiTask, readsOutput: Bool) -> (() -> Void)? {
-        guard !readsOutput, task.stoppable == true, let onSubagentStop else { return nil }
-        return { onSubagentStop(task) }
-    }
-}
-
-private struct KimiTaskRow: View {
-    let task: KimiTask
-    let output: String?
-    let isLoadingOutput: Bool
-    let isStopping: Bool
-    /// Only the persisted list has an output tail to read and a task to stop. A
-    /// foreground child belongs to the running turn, which Stop already covers.
-    let readsOutput: Bool
-    var onLoadOutput: () -> Void = {}
-    var onStop: () -> Void = {}
-    var onOpenTranscript: () -> Void = {}
-    /// A native roster row the bridge can stop on its own; the main turn keeps running.
-    var onSubagentStop: (() -> Void)? = nil
-    var stopError: String? = nil
-    @State private var expanded = false
-    @UILocalization private var L
-
-    private var symbol: String {
-        switch task.subagentPhase {
-        case "queued": return "clock"
-        case "suspended": return "pause.circle"
-        default: break
-        }
-        switch task.status {
-        case "running": return "circle.dotted"
-        case "completed": return "checkmark"
-        case "failed": return "exclamationmark.circle"
-        case "cancelled": return "xmark.circle"
-        default: return "questionmark.circle"
-        }
-    }
-    private var attention: Bool { task.isFailed || task.subagentPhase == "suspended" }
-    private var tint: Color { attention ? .orange : .secondary }
-    /// The background list mixes processes, detached children and question
-    /// tasks. The roster section holds subagents only, so its rows name the
-    /// subagent type instead of the kind.
-    private var chip: String? {
-        guard readsOutput else { return task.subagentType }
-        return task.subagentType ?? task.kindLabel
-    }
-
-    /// Tokens, tool calls and the latest tool of a native roster entry; nil for
-    /// Kimi records, which report none of them.
-    private var usage: String? {
-        var parts: [String] = []
-        if let tokens = task.tokenCount { parts.append(L("已用 \(tokens) Token")) }
-        if let calls = task.toolUseCount { parts.append(L("\(calls) 次调用")) }
-        if let tool = task.latestActivity { parts.append(L("最近工具：\(tool)")) }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
-    }
-
-    var body: some View {
-        let usageLine = usage
-        DisclosureGroup(isExpanded: $expanded) {
-            if expanded { details }
-        } label: {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 8) {
-                    Image(systemName: symbol).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(tint).accessibilityHidden(true)
-                    Text(task.description).lineLimit(1).truncationMode(.middle)
-                    if let chip, chip != task.description {
-                        Text(LocalizedStringKey(chip)).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(WorkbenchTheme.quiet).fixedSize()
-                    }
-                    Spacer(minLength: 4)
-                    KimiTaskClock(task: task).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(.tertiary)
-                    Text(task.phaseLabel).foregroundStyle(tint).fixedSize()
-                }
-                if let usageLine {
-                    // Under the description, past the status symbol's column.
-                    Text(verbatim: usageLine).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
-                        .lineLimit(1).truncationMode(.tail).padding(.leading, 19)
-                }
-            }.font(.system(size: WorkbenchTheme.Reading.labelSize)).foregroundStyle(WorkbenchTheme.quiet)
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(Text(verbatim: ["\(task.kindLabel) \(task.description) \(task.phaseLabel)", usageLine]
-                    .compactMap { $0 }.joined(separator: ", ")))
-                .help(Text(verbatim: [task.command, task.model, task.id].compactMap { $0 }.joined(separator: "\n")))
-        }.disclosureGroupStyle(WorkbenchDisclosureStyle())
-            .onChange(of: expanded) { _, value in
-                if value && readsOutput && output == nil { onLoadOutput() }
-            }
-    }
-
-    private var details: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            VStack(alignment: .leading, spacing: 3) {
-                meta("状态", task.statusLabel)
-                if let model = task.model {
-                    meta("模型", task.thinkingEffort.map { "\(model) · \($0)" } ?? model)
-                }
-                if let type = task.subagentType { meta("子 Agent 类型", type) }
-                if let command = task.command { meta("命令", command) }
-                if let index = task.swarmIndex { meta("并行序号", String(index)) }
-                if let reason = task.suspendedReason { meta("暂停原因", reason) }
-                meta("任务 ID", task.id)
-            }.font(.system(size: WorkbenchTheme.Reading.captionSize))
-            let stopsAlone = onSubagentStop != nil && task.isRunning
-            if task.transcriptAgentId != nil || stopsAlone {
-                HStack(spacing: 14) {
-                    if task.transcriptAgentId != nil {
-                        Button("查看过程") { onOpenTranscript() }.buttonStyle(.borderless)
-                            .help("读取这个子 Agent 自己的轮次、思考与工具调用")
-                    }
-                    if stopsAlone {
-                        // Stays 停止中 until the roster shows an outcome.
-                        Button { onSubagentStop?() } label: {
-                            if isStopping { Text("停止中") } else { Text("停止") }
-                        }.buttonStyle(.borderless).disabled(isStopping)
-                            .help("只停止这个子 Agent，主会话继续运行")
-                    }
-                }
-            }
-            if let stopError, task.isRunning {
-                Text(L("单独停止失败：\(stopError)。可以停止整轮。"))
-                    .foregroundStyle(.orange).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
-            }
-            if readsOutput || output != nil {
-                Text("输出").fontWeight(.medium).foregroundStyle(WorkbenchTheme.quiet)
-                if isLoadingOutput {
-                    ProgressView().controlSize(.small)
-                } else if let output, !output.isEmpty {
-                    ScrollView {
-                        Text(output).font(.system(size: WorkbenchTheme.Reading.captionSize, design: .monospaced)).textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .topLeading)
-                    }.frame(maxHeight: 220)
-                } else {
-                    Text("暂无输出").foregroundStyle(WorkbenchTheme.quiet)
-                }
-                if readsOutput && task.isRunning {
-                    HStack(spacing: 14) {
-                        Button("刷新输出") { onLoadOutput() }.buttonStyle(.borderless).disabled(isLoadingOutput)
-                        Button { onStop() } label: {
-                            if isStopping { Text("正在停止…") } else { Text("停止任务") }
-                        }.buttonStyle(.borderless).disabled(isStopping)
-                    }
-                }
-            }
-        }.frame(maxWidth: .infinity, alignment: .leading).padding(10)
-            .background(WorkbenchTheme.Fill.surface,
-                        in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
-            .padding(.leading, 10).padding(.top, 5)
-    }
-
-    private func meta(_ label: LocalizedStringKey, _ value: String) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Text(label).foregroundStyle(WorkbenchTheme.quiet).frame(width: 84, alignment: .leading)
-            Text(value).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
-        }
     }
 }
 

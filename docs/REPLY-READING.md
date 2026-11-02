@@ -85,8 +85,8 @@ Assistant progress stays visible in chronological order, interleaved with each
 reasoning phase. New reasoning and new overviews append below prior output rather
 than replacing a turn-wide slot. Completed reasoning phases have independent
 disclosures, titled 已思考 N秒 when this app watched the phase stream. The phase
-that is still streaming has no transcript row: the activity bar owns it, so the
-reader sees one live indicator instead of two. Kimi volatile deltas and native
+that is still streaming reads in place as 思考中 · N秒, open at four lines that
+follow the stream; the status line names only the phase. Kimi volatile deltas and native
 agent snapshots use the same policy. A volatile Kimi message is deduplicated only
 against messages in the current turn.
 
@@ -126,13 +126,14 @@ Expanded input/progress/output share a quiet solid background and stay selectabl
 
 The activity summary above the composer is a plain 28 pt row, with 11 pt counts
 and elapsed time. Attention states use a 36 pt row with a soft orange background;
-review and reconnect actions remain visible. The activity popover retains the full
-plan, tool details and timing breakdown. Model selection uses secondary text while
+review and reconnect actions remain visible. The task panel's 本轮 section holds the
+full plan, this turn's edits by file and the timing breakdown (2026-11-02: the
+activity popover was removed). Model selection uses secondary text while
 preserving the provider identity and existing interaction.
 
 `Tool Visibility Preview` includes a final answer, a finished-turn clock and a
 local approval-entry alert. Check completed, running, failed and disconnected
-states, expansion/collapse and the activity popover. Reduce Motion is read from
+states and expansion/collapse. Reduce Motion is read from
 the system rather than overriding a read-only SwiftUI environment value.
 
 ## Input and floating activity
@@ -157,15 +158,15 @@ Kimi conversation (and use Edit → Paste): confirm one thumbnail appears and th
 existing draft remains. Send it to verify upload separately. OMP/Qoder text-only
 inputs do not advertise image paste support.
 
-Streaming thinking has no transcript row (2026-10-28): the activity bar shows the
-live phase, and the settled thought appears as 已思考 N秒 with its full text in
+Streaming thinking had no transcript row from 2026-10-28 to 2026-11-02; it now reads
+in place as 思考中 · N秒, and the settled thought appears as 已思考 N秒 with its full text in
 upright secondary-size type. The activity
 bar stays above the composer, showing a quiet three-dot opacity pulse while busy,
 paused under Reduce Motion. Approval/question waits do not animate as active work.
 The Kimi TodoList schema was checked against installed Kimi 2.0.2 source: successful
 `TodoList` calls replace `todos: [{title, status}]`, where status is `pending`,
 `in_progress` or `done`; missing todos means query and an empty array clears.
-The bar displays progress and the current task, with a popover for the full list.
+The status line shows the step in progress and `c / n`; the task panel lists the plan.
 It does not infer a plan from prose or guess other agents' tool schemas.
 The floating list is scoped to the latest real user turn; injected runtime context
 does not start a new turn. A fully completed list remains while the turn is running
@@ -216,9 +217,8 @@ AppKit's spinning progress indicator supplies visible motion in the activity bar
 running sidebar rows without a SwiftUI animation timer. Reduce Motion shows a static
 hourglass; sidebar attention/review/idle states also have distinct visual indicators.
 
-The turn activity popover anchors to the pointer position within the task-bar button,
-held still while open. Keyboard/accessibility activation without a pointer uses
-the button bounds, and AppKit keeps the popover within screen bounds.
+Since 2026-11-02 the status line has no popover: a click opens the task panel's 本轮
+section (see `docs/design/ui-spec.md` 状态条).
 
 The bar uses the active tool's description when available, otherwise a localized
 operation label. Approval, disconnection and stopping states take precedence over

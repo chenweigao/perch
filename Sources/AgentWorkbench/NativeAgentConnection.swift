@@ -268,7 +268,7 @@ final class NativeAgentConnection {
             requests: value.interactions.map { request in
                 TaskContextRequest(id: request["id"].string ?? request.display,
                     title: request["title"].string ?? request["question"].string ?? request["message"].string ?? L("需要你处理"))
-            }, failure: value.error, messages: Array(value.messages.suffix(160)),
+            }, failure: value.error, messages: value.messages,
             tasks: (value.subagents ?? []).map(KimiTask.init(native:)), native: true)
     }
     func stopTaskContextAgent(_ key: String, session: String) async throws {

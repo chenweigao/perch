@@ -310,7 +310,6 @@
 
 "View full thoughts" = "View full thoughts";
 /* Turn timing and activity */
-"本轮结束" = "Turn ended";
 "已用时 %@" = "Elapsed %@";
 "用时 %@" = "Took %@";
 "已观察 %@" = "Observed %@";
@@ -331,25 +330,15 @@
 "Connection lost" = "Connection lost";
 "Review tool results" = "Review tool results";
 "Plan remaining" = "Plan remaining";
-"本轮活动" = "Turn activity";
-"查看本轮活动与计划" = "Show this turn’s activity and plan";
 "查看" = "Review";
 "等待你确认 · %lld 项" = "Waiting for you · %lld items";
-"关闭活动详情" = "Close activity details";
 "%lld/%lld 步" = "%lld/%lld steps";
-"%lld 个工具" = "%lld tools";
 "查看等待你确认的事项" = "Review what is waiting for you";
-"查看需要关注的工具结果" = "Review tool results that need attention";
 "返回最新" = "Return to latest";
 "有新内容，返回最新" = "New content — return to latest";
-"连接已断开，以下为最后收到的工具状态。" = "Connection lost. Tool states below are the last received states.";
-"当前操作" = "Current activity";
-"任务计划" = "Task plan";
 
 /* Subagents and background tasks */
-"%lld 运行中" = "%lld running";
 "子 Agent" = "Subagent";
-"后台任务" = "Background tasks";
 "命令" = "Command";
 "工具" = "Tool";
 "已完成" = "Completed";
@@ -359,18 +348,13 @@
 "执行中" = "Working";
 "已暂停" = "Suspended";
 "状态" = "Status";
-"子 Agent 类型" = "Subagent type";
 "并行序号" = "Swarm index";
 "暂停原因" = "Suspend reason";
 "任务 ID" = "Task ID";
 "输出" = "Output";
 "暂无输出" = "No output yet";
-"刷新输出" = "Refresh output";
 "停止任务" = "Stop task";
 "正在停止…" = "Stopping…";
-"刷新后台任务" = "Refresh background tasks";
-"重新读取后台任务列表" = "Read the background task list again";
-"重试读取任务" = "Retry reading tasks";
 "查看过程" = "Show activity";
 "读取这个子 Agent 自己的轮次、思考与工具调用" = "Read this subagent’s own turns, thinking and tool calls";
 "子 Agent 过程" = "Subagent activity";
@@ -720,7 +704,6 @@
 "模型原生摘要" = "Provider-native summary";
 "活动叙事" = "Activity narrative";
 "探索" = "Exploring";
-"依据" = "Evidence";
 "受阻" = "Blocked";
 "推进" = "Progressing";
 "阶段已完成" = "Stage complete";
@@ -1222,7 +1205,6 @@
 "网络不可用" = "Network unavailable";
 
 "查询返回 %lld" = "Request returned %lld";
-"编辑文件" = "Edited files";
 "确认本题并继续" = "Confirm and continue";
 
 "修改回答" = "Edit answer";
@@ -1496,7 +1478,6 @@
 "Progress" = "Progress";
 "Output" = "Output";
 "No input or output" = "No input or output";
-"Latest update" = "Latest update";
 "Result" = "Result";
 "In progress" = "In progress";
 "Pending" = "Pending";
@@ -1665,9 +1646,7 @@
 "要连接另一台机器，请添加新机器。" = "To connect a different machine, add a new one.";
 
 /* Native subagents: roster, transcript sheet and stop (2026-10-18) */
-"停止中" = "Stopping";
 "只停止这个子 Agent，主会话继续运行" = "Stops only this subagent; the main session keeps running";
-"单独停止失败：%@。可以停止整轮。" = "Could not stop this subagent alone: %@. You can stop the whole turn instead.";
 "最近工具：%@" = "Last tool: %@";
 "来自子 Agent" = "From a subagent";
 "来自子 Agent：%@" = "From subagent: %@";
@@ -2001,4 +1980,22 @@
 "不提醒" = "Off";
 "静默" = "Silent";
 "提示音" = "Sound";
-"Perch 在前台时，只有需要你处理的事会播放提示音；一轮结束只在 Perch 处于后台时提示。完成通知会合并。可在会话右键菜单中单独静音。" = "While Perch is in front, only things that need you play a sound. A finished turn alerts only when Perch is in the background. Completion notifications are grouped. Mute individual sessions from their context menu.";
+"%lld 分钟没有新进展" = "No progress for %lld min";
+"共 %lld 项" = "%lld in total";
+"完成 · %lld 项需要你看一下" = "Done · %lld need a look";
+"需要你确认：%@" = "Needs your approval: %@";
+"需要你回答：%@" = "Needs your answer: %@";
+"本轮状态" = "Turn status";
+"在任务面板查看本轮详情" = "Show this turn in the task panel";
+"在任务面板查看需要关注的工具结果" = "Review uncertain tool results in the task panel";
+"在右栏查看工作区改动" = "Show working-tree changes in the inspector";
+"改了 %lld 个文件" = "Changed %lld files";
+"从提交本轮请求到现在的经过时间，包含通信、工具调用和等待。" = "Time since this turn's request was sent, including transport, tool calls and waiting.";
+"思考中 · %@" = "Thinking · %@";
+"本轮" = "This turn";
+"计划" = "Plan";
+"编辑文件 · %lld" = "Edited files · %lld";
+"疑似卡住" = "Possibly stuck";
+"可能卡住了" = "May be stuck";
+"任务几分钟没有新进展，可能卡住了。" = "The task has made no progress for a few minutes and may be stuck.";
+"Perch 在前台时，只有需要你处理的事会播放提示音；一轮结束只在 Perch 处于后台时提示。完成通知会合并。可在会话右键菜单中单独静音。疑似卡住只对正在打开的会话判断：3 分钟没有新进展（有工具运行时 10 分钟）。" = "While Perch is in front, only things that need you play a sound. A finished turn alerts only when Perch is in the background. Completion notifications are grouped. Mute individual sessions from their context menu. Possibly stuck applies to the open session only: 3 minutes without progress (10 while a tool runs).";

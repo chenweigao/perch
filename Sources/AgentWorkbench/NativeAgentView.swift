@@ -10,7 +10,6 @@ struct NativeAgentView: View {
     @State private var appActive = NSApp.isActive
     @State private var follow = true
     @State private var activityReview = 0
-    @State private var editStats = SessionEditStatsCache()
     private var displayedResultKey: String? {
         guard appActive, follow, connection.online,
               let snapshot = connection.snapshot, snapshot.id == connection.selectedID,
@@ -158,9 +157,7 @@ struct NativeAgentView: View {
     @ViewBuilder private func bottomBar(_ s: NativeAgentSnapshot, readingKey: String) -> some View {
         VStack(spacing: 0) {
             let recapKey = (isCurrent(s) ? s.taskRecapRevision : nil).map { "\(readingKey):\($0)" }
-            // Bridge protocol 7 roster; an older bridge reports none and the section stays hidden.
-            let subagentBoard = KimiTaskBoard(subagents: (s.subagents ?? []).map(KimiTask.init(native:)))
-            let subagentStopErrors = connection.subagentStopErrors(in: s)
+            let actions = ConversationActionContext(hostID: connection.host.id, kind: s.provider, sessionID: s.id)
             let activityProbe = PerfDiagnostics.begin()
             let activity = ConversationActivity(
                 messages: s.messages, isRunning: s.busy,
@@ -168,12 +165,14 @@ struct NativeAgentView: View {
                 online: connection.online,
                 isThinking: s.messages.last?.role == "assistant" && s.messages.last?.content.last?.type == "thinking",
                 isResponding: s.messages.last?.role == "assistant" && s.messages.last?.content.last?.type == "text",
-                pendingCount: s.interactions.count, isStopping: connection.isStopping, editStats: editStats)
+                pendingCount: s.interactions.count, isStopping: connection.isStopping)
             let _ = PerfDiagnostics.end("activity_derive", activityProbe, detail: "messages=\(s.messages.count)")
+            // Subagents and background tasks are in the task panel, which the line opens.
             ConversationActivityBar(activity: activity,
                 isRunning: s.busy,
                 timing: connection.timings.turns[s.id],
                 online: connection.online, offlineDetail: connection.error, pendingCount: s.interactions.count,
+                request: TurnRequest.native(s.interactions),
                 narrativeSession: readingKey,
                 recapKey: recapKey,
                 recapMessages: {
@@ -181,15 +180,9 @@ struct NativeAgentView: View {
                     return try await connection.recapMessages(for: s.id)
                 },
                 onReview: { activityReview += 1 }, onReconnect: { connection.connect() },
-                board: subagentBoard,
-                stoppingTasks: connection.subagents.stopping,
-                onOpenTranscript: { task in
-                    if isCurrent(s) { connection.openSubagent(task.id, in: s.id) }
-                },
-                onSubagentStop: { task in
-                    if isCurrent(s) { connection.stopSubagent(task.id, in: s.id) }
-                },
-                taskStopErrors: subagentStopErrors)
+                onDetails: { actions.post(.showTurnDetails) },
+                onChanges: { actions.post(.showChanges) },
+                onStall: { actions.post(.turnStalled(minutes: $0)) })
                 .id(s.id).frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, ReplyStyle.horizontalPadding)
                 .frame(maxWidth: .infinity, alignment: .center).padding(.vertical, 6)
             // Long upstream errors scroll inside the notice instead of displacing the conversation.

@@ -29,7 +29,11 @@ final class TaskNotifications: NSObject, UNUserNotificationCenterDelegate {
         cancelPendingCompletions(for: id)
         let content = UNMutableNotificationContent()
         content.title = title
-        content.body = event == .failed ? L("任务执行失败，请查看详情。") : L("这个任务需要你确认或回答。")
+        switch event {
+        case .failed: content.body = L("任务执行失败，请查看详情。")
+        case .stalled: content.body = L("任务几分钟没有新进展，可能卡住了。")
+        case .completed, .needsInput: content.body = L("这个任务需要你确认或回答。")
+        }
         content.userInfo = ["session": id]; content.sound = sound ? .default : nil
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "\(id):\(event.rawValue)", content: content, trigger: nil))
     }
@@ -78,5 +82,12 @@ struct TaskNotice: Identifiable {
     let sessionID: String
     let title: String
     let kind: TaskEventKind
-    var message: String { kind == .completed ? L("结果待查看") : kind == .failed ? L("任务执行失败") : L("需要你处理") }
+    var message: String {
+        switch kind {
+        case .completed: return L("结果待查看")
+        case .failed: return L("任务执行失败")
+        case .needsInput: return L("需要你处理")
+        case .stalled: return L("可能卡住了")
+        }
+    }
 }

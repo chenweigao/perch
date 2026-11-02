@@ -107,7 +107,7 @@ private struct WorkbenchDetail: View {
             if let notice = model.taskNotice {
                 HStack {
                     Button { model.openNotifiedTask(notice.sessionID) } label: {
-                        Label("\(notice.message) · \(notice.title)", systemImage: notice.kind == .completed ? "checkmark.circle" : "exclamationmark.circle").lineLimit(1)
+                        Label("\(notice.message) · \(notice.title)", systemImage: notice.kind == .completed ? "checkmark.circle" : notice.kind == .stalled ? "clock" : "exclamationmark.circle").lineLimit(1)
                     }.buttonStyle(.plain)
                     Spacer()
                     // Natural size: a 28 pt target would make the notice bar taller.

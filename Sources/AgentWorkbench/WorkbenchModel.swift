@@ -1029,8 +1029,28 @@ final class WorkbenchModel {
             // A sheet over the conversation; the composer is not the target.
             if !isKimi { native?.openSubagent(toolCallId, in: id) }
             return
+        case .showTurnDetails:
+            showTurn(.task, of: SessionReference(hostID: context.hostID, terminalID: id, kind: context.kind))
+            return
+        case .showChanges:
+            showTurn(.changes, of: SessionReference(hostID: context.hostID, terminalID: id, kind: context.kind))
+            return
+        case .turnStalled:
+            let reference = SessionReference(hostID: context.hostID, terminalID: id, kind: context.kind)
+            if let item = allSessions.first(where: { $0.reference == reference }) {
+                taskNotifications.deliverStall(id: item.id, title: item.title,
+                                               visibleSessionID: showDashboard ? nil : selectedReference?.id)
+            }
+            return
         }
         DispatchQueue.main.async { NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil) }
+    }
+    /// The status line asks for its own session: a panel locked to another one
+    /// follows again, and the task page shows its list, where 本轮 leads.
+    private func showTurn(_ page: WorkspaceInspectorPage, of reference: SessionReference) {
+        if let locked = taskContextWindow.locked, locked != reference { taskContextWindow.locked = nil }
+        if page == .task, taskContextWindow.detail?.source == reference { taskContextWindow.detail = nil }
+        taskContextWindow.showPage(page, model: self)
     }
     private func appendToDraft(kimi: KimiConnection?, native: NativeAgentConnection?, isKimi: Bool, id: String, text: String) {
         if isKimi, let kimi {

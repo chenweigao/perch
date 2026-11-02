@@ -61,10 +61,17 @@ final class WorkbenchNotificationState {
         deliver(AttentionEvent(kind), id: id, title: title, context: Self.context(for: id, visibleSessionID: visibleSessionID))
     }
 
+    /// A suspected stall, reported by the open session's status line.
+    func deliverStall(id: String, title: String, visibleSessionID: String?) {
+        guard !mutedTasks.contains(id) else { return }
+        deliver(.stalled, id: id, title: title, context: Self.context(for: id, visibleSessionID: visibleSessionID))
+    }
+
     /// Delivers one event through the channels the router picks.
     func deliver(_ event: AttentionEvent, id: String, title: String, context: AttentionContext) {
         let delivery = AttentionRouter.route(event, context: context, preferences: preferences)
-        if delivery.notice, let kind = TaskEventKind(event) {
+        let kind = TaskEventKind(event)
+        if delivery.notice {
             let notice = TaskNotice(sessionID: id, title: title, kind: kind)
             taskNotice = notice
             Task { @MainActor [weak self] in
@@ -72,7 +79,7 @@ final class WorkbenchNotificationState {
                 if self?.taskNotice?.id == notice.id { self?.taskNotice = nil }
             }
         }
-        if delivery.systemNotification, let kind = TaskEventKind(event) {
+        if delivery.systemNotification {
             notifications.post(id: id, title: title, event: kind, sound: delivery.notificationSound)
         }
         if delivery.sound { attentionSound?.stop(); attentionSound?.play() }
@@ -121,13 +128,12 @@ final class WorkbenchNotificationState {
 }
 
 private extension TaskEventKind {
-    /// Stalls are not catalog events and have no notice kind.
-    init?(_ event: AttentionEvent) {
+    init(_ event: AttentionEvent) {
         switch event {
         case .completed: self = .completed
         case .needsInput: self = .needsInput
         case .failed: self = .failed
-        case .stalled: return nil
+        case .stalled: self = .stalled
         }
     }
 }

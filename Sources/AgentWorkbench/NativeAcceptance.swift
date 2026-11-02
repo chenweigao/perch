@@ -977,7 +977,7 @@ private struct ReferenceComposerFixtureView: View {
         return report
     }
     /// Subagents (bridge protocol 7) in the production views over fixed in-memory
-    /// routes: the activity details' roster, the transcript sheet opened through
+    /// routes: the task panel's roster, the transcript sheet opened through
     /// the transcript action route, its follow and older reads, a reader body that
     /// transcript reads leave alone, one subagent's stop, and a close that ends
     /// the reads without stopping anything.
@@ -987,18 +987,18 @@ private struct ReferenceComposerFixtureView: View {
         guard native.snapshot?.subagents?.map(\.id) == [live, "toolu_done"] else {
             throw WorkbenchError("Missing the fixture's subagent roster")
         }
-        let details = Notification.Name("PerchAcceptanceActivityDetails")
-        NotificationCenter.default.post(name: details, object: true)
+        // The status line opens this turn in the task panel, where the roster lives.
+        let context = ConversationActionContext(hostID: NativeAcceptanceFixture.host.id, kind: .claude,
+                                                sessionID: "session-0", opensSubagents: true)
+        model.handleConversationAction(ConversationActionPayload(context: context, action: .showTurnDetails))
         try await settle(window, "subagent roster") {
             self.probe.subagentRoster == ["toolu_live|running|true|false", "toolu_done|completed|false|false"]
         }
         let roster = probe.subagentRoster
-        NotificationCenter.default.post(name: details, object: false)
-        try await Task.sleep(for: .milliseconds(300))
+        model.taskContextWindow.embeddedVisible = false
+        try await settle(window, "task panel closed") { self.probe.subagentRoster.isEmpty }
 
         // The Agent/Task card's route: the hosted row posts this payload.
-        let context = ConversationActionContext(hostID: NativeAcceptanceFixture.host.id, kind: .claude,
-                                                sessionID: "session-0", opensSubagents: true)
         model.handleConversationAction(ConversationActionPayload(context: context, action: .openSubagent(toolCallId: live)))
         let latest = ["tool:sub-t1", "text:sub-3:0", "tool:sub-t2", "text:sub-5:0"]
         try await settle(window, "subagent sheet") { window.sheets.count == 1 && self.probe.subagentSheetRows == latest }
@@ -1046,14 +1046,14 @@ private struct ReferenceComposerFixtureView: View {
         guard fixture.subagentReads.count == reads, fixture.subagentStops.count == 1 else {
             throw WorkbenchError("The closed sheet kept reading or sent a stop")
         }
-        NotificationCenter.default.post(name: details, object: true)
+        model.handleConversationAction(ConversationActionPayload(context: context, action: .showTurnDetails))
         try await settle(window, "stopped roster") { self.probe.subagentRoster.first == "toolu_live|cancelled|false|false" }
-        NotificationCenter.default.post(name: details, object: false)
-        try await Task.sleep(for: .milliseconds(300))
+        model.taskContextWindow.embeddedVisible = false
+        try await settle(window, "task panel closed") { self.probe.subagentRoster.isEmpty }
         return ["subagent_roster": roster, "subagent_sheet_rows": all, "subagent_reads": fixture.subagentReads,
                 "subagent_stop_requests": fixture.subagentStops,
                 "reading_body_evaluations_during_transcript_reads": readerUpdates,
-                "subagent_contract": "roster rows in the activity details, sheet through the transcript action route, full then delta follow reads, serialized older page, single-subagent stop settled by the roster, close ends reads without a stop; fixed routes, no SSH or real agent"]
+                "subagent_contract": "roster rows in the task panel the status line opens, sheet through the transcript action route, full then delta follow reads, serialized older page, single-subagent stop settled by the roster, close ends reads without a stop; fixed routes, no SSH or real agent"]
     }
     private func dashboard(_ window: NSWindow) async throws -> [String: Any] {
         let unified = try await unifiedWorkbench(window)
