@@ -7,7 +7,7 @@ ROOT = pathlib.Path(os.environ.get('AWB_NATIVE_ROOT', '~/.local/share/agent-work
 ROOT.mkdir(parents=True, exist_ok=True, mode=0o700)
 ROOT.chmod(0o700)
 os.umask(0o077)
-SERVICE_VERSION = 11
+SERVICE_VERSION = 12
 # Subagent text and thinking are forwarded into each subagent's own transcript.
 # Probe 2026-10-18 (SDK 0.3.280, CLI 2.1.302): every subagent assistant/user
 # message carried parent_tool_use_id, and no unparented stream delta held
@@ -697,6 +697,25 @@ def codex_agent_name(path):
 def codex_text_value(value):
     return value if isinstance(value, str) and value else None
 
+CODEX_ASYNC_REPLY_OPEN = '<send_user_message_question_reply>'
+CODEX_ASYNC_REPLY_CLOSE = '</send_user_message_question_reply>'
+
+def codex_async_reply_display(text):
+    """An async-question reply envelope reads as its quoted questions and answers;
+    anything else is None, so callers fall back to the raw text."""
+    if not isinstance(text, str): return None
+    value = text.strip()
+    if not (value.startswith(CODEX_ASYNC_REPLY_OPEN) and value.endswith(CODEX_ASYNC_REPLY_CLOSE)): return None
+    try: replies = json.loads(value[len(CODEX_ASYNC_REPLY_OPEN):-len(CODEX_ASYNC_REPLY_CLOSE)])
+    except Exception: return None
+    if isinstance(replies, dict): replies = [replies]
+    if not isinstance(replies, list) or not replies: return None
+    lines = []
+    for reply in replies:
+        if not isinstance(reply, dict) or not isinstance(reply.get('answer'), str): return None
+        lines.append('> %s\n\n%s' % (reply.get('question') or '', reply['answer']))
+    return '\n\n'.join(lines)
+
 def codex_permission_params(mode, turn=False):
     mode = permission_mode('codex', mode)
     policy, sandbox, turn_sandbox = {
@@ -847,6 +866,7 @@ class CodexSessionAdapter:
             self.write(target,{'role':'user','content':text,'timestamp':stamp},'codex:'+item_id); return
         if kind=='userMessage':
             text=''.join(part.get('text','') for part in item.get('content') or [] if part.get('type')=='text')
+            text=codex_async_reply_display(text) or text
             identity=item.get('clientId') or 'codex:'+item_id
             receipt=self.session.state.get('requests',{}).get(identity)
             if receipt:
@@ -864,6 +884,7 @@ class CodexSessionAdapter:
                 text=item.get('text',''); store[item_id]={'text':text}
             else: text=(store.get(item_id) or {}).get('text','')
             self.write(target,{'role':'assistant','content':[{'type':'text','text':text}],'timestamp':stamp},'codex:'+item_id)
+            if target is None and not history: self.async_question(item_id,item)
             return
         if kind in ('reasoning','plan'):
             if completed or kind=='plan' or item.get('content') or item.get('summary'):
@@ -913,6 +934,38 @@ class CodexSessionAdapter:
             self.write(target,{'role':'toolResult','toolCallId':item_id,'content':self.text(output),'isError':failed,'timestamp':stamp},'codex-result:'+item_id)
         if kind=='collabAgentToolCall':
             self.session.subagents.guard(self.collab,item,target,turn_id,history,epoch_seconds(at) or stamp)
+    def async_question(self, item_id, item):
+        """request_user_input_async arrives as an agent message carrying `questions`
+        (codex 0.162): the tool returns to the model at once, so the question is not
+        a blocking server request. It outlives its turn and is answered by sending a
+        user message in the reply envelope; see answer()."""
+        interaction_id='codex-asyncq:'+item_id
+        self.session.state['interactions']=[x for x in self.session.state['interactions'] if x.get('id')!=interaction_id]
+        self.interactions.pop(interaction_id,None)
+        questions=[q for q in item.get('questions') or [] if isinstance(q,dict) and str(q.get('title') or '').strip()]
+        if not questions:
+            if item.get('questions') is not None: self.session.touch(True)
+            return
+        shown=[]; mapping={}
+        for index,question in enumerate(questions):
+            title=question['title'].strip(); label=title; suffix=2
+            while label in mapping:
+                label='%s (%d)'%(title,suffix); suffix+=1
+            mapping[label]=title
+            shown.append({'id':str(index),'header':'','question':label,
+                          'options':[{'label':o,'description':''} for o in (question.get('options') or [])]})
+        self.interactions[interaction_id]={'method':'asyncUserInput','itemId':item_id,'questions':mapping}
+        self.session.state['interactions'].append({'id':interaction_id,'name':'AskUserQuestion','asyncQuestion':True,
+            'title':'Codex 提问','input':{'questions':shown}})
+        self.session.touch(True)
+    def clear_async_questions(self):
+        """A follow-up that is not a reply envelope supersedes every pending async
+        question, the same way the Codex UI drops them."""
+        ids=[key for key,value in self.interactions.items() if value.get('method')=='asyncUserInput']
+        if not ids: return
+        for key in ids: self.interactions.pop(key,None)
+        self.session.state['interactions']=[x for x in self.session.state['interactions'] if x.get('id') not in ids]
+        self.session.touch(True)
     def question_interaction(self, interaction_id, method, params):
         questions=[]; mapping={}
         def unique_label(value):
@@ -963,16 +1016,24 @@ class CodexSessionAdapter:
                 self.request(client,frame,method,params); return
             if method=='thread/started':
                 self.session.subagents.guard(self.thread_started,params.get('thread') or {}); return
+            if method=='thread/name/updated':
+                # The runtime's generated thread name is a better sidebar title than
+                # the prompt's first sixty characters.
+                name=clip_chars(params.get('threadName'),200)
+                if name and name!=self.session.state.get('title'):
+                    self.session.state['title']=name; self.session.touch(True)
+                return
             if method=='turn/started':
                 turn=params.get('turn') or {}; turn_id=turn.get('id')
                 if turn_id: self.session.state['turnId']=turn_id
                 self.session.state['busy']=True; self.session.state['error']=None; self.session.state['updated']=time.time(); self.session.finish('running'); self.session.touch(True); return
             if method=='turn/completed':
                 turn=params.get('turn') or {}; status=turn.get('status'); error=turn.get('error') or {}
-                # Children run their own turns, so their pending requests stay.
+                # Children run their own turns, so their pending requests stay; an
+                # async question is not turn-bound either and waits for its reply.
                 self.session.state['busy']=False; self.session.state['updated']=time.time()
-                self.session.state['interactions']=[x for x in self.session.state['interactions'] if isinstance(x.get('subagent'),dict)]
-                self.interactions={k:v for k,v in self.interactions.items() if v.get('thread')}
+                self.session.state['interactions']=[x for x in self.session.state['interactions'] if isinstance(x.get('subagent'),dict) or x.get('asyncQuestion')]
+                self.interactions={k:v for k,v in self.interactions.items() if v.get('thread') or v.get('method')=='asyncUserInput'}
                 self.session.subagents.guard(self.session.subagents.flush)
                 if status=='interrupted': self.session.state['cancelled']=True; self.session.state['stopAcknowledged']=True
                 elif status=='failed': self.session.state['error']=error.get('message') if isinstance(error,dict) else str(error)
@@ -1055,7 +1116,23 @@ class CodexSessionAdapter:
     def answer(self, interaction_id, body):
         pending=self.interactions.get(interaction_id)
         if not pending: raise ValueError('该 Codex 请求已失效，请同步会话后重试')
-        method=pending['method']; params=pending['params']; allow=bool(body.get('allow')) and not body.get('cancelled')
+        method=pending['method']; params=pending.get('params') or {}
+        allow=bool(body.get('allow')) and not body.get('cancelled')
+        if method=='asyncUserInput':
+            values=body.get('answers') or {}; replies=[]
+            for shown,title in pending.get('questions',{}).items():
+                value=str(values.get(shown) or '').strip()
+                if not value: raise ValueError('请回答所有问题')
+                replies.append({'questionItemId':pending['itemId'],'question':title,'answer':value})
+            if not replies: raise ValueError('请回答所有问题')
+            envelope=CODEX_ASYNC_REPLY_OPEN+json.dumps(replies,ensure_ascii=False)+CODEX_ASYNC_REPLY_CLOSE
+            message={'requestId':str(uuid.uuid4()),'text':envelope}
+            if self.session.state['busy']: self.session.steer(message)
+            else: self.session.prompt(message)
+            self.interactions.pop(interaction_id,None)
+            self.session.state['interactions']=[x for x in self.session.state['interactions'] if x.get('id')!=interaction_id]
+            self.session.touch(True)
+            return
         if method=='item/tool/requestUserInput':
             values=body.get('answers') or {}; answers={}
             for shown,question in pending.get('questions',{}).items():
@@ -1908,6 +1985,10 @@ class Session:
         if stored:
             marks=['[图片: %s]'%a['name'] if a['mediaType'].startswith('image/') else '[附件: %s]'%a['name'] for a in stored]
             content=(text+'\n' if text.strip() else '')+'\n'.join(marks)
+        if s['provider']=='codex':
+            display=codex_async_reply_display(text)
+            if display is not None: content=display
+            else: self.codex_adapter.clear_async_questions()
         if not s['messages']: s['title']=content[:60]
         if s['provider'] in ('qoder','qoderintl','dsh','codex','claude'): self.upsert({'role':'user','content':content},request_id)
         if s['provider']=='dsh':
@@ -2052,7 +2133,10 @@ class Session:
         receipt={'id':request_id,'digest':digest,'text':text,'status':'submitting',
                  'mode':'steer','turnId':s.get('turnId')}
         receipts[request_id]=receipt
-        if s['provider']=='codex': self.upsert({'role':'user','content':text},request_id)
+        if s['provider']=='codex':
+            display=codex_async_reply_display(text)
+            self.upsert({'role':'user','content':display or text},request_id)
+            if display is None: self.codex_adapter.clear_async_questions()
         self.touch(True)
         try:
             if s['provider']=='codex':

@@ -87,6 +87,11 @@ OMP、Qoder、Claude 与 dsh 的归档只属于远端工作台目录，删除工
 - **停止**：`canStop` 为 Codex 条目、运行中、已知子线程轮次，与主轮次是否仍在运行无关（子线程可以比主轮次活得久）。停止路由发 `turn/interrupt {threadId: 子线程, turnId: 子线程轮次}` 并记 `stopRequested`，之后子线程 interrupted 的 `turn/completed` 记为停止；app-server 拒绝或已退出时返回 400 与原因，不记 `stopRequested`。
 - **补历史**：读取过程时若 Codex 条目的过程缺失或为空，在会话锁外用 `thread/items/list`（asc，每页 100，最多 200 页）读该子线程，保留最新的 2,000 条再写入过程。会话的 app-server 在运行时用它，否则与模型目录一样临时启动一个、读完即关。成功读过一次就不再读；失败后 30 秒内不重试；读取期间已由实时帧填入的过程以实时帧为准。
 
+### Codex 异步提问与线程标题（native service v12）
+
+- `request_user_input_async` 不发反向请求：codex 0.162 把它作为一条带 `delivery:"async"` 与 `questions:[{title, options:[字符串]}]` 的 `agentMessage` 条目发出，工具立即返回。桥接把带 `questions` 的主线程 `agentMessage` 变成 `AskUserQuestion` 交互卡片（`asyncQuestion: true`，id 为 `codex-asyncq:<条目 id>`），文字照常进对话流；历史回填不复活提问。回答时桥接把各题答案包进 `<send_user_message_question_reply>[{questionItemId, question, answer}]</send_user_message_question_reply>`，作为普通用户消息发出（轮次运行中走 `turn/steer`，否则 `turn/start`）；`questionItemId` 即该条目的 id。提问不随 `turn/completed` 清除，任一非信封的后续消息把它全部撤下。信封消息在对话流与历史里显示为「> 问题 + 答案」的引用形式。
+- `thread/name/updated` 把运行时为线程生成的名字同步为会话标题。
+
 ## 运行中引导
 
 OMP 运行中使用 `steer` RPC，Codex 使用 `turn/steer`；菜单都可改选“下一轮发送”。需要同步更新 Mac 客户端和远端桥接脚本；客户端仅在服务端会话声明 `steer` 能力时提供引导。Qoder CN / Qoder / dsh / Claude Code 继续使用下一轮队列。
