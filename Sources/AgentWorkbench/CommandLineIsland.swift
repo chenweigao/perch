@@ -2,10 +2,11 @@ import GhosttyTerminal
 import SwiftUI
 import WorkbenchCore
 
-/// The quick command line floating over the bottom of the reader. The shell is
-/// throwaway: it is not a Herdr pane, it ends when the island closes, and it is
-/// never silently killed on selection changes — retargeting is an explicit
-/// button in the header.
+/// The quick command line in the reader's subordinate sheet: a second opaque
+/// panel directly below the reading sheet (see `WorkbenchDetailController`).
+/// The shell is throwaway: it is not a Herdr pane, it ends when the island
+/// closes, and it is never silently killed on selection changes — retargeting
+/// is an explicit button in the header.
 @MainActor
 @Observable
 final class CommandLineIslandState {
@@ -107,9 +108,8 @@ struct CommandLineIslandView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .workbenchFloatingSurface()
-        .clipShape(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.panel, style: .continuous))
-        .shadow(color: .black.opacity(0.08), radius: 12, y: 5)
+        // The AppKit sheet supplies the opaque surface, radius and elevation.
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var header: some View {

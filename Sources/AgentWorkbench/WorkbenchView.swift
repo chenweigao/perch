@@ -82,11 +82,22 @@ private struct WorkbenchWorkspace: View, Equatable {
     var body: some View {
         let inspectorVisible = model.taskContextWindow.embeddedVisible &&
             !model.showDashboard && !model.draftingNewTask
+        let island = model.commandLineIsland
+        let commandLine: (() -> AnyView)? = island.target == nil ? nil : {
+            AnyView(CommandLineIslandView(
+                state: island,
+                connection: model.connections.first { $0.id == island.target?.hostID },
+                currentTarget: model.commandLineTarget,
+                onRetarget: { model.retargetCommandLineIsland() },
+                onRestart: { model.restartCommandLineIsland() }))
+        }
         WorkspaceSplitView(
             newConversation: { model.startNewTask() },
             canNavigate: { model.canNavigate($0) },
             navigate: { model.navigate($0) },
             inspectorVisible: inspectorVisible,
+            commandLineVisible: island.visible && model.commandLineTarget != nil,
+            commandLine: commandLine,
             sidebar: { WorkbenchSidebar(model: model) },
             header: { WorkbenchHeader(model: model) },
             actions: { WorkbenchHeaderActions(model: model, kimi: model.kimi, native: model.native) },
@@ -101,40 +112,7 @@ private struct WorkbenchDetail: View {
     @Bindable var model: WorkbenchModel
 
     var body: some View {
-        GeometryReader { geo in
-            conversation
-                .padding(.bottom, commandLinePresented ? Self.islandHeight(in: geo.size) + Self.islandMargin + 6 : 0)
-                .frame(minWidth: WorkspaceLayoutMetrics.inspectorReadingMinimumWidth, maxWidth: .infinity, maxHeight: .infinity)
-                .background(WorkbenchTheme.contentBackground)
-                .overlay(alignment: .bottom) { commandLineIsland(in: geo.size) }
-        }
-        .environment(\.conversationPresentations, model.conversationPresentations)
-        .animation(.easeInOut(duration: 0.18), value: commandLinePresented)
-    }
-
-    /// A live shell stays mounted (hidden) until closed, so hiding the island
-    /// or leaving the session never kills what runs in it.
-    private var commandLinePresented: Bool { model.commandLineIsland.visible && model.commandLineTarget != nil }
-
-    private static func islandHeight(in size: CGSize) -> CGFloat { min(460, max(260, size.height * 0.4)) }
-    /// A narrow float margin keeps the rounded card readable while the island
-    /// otherwise spans the full reader width.
-    private static let islandMargin: CGFloat = 8
-
-    @ViewBuilder private func commandLineIsland(in size: CGSize) -> some View {
-        if let target = model.commandLineIsland.target {
-            CommandLineIslandView(
-                state: model.commandLineIsland,
-                connection: model.connections.first { $0.id == target.hostID },
-                currentTarget: model.commandLineTarget,
-                onRetarget: { model.retargetCommandLineIsland() },
-                onRestart: { model.restartCommandLineIsland() })
-                .frame(height: Self.islandHeight(in: size))
-                .padding(.horizontal, Self.islandMargin).padding(.bottom, Self.islandMargin)
-                .opacity(commandLinePresented ? 1 : 0)
-                .allowsHitTesting(commandLinePresented)
-                .accessibilityHidden(!commandLinePresented)
-        }
+        conversation.environment(\.conversationPresentations, model.conversationPresentations)
     }
 
     @ViewBuilder private var conversation: some View {
@@ -155,7 +133,8 @@ private struct WorkbenchDetail: View {
                 ConversationFindBar(model: model, kimi: model.kimi, native: model.native)
             }
             detailContent(index: index)
-        }
+        }.frame(minWidth: WorkspaceLayoutMetrics.inspectorReadingMinimumWidth, maxWidth: .infinity, maxHeight: .infinity)
+            .background(WorkbenchTheme.contentBackground)
     }
 
     // Kept as a separate expression: the branch set is heavy enough that the
