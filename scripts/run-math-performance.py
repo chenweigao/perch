@@ -88,9 +88,13 @@ def compare(runs):
         if old > 0 and new > old * 1.15:
             raise ValueError("Window retained memory regressed at " + str(count))
         first = comparisons[key]["initial_layout_display_ms"]
-        if first["baseline"] > 0 and first["candidate"] > first["baseline"] * 1.25:
+        # Best-case display time still carries WindowServer scheduling: measured
+        # on the shared CI runner 2026-11-02, one variant spread 374–903ms across
+        # three rounds, so a 1.25 gate fires on luck. Only a catastrophic
+        # best-case blowout is worth a failure.
+        if first["baseline"] > 0 and first["candidate"] > first["baseline"] * 3:
             raise ValueError("Window initial layout regressed at " + str(count))
-    checks.append("bounded mounted-window memory and initial layout regression")
+    checks.append("bounded mounted-window memory; initial layout gated only on catastrophic best-case regression")
     return {"checks": checks, "comparison": comparisons,
             "scope": "same-runner sequential synthetic A/B; window timings are not hardware input latency or FPS"}
 
