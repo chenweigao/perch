@@ -1,6 +1,6 @@
 {
   "fill" : {
-    "solid" : "srgb:0.08627,0.09804,0.12157,1.00000"
+    "solid" : "srgb:1.00000,0.47843,0.34902,1.00000"
   },
   "groups" : [
     {
@@ -8,7 +8,7 @@
         {
           "blend-mode" : "normal",
           "fill" : {
-            "solid" : "srgb:1.00000,0.47843,0.34902,1.00000"
+            "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
           },
           "glass" : false,
           "hidden" : false,
@@ -25,7 +25,7 @@
         {
           "blend-mode" : "normal",
           "fill" : {
-            "solid" : "srgb:0.98039,0.98039,0.96863,1.00000"
+            "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
           },
           "glass" : false,
           "hidden" : false,

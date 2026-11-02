@@ -7,19 +7,19 @@ let output = root.appendingPathComponent("Resources/Brand")
 let iconset = root.appendingPathComponent("build/Perch.iconset")
 try FileManager.default.createDirectory(at: iconset, withIntermediateDirectories: true)
 
-// Approved identity (2026-11 line redesign): a sun ring floating over a white
-// branch, both lines, on a flat graphite tile. Same composition as the in-app
-// PerchLineMark (Sources/AgentWorkbench/PerchBusyIndicator.swift) at icon weight:
-// the sun left of centre, one gap between the ring and the branch.
+// Approved identity (2026-11 line redesign): a sun ring floating over a branch,
+// both white lines, on a flat tile in the brand coral. Same composition as the
+// in-app PerchLineMark (Sources/AgentWorkbench/PerchBusyIndicator.swift) at icon
+// weight: the sun left of centre, one gap between the ring and the branch.
 let tile = NSRect(x: 100, y: 100, width: 824, height: 824)
 let lineWidth: CGFloat = 64
 let branch = (from: NSPoint(x: 282, y: 700), to: NSPoint(x: 742, y: 700))
 let sun = (center: NSPoint(x: 440, y: 470), radius: CGFloat(140))
 
-// One ink, one brand hue, no gradients.
-let tileColor = "#16191F"
-let branchColor = "#FAFAF7"
-let sunColor = "#FF7A59"
+// Two colors, no gradients: the brand coral (WorkbenchTheme.Brand.sun) and white.
+let tileColor = "#FF7A59"
+let branchColor = "#FFFFFF"
+let sunColor = "#FFFFFF"
 
 func color(_ hex: String) -> NSColor {
     let value = UInt32(hex.dropFirst(), radix: 16)!
