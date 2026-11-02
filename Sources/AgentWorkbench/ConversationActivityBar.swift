@@ -2,28 +2,11 @@ import AppKit
 import SwiftUI
 import WorkbenchCore
 
-/// AppKit animates the system spinner without invalidating the transcript graph.
+/// Running in session lists: the Perch sun turning on its own, the arc the status
+/// bar turns on its branch, so "running" looks the same everywhere. CoreAnimation
+/// only; the transcript graph is never invalidated.
 struct ConversationBusyIndicator: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    var body: some View {
-        Group {
-            if reduceMotion { Image(systemName: "hourglass").font(.system(size: WorkbenchTheme.Reading.labelSize)).foregroundStyle(WorkbenchTheme.quiet) }
-            else { BusySpinner() }
-        }.frame(width: 16, height: 16).accessibilityHidden(true)
-    }
-}
-
-private struct BusySpinner: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSProgressIndicator {
-        let view = NSProgressIndicator()
-        view.style = .spinning
-        view.controlSize = .small
-        view.isIndeterminate = true
-        view.startAnimation(nil)
-        return view
-    }
-    func updateNSView(_ view: NSProgressIndicator, context: Context) {}
-    static func dismantleNSView(_ view: NSProgressIndicator, coordinator: ()) { view.stopAnimation(nil) }
+    var body: some View { PerchBusyIndicator(showsBranch: false) }
 }
 
 /// Kept outside the transcript; only the clock subview refreshes every second.
@@ -166,9 +149,14 @@ struct ConversationActivityBar: View {
                      arrowEdge: .top) { details }
     }
 
-    /// Only real execution hops the Perch sun; every other state names itself with a symbol.
+    /// The Perch mark carries execution: its sun turns while a turn runs and closes
+    /// into the resting mark when the turn ends cleanly. One view for both, so the
+    /// end animates. Every other state names itself with a symbol.
+    private var showsPerch: Bool {
+        activity.animates || (turnEnded && reviewCount == 0 && !blocking && !stopping)
+    }
     @ViewBuilder private var indicator: some View {
-        if activity.animates { PerchBusyIndicator() }
+        if showsPerch { PerchBusyIndicator(running: activity.animates) }
         else {
             Image(systemName: symbol).font(.system(size: WorkbenchTheme.Reading.labelSize)).frame(width: 16, height: 16)
                 .foregroundStyle(blocking || (reviewCount > 0 && !isRunning) ? Color.orange : WorkbenchTheme.quiet)
@@ -177,7 +165,8 @@ struct ConversationActivityBar: View {
     }
     private var symbol: String {
         if blocking || stopping { return activity.symbol }
-        if turnEnded { return reviewCount > 0 ? "exclamationmark.circle" : "checkmark.circle" }
+        // A clean end shows the resting mark (`showsPerch`); this is the one that needs a look.
+        if turnEnded { return "exclamationmark.circle" }
         return activity.symbol
     }
 

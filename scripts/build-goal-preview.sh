@@ -13,7 +13,7 @@ done
 swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-library -I "$bin_dir/Modules" \
     -I .build/checkouts/swift-markdown/Sources/CAtomic/include \
     -I .build/checkouts/swift-cmark/src/include -I .build/checkouts/swift-cmark/extensions/include \
-    Sources/AgentWorkbench/GoalHeaderBar.swift Sources/AgentWorkbench/WorkbenchTheme.swift \
+    Sources/AgentWorkbench/GoalHeaderBar.swift Sources/AgentWorkbench/PerchBusyIndicator.swift Sources/AgentWorkbench/WorkbenchTheme.swift \
     Sources/AgentWorkbench/UILocalization.swift Tests/GoalHeaderPreview/App.swift \
     "${objects[@]}" -o "$app_dir/Contents/MacOS/GoalHeaderPreview"
 cat > "$app_dir/Contents/Info.plist" <<'PLIST'

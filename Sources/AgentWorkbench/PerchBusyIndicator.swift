@@ -2,194 +2,213 @@ import AppKit
 import QuartzCore
 import SwiftUI
 
-/// The conversation activity bar's running state: the Perch sun hops along its
-/// branch, squashing on each landing. All motion is CoreAnimation on two layers
-/// inside one NSView — like the NSProgressIndicator it replaces, it never
-/// invalidates the transcript's SwiftUI graph. Reduce Motion shows the still mark.
-struct PerchBusyIndicator: View {
-    var height: CGFloat = 16
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+/// The Perch mark as two lines on the 24-unit glyph grid (y down), the grid the
+/// agent marks use: a sun ring floating one gap above a branch, left of centre.
+/// The gap matters at 16pt; touching strokes merge into an Ω. One source for
+/// the status bar, the sidebar's running arc and the home mark (`PerchMark`).
+/// The app icon keeps the composition on its 1024 canvas at icon weight
+/// (`scripts/generate-brand.swift`).
+enum PerchLineMark {
+    static let lineWidth: CGFloat = 1.75
+    static let branchFrom = CGPoint(x: 3.5, y: 19.25)
+    static let branchTo = CGPoint(x: 20.5, y: 19.25)
+    static let sunCenter = CGPoint(x: 10, y: 10.75)
+    static let sunRadius: CGFloat = 5.5
+    /// List rows show the sun alone, centred and larger, in the 16pt slot the
+    /// system spinner used.
+    static let soloCenter = CGPoint(x: 12, y: 12)
+    static let soloRadius: CGFloat = 7
+    /// While a turn runs the ring opens to this share and turns; closed is rest.
+    static let runningArc: CGFloat = 0.75
+    static let revolution: CFTimeInterval = 1.2
+    static let openDuration: CFTimeInterval = 0.25
+    static let closeDuration: CFTimeInterval = 0.3
 
-    var body: some View {
-        PerchBusyRepresentable(animated: !reduceMotion)
-            .frame(width: height * PerchBusyGeometry.aspect, height: height)
-            .accessibilityHidden(true)
+    /// The resting mark's ink extent, for surfaces that crop to it.
+    static let contentBounds = CGRect(
+        x: branchFrom.x - lineWidth / 2, y: sunCenter.y - sunRadius - lineWidth / 2,
+        width: branchTo.x - branchFrom.x + lineWidth,
+        height: branchFrom.y - sunCenter.y + sunRadius + lineWidth)
+
+    /// The resting mark in grid units: the branch in one color, the sun in another.
+    static func draw(in cg: CGContext, branch: CGColor, sun: CGColor) {
+        cg.saveGState()
+        cg.setLineWidth(lineWidth)
+        cg.setLineCap(.round)
+        cg.setStrokeColor(branch)
+        cg.move(to: branchFrom)
+        cg.addLine(to: branchTo)
+        cg.strokePath()
+        cg.setStrokeColor(sun)
+        cg.strokeEllipse(in: CGRect(x: sunCenter.x - sunRadius, y: sunCenter.y - sunRadius,
+                                    width: 2 * sunRadius, height: 2 * sunRadius))
+        cg.restoreGState()
     }
 }
 
-/// The approved mark (scripts/generate-brand.swift's 1024 canvas) in a y-down unit
-/// space matching the SVG: the branch runs (0,0)-(432,0) with an 84-wide round cap
-/// and the sun rests tangent to it, bottom-center at (134, -42), radius 122. The
-/// content bounds fit the resting mark; hop arcs rise past them and neither the
-/// NSView nor the SwiftUI frame clips them.
-private enum PerchBusyGeometry {
-    static let contentWidth: CGFloat = 516
-    static let contentHeight: CGFloat = 328
-    static let aspect: CGFloat = contentWidth / contentHeight
+/// Execution feedback in the Perch mark. Running: the branch holds still and the
+/// sun opens into an arc that turns at a constant speed, the familiar spinner
+/// read. Not running: the closed, resting mark. Switching from running to rest
+/// closes the arc. All motion is CoreAnimation on two shape layers inside one
+/// NSView, so the transcript's SwiftUI graph is never invalidated. Reduce Motion
+/// keeps the open arc still. Ink is the status bar's `quiet`.
+struct PerchBusyIndicator: View {
+    var running = true
+    /// The status bar draws the whole mark; list rows show only the turning sun.
+    var showsBranch = true
+    var size: CGFloat = 16
+    /// Spoken when the indicator stands alone; nil when the row already says it.
+    var label: String? = nil
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    static let branchFrom = CGPoint.zero
-    static let branchTo = CGPoint(x: 432, y: 0)
-    static let branchWidth: CGFloat = 84
-    static let orbRadius: CGFloat = 122
-    /// Rest and landing contact point: the orb's bottom-center on the branch's top edge.
-    static let orbRest = CGPoint(x: 134, y: -42)
-    static let orbTravel: CGFloat = 166
-    static let hopHeight: CGFloat = 56
-
-    static let orbTop = NSColor(srgbRed: 1, green: 0xD9 / 255.0, blue: 0x8E / 255.0, alpha: 1)
-    static let orbBottom = NSColor(srgbRed: 1, green: 0x7A / 255.0, blue: 0x59 / 255.0, alpha: 1)
-
-    static func point(_ unit: CGPoint, scale: CGFloat) -> CGPoint {
-        CGPoint(x: (unit.x + 42) * scale, y: (unit.y + 286) * scale)
+    var body: some View {
+        PerchBusyRepresentable(running: running, showsBranch: showsBranch, animated: !reduceMotion)
+            .frame(width: size, height: size)
+            .accessibilityElement()
+            .accessibilityLabel(Text(verbatim: label ?? ""))
+            .accessibilityHidden(label == nil)
     }
 }
 
 private struct PerchBusyRepresentable: NSViewRepresentable {
+    let running: Bool
+    let showsBranch: Bool
     let animated: Bool
 
     func makeNSView(context: Context) -> PerchBusyView {
-        let view = PerchBusyView()
-        view.setAnimated(animated)
+        let view = PerchBusyView(showsBranch: showsBranch)
+        view.update(running: running, animated: animated, transition: false)
         return view
     }
 
     func updateNSView(_ view: PerchBusyView, context: Context) {
-        view.setAnimated(animated)
+        view.update(running: running, animated: animated, transition: true)
     }
 }
 
-/// Branch first, sun above it. The sun's anchor is its bottom-center, so a landing
-/// squash spreads from the contact point like a droplet instead of shrinking in place.
 private final class PerchBusyView: NSView {
     private let branchLayer = CAShapeLayer()
-    private let orbLayer = CALayer()
+    private let sunLayer = CAShapeLayer()
+    private let showsBranch: Bool
+    private var running = false
     private var animated = true
 
     override var isFlipped: Bool { true }
 
-    override init(frame: NSRect) {
-        super.init(frame: frame)
+    init(showsBranch: Bool) {
+        self.showsBranch = showsBranch
+        super.init(frame: .zero)
         wantsLayer = true
         setAccessibilityElement(false)
-        branchLayer.lineCap = .round
-        orbLayer.anchorPoint = CGPoint(x: 0.5, y: 1)
-        orbLayer.contentsGravity = .resize
-        layer?.addSublayer(branchLayer)
-        layer?.addSublayer(orbLayer)
+        for shape in [branchLayer, sunLayer] {
+            shape.fillColor = nil
+            shape.lineCap = .round
+            layer?.addSublayer(shape)
+        }
+        branchLayer.isHidden = !showsBranch
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     override func layout() {
         super.layout()
-        guard bounds.height > 0 else { return }
-        let scale = bounds.height / PerchBusyGeometry.contentHeight
+        guard bounds.width > 0 else { return }
+        let g = PerchLineMark.self
+        let u = bounds.width / 24
+        let center = showsBranch ? g.sunCenter : g.soloCenter
+        let radius = (showsBranch ? g.sunRadius : g.soloRadius) * u
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         let branch = CGMutablePath()
-        branch.move(to: PerchBusyGeometry.point(PerchBusyGeometry.branchFrom, scale: scale))
-        branch.addLine(to: PerchBusyGeometry.point(PerchBusyGeometry.branchTo, scale: scale))
+        branch.move(to: CGPoint(x: g.branchFrom.x * u, y: g.branchFrom.y * u))
+        branch.addLine(to: CGPoint(x: g.branchTo.x * u, y: g.branchTo.y * u))
         branchLayer.path = branch
-        branchLayer.lineWidth = PerchBusyGeometry.branchWidth * scale
-        branchLayer.strokeColor = resolvedInk()
-
-        let diameter = PerchBusyGeometry.orbRadius * 2 * scale
-        orbLayer.bounds = CGRect(origin: .zero, size: CGSize(width: diameter, height: diameter))
-        orbLayer.position = PerchBusyGeometry.point(PerchBusyGeometry.orbRest, scale: scale)
-        let backing = window?.backingScaleFactor ?? 2
-        branchLayer.contentsScale = backing
-        orbLayer.contentsScale = backing
-        orbLayer.contents = PerchBusyView.orbImage(diameter: diameter, scale: backing)
+        // The sun layer is the ring's square, so its rotation turns about the centre.
+        sunLayer.bounds = CGRect(x: 0, y: 0, width: 2 * radius, height: 2 * radius)
+        sunLayer.position = CGPoint(x: center.x * u, y: center.y * u)
+        sunLayer.path = CGPath(ellipseIn: sunLayer.bounds, transform: nil)
+        for shape in [branchLayer, sunLayer] {
+            shape.lineWidth = g.lineWidth * u
+            shape.contentsScale = window?.backingScaleFactor ?? 2
+        }
+        applyInk()
         CATransaction.commit()
-        if animated && orbLayer.animation(forKey: "hop") == nil { startHopping() }
+        if running && animated { startTurning() }
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window != nil && running && animated { startTurning() }
     }
 
     override func viewDidChangeEffectiveAppearance() {
         super.viewDidChangeEffectiveAppearance()
-        branchLayer.strokeColor = resolvedInk()
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        applyInk()
+        CATransaction.commit()
     }
 
-    private func resolvedInk() -> CGColor {
-        var ink = NSColor.secondaryLabelColor.cgColor
-        effectiveAppearance.performAsCurrentDrawingAppearance { ink = NSColor.secondaryLabelColor.cgColor }
-        return ink
+    private func applyInk() {
+        var ink = WorkbenchTheme.quietNS.cgColor
+        effectiveAppearance.performAsCurrentDrawingAppearance { ink = WorkbenchTheme.quietNS.cgColor }
+        branchLayer.strokeColor = ink
+        sunLayer.strokeColor = ink
     }
 
-    /// Sunset disc baked from the brand gradient at the exact backing scale. Bitmap
-    /// contexts run y-down to the displayed image, so the gradient's start is the top.
-    private static func orbImage(diameter: CGFloat, scale: CGFloat) -> CGImage? {
-        let pixels = Int((diameter * scale).rounded())
-        guard pixels > 0, let context = CGContext(data: nil, width: pixels, height: pixels,
-                                                  bitsPerComponent: 8, bytesPerRow: 0,
-                                                  space: CGColorSpaceCreateDeviceRGB(),
-                                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
-        else { return nil }
-        let rect = CGRect(x: 0, y: 0, width: pixels, height: pixels)
-        context.addEllipse(in: rect)
-        context.clip()
-        let colors = [PerchBusyGeometry.orbTop.cgColor, PerchBusyGeometry.orbBottom.cgColor] as CFArray
-        guard let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 1])
-        else { return nil }
-        context.drawLinearGradient(gradient, start: CGPoint(x: rect.midX, y: rect.minY),
-                                   end: CGPoint(x: rect.midX, y: rect.maxY), options: [])
-        return context.makeImage()
-    }
-
-    func setAnimated(_ animated: Bool) {
-        guard animated != self.animated else { return }
+    /// `transition` animates a state change (open, or close and coast to a stop);
+    /// the first configuration applies without motion.
+    func update(running: Bool, animated: Bool, transition: Bool) {
+        guard !transition || running != self.running || animated != self.animated else { return }
+        let moving = transition && animated && running != self.running
+        self.running = running
         self.animated = animated
-        if animated { startHopping() } else { orbLayer.removeAllAnimations() }
-    }
-
-    /// One cycle: hop right, settle, hop back. Rises ease out, falls ease in; the
-    /// squash lands a beat after contact and recovers before the next hop.
-    private func startHopping() {
-        guard animated, bounds.height > 0 else { return }
-        orbLayer.removeAllAnimations()
-        let scale = bounds.height / PerchBusyGeometry.contentHeight
-        let g = PerchBusyGeometry.self
-        let home = g.orbRest
-        let away = CGPoint(x: home.x + g.orbTravel, y: home.y)
-        let peak = CGPoint(x: home.x + g.orbTravel / 2, y: home.y - g.hopHeight)
-        let duration: CFTimeInterval = 1.6
-
-        let position = CAKeyframeAnimation(keyPath: "position")
-        position.values = [home, home, peak, away, away, away, away, peak, home, home, home]
-            .map { NSValue(point: g.point($0, scale: scale)) }
-        position.keyTimes = [0, 0.05, 0.20, 0.36, 0.42, 0.50, 0.55, 0.70, 0.86, 0.92, 1]
-        position.duration = duration
-        position.repeatCount = .infinity
-        position.timingFunctions = PerchBusyView.hopTimings
-        orbLayer.add(position, forKey: "hop")
-
-        let squashTimes: [NSNumber] = [0, 0.05, 0.20, 0.36, 0.39, 0.47, 0.50, 0.55, 0.70, 0.86, 0.89, 1]
-        let squashX = CAKeyframeAnimation(keyPath: "transform.scale.x")
-        squashX.values = [1, 1.12, 0.94, 1, 1.16, 1, 1, 1.12, 0.94, 1, 1.16, 1]
-        let squashY = CAKeyframeAnimation(keyPath: "transform.scale.y")
-        squashY.values = [1, 0.88, 1.10, 1, 0.84, 1, 1, 0.88, 1.10, 1, 0.84, 1]
-        for squash in [squashX, squashY] {
-            squash.keyTimes = squashTimes
-            squash.duration = duration
-            squash.repeatCount = .infinity
-            squash.timingFunctions = PerchBusyView.squashTimings
-            orbLayer.add(squash, forKey: squash.keyPath)
+        let arc = running ? PerchLineMark.runningArc : 1
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        if moving {
+            let resize = CABasicAnimation(keyPath: "strokeEnd")
+            resize.fromValue = sunLayer.presentation()?.strokeEnd ?? sunLayer.strokeEnd
+            resize.toValue = arc
+            resize.duration = running ? PerchLineMark.openDuration : PerchLineMark.closeDuration
+            resize.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            sunLayer.add(resize, forKey: "arc")
         }
+        sunLayer.strokeEnd = arc
+        CATransaction.commit()
+        if running && animated { startTurning() } else { stopTurning(coasting: moving) }
     }
 
-    private static let hopTimings = [
-        CAMediaTimingFunction(name: .easeOut), CAMediaTimingFunction(name: .easeOut),
-        CAMediaTimingFunction(name: .easeIn), CAMediaTimingFunction(name: .easeOut),
-        CAMediaTimingFunction(name: .easeInEaseOut), CAMediaTimingFunction(name: .easeOut),
-        CAMediaTimingFunction(name: .easeOut), CAMediaTimingFunction(name: .easeIn),
-        CAMediaTimingFunction(name: .easeOut), CAMediaTimingFunction(name: .easeInEaseOut),
-    ]
+    private func startTurning() {
+        guard sunLayer.animation(forKey: "turn") == nil else { return }
+        let turn = CABasicAnimation(keyPath: "transform.rotation.z")
+        // Additive from 0, so each run continues from wherever the last one rested.
+        turn.fromValue = 0
+        turn.toValue = 2 * CGFloat.pi
+        turn.duration = PerchLineMark.revolution
+        turn.repeatCount = .infinity
+        turn.isAdditive = true
+        turn.timingFunction = CAMediaTimingFunction(name: .linear)
+        sunLayer.add(turn, forKey: "turn")
+    }
 
-    private static let squashTimings = [
-        CAMediaTimingFunction(name: .easeOut), CAMediaTimingFunction(name: .easeOut),
-        CAMediaTimingFunction(name: .easeIn), CAMediaTimingFunction(name: .easeOut),
-        CAMediaTimingFunction(name: .easeInEaseOut), CAMediaTimingFunction(name: .easeOut),
-        CAMediaTimingFunction(name: .easeInEaseOut), CAMediaTimingFunction(name: .easeOut),
-        CAMediaTimingFunction(name: .easeIn), CAMediaTimingFunction(name: .easeOut),
-        CAMediaTimingFunction(name: .easeInEaseOut),
-    ]
+    /// Holds the arc where it is, then lets it coast a quarter turn while it closes.
+    private func stopTurning(coasting: Bool) {
+        guard sunLayer.animation(forKey: "turn") != nil else { return }
+        let shown = sunLayer.presentation()?.value(forKeyPath: "transform.rotation.z") as? NSNumber
+        let angle = CGFloat(shown?.doubleValue ?? 0)
+        let rest = angle + (coasting ? .pi / 2 : 0)
+        sunLayer.removeAnimation(forKey: "turn")
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        sunLayer.setValue(rest, forKeyPath: "transform.rotation.z")
+        CATransaction.commit()
+        guard coasting else { return }
+        let coast = CABasicAnimation(keyPath: "transform.rotation.z")
+        coast.fromValue = angle
+        coast.toValue = rest
+        coast.duration = PerchLineMark.closeDuration
+        coast.timingFunction = CAMediaTimingFunction(name: .easeOut)
+        sunLayer.add(coast, forKey: "coast")
+    }
 }
