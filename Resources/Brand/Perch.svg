@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Perch">
-  <rect x="100" y="100" width="824" height="824" rx="170" fill="#16191F"/>
-  <line x1="282" y1="700" x2="742" y2="700" stroke-width="64" stroke-linecap="round" stroke="#FAFAF7"/>
-  <circle cx="440" cy="470" r="140" fill="none" stroke-width="64" stroke="#FF7A59"/>
+  <rect x="100" y="100" width="824" height="824" rx="170" fill="#FF7A59"/>
+  <line x1="282" y1="700" x2="742" y2="700" stroke-width="64" stroke-linecap="round" stroke="#FFFFFF"/>
+  <circle cx="440" cy="470" r="140" fill="none" stroke-width="64" stroke="#FFFFFF"/>
 </svg>

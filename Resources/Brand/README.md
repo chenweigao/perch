@@ -6,6 +6,8 @@ Approved identity (2026-11 line redesign): a sun ring floating over a branch,
 both drawn as lines — Perch, literally. One gap separates the ring from the
 branch; the sun sits left of centre. No letterform, no terminal glyph, no house.
 It replaces the 2026-10 mark (a gradient orb tangent to a thick white branch).
+The app icon draws both lines in white on the brand coral (2026-11-02, replacing
+a graphite tile).
 
 - `Perch.svg`: editable app icon, transparent outer margin.
 - `Perch-mark.svg`: monochrome mark (branch + ring in one ink) on transparency.
@@ -13,13 +15,14 @@ It replaces the 2026-10 mark (a gradient orb tangent to a thick white branch).
 - `Perch.icns`: macOS icon with 16, 32, 128, 256 and 512 point sizes at 1× and 2×.
 - `Perch.icon/`: Liquid Glass Icon Composer document; one full-canvas SVG per
   layer (`Assets/sun.svg`, `Assets/branch.svg`), flat solid fills, backplate is
-  the graphite tile.
+  the coral tile.
 - `scripts/generate-brand.swift`: canonical icon geometry shared by SVG, raster
   exports and the `.icon` layers.
 
-Colors: one ink and one brand hue, no gradients. Tile `#16191F`, branch
-`#FAFAF7`, sun `#FF7A59`. Icon canvas 1024, line width 64: branch
-(282, 700)→(742, 700) with round caps, ring centre (440, 470), radius 140.
+Colors: the brand coral and white, no gradients. Tile `#FF7A59`, branch and
+ring `#FFFFFF`. In the app the brand coral is `WorkbenchTheme.Brand.sun`, the
+home mark's ring. Icon canvas 1024, line width 64: branch (282, 700)→(742, 700)
+with round caps, ring centre (440, 470), radius 140.
 
 In the app the mark is drawn from `PerchLineMark`
 (`Sources/AgentWorkbench/PerchBusyIndicator.swift`) on the 24-unit glyph grid
