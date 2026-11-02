@@ -42,11 +42,6 @@ the glass (shadow, translucency, per-appearance fills), open `Perch.icon` in
 Icon Composer, then mirror the changes back into `generate-brand.swift` so the
 document stays reproducible.
 
-The 2026-11 `Perch-1024.png` and `Perch.icns` were rasterized from `Perch.svg`
-off macOS (Chromium, PNG chunks assembled into the icns) because no Mac was
-available. Running the commands above replaces them with the canonical
-CoreGraphics and iconutil output; the geometry is the same.
-
 The public app name is Perch. The internal executable, bundle identifier, stored
 workspace paths and remote service names keep their existing identities so that
 branding does not fork or migrate sessions and preferences.

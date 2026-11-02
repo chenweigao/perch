@@ -156,12 +156,17 @@ struct ConversationActivityBar: View {
         activity.animates || (turnEnded && reviewCount == 0 && !blocking && !stopping)
     }
     @ViewBuilder private var indicator: some View {
-        if showsPerch { PerchBusyIndicator(running: activity.animates) }
-        else {
-            Image(systemName: symbol).font(.system(size: WorkbenchTheme.Reading.labelSize)).frame(width: 16, height: 16)
-                .foregroundStyle(blocking || (reviewCount > 0 && !isRunning) ? Color.orange : WorkbenchTheme.quiet)
-                .accessibilityHidden(true)
-        }
+        ZStack {
+            // Mounted in every state, so a run's end closes this same arc. Native
+            // agents report the run state and the turn's end time separately; a
+            // conditional view would be replaced in between and land at rest.
+            PerchBusyIndicator(running: activity.animates).opacity(showsPerch ? 1 : 0)
+            if !showsPerch {
+                Image(systemName: symbol).font(.system(size: WorkbenchTheme.Reading.labelSize)).frame(width: 16, height: 16)
+                    .foregroundStyle(blocking || (reviewCount > 0 && !isRunning) ? Color.orange : WorkbenchTheme.quiet)
+                    .accessibilityHidden(true)
+            }
+        }.frame(width: 16, height: 16)
     }
     private var symbol: String {
         if blocking || stopping { return activity.symbol }
