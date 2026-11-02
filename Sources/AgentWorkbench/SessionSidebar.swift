@@ -589,12 +589,7 @@ private struct SessionSidebarRow: View {
                          running: item.online && !item.archived && item.section == .running,
                          offline: compact && !item.online && !item.archived,
                          selected: selected,
-                         starred: model.workspace.starred.contains(item.reference), archived: item.archived,
-                         canOpen: item.online && !item.archived,
-                         canQuickArchive: model.canArchive(item) && (item.archived || item.section != .running),
-                         busy: model.managing.contains(item.id), onOpen: onOpen,
-                         onPin: { model.toggleStar(item.reference) },
-                         onArchive: { model.setArchived(item, archived: !item.archived) }) {
+                         canOpen: item.online && !item.archived, onOpen: onOpen) {
             if compact {
                 SidebarAgentIndicator(item: item)
             } else { SessionStatusIndicator(item: item) }

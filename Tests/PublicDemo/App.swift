@@ -16,7 +16,6 @@ private struct PublicDemo: View {
     @State private var selected = 0
     @State private var draft = ""
     @State private var model = ""
-    @State private var pinned = true
     @State private var showNotice = false
     private let titles = ["修复登录后的页面跳转", "补全登录回归测试"]
     private let messages: [KimiMessage] = {
@@ -122,9 +121,7 @@ private struct PublicDemo: View {
     }
     private func row(_ index: Int, symbol: String) -> some View {
         SessionRowChrome(title: titles[index], subtitle: nil, selected: selected == index,
-                         starred: index == 0 && pinned, archived: false, canOpen: true,
-                         canQuickArchive: false, busy: false, onOpen: { selected = index },
-                         onPin: { if index == 0 { pinned.toggle() } }, onArchive: {}) {
+                         canOpen: true, onOpen: { selected = index }) {
             Image(systemName: symbol).foregroundStyle(.secondary)
         }
     }

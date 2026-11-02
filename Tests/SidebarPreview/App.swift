@@ -117,16 +117,21 @@ private struct SidebarPreview: View {
                          hostName: "studio-mini.local", hostID: UUID(uuidString: "11111111-2222-3333-4444-555555555555"),
                          directory: "/workspace/mini-workspace", detail: status,
                          groups: ["Perch 工作台"], updatedAt: Date().timeIntervalSince1970 - 259200,
-                         selected: title == name, starred: starred.contains(name), archived: archived.contains(name),
-                         canOpen: !archived.contains(name) && !status.contains("连接中断"), canQuickArchive: !status.contains("运行中") && !status.contains("连接中断"), busy: false,
-                         onOpen: { title = name; page = .other },
-                         onPin: {
-                             if starred.contains(name) { starred.remove(name) } else { starred.insert(name) }
-                         }, onArchive: {
-                             if archived.contains(name) { archived.remove(name) } else { archived.insert(name) }
-                         }) {
+                         selected: title == name,
+                         canOpen: !archived.contains(name) && !status.contains("连接中断"),
+                         onOpen: { title = name; page = .other }) {
             Image(systemName: archived.contains(name) ? "archivebox" : symbol).foregroundStyle(.secondary)
         }.contextMenu {
+            // Pin and archive live only here, as in the app's session rows.
+            Button(starred.contains(name) ? "取消置顶" : "置顶会话") {
+                if starred.contains(name) { starred.remove(name) } else { starred.insert(name) }
+            }
+            if !status.contains("运行中") && !status.contains("连接中断") {
+                Button(archived.contains(name) ? "恢复归档" : "归档会话") {
+                    if archived.contains(name) { archived.remove(name) } else { archived.insert(name) }
+                }
+            }
+            Divider()
             Button("重命名…") { title = "重命名预览" }
             Button("分组…") { title = "分组预览" }
             Divider()

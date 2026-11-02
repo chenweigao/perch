@@ -14,7 +14,6 @@ import WorkbenchCore
 private struct HostLabelPreview: View {
     @State private var selected = 0
     @State private var environment = 0
-    @State private var pinned: Set<Int> = []
     private let titles = ["排查远端构建失败，确认依赖和执行环境", "检查后台任务的运行状态",
                           "验证长会话名称截断时机器标识始终可见", "完善会话摘要与通知展示",
                           "检查断线后的会话显示"]
@@ -33,11 +32,8 @@ private struct HostLabelPreview: View {
                         ForEach(titles.indices, id: \.self) { index in
                             SessionRowChrome(title: titles[index], subtitle: index == 4 ? "离线 · 状态未同步" : nil,
                                 hostName: names[index % 3], hostID: ids[index % 3], selected: selected == index,
-                                starred: pinned.contains(index), archived: false, canOpen: index != 4,
-                                canQuickArchive: index >= 3, busy: false,
-                                onOpen: { selected = index; environment = index % 3 },
-                                onPin: { if pinned.contains(index) { pinned.remove(index) } else { pinned.insert(index) } },
-                                onArchive: {}) {
+                                canOpen: index != 4,
+                                onOpen: { selected = index; environment = index % 3 }) {
                                     Image(systemName: index == 4 ? "wifi.slash" : index < 3 ? "circle.dotted" : "checkmark.circle")
                                         .foregroundStyle(.secondary)
                                 }.opacity(index == 4 ? 0.65 : 1)

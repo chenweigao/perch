@@ -2,7 +2,9 @@ import AppKit
 import SwiftUI
 import WorkbenchCore
 
-/// Host identity and hover actions share the trailing space.
+/// The trailing space holds host identity or the session's age. Rows carry no
+/// hover buttons: pin and archive live only in the row's context menu, so nothing
+/// covers or squeezes the title when the pointer passes over it.
 struct SessionRowChrome<Indicator: View>: View {
     @UILocalization private var L
     let title: String
@@ -19,24 +21,13 @@ struct SessionRowChrome<Indicator: View>: View {
     /// so the row keeps its height when a machine drops off.
     var offline = false
     let selected: Bool
-    let starred: Bool
-    let archived: Bool
     let canOpen: Bool
-    let canQuickArchive: Bool
-    let busy: Bool
     let onOpen: () -> Void
-    let onPin: () -> Void
-    let onArchive: () -> Void
     @ViewBuilder let indicator: Indicator
     @State private var hovered = false
     @Environment(\.locale) private var locale
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    private enum Focus { case open, pin, archive }
-    @FocusState private var focus: Focus?
 
-    private var showActions: Bool { hovered || focus != nil }
-    private var actionWidth: CGFloat { showActions ? CGFloat((archived ? 0 : 1) + (canQuickArchive ? 1 : 0)) * 28 : 0 }
-    private var trailingWidth: CGFloat { compact ? (running ? actionWidth : 36) : max(actionWidth, hostName == nil ? 0 : 28) }
+    private var trailingWidth: CGFloat { compact ? (running ? 0 : 36) : (hostName == nil ? 0 : 28) }
     private var rowHeight: CGFloat {
         #if PERCH_ACCEPTANCE
         if NativeAcceptanceProbe.shared.fixedSidebarHeight { return SidebarMetrics.subtitleRowHeight }
@@ -53,50 +44,9 @@ struct SessionRowChrome<Indicator: View>: View {
         .help(Text(verbatim: tooltip))
     }
 
-    /// Pin and archive, shared by both row layouts.
-    @ViewBuilder private var actionButtons: some View {
-        HStack(spacing: 0) {
-            if !archived {
-                Button(action: onPin) {
-                    Image(systemName: starred ? "pin.slash" : "pin")
-                        .frame(width: 28, height: 28).contentShape(Rectangle())
-                }.help(starred ? L("取消置顶") : L("置顶会话"))
-                    .accessibilityLabel(starred ? L("取消置顶") : L("置顶会话")).disabled(busy)
-                    .focused($focus, equals: .pin)
-            }
-            if canQuickArchive {
-                Button(action: onArchive) {
-                    Image(systemName: archived ? "arrow.uturn.backward" : "archivebox")
-                        .frame(width: 28, height: 28).contentShape(Rectangle())
-                }.help(archived ? L("恢复会话") : L("归档会话"))
-                    .accessibilityLabel(archived ? L("恢复会话") : L("归档会话")).disabled(busy)
-                    .focused($focus, equals: .archive)
-            }
-        }
-    }
-
     /// Titles own the space. The status column holds a stable 28 pt minimum and
-    /// grows for wider labels instead of truncating; pin/archive remain in the
-    /// row's context menu.
-    private var fullActionWidth: CGFloat { CGFloat((archived ? 0 : 1) + (canQuickArchive ? 1 : 0)) * 28 }
-
+    /// grows for wider labels instead of truncating.
     private var conversationRow: some View {
-        ZStack(alignment: .topTrailing) {
-            conversationButton
-            // Pin and archive replace the age while the pointer is over the row; the
-            // material keeps them legible over a long title.
-            if fullActionWidth > 0 {
-                actionButtons.buttonStyle(.plain).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
-                    .frame(width: fullActionWidth, height: 28)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.chip))
-                    .padding(.trailing, SidebarMetrics.rowInset - 2).padding(.top, 4)
-                    .opacity(showActions ? 1 : 0).allowsHitTesting(showActions).accessibilityHidden(!showActions)
-                    .animation(reduceMotion ? nil : .easeOut(duration: SidebarMetrics.highlightDuration), value: showActions)
-            }
-        }
-    }
-
-    private var conversationButton: some View {
         Button(action: onOpen) {
             HStack(alignment: .top, spacing: SidebarMetrics.labelSpacing) {
                 indicator.frame(width: SidebarMetrics.iconWidth, height: 18).padding(.top, 1)
@@ -123,11 +73,10 @@ struct SessionRowChrome<Indicator: View>: View {
                         SessionTimeText(updatedAt: updatedAt)
                     }
                 }.frame(minWidth: 28, minHeight: 18, maxHeight: 18, alignment: .trailing).padding(.top, 1)
-                    .opacity(showActions && fullActionWidth > 0 ? 0 : 1)
             }.padding(.horizontal, SidebarMetrics.rowInset).padding(.vertical, 8)
                 .frame(maxWidth: .infinity, minHeight: SidebarMetrics.sessionMinimumHeight, alignment: .leading)
                 .contentShape(Rectangle())
-        }.buttonStyle(.plain).disabled(!canOpen).focused($focus, equals: .open)
+        }.buttonStyle(.plain).disabled(!canOpen)
             .accessibilityLabel(title)
             .accessibilityValue(([offline ? L("离线 · 状态未同步") : nil, hostName, directory, detail,
                                   updatedAt > 0 ? SessionTime.label(since: updatedAt, waiting: false) : nil].compactMap { $0 } + groups).joined(separator: " · "))
@@ -168,28 +117,18 @@ struct SessionRowChrome<Indicator: View>: View {
                     }
                 }.padding(.leading, SidebarMetrics.rowInset).padding(.trailing, 4)
                     .frame(height: rowHeight).contentShape(Rectangle())
-            }.buttonStyle(.plain).disabled(!canOpen).focused($focus, equals: .open)
+            }.buttonStyle(.plain).disabled(!canOpen)
                 .accessibilityLabel(title)
                 .accessibilityValue(([hostName, directory, detail, updatedAt > 0 ? SessionTime.label(since: updatedAt, waiting: false) : nil].compactMap { $0 } + groups).joined(separator: " · "))
             ZStack(alignment: .trailing) {
                 if compact && !running && updatedAt > 0 {
                     SessionTimeText(updatedAt: updatedAt, tone: .tertiary)
-                        .opacity(showActions ? 0 : 1).accessibilityHidden(true)
+                        .accessibilityHidden(true)
                 } else if hostName != nil && !compact {
                     HostIdentityIcon(hostID: hostID)
                         .font(.system(size: WorkbenchTheme.Typography.body)).frame(width: 28)
-                        .opacity(showActions && actionWidth > 0 ? 0 : 1)
                         .accessibilityHidden(true)
                 }
-                actionButtons.buttonStyle(.plain).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
-                    .frame(width: actionWidth, alignment: .trailing).clipped()
-                    .background {
-                        if compact && showActions {
-                            RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.chip).fill(.regularMaterial)
-                        }
-                    }
-                    .opacity(showActions ? 1 : 0).allowsHitTesting(showActions).accessibilityHidden(!showActions)
-                    .animation(reduceMotion ? nil : .easeOut(duration: SidebarMetrics.highlightDuration), value: showActions)
             }.frame(width: trailingWidth, alignment: .trailing)
         }.padding(.trailing, 5).frame(height: rowHeight)
     }
