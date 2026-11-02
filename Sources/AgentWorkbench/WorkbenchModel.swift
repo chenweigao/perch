@@ -119,7 +119,7 @@ final class WorkbenchModel {
     var taskNotice: TaskNotice? { get { taskNotifications.taskNotice } set { taskNotifications.taskNotice = newValue } }
     var notificationError: String? { get { taskNotifications.notificationError } set { taskNotifications.notificationError = newValue } }
     var notificationsEnabled: Bool { get { taskNotifications.notificationsEnabled } set { taskNotifications.notificationsEnabled = newValue } }
-    var notifyAttentionOnly: Bool { get { taskNotifications.notifyAttentionOnly } set { taskNotifications.notifyAttentionOnly = newValue } }
+    var showsDockBadge: Bool { get { taskNotifications.showsDockBadge } set { taskNotifications.showsDockBadge = newValue } }
     var mutedTasks: Set<String> { taskNotifications.mutedTasks }
     func toggleTaskNotifications(_ id: String) { taskNotifications.toggleTaskNotifications(id) }
     @ObservationIgnored private var pendingNotificationID: String?
@@ -552,6 +552,7 @@ final class WorkbenchModel {
         }
         let next = (conversations + agents).sorted { $0.updatedAt == $1.updatedAt ? $0.id < $1.id : $0.updatedAt > $1.updatedAt }
         allSessions = next
+        taskNotifications.updateDockBadge(next)
     }
     /// User-triggered list mutations (pin, archive) animate the row move;
     /// streamed catalog updates stay instant. Honors system Reduce Motion.

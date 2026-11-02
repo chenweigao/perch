@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Observation
 import SwiftUI
@@ -88,7 +89,7 @@ private final class Invalidation: @unchecked Sendable {
     withObservationTracking { _ = model.taskNotice } onChange: { notificationChange.mark() }
     withObservationTracking { _ = model.allSessions } onChange: { unrelatedCatalog.mark() }
     model.notificationsEnabled = false
-    model.notifyAttentionOnly = false
+    model.taskNotifications.setLevel(.silent, for: .completed)
     let running = TaskEventState(running: true, pending: false, failed: false, completion: nil)
     let completed = TaskEventState(running: false, pending: false, failed: false, completion: "1")
     model.taskNotifications.observe(running, id: "notice", title: "Fixture", online: true, visibleSessionID: nil)
@@ -103,7 +104,24 @@ private final class Invalidation: @unchecked Sendable {
     model.taskNotifications.observe(completed, id: "muted", title: "Muted", online: true, visibleSessionID: nil)
     precondition(model.mutedTasks.contains("muted") && model.taskNotice == nil)
     model.toggleTaskNotifications("muted")
-    print("PASS: extracted notification observation, bindings, deduplication and mute state")
+    model.taskNotifications.setLevel(.off, for: .completed)
+    model.taskNotifications.observe(running, id: "off", title: "Off", online: true, visibleSessionID: nil)
+    model.taskNotifications.observe(completed, id: "off", title: "Off", online: true, visibleSessionID: nil)
+    precondition(model.taskNotice == nil, "An off level shows no notice")
+    model.taskNotifications.setLevel(AttentionPreferences.defaultLevels[.completed]!, for: .completed)
+    let waiting = WorkspaceSession(reference: SessionReference(hostID: UUID(), terminalID: "waiting", kind: .kimi),
+        title: "Waiting", directory: "/fixture", hostName: "Fixture", detail: "", online: true,
+        section: .attention, canMarkReviewed: false)
+    model.showsDockBadge = true
+    model.taskNotifications.updateDockBadge([waiting])
+    precondition(NSApp.dockTile.badgeLabel == "1", "The Dock badge counts sessions waiting for the reader")
+    model.showsDockBadge = false
+    precondition(NSApp.dockTile.badgeLabel == nil, "Turning the badge off clears it")
+    model.showsDockBadge = true
+    precondition(NSApp.dockTile.badgeLabel == "1", "Turning it back on restores the current count")
+    model.taskNotifications.updateDockBadge([])
+    precondition(NSApp.dockTile.badgeLabel == nil)
+    print("PASS: extracted notification observation, bindings, deduplication, levels and mute state")
     _ = ConversationPresentationHandle().update(key: "shutdown:native:fixture",
         input: .init(messages: [], language: "en"), cache: model.conversationPresentations)
     precondition(model.conversationPresentations.count == 1)

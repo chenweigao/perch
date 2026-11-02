@@ -114,16 +114,33 @@ struct WorkbenchSettings: View {
         }
     }
 
-    private var notificationsPane: some View {
+    @ViewBuilder private var notificationsPane: some View {
         Section {
             Toggle("关闭主窗口后继续在菜单栏运行", isOn: $background)
             if let error = model.companionShortcutError { Text(error).font(.subheadline).foregroundStyle(.orange) }
             Toggle("Notify when Perch is in the background", isOn: $model.notificationsEnabled)
-            Toggle("仅通知需要我处理的任务", isOn: $model.notifyAttentionOnly)
-                .disabled(!model.notificationsEnabled)
+            Toggle("在 Dock 图标上显示待处理", isOn: $model.showsDockBadge)
             if let error = model.notificationError { Text(error).font(.subheadline).foregroundStyle(.orange) }
         } footer: {
-            Text("完成通知会合并；确认、提问与失败立即通知。可在会话右键菜单中单独静音。")
+            Text("Dock 图标上的数字是等你处理的会话数；只有圆点时表示有新结果待查看。")
+        }
+        Section {
+            attentionLevelPicker("一轮结束", event: .completed)
+            attentionLevelPicker("需要确认或回答", event: .needsInput)
+            attentionLevelPicker("执行失败", event: .failed)
+        } header: {
+            Text("提醒方式")
+        } footer: {
+            Text("Perch 在前台时，只有需要你处理的事会播放提示音；一轮结束只在 Perch 处于后台时提示。完成通知会合并。可在会话右键菜单中单独静音。")
+        }
+    }
+
+    private func attentionLevelPicker(_ title: LocalizedStringKey, event: AttentionEvent) -> some View {
+        Picker(title, selection: Binding(get: { model.taskNotifications.level(event) },
+                                         set: { model.taskNotifications.setLevel($0, for: event) })) {
+            Text("不提醒").tag(AttentionLevel.off)
+            Text("静默").tag(AttentionLevel.silent)
+            Text("提示音").tag(AttentionLevel.sound)
         }
     }
 
