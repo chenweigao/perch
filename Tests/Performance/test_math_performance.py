@@ -145,6 +145,15 @@ class MathPerformanceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Window initial layout regressed"):
             MODULE.compare(runs)
 
+    def test_window_initial_layout_load_spike_passes(self):
+        # Two loaded rounds out of three move the median past the ratio gate;
+        # the best-case comparison must not read a scheduling spike as a layout
+        # regression.
+        runs = fixtures()
+        for record in runs["candidate"]["window-30"][:2]:
+            record["measurements"]["initial_layout_display_ms"] = 15
+        MODULE.compare(runs)
+
     def test_nonfinite_samples_fail(self):
         for value in [-1, float("nan"), float("inf")]:
             with self.assertRaises(ValueError):
