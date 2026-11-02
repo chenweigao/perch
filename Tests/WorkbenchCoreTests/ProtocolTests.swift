@@ -33,6 +33,7 @@ struct ProtocolTests {
         try checkWorkspaceProgress()
         try checkGroupSuggestions()
         try checkSessionNaming()
+        try checkCronFireEnvelope()
         try checkToolVisibility()
         try checkConversationTodos()
         try checkConversationActivity()

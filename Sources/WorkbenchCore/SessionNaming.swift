@@ -9,6 +9,10 @@ public enum SessionNaming {
     public static func excerpt(from messages: [KimiMessage], limit: Int = 400, hasOlder: Bool = false) -> String? {
         guard !hasOlder else { return nil }
         for message in messages where message.role == "user" && !message.isCompactionSummary {
+            if let cronFire = message.cronFire {
+                if !cronFire.prompt.isEmpty { return String(cronFire.prompt.prefix(limit)) }
+                continue
+            }
             let text = message.content.filter { $0.type == "text" && !$0.isRuntimeContext }
                 .compactMap(\.text).joined(separator: " ")
                 .trimmingCharacters(in: .whitespacesAndNewlines)

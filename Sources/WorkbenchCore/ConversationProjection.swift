@@ -81,6 +81,10 @@ public struct ConversationTurnSummary: Identifiable, Equatable {
     static func make(_ messages: [KimiMessage], entries: [ConversationTimelineEntry]) -> Self? {
         guard let user = messages.first, user.isUserPrompt, let entry = entries.first else { return nil }
         func excerpt(_ message: KimiMessage) -> String {
+            if let cronFire = message.cronFire {
+                return String(cronFire.prompt.prefix(320))
+                    .split(whereSeparator: \.isWhitespace).joined(separator: " ")
+            }
             var value = ""
             for part in message.content where part.type == "text" && !part.isRuntimeContext {
                 value += " " + String((part.skillContextSplit?.prefix ?? part.text ?? "").prefix(320 - value.count))
