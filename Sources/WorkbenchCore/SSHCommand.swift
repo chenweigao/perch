@@ -12,16 +12,8 @@ public enum SSHCommand {
         }
     }
 
-    public static func attach(host: SSHHost, binary: String, terminalID: String, controlPath: String) -> String {
-        // Run the installed remote binary so attach and server use the same protocol.
-        let remote = "exec \(quote(binary)) terminal attach \(quote(terminalID))"
-        return (["/usr/bin/ssh", "-tt", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
-                 "-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=2",
-                 "-S", controlPath, host.destination, remote].map(quote)).joined(separator: " ")
-    }
-
     /// A throwaway login shell on the host, multiplexed over the same control
-    /// connection as attach. Unlike a Herdr pane nothing persists: the shell
+    /// connection. Unlike a persistent pane nothing survives detach: the shell
     /// ends when the surface closes. An empty directory lands on the login
     /// directory; "~/..." expands on the remote side.
     public static func shell(host: SSHHost, directory: String, controlPath: String) -> String {

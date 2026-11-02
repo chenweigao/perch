@@ -265,7 +265,6 @@ struct ConnectionChecks {
     @MainActor
     static func main() async throws {
         setbuf(stdout, nil)
-        try checkHostSnapshotChanges()
         try await checkIdleSnapshotPolling()
         try await checkIdleSnapshotBackoff()
         try await checkNativeLoading()

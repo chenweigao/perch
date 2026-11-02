@@ -87,7 +87,7 @@ import WorkbenchCore
             let launch = TaskLaunchDefaults(hostID: host.id, provider: .kimi, directory: "/tmp", model: "fixture/model")
             try empty.finishSetup(host, launch: launch, startTask: true)
             precondition(empty.selectedHostID == host.id && empty.kimi.host == host && empty.pendingSetupLaunch)
-            precondition(empty.selectedConnection?.wantsConnection == false, "Kimi setup must not connect Herdr")
+            precondition(empty.selectedConnection?.wantsConnection == false, "Kimi setup must not open the host SSH channel")
             empty.setupDismissed()
             precondition(empty.draftingNewTask && empty.launchAfterSetup == launch)
             let reference = SessionReference(hostID: host.id, terminalID: "fixture-terminal")
@@ -182,33 +182,27 @@ import WorkbenchCore
             model.start()
             let aa = model.agentConnections(for: a.id)!
             let ba = model.agentConnections(for: b.id)!
-            precondition(aa.kimi.connecting && aa.native.wantsConnection && model.connections[0].wantsConnection)
+            precondition(aa.kimi.connecting && aa.native.wantsConnection)
+            precondition(!model.connections[0].wantsConnection, "the host SSH channel is on demand, never at launch")
             precondition(!ba.kimi.connecting && !ba.native.wantsConnection && !model.connections[1].wantsConnection)
             model.activateAgentEnvironment(b.id)
             model.resumeConnectionsAfterWake()
             precondition(!ba.kimi.connecting && !ba.native.wantsConnection && !model.connections[1].wantsConnection)
 
             model.disconnectSSH(a.id)
-            precondition(model.connections[0].wantsConnection, "SSH Agent disconnect must leave Herdr connected")
-            model.disconnectHerdr(a.id)
             model.activateAgentEnvironment(a.id)
             model.resumeConnectionsAfterWake()
             precondition(!aa.kimi.connecting && !aa.native.wantsConnection && !model.connections[0].wantsConnection)
             precondition(model.connections[0].host.autoConnectSSH && model.connections[0].host.autoConnectHerdr,
                          "temporary disconnect must preserve launch preferences")
 
-            model.setAutoConnect(true, for: b.id, herdr: true)
-            precondition(model.connections[1].wantsConnection && !ba.kimi.connecting && !ba.native.wantsConnection)
-            model.setAutoConnect(true, for: b.id, herdr: false)
+            model.setAutoConnect(true, for: b.id)
             precondition(ba.kimi.connecting && ba.native.wantsConnection)
-            model.setAutoConnect(false, for: b.id, herdr: true)
-            precondition(!model.connections[1].wantsConnection && ba.kimi.connecting && ba.native.wantsConnection)
-            model.setAutoConnect(false, for: b.id, herdr: false)
+            model.setAutoConnect(false, for: b.id)
             precondition(!ba.kimi.connecting && !ba.native.wantsConnection)
-            model.setAutoConnect(false, for: a.id, herdr: true)
-            model.setAutoConnect(false, for: a.id, herdr: false)
+            model.setAutoConnect(false, for: a.id)
             let setup = RemoteSetupController(host: model.connections[0].host)
-            precondition(!setup.host.autoConnectSSH && !setup.host.autoConnectHerdr,
+            precondition(!setup.host.autoConnectSSH,
                          "editing the host must retain connection preferences")
             var nativeHost = setup.host
             nativeHost.enabledAgents = [.omp, .claude]
@@ -225,14 +219,14 @@ import WorkbenchCore
             precondition(!aa.kimi.connecting && !aa.native.wantsConnection && !model.connections[0].wantsConnection)
             model.shutdown()
             UserDefaults.standard.synchronize()
-            print("PASS: independent SSH/Herdr controls, immediate toggles, temporary disconnect, activation/wake and setup")
+            print("PASS: SSH controls, immediate toggles, temporary disconnect, activation/wake and setup")
 
         case "connection-restart":
             let model = WorkbenchModel()
             precondition(model.connections.count == 2)
             model.start()
             for connection in model.connections {
-                precondition(!connection.host.autoConnectSSH && !connection.host.autoConnectHerdr)
+                precondition(!connection.host.autoConnectSSH)
                 let agents = model.agentConnections(for: connection.id)!
                 precondition(!agents.kimi.connecting && !agents.native.wantsConnection && !connection.wantsConnection)
             }
@@ -242,7 +236,7 @@ import WorkbenchCore
             connection.connect()
             let agents = model.agentConnections(for: connection.id)!
             precondition(agents.kimi.connecting && agents.native.wantsConnection && connection.wantsConnection)
-            precondition(!connection.host.autoConnectSSH && !connection.host.autoConnectHerdr)
+            precondition(!connection.host.autoConnectSSH)
             model.shutdown()
             print("PASS: disabled launch preferences survive restart; manual reconnect remains available")
 

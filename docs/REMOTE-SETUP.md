@@ -14,7 +14,7 @@ controls. This takes inspiration from [Codex's SSH connection workflow](https://
 - A fresh workspace has no preset host and starts no SSH processes. Old saved
   endpoint IDs and their session/draft associations are retained. An old implicit
   `dev-env` with a saved open session is restored as an existing environment.
-- New hosts enable only the chosen agent. Kimi setup does not require Herdr or the
+- New hosts enable only the chosen agent. Kimi setup does not require the
   native bridge. OMP installation does not require the Qoder SDK or npm.
 - Kimi routing settings contain only a port and a remote token-file path. The
   token is still read over SSH and retained only in memory.
@@ -75,7 +75,7 @@ and timeouts. The host lifecycle executable uses isolated preferences and checks
 handoff, endpoint/draft persistence, probe isolation and last-host removal.
 
 Manual interaction checks on macOS: start with isolated preferences; connect a
-Kimi-only server without Herdr; repair an untrusted SSH key and a missing Kimi
+Kimi-only server; repair an untrusted SSH key and a missing Kimi
 service; choose a custom Kimi port/token path; browse a directory containing
 spaces; begin a task and confirm its machine/model/directory. Check OMP without
 Node/npm and Qoder without OMP. Cancel a check and retry on a different host;

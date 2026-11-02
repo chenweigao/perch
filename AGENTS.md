@@ -1,7 +1,7 @@
 # Agent Workbench
 
-Independent native macOS client for the public Herdr API and CLI. SwiftUI/AppKit,
-GhosttyTerminal, and the system OpenSSH client. Appearance follows the system;
+Independent native macOS client for Kimi and native coding agents over the system
+OpenSSH client. SwiftUI/AppKit and GhosttyTerminal. Appearance follows the system;
 Settings offers light/dark overrides. Acceptance and preview fixtures stay pinned
 to light.
 

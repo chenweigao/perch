@@ -650,15 +650,15 @@ struct SessionActionsMenu: View {
         }
         Divider()
         Button { model.setArchived(item, archived: !item.archived) } label: {
-            Label(item.archived ? L("恢复归档") : item.reference.kind == .terminal ? L("归档到本机") : L("归档会话"), systemImage: "archivebox")
+            Label(item.archived ? L("恢复归档") : L("归档会话"), systemImage: "archivebox")
         }.disabled(busy || !model.canArchive(item))
         if model.tabs.ids.contains(item.id) {
             Button("关闭本地视图") { model.close(item.id) }
         }
         Divider()
         Button(role: .destructive) { model.pendingDeletion = item } label: {
-            Label(item.reference.kind == .terminal ? L("结束远端终端…") : L("删除会话…"), systemImage: "trash")
-        }.disabled(busy || !item.online || (item.reference.kind != .terminal && !model.canArchive(item)))
+            Label(L("删除会话…"), systemImage: "trash")
+        }.disabled(busy || !item.online || !model.canArchive(item))
     }
 }
 
@@ -754,9 +754,6 @@ private struct ConnectionControls: View {
                                     }
                                 }
                             }
-                        }
-                        if connection.host.enabledAgents.contains(.terminal) {
-                            agentStatus("Herdr", online: connection.online, error: connection.error) { connection.connect() }
                         }
                     }
                 }.padding(.vertical, 6)

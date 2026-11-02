@@ -45,7 +45,6 @@ final class RemoteSetupController: ObservableObject {
     private var task: Task<Void, Never>?
     private var kimi: KimiConnection?
     private var native: NativeAgentConnection?
-    private var terminal: HostConnection?
     private var kimiBinaryPath = ""
     private var kimiInstalledVersion = ""
 
@@ -129,8 +128,8 @@ final class RemoteSetupController: ObservableObject {
         task?.cancel(); task = nil; disconnectProbes(); busy = false
     }
     private func disconnectProbes() {
-        kimi?.disconnect(); native?.disconnect(); terminal?.disconnect()
-        kimi = nil; native = nil; terminal = nil
+        kimi?.disconnect(); native?.disconnect()
+        kimi = nil; native = nil
     }
     private func run(_ action: @escaping () async throws -> Void) {
         guard !busy else { return }
@@ -191,7 +190,6 @@ final class RemoteSetupController: ObservableObject {
             self.checks = [Check(id: "runtime", title: L("运行环境")), Check(id: "service", title: L("服务连接")), Check(id: "models", title: L("模型与登录"))]
             defer { if !Task.isCancelled { self.disconnectProbes() } }
             if self.provider == .kimi { try await self.checkKimi() }
-            else if self.provider == .terminal { try await self.checkTerminal() }
             else { try await self.checkNative() }
             try Task.checkCancellation()
             self.ready = true
@@ -393,16 +391,6 @@ final class RemoteSetupController: ObservableObject {
         default: break
         }
         hint = ""
-    }
-    private func checkTerminal() async throws {
-        mark("runtime", .checking)
-        hint = L("请在远端安装并启动 Herdr，然后重新检查。")
-        _ = try await ssh("herdr --version")
-        try Task.checkCancellation(); mark("runtime", .passed); mark("service", .checking)
-        let connection = HostConnection(host: host); terminal = connection; connection.connect()
-        try await awaitConnection(online: { connection.online }, error: { connection.error })
-        mark("service", .passed)
-        mark("models", .information, L("终端中的 Agent 与模型由你使用的 CLI 管理。")); hint = ""
     }
     func browse(_ path: String) {
         run {
