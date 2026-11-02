@@ -907,8 +907,6 @@
 
 "在当前执行环境中只读查看文件。" = "Browse files read-only in the current execution environment.";
 
-"仅通知需要我处理的任务" = "Only notify for tasks that need my attention";
-"完成通知会合并；确认、提问与失败立即通知。可在会话右键菜单中单独静音。" = "Completion notifications are grouped. Approvals, questions and failures notify immediately. Mute individual sessions from their context menu.";
 "恢复任务通知" = "Unmute task notifications";
 "静音任务通知" = "Mute task notifications";
 "通知未开启，请在系统设置 → 通知中允许 Perch。" = "Notifications are disabled. Allow Perch in System Settings → Notifications.";
@@ -1997,3 +1995,13 @@
 "工作台视图" = "Workbench view";
 "掌握进展，继续工作。" = "Catch up and keep moving.";
 "%lld 个会话" = "%lld sessions";
+"在 Dock 图标上显示待处理" = "Show pending items on the Dock icon";
+"Dock 图标上的数字是等你处理的会话数；只有圆点时表示有新结果待查看。" = "The Dock number counts sessions waiting for you. A dot alone means new results are ready to read.";
+"提醒方式" = "Alerts";
+"一轮结束" = "Turn finished";
+"需要确认或回答" = "Needs approval or an answer";
+"执行失败" = "Failed";
+"不提醒" = "Off";
+"静默" = "Silent";
+"提示音" = "Sound";
+"Perch 在前台时，只有需要你处理的事会播放提示音；一轮结束只在 Perch 处于后台时提示。完成通知会合并。可在会话右键菜单中单独静音。" = "While Perch is in front, only things that need you play a sound. A finished turn alerts only when Perch is in the background. Completion notifications are grouped. Mute individual sessions from their context menu.";

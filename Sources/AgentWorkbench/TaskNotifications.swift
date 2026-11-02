@@ -6,6 +6,7 @@ final class TaskNotifications: NSObject, UNUserNotificationCenterDelegate {
     var onOpen: ((String) -> Void)?
     var onOpenDashboard: (() -> Void)?
     private var completions: [String: String] = [:]
+    private var completionSound = false
     private var completionDelivery: DispatchWorkItem?
     func start() { UNUserNotificationCenter.current().delegate = self }
     func requestPermission(_ completion: @escaping (String?) -> Void) {
@@ -13,9 +14,12 @@ final class TaskNotifications: NSObject, UNUserNotificationCenterDelegate {
             DispatchQueue.main.async { completion(error?.localizedDescription ?? (allowed ? nil : L("通知未开启，请在系统设置 → 通知中允许 Perch。"))) }
         }
     }
-    func post(id: String, title: String, event: TaskEventKind) {
+    /// `sound` attaches the default notification sound; the router decides it from
+    /// the event's level.
+    func post(id: String, title: String, event: TaskEventKind, sound: Bool) {
         if event == .completed {
             completions[id] = title
+            completionSound = completionSound || sound
             guard completionDelivery == nil else { return }
             let work = DispatchWorkItem { [weak self] in self?.deliverCompletions() }
             completionDelivery = work
@@ -26,7 +30,7 @@ final class TaskNotifications: NSObject, UNUserNotificationCenterDelegate {
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = event == .failed ? L("任务执行失败，请查看详情。") : L("这个任务需要你确认或回答。")
-        content.userInfo = ["session": id]; content.sound = .default
+        content.userInfo = ["session": id]; content.sound = sound ? .default : nil
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "\(id):\(event.rawValue)", content: content, trigger: nil))
     }
     func postInactivity(id: String, title: String) {
@@ -38,11 +42,11 @@ final class TaskNotifications: NSObject, UNUserNotificationCenterDelegate {
     }
     func cancelPendingCompletions(for id: String? = nil) {
         if let id { completions.removeValue(forKey: id) } else { completions.removeAll() }
-        if completions.isEmpty { completionDelivery?.cancel(); completionDelivery = nil }
+        if completions.isEmpty { completionDelivery?.cancel(); completionDelivery = nil; completionSound = false }
     }
     private func deliverCompletions() {
-        let batch = completions
-        completions.removeAll(); completionDelivery = nil
+        let batch = completions, sound = completionSound
+        completions.removeAll(); completionDelivery = nil; completionSound = false
         guard !batch.isEmpty, !NSApp.isActive else { return }
         let content = UNMutableNotificationContent()
         if batch.count == 1, let item = batch.first {
@@ -54,7 +58,7 @@ final class TaskNotifications: NSObject, UNUserNotificationCenterDelegate {
             content.body = L("打开工作台查看已完成的回复。")
             content.userInfo = ["dashboard": true]
         }
-        content.sound = .default
+        content.sound = sound ? .default : nil
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "completed-batch", content: content, trigger: nil))
     }
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
