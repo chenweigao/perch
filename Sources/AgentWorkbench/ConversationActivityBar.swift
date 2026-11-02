@@ -160,13 +160,22 @@ struct ConversationActivityBar: View {
             // Mounted in every state, so a run's end closes this same arc. Native
             // agents report the run state and the turn's end time separately; a
             // conditional view would be replaced in between and land at rest.
-            PerchBusyIndicator(running: activity.animates).opacity(showsPerch ? 1 : 0)
+            PerchBusyIndicator(running: activity.animates, motion: motion).opacity(showsPerch ? 1 : 0)
             if !showsPerch {
                 Image(systemName: symbol).font(.system(size: WorkbenchTheme.Reading.labelSize)).frame(width: 16, height: 16)
                     .foregroundStyle(blocking || (reviewCount > 0 && !isRunning) ? Color.orange : WorkbenchTheme.quiet)
                     .accessibilityHidden(true)
             }
         }.frame(width: 16, height: 16)
+    }
+    /// Each phase of a running turn moves the mark its own way.
+    private var motion: PerchBusyIndicator.Motion {
+        switch activity.phase {
+        case .thinking: .thinking
+        case .reading: .reading
+        case .writing: .writing
+        case .working, nil: .working
+        }
     }
     private var symbol: String {
         if blocking || stopping { return activity.symbol }
