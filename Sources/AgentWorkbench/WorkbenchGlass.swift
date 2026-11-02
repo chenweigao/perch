@@ -7,7 +7,7 @@ extension View {
     }
 
     func workbenchControlSurface() -> some View {
-        modifier(WorkbenchGlassSurface(cornerRadius: 20))
+        modifier(WorkbenchGlassSurface(cornerRadius: WorkbenchTheme.Radius.panel))
     }
 
     func workbenchComposerSurface() -> some View {
@@ -147,7 +147,7 @@ struct WorkbenchDisclosureButtonStyle: ButtonStyle {
         @State private var hovered = false
         var body: some View {
             configuration.label
-                .background(wash, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .background(wash, in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row, style: .continuous))
                 .onHover { hovered = $0 }
         }
         private var wash: Color {

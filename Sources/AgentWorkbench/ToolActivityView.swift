@@ -204,7 +204,7 @@ struct KimiToolCard: View {
             if tool.input == nil && tool.output == nil && tool.progress == nil { Text("No input or output").foregroundStyle(WorkbenchTheme.quiet) }
         }.font(.system(size: ReplyStyle.captionSize, design: .monospaced)).frame(maxWidth: .infinity, alignment: .leading)
             .padding(10)
-            .background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: 6))
+            .background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius, style: .continuous))
             .padding(.leading, ReplyStyle.Process.nestedIndent).padding(.top, 5)
     }
 }

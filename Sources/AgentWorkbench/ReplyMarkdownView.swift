@@ -955,6 +955,7 @@ final class NativeUserMessageView: NSView {
         #endif
         bubbleBackground.wantsLayer = true
         bubbleBackground.layer?.cornerRadius = UserMessageStyle.cornerRadius
+        bubbleBackground.layer?.cornerCurve = .continuous
         addSubview(bubbleBackground)
         promptClip.wantsLayer = true
         promptClip.layer?.masksToBounds = true

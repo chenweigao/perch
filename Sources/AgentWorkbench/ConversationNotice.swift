@@ -10,7 +10,7 @@ extension ReplyStyle {
         static let spacing: CGFloat = 8
         static let horizontalPadding: CGFloat = 12
         static let verticalPadding: CGFloat = 8
-        static let cornerRadius: CGFloat = 8
+        static let cornerRadius: CGFloat = WorkbenchTheme.Radius.card
         static let fillOpacity: Double = 0.06
         /// Long upstream errors scroll past this height instead of displacing the conversation.
         static let maxTextHeight: CGFloat = 128
