@@ -649,16 +649,20 @@ struct TaskRecapPopover: View {
     }
 }
 
-/// A turn's wall time with its breakdown, for the task panel's 本轮 section.
+/// A finished turn's wall time with its breakdown, for the task panel's 本轮
+/// section. Static: the running clock lives on the status line.
 struct TurnTimingDetails: View {
     let timing: ConversationTiming
     @Environment(\.locale) private var locale
     var body: some View {
-        Group {
-            if let end = timing.endedAt { content(at: end) }
-            else {
-                TimelineView(.periodic(from: timing.startedAt, by: 1)) { context in content(at: context.date) }
-            }
+        let end = timing.endedAt ?? timing.startedAt
+        let total = timing.elapsed(at: end), waiting = timing.waiting(at: end)
+        VStack(alignment: .leading, spacing: 4) {
+            if timing.observedOnly { Text("观察时长 \(duration(total))") } else { Text("用时 \(duration(total))") }
+            Text("处理与工具调用：\(duration(total - waiting))").foregroundStyle(WorkbenchTheme.quiet)
+            Text("等待确认：\(duration(waiting))").foregroundStyle(WorkbenchTheme.quiet)
+            Text("阶段时长按客户端收到的状态估算，包含通信与调度。")
+                .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet)
         }.monospacedDigit()
             .help(timing.observedOnly
                   ? Text("从客户端首次观察到本轮开始计时，包含等待；此前用时未知。")
@@ -667,44 +671,18 @@ struct TurnTimingDetails: View {
     private func duration(_ value: TimeInterval) -> String {
         ConversationTiming.duration(value, chinese: locale.language.languageCode?.identifier == "zh")
     }
-    private func content(at now: Date) -> some View {
-        let total = timing.elapsed(at: now), waiting = timing.waiting(at: now)
-        return VStack(alignment: .leading, spacing: 4) {
-            label(duration(total))
-            Text("处理与工具调用：\(duration(total - waiting))").foregroundStyle(WorkbenchTheme.quiet)
-            Text("等待确认：\(duration(waiting))").foregroundStyle(WorkbenchTheme.quiet)
-            Text("阶段时长按客户端收到的状态估算，包含通信与调度。")
-                .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet)
-        }
-    }
-    @ViewBuilder private func label(_ duration: String) -> some View {
-        if timing.observedOnly {
-            if timing.endedAt == nil { Text("已观察 \(duration)") }
-            else { Text("观察时长 \(duration)") }
-        } else if timing.endedAt == nil { Text("已用时 \(duration)") }
-        else { Text("用时 \(duration)") }
-    }
 }
 
-/// Only a running task needs a clock that redraws; a finished one is fixed.
-/// Callers set its font and color.
+/// A finished task's duration, for the task panel. Running time is not shown
+/// there; callers pass finished tasks and set the font and color.
 struct KimiTaskClock: View {
     let task: KimiTask
     @Environment(\.locale) private var locale
     var body: some View {
-        Group {
-            if let started = task.startedDate {
-                if let ended = task.completedDate {
-                    Text(duration(ended.timeIntervalSince(started)))
-                } else {
-                    TimelineView(.periodic(from: started, by: 1)) { context in
-                        Text(duration(context.date.timeIntervalSince(started)))
-                    }
-                }
-            }
-        }.monospacedDigit().fixedSize()
-    }
-    private func duration(_ interval: TimeInterval) -> String {
-        ConversationTiming.duration(max(0, interval), chinese: locale.language.languageCode?.identifier == "zh")
+        if let started = task.startedDate, let ended = task.completedDate {
+            Text(ConversationTiming.duration(max(0, ended.timeIntervalSince(started)),
+                                             chinese: locale.language.languageCode?.identifier == "zh"))
+                .monospacedDigit().fixedSize()
+        }
     }
 }

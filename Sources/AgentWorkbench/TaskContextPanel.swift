@@ -89,7 +89,6 @@ struct TaskContextView: View {
     @State private var state = TaskContextState()
     @State private var allFiles = false
     @State private var completedTasks = false
-    @State private var completedTools = false
     @State private var draftSource: WorkspaceSession?
     @State private var scrolled = false
     @AppStorage(AppLanguage.defaultsKey) private var language: AppLanguage = .system
@@ -186,7 +185,7 @@ struct TaskContextView: View {
             .workbenchHostedTask(id: key) {
                 let input = key
                 if state.reference != input.reference {
-                    allFiles = false; completedTasks = false; completedTools = false
+                    allFiles = false; completedTasks = false
                 }
                 await state.follow(input.reference, online: input.online) {
                     guard let source = input.reference else { throw CancellationError() }
@@ -196,15 +195,6 @@ struct TaskContextView: View {
             .sheet(item: $draftSource) { source in
                 TaskContextDraft(model: model, source: source)
             }
-    }
-    /// "1 个运行中 · 76 次调用": what the lane holds, without opening a section.
-    private var summary: String? {
-        guard let current else { return nil }
-        let running = current.tasks.filter(\.isRunning).count
-        var parts: [String] = []
-        if running > 0 { parts.append(L("\(running) 个运行中")) }
-        if !current.tools.isEmpty { parts.append(L("\(current.tools.count) 次调用")) }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
     private var header: some View {
         HStack(spacing: 2) {
@@ -219,10 +209,6 @@ struct TaskContextView: View {
                 } else {
                     Text("任务面板").font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold))
                         .foregroundStyle(.primary)
-                }
-                if let summary {
-                    Text(verbatim: summary).font(.system(size: WorkbenchTheme.Typography.caption))
-                        .monospacedDigit().foregroundStyle(WorkbenchTheme.quiet).lineLimit(1)
                 }
             }
             Spacer(minLength: 4)
@@ -276,6 +262,15 @@ struct TaskContextView: View {
                             .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
                     }.buttonStyle(TaskContextRowStyle(tinted: true)).disabled(!online).help("查看并处理")
                 }
+            }
+        }
+        // Running tools are the status line's; the panel keeps only the results
+        // nobody confirmed, which the status line's 查看 opens.
+        let uncertain = value.tools.filter { $0.staysVisible && $0.status != .running }
+        if !uncertain.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                sectionTitle("需要你看一下", icon: "exclamationmark.circle", count: uncertain.count)
+                ForEach(uncertain) { tool in toolRow(tool) }
             }
         }
         TaskTurnSection(model: model, item: item, snapshot: value)
@@ -338,26 +333,10 @@ struct TaskContextView: View {
             }))
             #endif
         }
-        if !value.tools.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
-                sectionTitle("工具活动", icon: "wrench.and.screwdriver", count: value.tools.count)
-                ForEach(value.tools.filter { $0.staysVisible }) { tool in toolRow(tool) }
-                let completed = value.tools.filter { !$0.staysVisible }
-                if !completed.isEmpty {
-                    TaskContextDisclosure(title: "已结束的调用 · \(completed.count)", expanded: $completedTools) {
-                        ForEach(completed.suffix(20).reversed()) { tool in toolRow(tool) }
-                        if completed.count > 20 {
-                            Text("显示最近 20 次调用，完整记录请打开会话。").font(.system(size: WorkbenchTheme.Typography.caption))
-                                .foregroundStyle(WorkbenchTheme.quiet).padding(.horizontal, 4)
-                        }
-                    }
-                }
-            }
-        }
-        if value.files.isEmpty && value.tasks.isEmpty && value.tools.isEmpty &&
+        if value.files.isEmpty && value.tasks.isEmpty && uncertain.isEmpty &&
             value.requests.isEmpty && value.failure == nil && value.todos.isEmpty && value.edits == nil {
             emptyState(value.busy ? "hourglass" : "tray",
-                       value.busy ? "任务正在进行，文件和工具活动会显示在这里。" : "此任务暂时没有文件或工具活动。")
+                       value.busy ? "任务正在进行，计划、改动和文件会显示在这里。" : "此任务暂时没有计划、改动或文件。")
         }
     }
     private func emptyState(_ icon: String, _ text: LocalizedStringKey) -> some View {
@@ -394,7 +373,8 @@ struct TaskContextView: View {
                     Text(verbatim: title).lineLimit(2).foregroundStyle(.primary)
                     HStack(spacing: 6) {
                         Text(task.phaseLabel)
-                        KimiTaskClock(task: task)
+                        // Running time ticks only on the status line; a finished task keeps its duration.
+                        if task.completedDate != nil { KimiTaskClock(task: task) }
                         if let endpoint {
                             Text(verbatim: endpoint).font(.system(size: WorkbenchTheme.Typography.caption, design: .monospaced))
                                 .lineLimit(1).truncationMode(.middle)
@@ -486,6 +466,8 @@ private struct TaskContextDisclosure<Content: View>: View {
     }
 }
 
+/// A tool result nobody confirmed. The panel lists no running tools, so rows
+/// never animate.
 private struct TaskContextToolRow: View {
     let tool: VisibleTool
     @State private var expanded = false
@@ -521,7 +503,6 @@ private struct TaskContextToolRow: View {
             Button { withAnimation(reduceMotion ? nil : .snappy(duration: 0.18)) { expanded.toggle() } } label: {
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: symbol).foregroundStyle(ink).frame(width: 16).padding(.top, 2)
-                        .symbolEffect(.pulse, options: .repeating, isActive: tool.status == .running && !reduceMotion)
                     VStack(alignment: .leading, spacing: 3) {
                         Text(verbatim: ToolPresentation.compactTarget(tool)).lineLimit(2)
                             .foregroundStyle(tool.hasCall ? Color.primary : WorkbenchTheme.quiet)

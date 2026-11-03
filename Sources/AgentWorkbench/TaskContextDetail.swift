@@ -77,7 +77,8 @@ struct TaskContextDetailView: View {
             }
             HStack(spacing: 0) {
                 Text(verbatim: [task.subagentType ?? task.kindLabel, task.phaseLabel].joined(separator: " · "))
-                if current, task.startedDate != nil {
+                // A finished task's duration; running time is the status line's.
+                if task.startedDate != nil, task.completedDate != nil {
                     Text(verbatim: " · ")
                     KimiTaskClock(task: task)
                 }
@@ -259,15 +260,13 @@ struct TaskContextDetailView: View {
     }
 }
 
-/// The status mark of a task row and its detail page.
+/// The status mark of a task row and its detail page. Still in every state:
+/// the status line is the one place that moves while work runs.
 struct TaskStatusSymbol: View {
     let task: KimiTask
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// A running task reads in the accent ink and breathes; finished ones stay quiet.
     var body: some View {
         Image(systemName: Self.name(of: task))
-            .foregroundStyle(task.isFailed ? Color.red : task.isRunning ? WorkbenchTheme.accent : Color.secondary)
-            .symbolEffect(.pulse, options: .repeating, isActive: task.isRunning && !reduceMotion)
+            .foregroundStyle(task.isFailed ? Color.red : Color.secondary)
             .frame(width: 16).accessibilityHidden(true)
     }
     static func name(of task: KimiTask) -> String {
