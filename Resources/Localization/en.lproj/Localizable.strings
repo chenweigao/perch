@@ -1146,6 +1146,10 @@
 
 "设置与环境" = "Settings & environments";
 
+"设置与环境 · ⌘," = "Settings & environments · ⌘,";
+
+"%lld 项待处理" = "%lld pending";
+
 "更多项目" = "More projects";
 
 "显示全部 %lld 个会话" = "Show all %lld sessions";
