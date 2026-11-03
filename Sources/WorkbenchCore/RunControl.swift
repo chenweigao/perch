@@ -225,6 +225,11 @@ public struct OutboundQueue: Codable, Equatable, Sendable {
         messages.filter { $0.session == session }
     }
     public func isPaused(_ session: SessionReference) -> Bool { paused.contains(session.id) }
+    public func hasResumableMessages(for session: SessionReference) -> Bool {
+        items(for: session).contains {
+            $0.state == .stoppedBeforeDelivery || (isPaused(session) && $0.state == .draftQueued)
+        }
+    }
     public func message(_ id: String) -> OutboundMessage? { messages.first { $0.id == id } }
 
     @discardableResult
