@@ -1,6 +1,56 @@
 import AppKit
 import QuartzCore
+import Observation
 import SwiftUI
+
+/// Presentation activity only; transport, remote tasks and notifications keep running.
+@MainActor @Observable final class AppPresentationActivity {
+    static let shared = AppPresentationActivity()
+    private(set) var isActive = NSApp.isActive
+    @ObservationIgnored private var observers: [NSObjectProtocol] = []
+    private init() {
+        for (name, active) in [(NSApplication.didBecomeActiveNotification, true),
+                               (NSApplication.didResignActiveNotification, false)] {
+            observers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.isActive = active }
+            })
+        }
+    }
+}
+
+/// Shared visibility contract for the two perpetual layer effects: sun and title.
+class PresentationAnimationView: NSView {
+    private var applicationActive = NSApp.isActive
+    var canAnimate: Bool {
+        applicationActive && window?.occlusionState.contains(.visible) == true && !isHiddenOrHasHiddenAncestor
+    }
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        let center = NotificationCenter.default
+        center.removeObserver(self)
+        applicationActive = NSApp.isActive
+        if let window {
+            center.addObserver(self, selector: #selector(activated), name: NSApplication.didBecomeActiveNotification, object: NSApp)
+            for name in [NSApplication.didResignActiveNotification, NSApplication.didHideNotification] {
+                center.addObserver(self, selector: #selector(resigned), name: name, object: NSApp)
+            }
+            center.addObserver(self, selector: #selector(presentationChanged), name: NSApplication.didUnhideNotification, object: NSApp)
+            center.addObserver(self, selector: #selector(presentationChanged), name: NSWindow.didChangeOcclusionStateNotification, object: window)
+        }
+        presentationActivityChanged()
+    }
+    override func viewDidHide() { super.viewDidHide(); presentationActivityChanged() }
+    override func viewDidUnhide() { super.viewDidUnhide(); presentationActivityChanged() }
+    @objc private func activated() { applicationActive = true; presentationActivityChanged() }
+    @objc private func resigned() { applicationActive = false; presentationActivityChanged() }
+    @objc private func presentationChanged() { presentationActivityChanged() }
+    func presentationActivityChanged() {}
+    func stopObserving() {
+        NotificationCenter.default.removeObserver(self)
+        applicationActive = false
+        presentationActivityChanged()
+    }
+}
 
 /// The running sun of list rows and the Goal header on the 24-unit glyph grid:
 /// a ring that chases. The brand bird lives in `PerchBirdGeometry`; the status
@@ -70,9 +120,10 @@ private struct PerchBusyRepresentable: NSViewRepresentable {
     let animated: Bool
     func makeNSView(context: Context) -> PerchBusyView { PerchBusyView(animated: animated) }
     func updateNSView(_ view: PerchBusyView, context: Context) { view.animated = animated }
+    static func dismantleNSView(_ view: PerchBusyView, coordinator: ()) { view.stopObserving() }
 }
 
-private final class PerchBusyView: NSView {
+private final class PerchBusyView: PresentationAnimationView {
     private let sun = CAShapeLayer()
     private var builtSize: CGSize = .zero
     private static let chase = PerchLineMark.chaseKeyframes()
@@ -98,11 +149,7 @@ private final class PerchBusyView: NSView {
         rebuild()
     }
 
-    override func viewDidMoveToWindow() {
-        super.viewDidMoveToWindow()
-        // Detached layers can drop their animations; a chasing sun restarts.
-        if window != nil, animated, sun.animationKeys()?.isEmpty != false { rebuild() }
-    }
+    override func presentationActivityChanged() { rebuild() }
 
     override func viewDidChangeEffectiveAppearance() {
         super.viewDidChangeEffectiveAppearance()
@@ -138,7 +185,7 @@ private final class PerchBusyView: NSView {
         sun.lineWidth = l.lineWidth * unit
         sun.strokeColor = ink
         sun.contentsScale = window?.backingScaleFactor ?? 2
-        if animated {
+        if animated && canAnimate {
             let chase = Self.chase
             sun.strokeStart = chase.start[0]
             sun.strokeEnd = chase.end[0]

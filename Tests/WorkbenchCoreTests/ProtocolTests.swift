@@ -25,6 +25,7 @@ struct ProtocolTests {
         try checkConversationProcessFold()
         try checkConversationPresentationModel()
         try checkConversationPresentationHistory()
+        try checkBackgroundPresentationCadence()
         try checkConversationPresentationPaging()
         checkCompactionSummaryDisplay()
         try checkActivitySummaries()
