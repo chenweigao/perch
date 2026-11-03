@@ -64,6 +64,12 @@ public struct ActivitySummaryBatch: Hashable {
                               isRunning: Bool, enabled: Bool, includeToolOutput: Bool = false) -> Self? {
         guard enabled else { return nil }
         let projection = ActivityNarrativeProjection.make(entries: entries, tools: tools, isRunning: isRunning)
+        return latest(in: entries, tools: tools, projection: projection, includeToolOutput: includeToolOutput)
+    }
+
+    // Presentation already computed this projection for the same entries/tools.
+    static func latest(in entries: [ConversationTimelineEntry], tools: [String: VisibleTool],
+                       projection: ActivityNarrativeSnapshot, includeToolOutput: Bool) -> Self? {
         guard let stage = projection.stages.last, stage.narrative.source == .local else { return nil }
         let start = entries.lastIndex { $0.messages.first?.id == projection.turnID } ?? entries.endIndex
         let currentEntries = entries[start...]

@@ -11,6 +11,26 @@ func checkConversationPresentationModel() throws {
             ["id": "reply", "role": "assistant", "created_at": "4", "content": [["type": "text", "text": reply]]]]
         return try KimiWire.decoder().decode([KimiMessage].self, from: JSONSerialization.data(withJSONObject: raw))
     }
+    // Exercise summary reuse during shell output changes, completion, and a
+    // provider-owned stage, not just a static Read tool.
+    func shellMessages(output: String, providerSummary: Bool = false) throws -> [KimiMessage] {
+        let thought: [String: Any] = providerSummary
+            ? ["type": "thinking", "thinking": "检查构建结果",
+               "source": ["kind": "activity_summary", "provider": "codex",
+                          "itemId": "shell-summary", "turnId": "shell-user",
+                          "summaryParts": ["验证构建结果"], "state": "final"]]
+            : ["type": "thinking", "thinking": "检查构建结果"]
+        return try KimiWire.decoder().decode([KimiMessage].self,
+            from: JSONSerialization.data(withJSONObject: [
+                ["id": "shell-user", "role": "user", "content": [["type": "text", "text": "验证构建"]]],
+                ["id": "shell-call", "role": "assistant", "content": [
+                    thought,
+                    ["type": "tool_use", "tool_call_id": "shell", "tool_name": "Bash",
+                     "input": ["command": "cd '/project with spaces' && env MODE=ci bash -lc 'swift build && swift test'"]]]],
+                ["id": "shell-result", "role": "tool", "content": [
+                    ["type": "tool_result", "tool_call_id": "shell", "output": output]]]
+            ] as [[String: Any]]))
+    }
     let initial = try messages()
     let model = Model(key: "host:native:a")
     let referenceTools = ToolVisibilityProjection(), referenceTurns = ConversationProjection()
@@ -20,7 +40,17 @@ func checkConversationPresentationModel() throws {
                   Model.Input(messages: initial, isRunning: true, online: false, language: "zh", summariesEnabled: true),
                   Model.Input(messages: older + initial, language: "zh", summariesEnabled: true, includeToolOutput: true),
                   Model.Input(messages: Array(initial.prefix(2)), running: ["t"], isRunning: true, language: "zh"),
-                  Model.Input(messages: [], language: "zh")] {
+                  Model.Input(messages: try shellMessages(output: "building"), isRunning: true,
+                              language: "zh", summariesEnabled: true),
+                  Model.Input(messages: try shellMessages(output: "tests passed"), isRunning: true,
+                              language: "en", summariesEnabled: true, includeToolOutput: true),
+                  Model.Input(messages: try shellMessages(output: "tests passed"), language: "en",
+                              summariesEnabled: true, includeToolOutput: true),
+                  Model.Input(messages: try shellMessages(output: "tests passed", providerSummary: true),
+                              isRunning: true, language: "zh", summariesEnabled: true),
+                  Model.Input(messages: try shellMessages(output: "tests passed"), isRunning: true,
+                              language: "zh", summariesEnabled: false),
+                  Model.Input(messages: [], language: "zh", summariesEnabled: true)] {
         let visible = referenceTools.update(input.messages, sessionID: model.key, live: input.live, running: input.running, online: input.online)
         let timeline = referenceTurns.update(visible.messages, isRunning: input.isRunning)
         let narrative = ActivityNarrativeProjection.make(entries: timeline.entries, tools: visible.tools, isRunning: input.isRunning)
@@ -41,6 +71,11 @@ func checkConversationPresentationModel() throws {
         let count = model.preparationCount
         precondition(model.update(input) === snapshot && model.preparationCount == count, "Equal values must reuse the prepared snapshot")
     }
+    let providerSnapshot = Model(key: "provider").update(.init(
+        messages: try shellMessages(output: "tests passed", providerSummary: true),
+        isRunning: true, language: "zh", summariesEnabled: true))
+    precondition(providerSnapshot.narrative.current?.source == .provider && providerSnapshot.batch == nil,
+                 "Provider-owned narratives must not schedule a local summary")
     let live = try KimiWire.decoder().decode([KimiLiveTool].self, from: Data(#"[{"tool_call_id":"live","name":"Bash","args":{"command":"test"},"last_progress":{"text":"running"}}]"#.utf8))
     let liveModel = Model(key: "host:kimi:a")
     _ = liveModel.update(.init(messages: [initial[0]], live: live, isRunning: true, epoch: "one", language: "zh"))
