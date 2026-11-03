@@ -441,8 +441,9 @@ struct NativeRunControls: View {
                         }
                     }
                 }
-                if connection.queue.isPaused(reference) || pending.contains(where: { $0.state == .stoppedBeforeDelivery }) {
+                if connection.queue.hasResumableMessages(for: reference) {
                     Button("继续发送排队消息") { connection.resumeQueue(reference) }.font(.system(size: WorkbenchTheme.Typography.secondary))
+                        .accessibilityIdentifier("native-queue-resume")
                         .disabled(!connection.online || connection.sessions.first(where: { $0.id == sessionID })?.busy != false || !phase.isSettled)
                 }
                 ForEach(pending) { message in
