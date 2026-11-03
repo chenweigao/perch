@@ -10,6 +10,8 @@ import WorkbenchCore
     var reconnects = 0
     var details = 0
     var changes = 0
+    /// nil follows the runner's Reduce Motion; the sweep checks pin it.
+    var reduceMotion: Bool?
     var barFrame = CGRect.zero
 }
 
@@ -40,7 +42,8 @@ private struct ActivityBarCheckFixture: View {
                                     offlineDetail: phase.online ? nil : "ssh: connect to host fixture.invalid: Network is unreachable",
                                     pendingCount: phase.pending,
                                     onReview: { state.reviews += 1 }, onReconnect: { state.reconnects += 1 },
-                                    onDetails: { state.details += 1 }, onChanges: { state.changes += 1 })
+                                    onDetails: { state.details += 1 }, onChanges: { state.changes += 1 },
+                                    reduceMotionOverride: state.reduceMotion)
                 .frame(width: state.width)
                 .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("activity-check")) } action: { state.barFrame = $0 }
             Color.secondary.opacity(0.15).frame(height: 64)
@@ -79,6 +82,9 @@ private struct ActivityBarCheckFixture: View {
             ["type": "tool_use", "tool_call_id": "read", "tool_name": "Read", "input": ["path": "/fixture/Locked.swift"]]]]
     ]
     let runningMessages = try decode([prompt] + plan + edit + [command])
+    let progressNote: [String: Any] = ["id": "note", "role": "assistant", "created_at": "7",
+                                       "content": [["type": "text", "text": "Build is still compiling."]]]
+    let moreMessages = try decode([prompt] + plan + edit + [command, progressNote])
     let failedMessages = try decode([prompt] + plan + edit + failure)
     let endedMessages = try decode([prompt] + plan + edit)
     var clocks = ConversationTimings()
@@ -98,6 +104,7 @@ private struct ActivityBarCheckFixture: View {
     }
     let phases: [String: ActivityBarCheckPhase] = [
         "running": phase(runningMessages, running: true, timing: live),
+        "running-more": phase(moreMessages, running: true, timing: live),
         "pending": phase(runningMessages, running: true, pending: 2, timing: live),
         "offline": phase(runningMessages, running: true, online: false, timing: live),
         "stopping": phase(runningMessages, running: true, stopping: true, timing: live),
@@ -178,10 +185,35 @@ private struct ActivityBarCheckFixture: View {
                      "A click on the \(name) line must reach the line: details \(state.details - details), reviews \(state.reviews - reviews)")
     }
     precondition(state.changes == 0, "Only the +a −d button opens the changes page")
+    // The title sweeps once per progress event and holds still without one.
+    func glints(_ view: NSView) -> [ShimmerGlintView] {
+        (view as? ShimmerGlintView).map { [$0] } ?? view.subviews.flatMap(glints)
+    }
+    // Pinned so the result does not depend on the runner's Reduce Motion setting.
+    state.reduceMotion = true
+    state.phase = "running"
+    try await Task.sleep(for: .milliseconds(300))
+    host.layoutSubtreeIfNeeded()
+    precondition(glints(host).isEmpty, "Reduce Motion keeps the running title still")
+    state.reduceMotion = false
+    try await Task.sleep(for: .milliseconds(300))
+    host.layoutSubtreeIfNeeded()
+    guard let glint = glints(host).first else {
+        preconditionFailure("A running title must carry its shimmer (system Reduce Motion: \(NSWorkspace.shared.accessibilityDisplayShouldReduceMotion))")
+    }
+    let mounted = glint.sweeps
+    try await Task.sleep(for: .milliseconds(500))
+    precondition(glint.sweeps == mounted, "No progress, no sweep: \(glint.sweeps - mounted)")
+    state.phase = "running-more"
+    try await Task.sleep(for: .milliseconds(200))
+    precondition(glints(host).first === glint && glint.sweeps == mounted + 1, "New output sweeps the same title once: \(glint.sweeps - mounted)")
+    try await Task.sleep(for: .milliseconds(500))
+    precondition(glint.sweeps == mounted + 1, "One event, one sweep")
+    state.reduceMotion = nil
     // A session this client never watched run has nothing to say and takes no space.
     state.phase = "idle"
     try await Task.sleep(for: .milliseconds(200))
     host.layoutSubtreeIfNeeded()
     precondition(state.barFrame.height < 0.5, "An idle status line must take no space: \(state.barFrame.height)pt")
-    print("PASS: status line clicks reach the line through its title; idle status line takes no space; activity bar keeps one height and the reading viewport across running/pending/offline/stopping/failed/ended, wide/narrow, light/dark; pending review and reconnect actions respond")
+    print("PASS: the running title sweeps once per progress event; status line clicks reach the line through its title; idle status line takes no space; activity bar keeps one height and the reading viewport across running/pending/offline/stopping/failed/ended, wide/narrow, light/dark; pending review and reconnect actions respond")
 }

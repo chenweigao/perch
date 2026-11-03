@@ -58,9 +58,11 @@ extension WorkbenchModel {
     }
 }
 
-/// The task page's 本轮 section: what the status line leaves out. The agent's
-/// narrative and where it came from, the plan, this turn's edits by file, the
-/// timing breakdown and Recap. The status line opens the panel here.
+/// The task page's 本轮 section: what the status line leaves out, as an
+/// inventory rather than a live feed. The plan and this turn's edits by file
+/// update in place without motion; the agent's narrative with its source, the
+/// timing breakdown and Recap appear once the turn has ended. The status line
+/// opens the panel here.
 struct TaskTurnSection: View {
     let model: WorkbenchModel
     let item: WorkspaceSession
@@ -73,17 +75,20 @@ struct TaskTurnSection: View {
 
     var body: some View {
         let context = model.turnContext(item.reference, busy: snapshot.busy)
-        let narrative = context.flatMap { narratives.narrative(session: $0.narrativeKey) }
+        // While the turn runs the status line says what it does; the panel shows
+        // the narrative and the timing once the turn has ended.
+        let narrative = snapshot.busy ? nil : context.flatMap { narratives.narrative(session: $0.narrativeKey) }
+        let timing = context?.timing.flatMap { $0.endedAt == nil ? nil : $0 }
         let failure = context.flatMap { narratives.failure(session: $0.narrativeKey)?.message }
         if narrative != nil || failure != nil || !snapshot.todos.isEmpty || snapshot.edits != nil
-            || context?.timing != nil || context?.recapKey != nil {
+            || timing != nil || context?.recapKey != nil {
             VStack(alignment: .leading, spacing: 12) {
                 header(context)
                 if let narrative { self.narrative(narrative) }
                 if let failure, let context { externalFailure(failure, key: context.narrativeKey) }
                 if !snapshot.todos.isEmpty { plan }
                 if let edits = snapshot.edits { self.edits(edits) }
-                if let timing = context?.timing { TurnTimingDetails(timing: timing) }
+                if let timing { TurnTimingDetails(timing: timing) }
             }.font(.system(size: WorkbenchTheme.Typography.body))
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("task-context-turn")
@@ -113,8 +118,7 @@ struct TaskTurnSection: View {
             if let detail = narrative.detail, !detail.isEmpty {
                 Text(detail).foregroundStyle(WorkbenchTheme.quiet).textSelection(.enabled)
             }
-            Text(verbatim: [narrative.phase.label, narrative.source.label,
-                            narrative.lifecycle == .streaming ? L("正在更新") : L("阶段已完成")].joined(separator: " · "))
+            Text(verbatim: [narrative.phase.label, narrative.source.label].joined(separator: " · "))
                 .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet)
         }.fixedSize(horizontal: false, vertical: true)
     }

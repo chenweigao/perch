@@ -12,6 +12,9 @@ public struct ConversationActivity {
     /// tool starting, reporting or finishing, a plan step. Stable within a
     /// process only; the status line times a suspected stall from its last change.
     public let progressSignature: Int
+    /// Text and thinking the agent wrote this turn, in UTF-16 units: a number
+    /// that only grows while output arrives, so the status line can show it.
+    public let outputCharacters: Int
     public let title: String
     public let operationDescription: String?
     public let symbol: String
@@ -57,6 +60,14 @@ public struct ConversationActivity {
             if tool.status == .running { progress.combine(tool.progress?.display.utf16.count ?? -1) }
         }
         progressSignature = progress.finalize()
+        var written = 0
+        for message in current where message.role == "assistant" {
+            for part in message.content {
+                if part.type == "text" { written += part.text?.utf16.count ?? 0 }
+                else if part.type == "thinking" { written += part.thinking?.utf16.count ?? 0 }
+            }
+        }
+        outputCharacters = written
         let active = tools.filter { $0.status == .running }
         let description = active.first?.input?["description"].string?.trimmingCharacters(in: .whitespacesAndNewlines)
         operationDescription = online && isRunning && pendingCount == 0 && !isStopping && description?.isEmpty == false

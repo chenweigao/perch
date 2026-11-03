@@ -41,13 +41,37 @@ func checkTurnStatus() throws {
     precondition(describedStatus.detail == nil, "A described tool already names its target")
     let phase = TurnStatus(activity: ConversationActivity(messages: user + command, isRunning: true, running: running), turn: SessionTurn(running: true))
     precondition(phase.source == .phase && phase.headline == "Running command…" && phase.detail == "swift build")
-    let thinking = TurnStatus(activity: ConversationActivity(messages: user, isRunning: true, isThinking: true), turn: SessionTurn(running: true))
+    let thinkingActivity = ConversationActivity(messages: user, isRunning: true, isThinking: true)
+    let thinking = TurnStatus(activity: thinkingActivity, turn: SessionTurn(running: true))
     precondition(thinking.headline == "Thinking…" && thinking.detail == nil && thinking.shimmers && thinking.opensDetails)
-    let stalled = TurnStatus(activity: ConversationActivity(messages: user + command, isRunning: true, running: running),
-                             turn: SessionTurn(running: true), stalledMinutes: 4)
+    let commandActivity = ConversationActivity(messages: user + command, isRunning: true, running: running)
+    let zh = Locale(identifier: "zh-Hans")
+    let stalled = TurnStatus(activity: commandActivity, turn: SessionTurn(running: true), quiet: TurnStatus.Quiet(seconds: 240), locale: zh)
     precondition(stalled.state == .running && stalled.stalledMinutes == 4 && stalled.detail == "4 分钟没有新进展",
                  "A stall replaces the target and keeps the current action")
     precondition(!stalled.shimmers, "A suspected stall holds the title still")
+    // Quiet for a minute: name the command being waited on, or say nothing arrived.
+    let waitingOnTool = TurnStatus(activity: commandActivity, turn: SessionTurn(running: true),
+                                   quiet: TurnStatus.Quiet(seconds: 75, toolSeconds: 150), locale: zh)
+    precondition(waitingOnTool.detail == "swift build · 已运行 2分" && waitingOnTool.stalledMinutes == nil && waitingOnTool.shimmers,
+                 "\(String(describing: waitingOnTool.detail))")
+    precondition(TurnStatus(activity: commandActivity, turn: SessionTurn(running: true), quiet: TurnStatus.Quiet(seconds: 540, toolSeconds: 540),
+                            locale: zh).stalledMinutes == nil, "A running tool may stay quiet for ten minutes")
+    precondition(TurnStatus(activity: commandActivity, turn: SessionTurn(running: true), quiet: TurnStatus.Quiet(seconds: 600, toolSeconds: 600),
+                            locale: zh).stalledMinutes == 10)
+    let silent = TurnStatus(activity: thinkingActivity, turn: SessionTurn(running: true), quiet: TurnStatus.Quiet(seconds: 60), locale: zh)
+    precondition(silent.detail == "1 分钟没有新输出" && silent.stalledMinutes == nil, "\(String(describing: silent.detail))")
+    precondition(TurnStatus(activity: commandActivity, turn: SessionTurn(running: true), quiet: nil).detail == "swift build")
+
+    // What the turn produced: numbers that only grow while output arrives, in English.
+    let reply = try messages(#"[{"id":"t","role":"assistant","created_at":"","content":[{"type":"thinking","thinking":"想一想"},{"type":"text","text":"正在检查"}]}]"#)
+    let producing = TurnStatus(activity: ConversationActivity(messages: user + reply + command, isRunning: true, running: running),
+                               turn: SessionTurn(running: true))
+    precondition(producing.output?.characters == 7 && producing.output?.toolCalls == 1)
+    precondition(producing.output?.charactersLabel == "↓ 7 chars" && producing.output?.toolCallsLabel == "1 tool call")
+    precondition(thinking.output?.charactersLabel == nil && thinking.output?.toolCallsLabel == nil, "Nothing yet, no zero counters")
+    precondition(TurnStatus.compact(980) == "980" && TurnStatus.compact(3_200) == "3.2k" && TurnStatus.compact(3_000) == "3k"
+                 && TurnStatus.compact(12_345) == "12k" && TurnStatus.compact(1_250_000) == "1.3M")
 
     // What the reader must do outranks progress.
     let pendingActivity = ConversationActivity(messages: user + command, isRunning: true, running: running, pendingCount: 2)
