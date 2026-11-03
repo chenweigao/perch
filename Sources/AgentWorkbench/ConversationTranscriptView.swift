@@ -2182,7 +2182,7 @@ private struct ConversationEntryView: View, Equatable {
                         .font(.system(size: ReplyStyle.labelSize)).foregroundStyle(.secondary)
                 case .processFold:
                     if let foldedRows {
-                        ProcessFoldRow(rows: foldedRows, api: api, sessionId: sessionId, turnSeconds: processSeconds)
+                        ProcessFoldRow(rows: foldedRows, api: api, sessionId: sessionId)
                     }
                 default:
                     if entry.presentation == .record {
@@ -2218,10 +2218,7 @@ struct ProcessFoldRow: View {
     let rows: [ConversationPresentationModel.Row]
     let api: KimiAPI?
     let sessionId: String
-    /// The turn's duration on its first fold, when this app watched the turn end.
-    var turnSeconds: TimeInterval? = nil
     @UILocalization private var L
-    @Environment(\.locale) private var locale
     @Environment(\.conversationMemoryKey) private var memoryKey
     @Environment(\.conversationActionContext) private var actionContext
     @RememberedExpansion("process-fold") private var expanded
@@ -2295,11 +2292,6 @@ struct ProcessFoldRow: View {
                 }
                 if attention > 0 {
                     Text(L("· \(attention) 项需关注")).foregroundStyle(.orange)
-                }
-                if let turnSeconds {
-                    let duration = ConversationTiming.duration(max(1, turnSeconds.rounded()),
-                                                               chinese: locale.language.languageCode?.identifier == "zh")
-                    Text(verbatim: L("· 用时 \(duration)")).monospacedDigit()
                 }
             }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(.secondary)
         }.disclosureGroupStyle(ProcessDisclosureStyle())
