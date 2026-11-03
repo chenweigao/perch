@@ -156,3 +156,22 @@ public enum SessionEditStats {
         return SessionEditStat(additions: newEnd - start, deletions: oldEnd - start)
     }
 }
+
+/// Matches a turn's edited files to Git working-tree entries, so the changes
+/// page can mark which of the working tree's changes this turn made.
+public enum TurnEditPaths {
+    /// Repository-relative paths of `edits` that lie inside `root`. Tools name
+    /// files absolute or relative to the session's `directory`; `~` paths can't
+    /// be resolved without the remote home and are left out.
+    public static func relative(_ edits: some Sequence<String>, directory: String, root: String) -> Set<String> {
+        let base = (root as NSString).standardizingPath
+        var paths = Set<String>()
+        for edit in edits where !edit.isEmpty && !edit.hasPrefix("~") {
+            let absolute = edit.hasPrefix("/") ? edit : (directory as NSString).appendingPathComponent(edit)
+            let path = (absolute as NSString).standardizingPath
+            guard path.hasPrefix(base + "/") else { continue }
+            paths.insert(String(path.dropFirst(base.count + 1)))
+        }
+        return paths
+    }
+}

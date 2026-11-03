@@ -42,31 +42,36 @@ func checkTurnStatus() throws {
     let phase = TurnStatus(activity: ConversationActivity(messages: user + command, isRunning: true, running: running), turn: SessionTurn(running: true))
     precondition(phase.source == .phase && phase.headline == "Running command…" && phase.detail == "swift build")
     let thinking = TurnStatus(activity: ConversationActivity(messages: user, isRunning: true, isThinking: true), turn: SessionTurn(running: true))
-    precondition(thinking.headline == "Thinking…" && thinking.detail == nil && thinking.symbol == nil)
+    precondition(thinking.headline == "Thinking…" && thinking.detail == nil && thinking.shimmers && thinking.opensDetails)
     let stalled = TurnStatus(activity: ConversationActivity(messages: user + command, isRunning: true, running: running),
                              turn: SessionTurn(running: true), stalledMinutes: 4)
     precondition(stalled.state == .running && stalled.stalledMinutes == 4 && stalled.detail == "4 分钟没有新进展",
                  "A stall replaces the target and keeps the current action")
+    precondition(!stalled.shimmers, "A suspected stall holds the title still")
 
     // What the reader must do outranks progress.
     let pendingActivity = ConversationActivity(messages: user + command, isRunning: true, running: running, pendingCount: 2)
     let approval = TurnStatus(activity: pendingActivity, turn: SessionTurn(running: true, pending: true), pendingCount: 2,
                               request: TurnRequest(kind: .approval, text: "运行 rm -rf build"))
     precondition(approval.state == .waiting && approval.headline == "需要你确认：运行 rm -rf build" && approval.detail == "共 2 项")
-    precondition(approval.isBlocking && approval.symbol == "hand.raised")
+    precondition(approval.isBlocking && !approval.opensDetails && !approval.shimmers && approval.changes == nil)
     let question = TurnStatus(activity: pendingActivity, turn: SessionTurn(running: true, pending: true), pendingCount: 1,
                               request: TurnRequest(kind: .question, text: "用哪个分支？"))
     precondition(question.headline == "需要你回答：用哪个分支？" && question.detail == nil)
     precondition(TurnStatus(activity: pendingActivity, turn: SessionTurn(running: true, pending: true), pendingCount: 2).headline == "等待你确认 · 2 项")
     let offline = TurnStatus(activity: ConversationActivity(messages: user + command, isRunning: true, online: false),
                              turn: SessionTurn(running: true, pending: true), online: false, pendingCount: 1)
-    precondition(offline.state == .offline && offline.headline == "Connection lost" && offline.symbol == "wifi.exclamationmark")
+    precondition(offline.state == .offline && offline.headline == "Connection lost" && !offline.opensDetails)
     let waitingFromCatalog = TurnStatus(activity: ConversationActivity(messages: user + command, isRunning: true, running: running),
                                         turn: SessionTurn(running: true, pending: true))
     precondition(waitingFromCatalog.state == .waiting && waitingFromCatalog.headline == "等你处理",
                  "Pending facts without listed requests still wait for the reader")
     let stopping = TurnStatus(activity: ConversationActivity(messages: user + command, isRunning: true, isStopping: true), turn: SessionTurn(running: true))
-    precondition(stopping.state == .stopping && stopping.symbol == "stop.circle")
+    precondition(stopping.state == .stopping && !stopping.shimmers && stopping.opensDetails)
+    let editing = TurnStatus(activity: ConversationActivity(messages: user + edit + command, isRunning: true, running: running),
+                             turn: SessionTurn(running: true))
+    precondition(editing.changes?.files == 1 && editing.changes?.additions == 2,
+                 "This turn's edits stay on the right while it runs, not only once it ends")
 
     // Ended turns: uncertain results first, then the result this client watched.
     let review = TurnStatus(activity: ConversationActivity(messages: user + command, isRunning: false), turn: SessionTurn())
@@ -80,8 +85,8 @@ func checkTurnStatus() throws {
     let ended = ConversationActivity(messages: earlierEdit + user + edit, isRunning: false)
     precondition(ended.edits?.perFile.keys.sorted() == ["/p/Bar.swift"], "Edits count the latest turn only")
     let done = TurnStatus(activity: ended, turn: SessionTurn(completion: "done"), timing: finished)
-    precondition(done.state == .done && done.headline == "完成" && done.symbol == nil)
-    precondition(done.result?.files == 1 && done.result?.additions == 2 && done.result?.deletions == 1)
+    precondition(done.state == .done && done.headline == "完成" && done.opensDetails && !done.shimmers)
+    precondition(done.changes?.files == 1 && done.changes?.additions == 2 && done.changes?.deletions == 1)
     precondition(abs((done.result?.duration ?? 0) - 95) < 2 && done.result?.observedOnly == false)
     precondition(TurnStatus(activity: ended, turn: SessionTurn(completion: "done"), timing: live).result?.duration == nil,
                  "The line holds while the end time is still on its way")
@@ -127,5 +132,9 @@ func checkTurnStatus() throws {
     [{"approval_id":"a","tool_name":"Bash","action":"Run rm -rf build","tool_input_display":{},"agent_id":"main"}]
     """#.utf8))
     precondition(TurnRequest.kimi(approvals: approvals, questions: []) == TurnRequest(kind: .approval, text: "Run rm -rf build"))
-    print("PASS: turn status headlines, requests, ended results, turn-scoped edits, stall thresholds and the minute clock")
+    // The changes page marks the working tree's entries this turn edited.
+    let marked = TurnEditPaths.relative(["/repo/app/Sources/A.swift", "Sources/B.swift", "../other/C.swift", "~/D.swift", "/elsewhere/E.swift"],
+                                        directory: "/repo/app", root: "/repo")
+    precondition(marked == ["app/Sources/A.swift", "app/Sources/B.swift", "other/C.swift"], "\(marked)")
+    print("PASS: turn status headlines, requests, ended results, turn-scoped edits, stall thresholds, the minute clock and turn edit paths")
 }

@@ -1989,7 +1989,6 @@
 "在任务面板查看本轮详情" = "Show this turn in the task panel";
 "在任务面板查看需要关注的工具结果" = "Review uncertain tool results in the task panel";
 "在右栏查看工作区改动" = "Show working-tree changes in the inspector";
-"改了 %lld 个文件" = "Changed %lld files";
 "从提交本轮请求到现在的经过时间，包含通信、工具调用和等待。" = "Time since this turn's request was sent, including transport, tool calls and waiting.";
 "思考中 · %@" = "Thinking · %@";
 "本轮" = "This turn";
@@ -2001,3 +2000,8 @@
 "Perch 在前台时，只有需要你处理的事会播放提示音；一轮结束只在 Perch 处于后台时提示。完成通知会合并。可在会话右键菜单中单独静音。疑似卡住只对正在打开的会话判断：3 分钟没有新进展（有工具运行时 10 分钟）。" = "While Perch is in front, only things that need you play a sound. A finished turn alerts only when Perch is in the background. Completion notifications are grouped. Mute individual sessions from their context menu. Possibly stuck applies to the open session only: 3 minutes without progress (10 while a tool runs).";
 "本轮失败" = "Turn failed";
 "在任务面板查看失败原因" = "See why it failed in the task panel";
+"%lld 个文件 · 本轮 %lld" = "%lld files · %lld this turn";
+"· 观察时长 %@" = "· Observed %@";
+"本轮 Agent 编辑过这个文件" = "The agent edited this file in this turn";
+"本轮改了 %lld 个文件" = "%lld files changed this turn";
+"查看改动：本轮改了 %lld 个文件" = "View changes: %lld files changed this turn";

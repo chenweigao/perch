@@ -96,7 +96,7 @@ struct GoalHeaderBar: View {
             HStack(spacing: 6) {
                 if turn == .running {
                     // The same turning sun as the status bar and sidebar.
-                    PerchBusyIndicator(style: .sun, size: 12, label: L("当前一轮正在执行"))
+                    PerchBusyIndicator(size: 12, label: L("当前一轮正在执行"))
                 }
                 switch goal.status {
                 case "active":

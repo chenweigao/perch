@@ -75,11 +75,16 @@ public struct TurnStatus: Equatable, Sendable {
         public let total: Int
     }
 
-    /// This turn's outcome: its edit churn and how long it took.
-    public struct Result: Equatable, Sendable {
+    /// This turn's edit churn from its own edit-class tool calls, the figure the
+    /// transcript's process fold shows. Not the Git working tree.
+    public struct Changes: Equatable, Sendable {
         public let files: Int
         public let additions: Int
         public let deletions: Int
+    }
+
+    /// How long a finished turn took.
+    public struct Result: Equatable, Sendable {
         /// nil until the turn's end time arrives.
         public let duration: TimeInterval?
         /// The client only saw part of the turn, so the duration is a lower bound.
@@ -96,25 +101,22 @@ public struct TurnStatus: Equatable, Sendable {
     public let progress: Progress?
     /// Uncertain tool results: a count while running, the subject once ended.
     public let attention: Int
+    /// Shown on the right while the turn runs and after it ends; nil when it
+    /// edited nothing or the line is about the reader (waiting, offline).
+    public let changes: Changes?
     public let result: Result?
     /// A suspected stall, in whole minutes without progress.
     public let stalledMinutes: Int?
 
-    /// Running and a clean end carry the Perch mark; every other state names itself.
-    public var symbol: String? {
-        switch state {
-        case .offline: return "wifi.exclamationmark"
-        case .waiting: return "hand.raised"
-        case .stopping: return "stop.circle"
-        case .failed: return "exclamationmark.triangle"
-        case .review: return "exclamationmark.circle"
-        case .plan: return "checklist"
-        case .running, .done, .hidden: return nil
-        }
-    }
     /// A lost connection and a pending decision stop progress and own the tone.
     public var isBlocking: Bool { state == .offline || state == .waiting }
     public var needsReader: Bool { isBlocking || state == .failed || state == .review }
+    /// A click on the line opens the task panel and nothing else on it does, so
+    /// it ends in a chevron. States that need the reader have their own button.
+    public var opensDetails: Bool { [.running, .stopping, .plan, .done].contains(state) }
+    /// The title shimmers only while the turn makes progress: a suspected stall
+    /// and every other state hold still.
+    public var shimmers: Bool { state == .running && stalledMinutes == nil }
 
     /// Running headlines longer than this come from a whole progress reply;
     /// the task panel shows them instead.
@@ -184,10 +186,7 @@ public struct TurnStatus: Equatable, Sendable {
             // the line stays put and the duration follows.
             state = .done
             headline = L("完成")
-            result = Result(files: activity.edits?.perFile.count ?? 0,
-                            additions: activity.edits?.total.additions ?? 0,
-                            deletions: activity.edits?.total.deletions ?? 0,
-                            duration: timing.endedAt.map(timing.elapsed(at:)), observedOnly: timing.observedOnly)
+            result = Result(duration: timing.endedAt.map(timing.elapsed(at:)), observedOnly: timing.observedOnly)
         } else if progress != nil {
             state = .plan
             headline = L(key: "Plan remaining")
@@ -198,6 +197,11 @@ public struct TurnStatus: Equatable, Sendable {
         self.source = source
         self.detail = detail
         self.result = result
+        if let edits = activity.edits, ![.offline, .waiting, .hidden].contains(state) {
+            changes = Changes(files: edits.perFile.count, additions: edits.total.additions, deletions: edits.total.deletions)
+        } else {
+            changes = nil
+        }
         self.attention = attention
         self.stalledMinutes = stalled
     }
