@@ -267,23 +267,7 @@ struct ConversationTranscript: View {
     @Environment(\.self) private var environment
     @State private var measured: (session: String, height: CGFloat)?
     @State private var documentLayout = ConversationDocumentLayout()
-    @State private var backgroundDisplayDate = Date()
     var body: some View {
-        let appActive = AppPresentationActivity.shared.isActive
-        // Keep one document host mounted across activation changes. Incoming
-        // data still arrives immediately; inactive presentation catches up at 0.5 Hz.
-        transcript(displayDate: appActive ? nil : backgroundDisplayDate)
-            .task(id: appActive) {
-                guard !appActive else { return }
-                while !Task.isCancelled {
-                    do { try await Task.sleep(for: .seconds(2)) } catch { return }
-                    guard !Task.isCancelled else { return }
-                    if presentation.hasPendingUpdate { backgroundDisplayDate = Date() }
-                }
-            }
-    }
-
-    private func transcript(displayDate: Date?) -> some View {
         // Connection snapshots land here; their state types stay probe-free.
         let projectionProbe = PerfDiagnostics.begin()
         let key = memoryKey ?? sessionId
@@ -291,7 +275,7 @@ struct ConversationTranscript: View {
             messages: messages, live: liveTools, running: running, isRunning: isRunning, online: online,
             epoch: historyEpoch, language: environment.locale.identifier + ":" + AppLanguage.current.localization,
             summariesEnabled: summarySettings.configuration.enabled && allowsActivitySummaries && online,
-            includeToolOutput: summarySettings.configuration.includeToolOutput), cache: presentations, displayDate: displayDate)
+            includeToolOutput: summarySettings.configuration.includeToolOutput), cache: presentations)
         let observation = SummaryObservation(session: key, batch: snapshot.batch, narrativeKey: snapshot.narrativeKey,
             running: isRunning, online: online && allowsActivitySummaries && allowsActivitySummaryRequests, following: followsLatest,
             settingsRevision: summarySettings.revision)
@@ -315,7 +299,7 @@ struct ConversationTranscript: View {
         }
         let _ = PerfDiagnostics.end("snapshot_projection", projectionProbe,
                                     detail: "messages=\(messages.count) rows=\(contents.count)")
-        return ConversationDocumentHost(contents: contents, contentIdentity: identity, navigation: snapshot.navigation, sessionId: key,
+        ConversationDocumentHost(contents: contents, contentIdentity: identity, navigation: snapshot.navigation, sessionId: key,
                                  appearance: ConversationEntryAppearance(environment), foldParents: foldParents,
                                  viewport: environment.conversationViewport,
                                  layout: documentLayout, measuredHeight: measured?.session == sessionId ? measured?.height : nil,
@@ -2481,14 +2465,12 @@ private struct ThoughtOutput: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
             HStack {
-                if !finished, let liveSince, AppPresentationActivity.shared.isActive {
+                if !finished, let liveSince {
                     // Only the title redraws each second.
                     TimelineView(.periodic(from: liveSince, by: 1)) { context in
                         ThoughtToggle(title: Text(verbatim: L("思考中 · \(duration(context.date.timeIntervalSince(liveSince)))")),
                                       expanded: $expanded)
                     }
-                } else if !finished, let liveSince {
-                    ThoughtToggle(title: Text(verbatim: L("思考中 · \(duration(Date().timeIntervalSince(liveSince)))")), expanded: $expanded)
                 } else {
                     ThoughtToggle(title: finished ? ThoughtTitle(seconds: seconds, noResponse: true).text(locale: locale, L: L)
                                                   : Text("Thinking"), expanded: $expanded)

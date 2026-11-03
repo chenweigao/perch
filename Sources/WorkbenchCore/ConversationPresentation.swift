@@ -504,36 +504,13 @@ public final class ConversationPresentationCache {
 /// releases that model on navigation; the optional workbench cache controls reuse.
 public final class ConversationPresentationHandle {
     private var current: ConversationPresentationModel?
-    private var displayed: ConversationPresentationModel.Snapshot?
-    private var displayDate: Date?
-    private var displayEpoch: String?
-    private var displayLanguage = ""
-    private var displayedInput: ConversationPresentationModel.Input?
-    public private(set) var hasPendingUpdate = false
     public init() {}
-    /// A background view supplies its two-second display tick. Incoming data
-    /// continues to arrive; only projection is coalesced until the next tick.
-    /// nil keeps the foreground path immediate. Navigation/epoch/language changes
-    /// never reuse the previous display, even within the same tick.
     public func update(key: String, input: ConversationPresentationModel.Input,
-                       cache: ConversationPresentationCache? = nil,
-                       displayDate: Date? = nil) -> ConversationPresentationModel.Snapshot {
-        if let displayDate, self.displayDate == displayDate, current?.key == key,
-           displayEpoch == input.epoch, displayLanguage == input.language,
-           displayedInput?.isRunning == input.isRunning, displayedInput?.online == input.online, let displayed {
-            hasPendingUpdate = displayedInput != input
-            return displayed
-        }
+                       cache: ConversationPresentationCache? = nil) -> ConversationPresentationModel.Snapshot {
         let model = current?.key == key ? current! : cache?.model(for: key) ?? ConversationPresentationModel(key: key)
         current = model
         let result = model.update(input)
         cache?.retain(model)
-        displayed = result
-        displayedInput = input
-        hasPendingUpdate = false
-        self.displayDate = displayDate
-        displayEpoch = input.epoch
-        displayLanguage = input.language
         return result
     }
 }

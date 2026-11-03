@@ -27,7 +27,7 @@ class FunctionalGroupTests(unittest.TestCase):
         out = Path("/tmp/functional-groups")
         self.assertEqual([name for name, _, _ in functional.macos_commands("build", out)], ["build"])
         self.assertEqual([name for name, _, _ in functional.macos_commands("core", out)],
-                         ["app-launch", "signature", "version", "workbench", "connections", "composer", "idle-rendering", "math-performance"])
+                         ["app-launch", "signature", "version", "workbench", "connections", "composer", "math-performance"])
         self.assertEqual([name for name, _, _ in functional.macos_commands("host", out)],
                          ["host-lifecycle", "scroll-following"])
         self.assertEqual([name for name, _, _ in functional.macos_commands("native", out)][:2],

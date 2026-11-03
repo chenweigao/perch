@@ -295,10 +295,9 @@ struct ShimmerGlint: NSViewRepresentable {
     let size: CGFloat
     func makeNSView(context: Context) -> ShimmerGlintView { ShimmerGlintView() }
     func updateNSView(_ view: ShimmerGlintView, context: Context) { view.configure(text: text, size: size) }
-    static func dismantleNSView(_ view: ShimmerGlintView, coordinator: ()) { view.stopObserving() }
 }
 
-final class ShimmerGlintView: PresentationAnimationView {
+final class ShimmerGlintView: NSView {
     static let sweep: CFTimeInterval = 1.6
     static let rest: CFTimeInterval = 0.8
     /// The band's peak: nearly the body ink, as Codex blends 90%.
@@ -338,7 +337,6 @@ final class ShimmerGlintView: PresentationAnimationView {
         super.layout()
         refresh()
     }
-    override func presentationActivityChanged() { refresh() }
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         rendered = nil
@@ -356,7 +354,7 @@ final class ShimmerGlintView: PresentationAnimationView {
     /// Renders the ink copy when the text, its frame, the scale or the
     /// appearance changed, and restarts the sweep when the width did.
     private func refresh() {
-        guard canAnimate, let window, bounds.width > 0, bounds.height > 0, !text.isEmpty else {
+        guard let window, bounds.width > 0, bounds.height > 0, !text.isEmpty else {
             band.removeAllAnimations()
             copy.contents = nil
             rendered = nil
@@ -421,17 +419,13 @@ private struct TurnClock: View {
     let timing: ConversationTiming
     @Environment(\.locale) private var locale
     var body: some View {
-        Group {
-            if AppPresentationActivity.shared.isActive {
-                TimelineView(TurnClockSchedule(start: timing.startedAt)) { context in label(at: context.date) }
-            } else { label(at: Date()) }
+        TimelineView(TurnClockSchedule(start: timing.startedAt)) { context in
+            Text(verbatim: TurnStatus.clock(timing.elapsed(at: context.date),
+                                            chinese: locale.language.languageCode?.identifier == "zh"))
         }.monospacedDigit().fixedSize()
             .help(timing.observedOnly
                   ? Text("从客户端首次观察到本轮开始计时，包含等待；此前用时未知。")
                   : Text("从提交本轮请求到现在的经过时间，包含通信、工具调用和等待。"))
-    }
-    private func label(at date: Date) -> some View {
-        Text(verbatim: TurnStatus.clock(timing.elapsed(at: date), chinese: locale.language.languageCode?.identifier == "zh"))
     }
 }
 
@@ -596,9 +590,9 @@ struct TurnTimingDetails: View {
     var body: some View {
         Group {
             if let end = timing.endedAt { content(at: end) }
-            else if AppPresentationActivity.shared.isActive {
+            else {
                 TimelineView(.periodic(from: timing.startedAt, by: 1)) { context in content(at: context.date) }
-            } else { content(at: Date()) }
+            }
         }.monospacedDigit()
             .help(timing.observedOnly
                   ? Text("从客户端首次观察到本轮开始计时，包含等待；此前用时未知。")
@@ -636,11 +630,11 @@ struct KimiTaskClock: View {
             if let started = task.startedDate {
                 if let ended = task.completedDate {
                     Text(duration(ended.timeIntervalSince(started)))
-                } else if AppPresentationActivity.shared.isActive {
+                } else {
                     TimelineView(.periodic(from: started, by: 1)) { context in
                         Text(duration(context.date.timeIntervalSince(started)))
                     }
-                } else { Text(duration(Date().timeIntervalSince(started))) }
+                }
             }
         }.monospacedDigit().fixedSize()
     }
