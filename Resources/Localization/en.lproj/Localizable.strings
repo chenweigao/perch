@@ -2005,3 +2005,5 @@
 "本轮 Agent 编辑过这个文件" = "The agent edited this file in this turn";
 "本轮改了 %lld 个文件" = "%lld files changed this turn";
 "查看改动：本轮改了 %lld 个文件" = "View changes: %lld files changed this turn";
+"已运行 %@" = "running %@";
+"%lld 分钟没有新输出" = "No output for %lld min";

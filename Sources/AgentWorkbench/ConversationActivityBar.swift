@@ -30,7 +30,7 @@ struct ConversationBusyIndicator: View {
 /// trailing chevron; the turn's +a −d on the right opens the changes page.
 /// Every visible state shares one transparent row height, so a run starting,
 /// waiting or failing never resizes the transcript; an idle session takes no
-/// space. Only the clock and the shimmer move on their own.
+/// space. The clock moves on its own; the shimmer only when output arrives.
 struct ConversationActivityBar: View {
     static let height: CGFloat = 32
     let activity: ConversationActivity
@@ -63,7 +63,8 @@ struct ConversationActivityBar: View {
     @UILocalization private var L
     @State private var recapPresented = false
     @State private var progress = TurnProgressClock()
-    @State private var stalledMinutes: Int?
+    /// How long the running turn has been quiet, past `TurnStatus.quietThreshold`.
+    @State private var quiet: TurnStatus.Quiet?
     @State private var highlight = false
     @ObservedObject var narrativeStore = ActivityNarrativeStore.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -80,11 +81,11 @@ struct ConversationActivityBar: View {
     private var status: TurnStatus {
         TurnStatus(activity: activity, turn: turn, online: online, pendingCount: pendingCount,
                    request: request, timing: timing, narrativeHeadline: turn.running ? narrative?.headline : nil,
-                   stalledMinutes: activity.animates ? stalledMinutes : nil,
+                   quiet: activity.animates ? quiet : nil,
                    resultDismissed: resultKey.map { TurnResultMemory.contains($0) } ?? false, locale: locale)
     }
     private var progressKey: TurnProgressClock.Key {
-        TurnProgressClock.Key(signature: activity.progressSignature, toolRunning: !activity.activeTools.isEmpty)
+        TurnProgressClock.Key(signature: activity.progressSignature, tool: activity.activeTools.first?.id)
     }
 
     var body: some View {
@@ -101,9 +102,9 @@ struct ConversationActivityBar: View {
         // A reference write per update: progress never invalidates this body.
         .onChange(of: progressKey, initial: true) { _, key in
             progress.mark(key)
-            if stalledMinutes != nil { stalledMinutes = nil }
+            if quiet != nil { quiet = nil }
         }
-        .task(id: activity.animates) { await watchStall(running: activity.animates) }
+        .task(id: activity.animates) { await watchQuiet(running: activity.animates) }
         .onChange(of: status.state) { old, new in
             // One soft emphasis when a watched turn ends, never a loop.
             guard new == .done, old == .running, !reduceMotion else { return }
@@ -119,18 +120,21 @@ struct ConversationActivityBar: View {
         }
     }
 
-    /// Checks every 15 s while the turn runs; progress resets the clock.
-    private func watchStall(running: Bool) async {
+    /// Checks every 15 s while the turn runs; progress resets the clock. Past a
+    /// minute the line says what it waits on; past the stall threshold it
+    /// reports a suspected stall once.
+    private func watchQuiet(running: Bool) async {
         guard running else {
-            if stalledMinutes != nil { stalledMinutes = nil }
+            if quiet != nil { quiet = nil }
             return
         }
         while !Task.isCancelled {
             try? await Task.sleep(for: .seconds(15))
             guard !Task.isCancelled else { return }
-            let minutes = progress.stalledMinutes(now: Date())
-            if minutes != stalledMinutes { stalledMinutes = minutes }
-            if let minutes, !progress.reported {
+            let next = progress.quiet(now: Date())
+            if next != quiet { quiet = next }
+            if let next, !progress.reported,
+               let minutes = TurnStatus.stalledMinutes(quietFor: next.seconds, toolRunning: next.toolSeconds != nil) {
                 progress.reported = true
                 onStall(minutes)
             }
@@ -193,22 +197,30 @@ struct ConversationActivityBar: View {
             .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: status.headline)
             .overlay {
                 if status.shimmers && !reduceMotion {
-                    ShimmerGlint(text: status.headline, size: WorkbenchTheme.Reading.labelSize)
+                    ShimmerGlint(text: status.headline, size: WorkbenchTheme.Reading.labelSize, pulse: activity.progressSignature)
                 }
             }
     }
 
-    /// Plan steps, this turn's edits and the clock, then the state's own buttons
-    /// and the chevron. In a narrow window plan steps fold first, then edits.
+    /// Plan steps, what the turn produced, its edits and the clock, then the
+    /// state's own buttons and the chevron. The output and tool-call counts grow
+    /// only when something arrives: a number going up is the agent working. In a
+    /// narrow window plan steps fold first, then tool calls, then edits; the
+    /// output count stays beside the clock longest.
     @ViewBuilder private func trailing(_ status: TurnStatus) -> some View {
         let clock = status.state == .running || status.state == .stopping ? timing : nil
         let progress = [.running, .stopping, .plan].contains(status.state) ? status.progress : nil
         let changes = onChanges == nil ? nil : status.changes
-        if progress != nil || changes != nil || clock != nil {
+        let output = status.output?.charactersLabel, calls = status.output?.toolCallsLabel
+        if progress != nil || output != nil || calls != nil || changes != nil || clock != nil {
             ViewThatFits(in: .horizontal) {
-                facts(progress, changes, clock)
-                facts(nil, changes, clock)
-                facts(nil, nil, clock)
+                facts(progress, output, calls, changes, clock)
+                facts(nil, output, calls, changes, clock)
+                facts(nil, output, nil, changes, clock)
+                // The output count is the proof of work: it outlasts the edits.
+                facts(nil, output, nil, nil, clock)
+                facts(nil, nil, nil, changes, clock)
+                facts(nil, nil, nil, nil, clock)
                 Color.clear.frame(width: 0, height: 0)
             }.font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
                 .layoutPriority(-1)
@@ -220,11 +232,14 @@ struct ConversationActivityBar: View {
                 .foregroundStyle(WorkbenchTheme.quiet).allowsHitTesting(false).accessibilityHidden(true)
         }
     }
-    private func facts(_ progress: TurnStatus.Progress?, _ changes: TurnStatus.Changes?, _ clock: ConversationTiming?) -> some View {
+    private func facts(_ progress: TurnStatus.Progress?, _ output: String?, _ calls: String?,
+                       _ changes: TurnStatus.Changes?, _ clock: ConversationTiming?) -> some View {
         HStack(spacing: 10) {
-            if let progress {
-                Text(verbatim: "\(progress.done) / \(progress.total)").allowsHitTesting(false).accessibilityHidden(true)
-            }
+            Group {
+                if let progress { Text(verbatim: "\(progress.done) / \(progress.total)") }
+                if let output { Text(verbatim: output).contentTransition(.numericText()) }
+                if let calls { Text(verbatim: calls).contentTransition(.numericText()) }
+            }.allowsHitTesting(false).accessibilityHidden(true)
             if let changes, let onChanges {
                 Button(action: onChanges) {
                     EditStatText(stat: SessionEditStat(additions: changes.additions, deletions: changes.deletions))
@@ -245,6 +260,8 @@ struct ConversationActivityBar: View {
         if let detail = status.detail { parts.append(detail) }
         if status.state == .running && status.attention > 0 { parts.append(L("\(status.attention) 项需关注")) }
         if let progress = status.progress { parts.append(L("\(progress.done)/\(progress.total) 步")) }
+        if let output = status.output?.charactersLabel { parts.append(output) }
+        if let calls = status.output?.toolCallsLabel { parts.append(calls) }
         if let changes = status.changes {
             parts.append(L("本轮改了 \(changes.files) 个文件") + " +\(changes.additions) −\(changes.deletions)")
         }
@@ -285,28 +302,40 @@ struct ConversationActivityBar: View {
 }
 
 /// The shimmer over a running turn's title, the way Codex's status line does it
-/// (codex-rs/tui/src/shimmer.rs): an ink copy of the title, seen through a band
-/// that sweeps left to right in 1.6 s, then rests 0.8 s. The copy is the same
-/// SwiftUI text rendered once to an image at the title's own frame, so it lines
-/// up glyph for glyph and truncates the same way; CoreAnimation moves the band's
-/// gradient mask, so nothing is laid out or drawn per frame.
+/// (codex-rs/tui/src/shimmer.rs), but driven by the turn rather than a timer:
+/// each progress event (`pulse`, the activity's progress signature) sends one
+/// band of ink across the title in 1.6 s, and a burst of events sweeps at most
+/// once per 2.4 s. No events, no motion, so a still title means nothing arrived.
+/// The ink copy is the same SwiftUI text rendered once to an image at the
+/// title's own frame, so it lines up glyph for glyph and truncates the same way;
+/// CoreAnimation moves the band's gradient mask, so nothing is laid out or
+/// drawn per frame.
 struct ShimmerGlint: NSViewRepresentable {
     let text: String
     let size: CGFloat
+    let pulse: Int
     func makeNSView(context: Context) -> ShimmerGlintView { ShimmerGlintView() }
-    func updateNSView(_ view: ShimmerGlintView, context: Context) { view.configure(text: text, size: size) }
+    func updateNSView(_ view: ShimmerGlintView, context: Context) { view.configure(text: text, size: size, pulse: pulse) }
+    static func dismantleNSView(_ view: ShimmerGlintView, coordinator: ()) { view.cancelPending() }
 }
 
 final class ShimmerGlintView: NSView {
     static let sweep: CFTimeInterval = 1.6
-    static let rest: CFTimeInterval = 0.8
+    /// The shortest gap from one sweep's start to the next.
+    static let spacing: CFTimeInterval = 2.4
     /// The band's peak: nearly the body ink, as Codex blends 90%.
     static let peak: CGFloat = 0.9
     private let copy = CALayer()
     private let band = CAGradientLayer()
     private var text = ""
     private var size: CGFloat = 0
+    private var pulse: Int?
     private var rendered: (text: String, size: CGFloat, bounds: CGSize, scale: CGFloat, dark: Bool)?
+    /// When the next sweep may start, and a sweep owed to events that came sooner.
+    private var nextSweep: CFTimeInterval = 0
+    private var pending: DispatchWorkItem?
+    /// Sweeps started, for checks.
+    private(set) var sweeps = 0
 
     override var isFlipped: Bool { true }
     /// Clicks reach the status line behind the title.
@@ -327,51 +356,86 @@ final class ShimmerGlintView: NSView {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    func configure(text: String, size: CGFloat) {
-        guard text != self.text || size != self.size else { return }
-        self.text = text; self.size = size
-        refresh()
+    /// A new `pulse` is a progress event; the first one only sets the baseline,
+    /// so mounting the title on a quiet turn does not sweep.
+    func configure(text: String, size: CGFloat, pulse: Int) {
+        if text != self.text || size != self.size {
+            self.text = text; self.size = size
+            render()
+        }
+        defer { self.pulse = pulse }
+        guard let previous = self.pulse, previous != pulse else { return }
+        request()
+    }
+
+    func cancelPending() {
+        pending?.cancel()
+        pending = nil
     }
 
     override func layout() {
         super.layout()
-        refresh()
+        render()
     }
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         rendered = nil
-        refresh()
+        render()
+        if window == nil { cancelPending() }
     }
     override func viewDidChangeBackingProperties() {
         super.viewDidChangeBackingProperties()
-        refresh()
+        render()
     }
     override func viewDidChangeEffectiveAppearance() {
         super.viewDidChangeEffectiveAppearance()
-        refresh()
+        render()
+    }
+
+    /// Sweeps now, or once when the current spacing ends.
+    private func request() {
+        let now = CACurrentMediaTime()
+        if now >= nextSweep { sweepNow(); return }
+        guard pending == nil else { return }
+        let item = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.pending = nil
+            self.sweepNow()
+        }
+        pending = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + (nextSweep - now), execute: item)
+    }
+
+    private func sweepNow() {
+        guard window != nil, bounds.width > 0, copy.contents != nil else { return }
+        let width = band.bounds.width
+        let move = CABasicAnimation(keyPath: "position.x")
+        move.fromValue = -width / 2
+        move.toValue = bounds.width + width / 2
+        move.duration = Self.sweep
+        band.add(move, forKey: "sweep")
+        nextSweep = CACurrentMediaTime() + Self.spacing
+        sweeps += 1
     }
 
     /// Renders the ink copy when the text, its frame, the scale or the
-    /// appearance changed, and restarts the sweep when the width did.
-    private func refresh() {
+    /// appearance changed. The band rests just off the left edge between sweeps.
+    private func render() {
         guard let window, bounds.width > 0, bounds.height > 0, !text.isEmpty else {
-            band.removeAllAnimations()
             copy.contents = nil
             rendered = nil
             return
         }
         let scale = window.backingScaleFactor
         let dark = effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
-        let key = (text: text, size: size, bounds: bounds.size, scale: scale, dark: dark)
-        if let rendered, rendered.text == key.text, rendered.size == key.size, rendered.bounds == key.bounds,
-           rendered.scale == key.scale, rendered.dark == key.dark, band.animation(forKey: "sweep") != nil { return }
+        if let rendered, rendered.text == text, rendered.size == size, rendered.bounds == bounds.size,
+           rendered.scale == scale, rendered.dark == dark { return }
         var ink = WorkbenchTheme.inkNS
         effectiveAppearance.performAsCurrentDrawingAppearance { ink = WorkbenchTheme.inkNS.usingColorSpace(.sRGB) ?? WorkbenchTheme.inkNS }
         let renderer = ImageRenderer(content: Text(verbatim: text).font(.system(size: size)).foregroundStyle(Color(nsColor: ink))
             .lineLimit(1).truncationMode(.tail)
             .frame(width: bounds.width, height: bounds.height, alignment: .leading))
         renderer.scale = scale
-        let widthChanged = rendered?.bounds.width != bounds.width
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         copy.frame = bounds
@@ -380,16 +444,7 @@ final class ShimmerGlintView: NSView {
         let width = max(24, bounds.height * 2.4)
         band.frame = CGRect(x: -width, y: 0, width: width, height: bounds.height)
         CATransaction.commit()
-        rendered = key
-        guard widthChanged || band.animation(forKey: "sweep") == nil else { return }
-        // The band starts just off the left edge and ends just off the right,
-        // then holds there for the rest.
-        let move = CAKeyframeAnimation(keyPath: "position.x")
-        move.values = [-width / 2, bounds.width + width / 2, bounds.width + width / 2]
-        move.keyTimes = [0, NSNumber(value: Self.sweep / (Self.sweep + Self.rest)), 1]
-        move.duration = Self.sweep + Self.rest
-        move.repeatCount = .infinity
-        band.add(move, forKey: "sweep")
+        rendered = (text, size, bounds.size, scale, dark)
     }
 }
 
@@ -398,18 +453,26 @@ final class ShimmerGlintView: NSView {
 final class TurnProgressClock {
     struct Key: Equatable {
         let signature: Int
-        let toolRunning: Bool
+        /// The first running tool's id, so its own running time can be told.
+        let tool: String?
     }
     private var key: Key?
     private var since = Date()
+    private var toolSince = Date()
     /// The current quiet stretch was already reported.
     var reported = false
     func mark(_ next: Key) {
         guard next != key else { return }
+        if next.tool != key?.tool { toolSince = Date() }
         key = next; since = Date(); reported = false
     }
-    func stalledMinutes(now: Date) -> Int? {
-        TurnStatus.stalledMinutes(quietFor: now.timeIntervalSince(since), toolRunning: key?.toolRunning ?? false)
+    /// nil until the turn has been quiet for `TurnStatus.quietThreshold`. Whole
+    /// 15 s steps, so the line redraws once per check at most.
+    func quiet(now: Date) -> TurnStatus.Quiet? {
+        let seconds = (now.timeIntervalSince(since) / 15).rounded(.down) * 15
+        guard seconds >= TurnStatus.quietThreshold else { return nil }
+        let tool = key?.tool == nil ? nil : (now.timeIntervalSince(toolSince) / 15).rounded(.down) * 15
+        return TurnStatus.Quiet(seconds: seconds, toolSeconds: tool)
     }
 }
 

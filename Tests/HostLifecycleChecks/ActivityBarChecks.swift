@@ -79,6 +79,9 @@ private struct ActivityBarCheckFixture: View {
             ["type": "tool_use", "tool_call_id": "read", "tool_name": "Read", "input": ["path": "/fixture/Locked.swift"]]]]
     ]
     let runningMessages = try decode([prompt] + plan + edit + [command])
+    let progressNote: [String: Any] = ["id": "note", "role": "assistant", "created_at": "7",
+                                       "content": [["type": "text", "text": "Build is still compiling."]]]
+    let moreMessages = try decode([prompt] + plan + edit + [command, progressNote])
     let failedMessages = try decode([prompt] + plan + edit + failure)
     let endedMessages = try decode([prompt] + plan + edit)
     var clocks = ConversationTimings()
@@ -98,6 +101,7 @@ private struct ActivityBarCheckFixture: View {
     }
     let phases: [String: ActivityBarCheckPhase] = [
         "running": phase(runningMessages, running: true, timing: live),
+        "running-more": phase(moreMessages, running: true, timing: live),
         "pending": phase(runningMessages, running: true, pending: 2, timing: live),
         "offline": phase(runningMessages, running: true, online: false, timing: live),
         "stopping": phase(runningMessages, running: true, stopping: true, timing: live),
@@ -178,10 +182,26 @@ private struct ActivityBarCheckFixture: View {
                      "A click on the \(name) line must reach the line: details \(state.details - details), reviews \(state.reviews - reviews)")
     }
     precondition(state.changes == 0, "Only the +a −d button opens the changes page")
+    // The title sweeps once per progress event and holds still without one.
+    func glints(_ view: NSView) -> [ShimmerGlintView] {
+        (view as? ShimmerGlintView).map { [$0] } ?? view.subviews.flatMap(glints)
+    }
+    state.phase = "running"
+    try await Task.sleep(for: .milliseconds(300))
+    host.layoutSubtreeIfNeeded()
+    guard let glint = glints(host).first else { preconditionFailure("A running title must carry its shimmer") }
+    let mounted = glint.sweeps
+    try await Task.sleep(for: .milliseconds(500))
+    precondition(glint.sweeps == mounted, "No progress, no sweep: \(glint.sweeps - mounted)")
+    state.phase = "running-more"
+    try await Task.sleep(for: .milliseconds(200))
+    precondition(glints(host).first === glint && glint.sweeps == mounted + 1, "New output sweeps the same title once: \(glint.sweeps - mounted)")
+    try await Task.sleep(for: .milliseconds(500))
+    precondition(glint.sweeps == mounted + 1, "One event, one sweep")
     // A session this client never watched run has nothing to say and takes no space.
     state.phase = "idle"
     try await Task.sleep(for: .milliseconds(200))
     host.layoutSubtreeIfNeeded()
     precondition(state.barFrame.height < 0.5, "An idle status line must take no space: \(state.barFrame.height)pt")
-    print("PASS: status line clicks reach the line through its title; idle status line takes no space; activity bar keeps one height and the reading viewport across running/pending/offline/stopping/failed/ended, wide/narrow, light/dark; pending review and reconnect actions respond")
+    print("PASS: the running title sweeps once per progress event; status line clicks reach the line through its title; idle status line takes no space; activity bar keeps one height and the reading viewport across running/pending/offline/stopping/failed/ended, wide/narrow, light/dark; pending review and reconnect actions respond")
 }

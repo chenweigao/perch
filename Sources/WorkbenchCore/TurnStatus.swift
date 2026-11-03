@@ -107,6 +107,29 @@ public struct TurnStatus: Equatable, Sendable {
     public let result: Result?
     /// A suspected stall, in whole minutes without progress.
     public let stalledMinutes: Int?
+    /// What the running turn has produced so far, shown while it runs: numbers
+    /// that grow only when output or a tool call arrives.
+    public let output: Output?
+
+    public struct Output: Equatable, Sendable {
+        public let characters: Int
+        public let toolCalls: Int
+        /// English in every language, like +a −d: "↓ 3.2k chars".
+        public var charactersLabel: String? { characters > 0 ? "↓ \(TurnStatus.compact(characters)) chars" : nil }
+        public var toolCallsLabel: String? {
+            toolCalls == 0 ? nil : toolCalls == 1 ? "1 tool call" : "\(TurnStatus.compact(toolCalls)) tool calls"
+        }
+    }
+
+    /// How long a running turn has shown no progress, as the status line saw it.
+    public struct Quiet: Equatable, Sendable {
+        public var seconds: TimeInterval
+        /// How long the tool now running has run; nil when none runs.
+        public var toolSeconds: TimeInterval?
+        public init(seconds: TimeInterval, toolSeconds: TimeInterval? = nil) {
+            self.seconds = seconds; self.toolSeconds = toolSeconds
+        }
+    }
 
     /// A lost connection and a pending decision stop progress and own the tone.
     public var isBlocking: Bool { state == .offline || state == .waiting }
@@ -114,8 +137,8 @@ public struct TurnStatus: Equatable, Sendable {
     /// A click on the line opens the task panel and nothing else on it does, so
     /// it ends in a chevron. States that need the reader have their own button.
     public var opensDetails: Bool { [.running, .stopping, .plan, .done].contains(state) }
-    /// The title shimmers only while the turn makes progress: a suspected stall
-    /// and every other state hold still.
+    /// The title may shimmer, once per progress event, only while the turn runs
+    /// and is not suspected stuck; every other state holds still.
     public var shimmers: Bool { state == .running && stalledMinutes == nil }
 
     /// Running headlines longer than this come from a whole progress reply;
@@ -129,7 +152,7 @@ public struct TurnStatus: Equatable, Sendable {
     /// follows a language switch in the same update as the SwiftUI labels around it.
     public init(activity: ConversationActivity, turn: SessionTurn, online: Bool = true, pendingCount: Int = 0,
                 request: TurnRequest? = nil, timing: ConversationTiming? = nil, narrativeHeadline: String? = nil,
-                stalledMinutes: Int? = nil, resultDismissed: Bool = false,
+                quiet: Quiet? = nil, resultDismissed: Bool = false,
                 locale: Locale = AppLanguage.current.resolvedLocale) {
         func L(_ value: String.LocalizationValue) -> String { WorkbenchCore.L(value, locale: locale) }
         func L(key: String) -> String { WorkbenchCore.L(String.LocalizationValue(key), locale: locale) }
@@ -166,13 +189,24 @@ public struct TurnStatus: Equatable, Sendable {
             } else {
                 headline = L(key: activity.title); source = .phase
             }
-            if let stalledMinutes {
-                stalled = stalledMinutes
-                detail = L("\(stalledMinutes) 分钟没有新进展")
-            } else if source != .description, let tool = activity.activeTools.first {
+            var target: String?
+            if source != .description, let tool = activity.activeTools.first {
                 // A tool's own description already says what it touches.
-                let target = ToolPresentation.compactTarget(tool)
-                if !target.isEmpty && target != tool.name && target != headline { detail = target }
+                let name = ToolPresentation.compactTarget(tool)
+                if !name.isEmpty && name != tool.name && name != headline { target = name }
+            }
+            let chinese = locale.language.languageCode?.identifier == "zh"
+            if let quiet, let minutes = Self.stalledMinutes(quietFor: quiet.seconds, toolRunning: quiet.toolSeconds != nil) {
+                stalled = minutes
+                detail = L("\(minutes) 分钟没有新进展")
+            } else if let quiet, quiet.seconds >= Self.quietThreshold, let toolSeconds = quiet.toolSeconds {
+                // Waiting on a command is normal: say which one and for how long.
+                let running = L("已运行 \(Self.clock(toolSeconds, chinese: chinese))")
+                detail = target.map { "\($0) · \(running)" } ?? running
+            } else if let quiet, quiet.seconds >= Self.quietThreshold {
+                detail = L("\(Int(quiet.seconds / 60)) 分钟没有新输出")
+            } else {
+                detail = target
             }
         } else if phase == .failed {
             state = .failed
@@ -204,6 +238,23 @@ public struct TurnStatus: Equatable, Sendable {
         }
         self.attention = attention
         self.stalledMinutes = stalled
+        output = state == .running || state == .stopping
+            ? Output(characters: activity.outputCharacters, toolCalls: activity.tools.count) : nil
+    }
+
+    /// A running turn that has produced nothing new for this long says so, or
+    /// names the command it waits on, before a stall is suspected.
+    public static let quietThreshold: TimeInterval = 60
+
+    /// 980, 3.2k, 12k, 1.2M: short enough to sit beside the clock.
+    public static func compact(_ value: Int) -> String {
+        func short(_ number: Double, _ unit: String) -> String {
+            let rounded = (number * 10).rounded() / 10
+            return (rounded < 10 && rounded != rounded.rounded() ? String(format: "%.1f", rounded) : String(Int(rounded.rounded()))) + unit
+        }
+        if value < 1000 { return String(max(0, value)) }
+        if value < 1_000_000 { return short(Double(value) / 1000, "k") }
+        return short(Double(value) / 1_000_000, "M")
     }
 
     // MARK: Stalls
