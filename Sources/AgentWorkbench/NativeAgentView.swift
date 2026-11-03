@@ -158,9 +158,10 @@ struct NativeAgentView: View {
         VStack(spacing: 0) {
             let recapKey = (isCurrent(s) ? s.taskRecapRevision : nil).map { "\(readingKey):\($0)" }
             let actions = ConversationActionContext(hostID: connection.host.id, kind: s.provider, sessionID: s.id)
+            let turn = SessionTurn(native: s)
             let activityProbe = PerfDiagnostics.begin()
             let activity = ConversationActivity(
-                messages: s.messages, isRunning: s.busy,
+                messages: s.messages, isRunning: turn.running,
                 running: ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy),
                 online: connection.online,
                 isThinking: s.messages.last?.role == "assistant" && s.messages.last?.content.last?.type == "thinking",
@@ -168,8 +169,7 @@ struct NativeAgentView: View {
                 pendingCount: s.interactions.count, isStopping: connection.isStopping)
             let _ = PerfDiagnostics.end("activity_derive", activityProbe, detail: "messages=\(s.messages.count)")
             // Subagents and background tasks are in the task panel, which the line opens.
-            ConversationActivityBar(activity: activity,
-                isRunning: s.busy,
+            ConversationActivityBar(activity: activity, turn: turn,
                 timing: connection.timings.turns[s.id],
                 online: connection.online, offlineDetail: connection.error, pendingCount: s.interactions.count,
                 request: TurnRequest.native(s.interactions),

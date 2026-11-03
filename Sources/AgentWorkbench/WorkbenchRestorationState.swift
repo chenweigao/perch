@@ -35,10 +35,10 @@ final class WorkbenchRestorationState {
             guard observation.state == "running", let reference = SessionReference(restoreID: id),
                   reference.hostID == hostID, reference.kind == .kimi else { continue }
             let session = sessions.first { $0.id == reference.terminalID }
+            // The sidebar's facts: background tasks alone are not a running turn.
+            let turn = session.map(SessionTurn.init(kimi:)) ?? SessionTurn()
             let probe = SessionRestoreProbe(exists: session != nil, archived: session?.archived == true,
-                                            busy: session?.busy ?? false,
-                                            pendingInteraction: ["approval", "question"].contains(session?.pendingInteraction ?? ""),
-                                            failed: session?.lastTurnReason == "failed",
+                                            busy: turn.running, pendingInteraction: turn.pending, failed: turn.failed,
                                             completed: session?.lastTurnReason == "completed")
             guard let outcome = RestoreResolution.outcome(probe) else { continue }
             entries.append(RestoredSession(reference: reference, title: restoreTitle(reference, fallback: session?.title ?? "", workspace: workspace, allSessions: allSessions),
@@ -56,10 +56,9 @@ final class WorkbenchRestorationState {
             // Running baselines record "completed:pending:error" (see dashboardObservation),
             // so a completion is only claimed when the count provably advanced.
             let baselineCompleted = observation.revision.split(separator: ":").first.flatMap { Int($0) }
+            let turn = session.map(SessionTurn.init(native:)) ?? SessionTurn()
             let probe = SessionRestoreProbe(exists: session != nil, archived: session?.archived ?? false,
-                                            busy: session?.busy ?? false,
-                                            pendingInteraction: (session?.pending ?? 0) > 0,
-                                            failed: session?.error != nil,
+                                            busy: turn.running, pendingInteraction: turn.pending, failed: turn.failed,
                                             completed: baselineCompleted.map { (session?.completed ?? 0) > $0 } ?? false)
             guard let outcome = RestoreResolution.outcome(probe) else { continue }
             entries.append(RestoredSession(reference: reference, title: restoreTitle(reference, fallback: session?.title ?? "", workspace: workspace, allSessions: allSessions),

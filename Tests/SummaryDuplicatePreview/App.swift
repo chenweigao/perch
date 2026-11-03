@@ -53,7 +53,7 @@ private struct SummaryPreview: View {
                     allowsActivitySummaries: true, narrativeStore: store)
             }
             ConversationActivityBar(activity: ConversationActivity(messages: messages, isRunning: running,
-                    running: phase == 1 ? ["edit"] : []), isRunning: running,
+                    running: phase == 1 ? ["edit"] : []), turn: SessionTurn(running: running),
                 narrativeSession: "duplicate-fixture", onReview: {}, narrativeStore: store)
             Text("继续此任务…").font(.title3).foregroundStyle(.secondary)
                 .padding(20).frame(maxWidth: .infinity, alignment: .leading)

@@ -27,45 +27,49 @@ func checkTurnStatus() throws {
     // Running headlines, most specific first: the plan step, a short narrative,
     // the tool's description, the generic phase. The target is secondary text.
     let stepped = TurnStatus(activity: ConversationActivity(messages: user + plan + command, isRunning: true, running: running),
-                             isRunning: true, narrativeHeadline: "解冲突")
+                             turn: SessionTurn(running: true), narrativeHeadline: "解冲突")
     precondition(stepped.state == .running && stepped.headline == "Adjust the layout" && stepped.source == .step)
     precondition(stepped.detail == "swift build" && stepped.progress?.done == 1 && stepped.progress?.total == 3)
     let narrated = TurnStatus(activity: ConversationActivity(messages: user + command, isRunning: true, running: running),
-                              isRunning: true, narrativeHeadline: "  解冲突  ")
+                              turn: SessionTurn(running: true), narrativeHeadline: "  解冲突  ")
     precondition(narrated.headline == "解冲突" && narrated.source == .narrative && narrated.detail == "swift build")
     let long = String(repeating: "长", count: TurnStatus.narrativeLimit + 1)
     let describedStatus = TurnStatus(activity: ConversationActivity(messages: user + described, isRunning: true, running: running),
-                                     isRunning: true, narrativeHeadline: long)
+                                     turn: SessionTurn(running: true), narrativeHeadline: long)
     precondition(describedStatus.headline == "Build the app" && describedStatus.source == .description,
                  "A narrative too long for one line yields to the tool's description")
     precondition(describedStatus.detail == nil, "A described tool already names its target")
-    let phase = TurnStatus(activity: ConversationActivity(messages: user + command, isRunning: true, running: running), isRunning: true)
+    let phase = TurnStatus(activity: ConversationActivity(messages: user + command, isRunning: true, running: running), turn: SessionTurn(running: true))
     precondition(phase.source == .phase && phase.headline == "Running command…" && phase.detail == "swift build")
-    let thinking = TurnStatus(activity: ConversationActivity(messages: user, isRunning: true, isThinking: true), isRunning: true)
+    let thinking = TurnStatus(activity: ConversationActivity(messages: user, isRunning: true, isThinking: true), turn: SessionTurn(running: true))
     precondition(thinking.headline == "Thinking…" && thinking.detail == nil && thinking.symbol == nil)
     let stalled = TurnStatus(activity: ConversationActivity(messages: user + command, isRunning: true, running: running),
-                             isRunning: true, stalledMinutes: 4)
+                             turn: SessionTurn(running: true), stalledMinutes: 4)
     precondition(stalled.state == .running && stalled.stalledMinutes == 4 && stalled.detail == "4 分钟没有新进展",
                  "A stall replaces the target and keeps the current action")
 
     // What the reader must do outranks progress.
     let pendingActivity = ConversationActivity(messages: user + command, isRunning: true, running: running, pendingCount: 2)
-    let approval = TurnStatus(activity: pendingActivity, isRunning: true, pendingCount: 2,
+    let approval = TurnStatus(activity: pendingActivity, turn: SessionTurn(running: true, pending: true), pendingCount: 2,
                               request: TurnRequest(kind: .approval, text: "运行 rm -rf build"))
     precondition(approval.state == .waiting && approval.headline == "需要你确认：运行 rm -rf build" && approval.detail == "共 2 项")
     precondition(approval.isBlocking && approval.symbol == "hand.raised")
-    let question = TurnStatus(activity: pendingActivity, isRunning: true, pendingCount: 1,
+    let question = TurnStatus(activity: pendingActivity, turn: SessionTurn(running: true, pending: true), pendingCount: 1,
                               request: TurnRequest(kind: .question, text: "用哪个分支？"))
     precondition(question.headline == "需要你回答：用哪个分支？" && question.detail == nil)
-    precondition(TurnStatus(activity: pendingActivity, isRunning: true, pendingCount: 2).headline == "等待你确认 · 2 项")
+    precondition(TurnStatus(activity: pendingActivity, turn: SessionTurn(running: true, pending: true), pendingCount: 2).headline == "等待你确认 · 2 项")
     let offline = TurnStatus(activity: ConversationActivity(messages: user + command, isRunning: true, online: false),
-                             isRunning: true, online: false, pendingCount: 1)
+                             turn: SessionTurn(running: true, pending: true), online: false, pendingCount: 1)
     precondition(offline.state == .offline && offline.headline == "Connection lost" && offline.symbol == "wifi.exclamationmark")
-    let stopping = TurnStatus(activity: ConversationActivity(messages: user + command, isRunning: true, isStopping: true), isRunning: true)
+    let waitingFromCatalog = TurnStatus(activity: ConversationActivity(messages: user + command, isRunning: true, running: running),
+                                        turn: SessionTurn(running: true, pending: true))
+    precondition(waitingFromCatalog.state == .waiting && waitingFromCatalog.headline == "等你处理",
+                 "Pending facts without listed requests still wait for the reader")
+    let stopping = TurnStatus(activity: ConversationActivity(messages: user + command, isRunning: true, isStopping: true), turn: SessionTurn(running: true))
     precondition(stopping.state == .stopping && stopping.symbol == "stop.circle")
 
     // Ended turns: uncertain results first, then the result this client watched.
-    let review = TurnStatus(activity: ConversationActivity(messages: user + command, isRunning: false), isRunning: false)
+    let review = TurnStatus(activity: ConversationActivity(messages: user + command, isRunning: false), turn: SessionTurn())
     precondition(review.state == .review && review.attention == 1 && review.headline == "完成 · 1 项需要你看一下")
     var clocks = ConversationTimings()
     clocks.submitted("turn", at: Date().addingTimeInterval(-95))
@@ -75,17 +79,21 @@ func checkTurnStatus() throws {
     let finished = clocks.turns["s"]
     let ended = ConversationActivity(messages: earlierEdit + user + edit, isRunning: false)
     precondition(ended.edits?.perFile.keys.sorted() == ["/p/Bar.swift"], "Edits count the latest turn only")
-    let done = TurnStatus(activity: ended, isRunning: false, timing: finished)
+    let done = TurnStatus(activity: ended, turn: SessionTurn(completion: "done"), timing: finished)
     precondition(done.state == .done && done.headline == "完成" && done.symbol == nil)
     precondition(done.result?.files == 1 && done.result?.additions == 2 && done.result?.deletions == 1)
     precondition(abs((done.result?.duration ?? 0) - 95) < 2 && done.result?.observedOnly == false)
-    precondition(TurnStatus(activity: ended, isRunning: false, timing: live).result?.duration == nil,
+    precondition(TurnStatus(activity: ended, turn: SessionTurn(completion: "done"), timing: live).result?.duration == nil,
                  "The line holds while the end time is still on its way")
-    precondition(TurnStatus(activity: ended, isRunning: false, timing: finished, resultDismissed: true).state == .hidden)
-    precondition(TurnStatus(activity: ended, isRunning: false).state == .hidden,
+    precondition(TurnStatus(activity: ended, turn: SessionTurn(completion: "done"), timing: finished, resultDismissed: true).state == .hidden)
+    precondition(TurnStatus(activity: ended, turn: SessionTurn(completion: "done")).state == .hidden,
                  "An idle session this client never watched run takes no space")
+    let failed = TurnStatus(activity: ConversationActivity(messages: user + command, isRunning: false), turn: SessionTurn(failed: true),
+                            timing: finished)
+    precondition(failed.state == .failed && failed.headline == "本轮失败" && failed.needsReader && failed.result == nil,
+                 "A failed turn outranks uncertain tools and the result line, like the sidebar's attention section")
     let unfinished = ConversationActivity(messages: user + plan, isRunning: false)
-    precondition(TurnStatus(activity: unfinished, isRunning: false).state == .plan)
+    precondition(TurnStatus(activity: unfinished, turn: SessionTurn()).state == .plan)
 
     // Progress: any visible change moves the signature; a re-evaluation does not.
     let base = ConversationActivity(messages: user + command, isRunning: true, running: running)

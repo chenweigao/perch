@@ -1999,3 +1999,5 @@
 "可能卡住了" = "May be stuck";
 "任务几分钟没有新进展，可能卡住了。" = "The task has made no progress for a few minutes and may be stuck.";
 "Perch 在前台时，只有需要你处理的事会播放提示音；一轮结束只在 Perch 处于后台时提示。完成通知会合并。可在会话右键菜单中单独静音。疑似卡住只对正在打开的会话判断：3 分钟没有新进展（有工具运行时 10 分钟）。" = "While Perch is in front, only things that need you play a sound. A finished turn alerts only when Perch is in the background. Completion notifications are grouped. Mute individual sessions from their context menu. Possibly stuck applies to the open session only: 3 minutes without progress (10 while a tool runs).";
+"本轮失败" = "Turn failed";
+"在任务面板查看失败原因" = "See why it failed in the task panel";

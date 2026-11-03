@@ -40,13 +40,19 @@ Kimi 对应语义：
 
 | Kimi 状态 | 工作台显示 |
 |---|---|
-| pending_interaction=approval / question | 等你处理：等待确认 / 等待回答 |
+| pending_interaction=approval / question（及其他非 none 值） | 等你处理：等待确认 / 等待回答 / 等你处理 |
 | busy=true，无上述交互 | 运行中 |
 | last_turn_reason=failed，且不在运行 | 等你处理：出错 |
 | last_turn_reason=completed，当前 updated_at 未查看 | 待查看结果 |
 | cancelled / 无完成原因 / 未知原因 / 已查看版本 | 其他会话，不当作成功完成 |
 
 Kimi 的“已查看”只存本地 updated_at，不代替审批或回答；同一会话有新版本时重新进入待查看。
+服务端没有待处理交互时报 `none`，它不算等你处理。
+
+分区、Dock 角标、批量归档的阻塞判断、任务通知、Goal 头部和会话内状态条读同一份 `SessionTurn`
+（`Sources/WorkbenchCore/SessionTurn.swift`）：Kimi 与原生会话的列表行、当前会话的快照各有一个构造函数，
+优先级统一为 等你处理 > 运行中 > 出错 > 已完成 > 空闲；分区由 `SessionTurn.section(reviewed:)` 加上已查看游标得出，
+通知由 `TaskEventTracker` 比较同一会话前后两份 `SessionTurn`。
 初次接入时，已有 completed 会话也会列为未查看，结果清单默认折叠。
 全局队列按事项分类混排各个来源，并保留来源、机器和目录。离线数据不计入当前数量，单独折叠显示。
 队列顺序固定为等你处理、待查看结果、运行中：需要人动手的排在只需等待的前面。

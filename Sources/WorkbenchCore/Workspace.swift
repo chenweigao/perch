@@ -57,6 +57,8 @@ public struct WorkspaceSession: Identifiable, Equatable, Sendable {
     public let canMarkReviewed: Bool
     public let archived: Bool
     public let updatedAt: Double
+    /// The catalog's turn facts; `section` is derived from them (`SessionTurn.section`).
+    public let turn: SessionTurn
     public var id: String { reference.id }
     public func matchesSearch(_ query: String) -> Bool {
         let searchable = "\(title) \(directory) \(hostName) \(detail) \(reference.kind.label)"
@@ -65,9 +67,11 @@ public struct WorkspaceSession: Identifiable, Equatable, Sendable {
         }
     }
     public init(reference: SessionReference, title: String, directory: String, hostName: String,
-                detail: String, online: Bool, section: WorkQueueSection, canMarkReviewed: Bool, archived: Bool = false, updatedAt: Double = 0) {
+                detail: String, online: Bool, section: WorkQueueSection, canMarkReviewed: Bool, archived: Bool = false, updatedAt: Double = 0,
+                turn: SessionTurn = SessionTurn()) {
         self.reference = reference; self.title = title; self.directory = directory; self.hostName = hostName
         self.detail = detail; self.online = online; self.section = section; self.canMarkReviewed = canMarkReviewed; self.archived = archived; self.updatedAt = updatedAt
+        self.turn = turn
     }
 }
 
@@ -184,12 +188,12 @@ public struct LocalWorkspace: Codable, Equatable, Sendable {
     }
 
     public func kimiSection(_ session: KimiSession, on hostID: UUID) -> WorkQueueSection {
-        if session.pendingInteraction == "approval" || session.pendingInteraction == "question" { return .attention }
-        if session.isTurnRunning { return .running }
-        if session.lastTurnReason == "failed" { return .attention }
         let ref = SessionReference(hostID: hostID, terminalID: session.id, kind: .kimi)
-        if session.lastTurnReason == "completed" && reviewedKimiUpdates[ref.id] != session.updatedAt { return .review }
-        return .other
+        return SessionTurn(kimi: session).section(reviewed: reviewedKimiUpdates[ref.id])
+    }
+    public func nativeSection(_ session: NativeAgentSession, on hostID: UUID) -> WorkQueueSection {
+        let ref = SessionReference(hostID: hostID, terminalID: session.id, kind: session.provider)
+        return SessionTurn(native: session).section(reviewed: reviewedKimiUpdates[ref.id])
     }
     public mutating func markReviewed(_ session: KimiSession, on hostID: UUID) {
         guard kimiSection(session, on: hostID) == .review else { return }

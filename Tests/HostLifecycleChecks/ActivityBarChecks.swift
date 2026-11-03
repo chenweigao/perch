@@ -32,7 +32,8 @@ private struct ActivityBarCheckFixture: View {
                     ForEach(0..<60, id: \.self) { index in Text(verbatim: "正文第 \(index) 行 reading position stays put.") }
                 }.frame(maxWidth: .infinity, alignment: .leading)
             }
-            ConversationActivityBar(activity: phase.activity, isRunning: phase.running, timing: phase.timing,
+            ConversationActivityBar(activity: phase.activity, turn: SessionTurn(running: phase.running, pending: phase.pending > 0),
+                                    timing: phase.timing,
                                     online: phase.online,
                                     offlineDetail: phase.online ? nil : "ssh: connect to host fixture.invalid: Network is unreachable",
                                     pendingCount: phase.pending,

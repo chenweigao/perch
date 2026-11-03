@@ -9,7 +9,9 @@ struct KimiGoalHeader: View {
     var body: some View {
         if let goal = connection.goal {
             GoalHeaderBar(goal: goal,
-                          isRunning: connection.conversation?.snapshot.session.isTurnRunning == true,
+                          // The status line's and the sidebar's facts, so the header never shows
+                          // the running sun while the turn waits for the reader.
+                          turn: connection.conversation.map { SessionTurn(kimi: $0.snapshot).state } ?? .idle,
                           isStale: !connection.online || connection.goalIsStale,
                           controlsEnabled: connection.online && connection.snapshotReady && !connection.loading && !connection.sending,
                           onRefresh: { Task { await connection.refreshGoal() } },

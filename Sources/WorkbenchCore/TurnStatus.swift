@@ -54,6 +54,8 @@ public struct TurnStatus: Equatable, Sendable {
         case waiting
         case stopping
         case running
+        /// The latest turn failed (`SessionTurn.failed`).
+        case failed
         /// The turn ended with tool results nobody confirmed.
         case review
         /// The turn ended cleanly while this client watched it run (it has a
@@ -104,6 +106,7 @@ public struct TurnStatus: Equatable, Sendable {
         case .offline: return "wifi.exclamationmark"
         case .waiting: return "hand.raised"
         case .stopping: return "stop.circle"
+        case .failed: return "exclamationmark.triangle"
         case .review: return "exclamationmark.circle"
         case .plan: return "checklist"
         case .running, .done, .hidden: return nil
@@ -111,15 +114,18 @@ public struct TurnStatus: Equatable, Sendable {
     }
     /// A lost connection and a pending decision stop progress and own the tone.
     public var isBlocking: Bool { state == .offline || state == .waiting }
-    public var needsReader: Bool { isBlocking || state == .review }
+    public var needsReader: Bool { isBlocking || state == .failed || state == .review }
 
     /// Running headlines longer than this come from a whole progress reply;
     /// the task panel shows them instead.
     public static let narrativeLimit = 48
 
-    /// `locale` is the view's environment locale, so the line follows a language
-    /// switch in the same update as the SwiftUI labels around it.
-    public init(activity: ConversationActivity, isRunning: Bool, online: Bool = true, pendingCount: Int = 0,
+    /// `turn` comes from the same constructors the sidebar and notifications
+    /// use (`SessionTurn(kimi:)`, `SessionTurn(native:)`), so its precedence of
+    /// waiting, running, failed and finished is theirs. `pendingCount` only sizes
+    /// the waiting line. `locale` is the view's environment locale, so the line
+    /// follows a language switch in the same update as the SwiftUI labels around it.
+    public init(activity: ConversationActivity, turn: SessionTurn, online: Bool = true, pendingCount: Int = 0,
                 request: TurnRequest? = nil, timing: ConversationTiming? = nil, narrativeHeadline: String? = nil,
                 stalledMinutes: Int? = nil, resultDismissed: Bool = false,
                 locale: Locale = AppLanguage.current.resolvedLocale) {
@@ -128,21 +134,24 @@ public struct TurnStatus: Equatable, Sendable {
         progress = activity.todos.isEmpty ? nil : Progress(done: activity.completedSteps, total: activity.todos.count)
         let uncertain = activity.attentionTools.count
         var source: Source?, detail: String?, result: Result?, attention = 0, stalled: Int?
+        let phase = turn.state
         if !online {
             state = .offline
             headline = L(key: activity.title)
-        } else if pendingCount > 0 {
+        } else if phase == .waiting {
             state = .waiting
             if let request {
                 headline = request.kind == .question ? L("需要你回答：\(request.text)") : L("需要你确认：\(request.text)")
                 if pendingCount > 1 { detail = L("共 \(pendingCount) 项") }
-            } else {
+            } else if pendingCount > 0 {
                 headline = L("等待你确认 · \(pendingCount) 项")
+            } else {
+                headline = L("等你处理")
             }
         } else if activity.isStopping {
             state = .stopping
             headline = L(key: activity.title)
-        } else if isRunning {
+        } else if phase == .running {
             state = .running
             attention = uncertain
             let narrative = narrativeHeadline?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -163,6 +172,9 @@ public struct TurnStatus: Equatable, Sendable {
                 let target = ToolPresentation.compactTarget(tool)
                 if !target.isEmpty && target != tool.name && target != headline { detail = target }
             }
+        } else if phase == .failed {
+            state = .failed
+            headline = L("本轮失败")
         } else if uncertain > 0 {
             state = .review
             attention = uncertain

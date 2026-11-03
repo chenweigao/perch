@@ -90,8 +90,8 @@ private final class Invalidation: @unchecked Sendable {
     withObservationTracking { _ = model.allSessions } onChange: { unrelatedCatalog.mark() }
     model.notificationsEnabled = false
     model.taskNotifications.setLevel(.silent, for: .completed)
-    let running = TaskEventState(running: true, pending: false, failed: false, completion: nil)
-    let completed = TaskEventState(running: false, pending: false, failed: false, completion: "1")
+    let running = SessionTurn(running: true, pending: false, failed: false, completion: nil)
+    let completed = SessionTurn(running: false, pending: false, failed: false, completion: "1")
     model.taskNotifications.observe(running, id: "notice", title: "Fixture", online: true, visibleSessionID: nil)
     model.taskNotifications.observe(completed, id: "notice", title: "Fixture", online: true, visibleSessionID: nil)
     precondition(notificationChange.occurred && !unrelatedCatalog.occurred && model.taskNotice?.sessionID == "notice",

@@ -33,7 +33,9 @@ struct ConversationBusyIndicator: View {
 struct ConversationActivityBar: View {
     static let height: CGFloat = 32
     let activity: ConversationActivity
-    let isRunning: Bool
+    /// The session's turn facts, built by the constructors the sidebar and
+    /// notifications use, so all of them agree on running, waiting and failed.
+    let turn: SessionTurn
     var timing: ConversationTiming? = nil
     var online = true
     /// Last connection error; the reconnect tooltip shows it.
@@ -75,8 +77,8 @@ struct ConversationActivityBar: View {
         return "\(narrativeSession):\(end.timeIntervalSinceReferenceDate)"
     }
     private var status: TurnStatus {
-        TurnStatus(activity: activity, isRunning: isRunning, online: online, pendingCount: pendingCount,
-                   request: request, timing: timing, narrativeHeadline: isRunning ? narrative?.headline : nil,
+        TurnStatus(activity: activity, turn: turn, online: online, pendingCount: pendingCount,
+                   request: request, timing: timing, narrativeHeadline: turn.running ? narrative?.headline : nil,
                    stalledMinutes: activity.animates ? stalledMinutes : nil,
                    resultDismissed: resultKey.map { TurnResultMemory.contains($0) } ?? false, locale: locale)
     }
@@ -260,6 +262,9 @@ struct ConversationActivityBar: View {
         case .review:
             Button("查看", action: onDetails).buttonStyle(.bordered).controlSize(.small).tint(.orange)
                 .help("在任务面板查看需要关注的工具结果").accessibilityHint(Text("在任务面板查看需要关注的工具结果"))
+        case .failed:
+            Button("查看", action: onDetails).buttonStyle(.bordered).controlSize(.small).tint(.orange)
+                .help("在任务面板查看失败原因").accessibilityHint(Text("在任务面板查看失败原因"))
         case .done:
             if let onChanges, (status.result?.files ?? 0) > 0 {
                 Button("查看改动", action: onChanges).buttonStyle(.borderless).controlSize(.small)

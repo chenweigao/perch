@@ -137,6 +137,7 @@
 
 `ConversationActivityBar`（`Sources/AgentWorkbench/ConversationActivityBar.swift`），位于正文与输入框之间。
 显示什么由 `TurnStatus`（`Sources/WorkbenchCore/TurnStatus.swift`，纯值，WorkbenchChecks 覆盖）决定。
+其中“等你 / 运行中 / 失败 / 已完成”取自 `SessionTurn`，与侧栏分区、Dock 角标、通知和 Goal 头部同一构造与同一优先级。
 它与提示条、输入框一起构成对话滚动视图的底部安全区栏（`ConversationScrollView` 的 `bar`，`safeAreaBar`）：
 正文从输入框玻璃下方滚过，跟随到底时最后一行停在栏的上沿。系统滚动边缘效果关闭（`scrollEdgeEffectHidden`）：
 在工作区分栏里它总被画成带分隔线的硬边，与请求的 `.soft` 无关；改由栏背后一条 28pt、卡片底色的渐变把正文淡入栏内
@@ -156,6 +157,7 @@
   | 等你 | `hand.raised`，橙 | 「需要你确认：<事项>」或「需要你回答：<问题>」（`TurnRequest`，取第一项的原文一行），多项附「共 N 项」；取不到原文时「等待你确认 · N 项」 | 实心「查看」 |
   | 停止中 | `stop.circle` | 正在停止… | 用时 |
   | 运行中 | Perch 动画 | 计划中进行中的一步 → Agent 进度说明（≤48 字）→ 工具描述 → 通用阶段；运行中工具的目标为次级文字 | 计划 `c / n`、用时 |
+  | 失败 | `exclamationmark.triangle`，橙 | 本轮失败 | 「查看」（任务面板的「需要你处理」列出原因） |
   | 疑似卡住 | 同运行中 | 动作不变，次级文字换成「N 分钟没有新进展」（`quiet`，不用橙色） | 同运行中 |
   | 结束且有需关注 | `exclamationmark.circle`，橙 | 完成 · N 项需要你看一下 | 「查看」（打开任务面板） |
   | 结果 | 静止标 | 完成 · 改了 N 个文件 +a −d · 用时 X | 「查看改动」（右栏改动页）、Recap |
@@ -185,7 +187,8 @@
   待确认 →「查看」（跳到待处理项）；本轮结束后仍有需关注的工具结果 →「查看」（打开详情）。
   运行中出现的需关注结果只加橙色计数，不改当前动作的颜色。
 - **Goal 保留执行反馈，断连提示不重复。** Goal 头部保留实际执行的追逐日弧和目标自身状态，状态行高度固定，
-  不随一轮开始或结束变化（`GoalHeaderBar.status`）。会话可见时，断连只在状态条提示，
+  不随一轮开始或结束变化（`GoalHeaderBar.status`）。日弧只在 `SessionTurn` 为运行中时转；目标进行中而本轮等你处理或失败时，
+  标签换成橙色「等你处理」「本轮失败」，不再显示「待续跑」。会话可见时，断连只在状态条提示，
   不在底部再放一行（`NativeAgentView`、`KimiWorkspaceView`）。
 - **可达性。** 状态条整行是一个按钮（「本轮状态」），可悬停、可键盘激活；VoiceOver 值包含标题、次级文字、需关注计数、
   步数与本轮编辑，不含时钟。操作按钮保留可见标题，用 hint 说明去向。

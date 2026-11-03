@@ -56,8 +56,8 @@ final class WorkbenchNotificationState {
         notifications.onOpenDashboard = onOpenDashboard
     }
 
-    func observe(_ state: TaskEventState, id: String, title: String, online: Bool, visibleSessionID: String?) {
-        guard let kind = taskEvents.observe(state, id: id, online: online), !mutedTasks.contains(id) else { return }
+    func observe(_ turn: SessionTurn, id: String, title: String, online: Bool, visibleSessionID: String?) {
+        guard let kind = taskEvents.observe(turn, id: id, online: online), !mutedTasks.contains(id) else { return }
         deliver(AttentionEvent(kind), id: id, title: title, context: Self.context(for: id, visibleSessionID: visibleSessionID))
     }
 
