@@ -280,6 +280,7 @@ struct ConnectionChecks {
         try await checkSendFailureIsolation()
         try await checkFailedTurnUnblocksQueue()
         try await checkInterruptedReceiptUnblocksQueue()
+        try await checkCodexQueueRestart()
         try await checkImmediateSelection()
         try await checkSelectionRetry()
         try await checkNativeModelCatalog()
@@ -691,6 +692,58 @@ struct ConnectionChecks {
         precondition(fixture.promptAttachments.count == 1, "Queued attachments must not steer the running turn")
         client.disconnect()
         print("PASS: Codex attachments reach the bridge and queue instead of steering")
+    }
+
+    @MainActor
+    static func checkCodexQueueRestart() async throws {
+        let fixture = TransportFixture()
+        let host = SSHHost(name: "Codex queue restart", destination: "fixture")
+        let client = NativeAgentConnection(host: host, transport: fixture.request)
+        let session = try await client.create(provider: .codex, cwd: "/fixture", model: "gpt-codex", permissionMode: "workspace-ask")
+        await settle { client.snapshot?.id == session.id }
+        let reference = client.reference(session.id)!
+        client.drafts[session.id] = "重启前已经发送"; client.send()
+        await settle { fixture.prompts.count == 1 && !client.sending }
+        let sent = client.queue.items(for: reference)[0]
+        let file = DraftFile(url: FileManager.default.temporaryDirectory.appendingPathComponent("perch-codex-restart-\(UUID()).json"))
+        defer { try? FileManager.default.removeItem(at: file.url) }
+        try file.flush(SavedDrafts(outbox: client.queue))
+        client.disconnect()
+
+        let restored = NativeAgentConnection(host: host, transport: fixture.request)
+        defer { restored.disconnect() }
+        restored.queue = try file.load().outbox
+        guard case .unknown = restored.queue.message(sent.id)?.state else { preconditionFailure("Restart must preserve receipt uncertainty") }
+        precondition(restored.queue.isPaused(reference) && !restored.queue.hasResumableMessages(for: reference))
+        fixture.receipts[sent.id] = "running"
+        try await restored.refresh()
+        precondition(restored.queue.message(sent.id)?.state == .running && !restored.queue.hasResumableMessages(for: reference))
+        fixture.receipts[sent.id] = "completed"
+        fixture.sessions[session.id]?["busy"] = false
+        fixture.sessions[session.id]?["turnState"] = "completed"
+        try await restored.refresh()
+        precondition(restored.queue.items(for: reference).isEmpty && restored.queue.isPaused(reference))
+        precondition(!restored.queue.hasResumableMessages(for: reference) && fixture.prompts.count == 1)
+        for _ in 0..<3 {
+            try file.flush(SavedDrafts(outbox: restored.queue))
+            restored.queue = try file.load().outbox
+            try await restored.refresh()
+            precondition(restored.queue.items(for: reference).isEmpty && !restored.queue.hasResumableMessages(for: reference))
+            precondition(fixture.prompts.count == 1, "Repeated restart must not replay a completed request")
+        }
+
+        restored.queue.enqueue("重启前尚未发送", for: reference, mode: .nextTurn, id: "codex-parked-restart")
+        try file.flush(SavedDrafts(outbox: restored.queue))
+        restored.queue = try file.load().outbox
+        try await restored.refresh()
+        precondition(restored.queue.message("codex-parked-restart")?.state == .stoppedBeforeDelivery)
+        precondition(restored.queue.hasResumableMessages(for: reference) && fixture.prompts.count == 1)
+        restored.resumeQueue(reference); restored.resumeQueue(reference)
+        await settle { fixture.prompts.count == 2 && restored.queue.message("codex-parked-restart")?.state == .accepted }
+        precondition(!restored.queue.hasResumableMessages(for: reference))
+        try await restored.refresh()
+        precondition(fixture.prompts == [session.id, session.id] && fixture.receipts[sent.id] == "completed")
+        print("PASS: Codex restart reconciles completed receipts without empty resume or replay; parked drafts resume exactly once")
     }
 
     @MainActor

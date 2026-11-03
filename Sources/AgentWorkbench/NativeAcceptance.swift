@@ -1,5 +1,6 @@
 #if PERCH_ACCEPTANCE
 import AppKit
+import ApplicationServices
 import SwiftUI
 import WorkbenchCore
 import os
@@ -584,6 +585,8 @@ private struct ReferenceComposerFixtureView: View {
                 try await settle(window) { self.hasMountedMessage(window, session: "session-0") }
             }
             if mode == "all" {
+                report["queue_recovery"] = try await queueRecovery()
+                window.makeKeyAndOrderFront(nil)
                 // The final turn's reply fills the viewport at the 16 pt reading
                 // size, so a bottom-anchored session may mount no user prompt row.
                 // Reveal the previous turn first: the reconciliation fixture needs
@@ -1877,6 +1880,102 @@ private struct ReferenceComposerFixtureView: View {
                 "single_row_content_refresh": true, "busy_state_refresh": true, "group_membership_refresh": true,
                 "pin_order_and_content_refresh": true,
                 "boundary": "mounted row probes and body counts; no timing or hardware event claim"]
+    }
+    private func queueRecovery() async throws -> [String: Any] {
+        let host = SSHHost(name: "Queue recovery fixture", destination: "")
+        let id = "queue-session"
+        let session: [String: Any] = [
+            "id": id, "provider": "codex", "title": "Queue recovery", "cwd": "/fixture",
+            "busy": false, "archived": false, "updated": 1.0, "completed": 1,
+            "pending": 0, "model": "fixture-model", "cancelled": false
+        ]
+        var receiptStatus = "running", promptRequests = 0
+        let connection = NativeAgentConnection(host: host) { path, body in
+            if path == "/sessions" { return try JSONSerialization.data(withJSONObject: ["sessions": [session]]) }
+            if path == "/sessions/\(id)/prompt", let body {
+                promptRequests += 1; receiptStatus = "accepted"
+                return try JSONSerialization.data(withJSONObject: ["id": body["requestId"].string!, "status": receiptStatus])
+            }
+            if path.hasPrefix("/sessions/\(id)/requests/") {
+                return try JSONSerialization.data(withJSONObject: ["id": String(path.split(separator: "/").last!), "status": receiptStatus])
+            }
+            throw WorkbenchError("Unexpected queue fixture route: \(path)")
+        }
+        defer { connection.disconnect() }
+        try await connection.refresh()
+        let reference = connection.reference(id)!
+        let file = DraftFile(url: FileManager.default.temporaryDirectory.appendingPathComponent("perch-queue-\(UUID()).json"))
+        defer { try? FileManager.default.removeItem(at: file.url) }
+        connection.queue.enqueue("暂停的消息", for: reference, mode: .nextTurn, id: "queue-positive-control")
+        connection.queue.pauseForStop(reference)
+        let window = NSWindow(contentRect: NSRect(x: 160, y: 160, width: 640, height: 360),
+            styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.title = "Queue recovery acceptance"
+        window.contentViewController = NSHostingController(rootView:
+            NativeRunControls(connection: connection, sessionID: id).padding(20)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .preferredColorScheme(.light).environment(\.locale, Locale(identifier: "zh-Hans")))
+        window.makeKeyAndOrderFront(nil)
+        defer { window.close() }
+        let ownAX = AXUIElementCreateApplication(getpid())
+        AXUIElementSetAttributeValue(ownAX, "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)
+        func resumeButton() -> NSObject? {
+            var visited = Set<ObjectIdentifier>()
+            func find(_ value: Any) -> NSObject? {
+                guard let node = value as? NSObject, visited.insert(ObjectIdentifier(node)).inserted else { return nil }
+                func attribute(_ name: String) -> Any? {
+                    let selector = NSSelectorFromString(name)
+                    return node.responds(to: selector) ? node.perform(selector)?.takeUnretainedValue() : nil
+                }
+                if attribute("accessibilityIdentifier") as? String == "native-queue-resume" { return node }
+                for child in attribute("accessibilityChildren") as? [Any] ?? [] {
+                    if let found = find(child) { return found }
+                }
+                return nil
+            }
+            return window.contentView.flatMap { find($0) }
+        }
+        try await settle(window, "parked queue resume positive control") { resumeButton() != nil }
+        guard connection.queue.remove("queue-positive-control") else { throw WorkbenchError("Missing parked queue message") }
+        try await settle(window, "empty paused queue must hide resume") { resumeButton() == nil }
+        connection.queue.enqueue("已经发送的消息", for: reference, mode: .now, id: "restored-request")
+        connection.queue.markRunning("restored-request")
+        try file.flush(SavedDrafts(outbox: connection.queue))
+        connection.queue = try file.load().outbox
+        try await Task.sleep(for: .milliseconds(150)); flush(window)
+        guard resumeButton() == nil else { throw WorkbenchError("Unknown receipt exposed queue resume") }
+        receiptStatus = "completed"
+        try await connection.refresh()
+        try await settle(window, "completed receipt must hide resume") { connection.queue.allItems.isEmpty && resumeButton() == nil }
+        try file.flush(SavedDrafts(outbox: connection.queue))
+        connection.queue = try file.load().outbox
+        try await Task.sleep(for: .milliseconds(150)); flush(window)
+        guard resumeButton() == nil else { throw WorkbenchError("Second restart exposed empty queue resume") }
+        connection.queue.enqueue("重启后继续发送", for: reference, mode: .nextTurn, id: "parked-restart")
+        try file.flush(SavedDrafts(outbox: connection.queue))
+        connection.queue = try file.load().outbox
+        try await connection.refresh()
+        try await settle(window, "restored draft must offer resume") { resumeButton() != nil }
+        guard promptRequests == 0, let button = resumeButton(),
+              let frame = (button.value(forKey: "accessibilityFrame") as? NSValue)?.rectValue, !frame.isEmpty else {
+            throw WorkbenchError("Restored queue replayed or has no visible resume control")
+        }
+        let rect = window.convertFromScreen(frame)
+        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+            let event = NSEvent.mouseEvent(with: type, location: NSPoint(x: rect.midX, y: rect.midY),
+                modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
+                context: nil, eventNumber: 1, clickCount: 1, pressure: type == .leftMouseDown ? 1 : 0)!
+            window.sendEvent(event)
+        }
+        try await settle(window, "explicit resume sends once") {
+            promptRequests == 1 && connection.queue.message("parked-restart")?.state == .accepted && resumeButton() == nil
+        }
+        try await connection.refresh()
+        guard promptRequests == 1 else { throw WorkbenchError("Queue resume duplicated a prompt") }
+        return ["empty_pause_hides_resume": true, "unknown_receipt_hides_resume": true,
+                "completed_receipt_hides_resume": true, "repeated_restart_hides_resume": true,
+                "parked_draft_offers_resume": true, "actual_resume_click_sends_once": true]
     }
     private func detailLifecycle(_ window: NSWindow) async throws -> [String: Any] {
         guard let scroll = transcript(in: window), let document = ConversationTranscript.document(in: scroll),
