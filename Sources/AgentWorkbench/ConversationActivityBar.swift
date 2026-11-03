@@ -67,8 +67,11 @@ struct ConversationActivityBar: View {
     @State private var quiet: TurnStatus.Quiet?
     @State private var highlight = false
     @ObservedObject var narrativeStore = ActivityNarrativeStore.shared
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Checks pin motion on or off; the app follows the system setting.
+    var reduceMotionOverride: Bool? = nil
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @Environment(\.locale) private var locale
+    private var reduceMotion: Bool { reduceMotionOverride ?? systemReduceMotion }
 
     private var narrative: ActivityNarrative? {
         narrativeOverride ?? narrativeSession.flatMap { narrativeStore.narrative(session: $0) }

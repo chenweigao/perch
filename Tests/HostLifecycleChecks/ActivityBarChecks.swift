@@ -10,6 +10,8 @@ import WorkbenchCore
     var reconnects = 0
     var details = 0
     var changes = 0
+    /// nil follows the runner's Reduce Motion; the sweep checks pin it.
+    var reduceMotion: Bool?
     var barFrame = CGRect.zero
 }
 
@@ -40,7 +42,8 @@ private struct ActivityBarCheckFixture: View {
                                     offlineDetail: phase.online ? nil : "ssh: connect to host fixture.invalid: Network is unreachable",
                                     pendingCount: phase.pending,
                                     onReview: { state.reviews += 1 }, onReconnect: { state.reconnects += 1 },
-                                    onDetails: { state.details += 1 }, onChanges: { state.changes += 1 })
+                                    onDetails: { state.details += 1 }, onChanges: { state.changes += 1 },
+                                    reduceMotionOverride: state.reduceMotion)
                 .frame(width: state.width)
                 .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("activity-check")) } action: { state.barFrame = $0 }
             Color.secondary.opacity(0.15).frame(height: 64)
@@ -186,10 +189,18 @@ private struct ActivityBarCheckFixture: View {
     func glints(_ view: NSView) -> [ShimmerGlintView] {
         (view as? ShimmerGlintView).map { [$0] } ?? view.subviews.flatMap(glints)
     }
+    // Pinned so the result does not depend on the runner's Reduce Motion setting.
+    state.reduceMotion = true
     state.phase = "running"
     try await Task.sleep(for: .milliseconds(300))
     host.layoutSubtreeIfNeeded()
-    guard let glint = glints(host).first else { preconditionFailure("A running title must carry its shimmer") }
+    precondition(glints(host).isEmpty, "Reduce Motion keeps the running title still")
+    state.reduceMotion = false
+    try await Task.sleep(for: .milliseconds(300))
+    host.layoutSubtreeIfNeeded()
+    guard let glint = glints(host).first else {
+        preconditionFailure("A running title must carry its shimmer (system Reduce Motion: \(NSWorkspace.shared.accessibilityDisplayShouldReduceMotion))")
+    }
     let mounted = glint.sweeps
     try await Task.sleep(for: .milliseconds(500))
     precondition(glint.sweeps == mounted, "No progress, no sweep: \(glint.sweeps - mounted)")
@@ -198,6 +209,7 @@ private struct ActivityBarCheckFixture: View {
     precondition(glints(host).first === glint && glint.sweeps == mounted + 1, "New output sweeps the same title once: \(glint.sweeps - mounted)")
     try await Task.sleep(for: .milliseconds(500))
     precondition(glint.sweeps == mounted + 1, "One event, one sweep")
+    state.reduceMotion = nil
     // A session this client never watched run has nothing to say and takes no space.
     state.phase = "idle"
     try await Task.sleep(for: .milliseconds(200))
