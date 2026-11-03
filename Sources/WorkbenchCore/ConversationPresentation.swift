@@ -377,8 +377,10 @@ public final class ConversationPresentationModel {
         }
         let rowsEnded = timestamp()
         let summaryStarted = timestamp()
-        let batch = ActivitySummaryBatch.latest(in: entries, tools: visibleTools,
-            isRunning: input.isRunning, enabled: input.summariesEnabled, includeToolOutput: input.includeToolOutput)
+        let batch = input.summariesEnabled
+            ? ActivitySummaryBatch.latest(in: entries, tools: visibleTools,
+                projection: narrative, includeToolOutput: input.includeToolOutput)
+            : nil
         let summaryEnded = timestamp()
         let value = Snapshot(history: presentedHistory, tail: tail, navigation: navigation, narrative: narrative, batch: batch)
         snapshot = value; preparationCount += 1
