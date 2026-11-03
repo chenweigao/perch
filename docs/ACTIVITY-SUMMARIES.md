@@ -195,12 +195,13 @@ sessions automatically** remains off by default and has no effect while external
 refinement is disabled.
 
 Only opened sessions with placeholder titles are eligible. A title supplied by the
-agent or user is never replaced. Kimi sessions wait for the first turn to complete;
-native bridge sessions may be named while that first turn runs. The request contains
-only the opening of the first user message, at most 400 characters. Generated titles
-never modify the remote session or enter agent context, and a later manual rename
-wins. Naming gets one attempt per saved configuration revision and has no automatic
-retry.
+agent or user is never replaced. Both Kimi and native bridge sessions are named
+asynchronously once the first user message is available in server-backed history,
+even while that first turn runs. Empty sessions and unconfirmed drafts do not
+trigger naming. The request contains only the opening of the first user message,
+at most 400 characters. Generated titles never modify the remote session or enter
+agent context, and a later manual rename wins. Naming gets one attempt per saved
+configuration revision and has no automatic retry.
 
 ## Validation
 
@@ -212,6 +213,10 @@ retry.
 - `python3 -m unittest discover -s remote -p 'test_*.py'` covers bridge event
   normalization, Codex streaming summaries, authoritative completion, and hydration.
 - `scripts/build.sh` validates the complete macOS app.
+- `python3 scripts/check-naming-lifecycle.py` checks first-message receipt, naming
+  during a running turn, title protection, deduplication and persistence with
+  isolated preferences and a loopback Chat Completions fixture. The macOS `core`
+  functional group runs this check; no real credentials or remote agents are used.
 - `python3 scripts/check-summary-lifecycle.py` checks the production queue with
   injected responses and isolated preferences: stage continuity, unchanged wording,
   burst coalescing, stale responses, turn isolation, disconnect and disable. It

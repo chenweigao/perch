@@ -287,8 +287,7 @@ final class WorkbenchModel {
                 guard let self, let kimi, let conversation else { return }
                 let session = conversation.snapshot.session
                 self.considerNaming(reference: SessionReference(hostID: kimi.host.id, terminalID: session.id, kind: .kimi),
-                                    remoteTitle: session.title, messages: conversation.messages,
-                                    busy: session.isTurnRunning, turnCompleted: session.lastTurnReason == "completed", hasOlder: conversation.hasOlder)
+                                    remoteTitle: session.title, messages: conversation.messages, hasOlder: conversation.hasOlder)
             }
         }
         kimi.onConversationChanged?(kimi.conversation)
@@ -296,8 +295,7 @@ final class WorkbenchModel {
             Task { @MainActor in
                 guard let self, let native, let snapshot else { return }
                 self.considerNaming(reference: SessionReference(hostID: native.host.id, terminalID: snapshot.id, kind: snapshot.provider),
-                                    remoteTitle: snapshot.title, messages: snapshot.messages,
-                                    busy: snapshot.busy, turnCompleted: false, hasOlder: snapshot.hasOlder)
+                                    remoteTitle: snapshot.title, messages: snapshot.messages, hasOlder: snapshot.hasOlder)
             }
         }
         native.onSnapshotChanged?(native.snapshot)
@@ -1173,27 +1171,23 @@ final class WorkbenchModel {
         if namingInProgress.contains(reference.id) { return L("正在自动命名…") }
         if let error = namingErrors[reference.id] { return L("自动命名失败：\(error)") }
         guard namingExcerpt(for: reference) != nil else { return L("首条消息尚未加载；打开会话后会自动加载历史并命名。") }
-        return L("仅为占位标题自动命名；已有标题保持不变，Kimi 会等待本轮完成。")
+        return L("首条消息接收后即可为占位标题自动命名，无需等待本轮完成；已有标题保持不变。")
     }
     private func reconsiderNaming() {
         for kimi in kimiEnvironments.values {
             guard let conversation = kimi.conversation else { continue }
             let session = conversation.snapshot.session
             considerNaming(reference: SessionReference(hostID: kimi.host.id, terminalID: session.id, kind: .kimi),
-                           remoteTitle: session.title, messages: conversation.messages, busy: session.isTurnRunning,
-                           turnCompleted: session.lastTurnReason == "completed", hasOlder: conversation.hasOlder)
+                           remoteTitle: session.title, messages: conversation.messages, hasOlder: conversation.hasOlder)
         }
         for native in nativeEnvironments.values {
             guard let snapshot = native.snapshot else { continue }
             considerNaming(reference: SessionReference(hostID: native.host.id, terminalID: snapshot.id, kind: snapshot.provider),
-                           remoteTitle: snapshot.title, messages: snapshot.messages, busy: snapshot.busy,
-                           turnCompleted: false, hasOlder: snapshot.hasOlder)
+                           remoteTitle: snapshot.title, messages: snapshot.messages, hasOlder: snapshot.hasOlder)
         }
     }
-    private func considerNaming(reference: SessionReference, remoteTitle: String, messages: [KimiMessage],
-                                busy: Bool, turnCompleted: Bool, hasOlder: Bool) {
-        naming.consider(reference: reference, remoteTitle: remoteTitle, messages: messages,
-                        busy: busy, turnCompleted: turnCompleted, hasOlder: hasOlder,
+    private func considerNaming(reference: SessionReference, remoteTitle: String, messages: [KimiMessage], hasOlder: Bool) {
+        naming.consider(reference: reference, remoteTitle: remoteTitle, messages: messages, hasOlder: hasOlder,
                         mayName: { self.workspace.sessionTitles[reference.id] == nil && !self.workspace.autoNamedSessions.contains(reference.id) },
                         remoteTitleNow: { self.namingRemoteTitle(for: reference) },
                         loadHistory: { self.loadHistoryForNaming(reference, remoteTitle: remoteTitle) },

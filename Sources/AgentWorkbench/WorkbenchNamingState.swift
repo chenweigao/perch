@@ -27,8 +27,7 @@ final class WorkbenchNamingState {
                                                      excerpt: excerpt, language: language)
     }
 
-    func consider(reference: SessionReference, remoteTitle: String, messages: [KimiMessage],
-                  busy: Bool, turnCompleted: Bool, hasOlder: Bool,
+    func consider(reference: SessionReference, remoteTitle: String, messages: [KimiMessage], hasOlder: Bool,
                   mayName: @escaping () -> Bool, remoteTitleNow: @escaping () -> String?,
                   loadHistory: () -> Void, apply: @escaping (String) -> Void) {
         let settings = ActivitySummarySettings.shared
@@ -36,7 +35,6 @@ final class WorkbenchNamingState {
         guard configuration.enabled, configuration.nameSessions, configuration.isValid else { return }
         guard mayName(),
               namingAttempts[reference.id] != settings.revision else { return }
-        if reference.kind == .kimi { guard !busy, turnCompleted else { return } }
         if hasOlder { loadHistory(); return }
         guard let excerpt = SessionNaming.excerpt(from: messages, hasOlder: hasOlder),
               SessionNaming.isPlaceholder(remoteTitle, kind: reference.kind, firstUserText: excerpt) else { return }

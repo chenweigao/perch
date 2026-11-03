@@ -24,6 +24,7 @@ def macos_commands(group, out):
             ("version", [python, "scripts/check-version.py", "--app", "build/Perch.app"], 60),
             ("workbench", ["swift", "run", "--build-system", "native", "-c", "release", "--skip-build", "WorkbenchChecks"], 120),
             ("connections", ["swift", "run", "--build-system", "native", "-c", "release", "--skip-build", "ConnectionChecks"], 120),
+            ("naming-lifecycle", [python, "scripts/check-naming-lifecycle.py"], 600),
             ("composer", ["bash", "scripts/check-composer.sh"], 120),
             ("math-performance", ["bash", "scripts/check-math-performance.sh", str(out / "math-performance")], 600),
         ]
