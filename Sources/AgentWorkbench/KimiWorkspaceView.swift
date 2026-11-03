@@ -71,41 +71,30 @@ struct KimiWorkspaceView: View {
     /// edge as its safe-area bar.
     @ViewBuilder private func bottomBar(_ conversation: KimiConversation) -> some View {
         VStack(spacing: 0) {
-            if let problem = connection.actionError ?? connection.commandErrors[conversation.snapshot.session.id] ?? conversation.error {
-                ConversationNotice(text: problem, action: connection.snapshotReady ? nil : reloadAction)
+            if let problem = connection.actionError ?? connection.commandErrors[conversation.snapshot.session.id] ?? connection.error {
+                ConversationNotice(text: problem, action: !connection.online
+                    ? ConversationNotice.Action(title: L("重新连接")) { connection.connect() }
+                    : connection.snapshotReady ? nil : reloadAction)
+            } else if !connection.online {
+                ConversationNotice(text: L("连接中断，显示的是最近同步的内容。"), symbol: "wifi.exclamationmark",
+                                   action: ConversationNotice.Action(title: L("重新连接")) { connection.connect() })
             }
-            let pending = conversation.snapshot.pendingApprovals.count + conversation.snapshot.pendingQuestions.count
             let sessionID = conversation.snapshot.session.id
-            let recapKey = conversation.taskRecapRevision.map {
-                "\(connection.host.id):kimi:\(sessionID):\($0)"
-            }
-            let actions = ConversationActionContext(hostID: connection.host.id, kind: .kimi, sessionID: sessionID)
             let turn = SessionTurn(kimi: conversation.snapshot)
-            let activityProbe = PerfDiagnostics.begin()
-            let messages = conversation.displayMessages
-            let activity = ConversationActivity(
-                messages: messages, isRunning: turn.running,
-                liveTools: conversation.live?.runningTools ?? [], online: connection.online,
-                isThinking: conversation.live?.thinkingText.isEmpty == false && conversation.live?.assistantText.isEmpty != false,
-                isResponding: conversation.live?.assistantText.isEmpty == false,
-                pendingCount: pending, isStopping: connection.isStopping)
-            let _ = PerfDiagnostics.end("activity_derive", activityProbe, detail: "messages=\(messages.count)")
-            ConversationActivityBar(activity: activity, turn: turn,
-                timing: connection.timings.turns[sessionID],
-                online: connection.online, offlineDetail: connection.error, pendingCount: pending,
-                request: TurnRequest.kimi(approvals: conversation.snapshot.pendingApprovals,
-                                          questions: conversation.snapshot.pendingQuestions),
-                narrativeSession: "\(connection.host.id):kimi:\(sessionID)",
-                recapKey: recapKey,
-                recapMessages: { try await connection.recapMessages(for: sessionID) },
-                onReview: { activityReview += 1 }, onReconnect: { connection.connect() },
-                onDetails: { actions.post(.showTurnDetails) },
-                onChanges: { actions.post(.showChanges) },
-                onStall: { actions.post(.turnStalled(minutes: $0)) })
+            if turn.running {
+                let pending = conversation.snapshot.pendingApprovals.count + conversation.snapshot.pendingQuestions.count
+                let actions = ConversationActionContext(hostID: connection.host.id, kind: .kimi, sessionID: sessionID)
+                let activity = ConversationActivity(
+                    messages: conversation.displayMessages, isRunning: true,
+                    liveTools: conversation.live?.runningTools ?? [], online: connection.online,
+                    isThinking: conversation.live?.thinkingText.isEmpty == false && conversation.live?.assistantText.isEmpty != false,
+                    isResponding: conversation.live?.assistantText.isEmpty == false,
+                    pendingCount: pending, isStopping: connection.isStopping)
+                TurnStallMonitor(activity: activity) { actions.post(.turnStalled(minutes: $0)) }
+                    .id(sessionID)
+            }
+            KimiComposerView(connection: connection, sessionID: sessionID, onInput: onInput)
                 .id(sessionID)
-                .frame(maxWidth: kimiReadingWidth).padding(.horizontal, ReplyStyle.horizontalPadding).frame(maxWidth: .infinity, alignment: .center).padding(.top, 4)
-            KimiComposerView(connection: connection, sessionID: conversation.snapshot.session.id, onInput: onInput)
-                .id(conversation.snapshot.session.id)
         }
     }
 
@@ -383,12 +372,17 @@ private struct KimiTimeline<Bar: View>: View {
         return conversation.snapshot.session
     }
     var body: some View {
+        let pendingCount = connection.conversation.map { $0.snapshot.pendingApprovals.count + $0.snapshot.pendingQuestions.count } ?? 0
+        let waitingRequest = connection.conversation.flatMap {
+            TurnRequest.kimi(approvals: $0.snapshot.pendingApprovals, questions: $0.snapshot.pendingQuestions)
+        }
         ScrollViewReader { proxy in
             ConversationScrollView(showsScrollIndicator: !follow, onScroll: { if follow || $0 { ConversationReadingMemory.shared.seenRevision[readingKey] = readingRevision }; follow = $0; ConversationReadingMemory.shared.following[readingKey] = $0 }, onContentSizeChange: {
                 if ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }
             }, onNearTop: {
                 if ConversationReadingMemory.shared.following[readingKey] == false { connection.loadOlder() }
-            }, showsReturnToLatest: !follow, hasNewReply: hasNewReply, onReturnToLatest: {
+            }, showsReturnToLatest: !follow, hasNewReply: hasNewReply,
+               waitingRequest: waitingRequest, pendingCount: pendingCount, onReturnToLatest: {
                 follow = true
                 ConversationReadingMemory.shared.following[readingKey] = true
                 ConversationReadingMemory.shared.seenRevision[readingKey] = readingRevision
@@ -407,16 +401,26 @@ private struct KimiTimeline<Bar: View>: View {
                             }
                         }.font(.system(size: ReplyStyle.captionSize)).foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.vertical, 2)
                     }
+                    let sessionID = c.snapshot.session.id
+                    let isTurnRunning = c.snapshot.session.isTurnRunning
                     let running = Set((c.live?.runningTools ?? []).map(\.id))
-                    ConversationTranscript(messages: c.displayMessages, api: connection.api, sessionId: c.snapshot.session.id,
-                                           running: running, isRunning: c.snapshot.session.isTurnRunning,
+                    let recapKey: String? = isTurnRunning ? nil : c.taskRecapRevision.map { "\(connection.host.id):kimi:\(sessionID):\($0)" }
+                    let recapMessageID = ConversationActionContext.recapTargetID(in: c.displayMessages, recapKey: recapKey)
+                    let _ = TaskRecapStore.shared.registerMessages(for: recapKey) {
+                        try await connection.recapMessages(for: sessionID)
+                    }
+                    let planProgress = TurnStatus.Progress.live(in: c.displayMessages, isRunning: isTurnRunning)
+                    ConversationTranscript(messages: c.displayMessages, api: connection.api, sessionId: sessionID,
+                                           running: running, isRunning: isTurnRunning,
                                            liveTools: c.live?.runningTools ?? [], online: connection.online, memoryKey: readingKey,
                                            allowsActivitySummaries: true, allowsActivitySummaryRequests: connection.snapshotReady,
                                            followsLatest: follow, historyEpoch: c.snapshot.epoch,
                                            foldsProcess: true, waitsForInitialPosition: true,
-                                           timing: connection.timings.turns[c.snapshot.session.id])
+                                           timing: connection.timings.turns[sessionID],
+                                           planProgress: planProgress)
                         .environment(\.conversationActionContext,
-                                     ConversationActionContext(hostID: connection.host.id, kind: .kimi, sessionID: c.snapshot.session.id))
+                                     ConversationActionContext(hostID: connection.host.id, kind: .kimi, sessionID: sessionID,
+                                                               recapKey: recapKey, recapMessageID: recapMessageID))
                     ForEach(connection.pendingPrompts[c.snapshot.session.id] ?? []) { prompt in
                         PendingMessageContent(text: prompt.text, status: prompt.label) {
                             if ["queued", "blocked"].contains(prompt.status) && c.snapshot.session.isTurnRunning {

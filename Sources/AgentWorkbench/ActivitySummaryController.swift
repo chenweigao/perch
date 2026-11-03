@@ -245,6 +245,8 @@ enum TaskRecapState: Equatable {
     private var cache: TaskRecapCache
     private let file: TaskRecapFile
     private var tasks: [String: Task<Void, Never>] = [:]
+    private var messageProviders: [String: @MainActor () async throws -> [KimiMessage]] = [:]
+    private var providerOrder: [String] = []
     typealias Summarizer = (ActivitySummaryConfiguration, String, TaskRecapInput, String) async throws -> TaskRecapResult
     private let summarize: Summarizer
 
@@ -255,6 +257,20 @@ enum TaskRecapState: Equatable {
             try await TaskRecapClient().summarize(configuration: configuration, apiKey: apiKey,
                                                    input: input, language: language)
         }
+    }
+
+    func registerMessages(for key: String?, provider: (@MainActor () async throws -> [KimiMessage])?) {
+        guard let key, let provider else { return }
+        if messageProviders[key] == nil { providerOrder.append(key) }
+        messageProviders[key] = provider
+        while providerOrder.count > 64 {
+            let oldest = providerOrder.removeFirst()
+            messageProviders.removeValue(forKey: oldest)
+        }
+    }
+
+    func messages(for key: String) -> (@MainActor () async throws -> [KimiMessage])? {
+        messageProviders[key]
     }
 
     func state(for key: String) -> TaskRecapState {

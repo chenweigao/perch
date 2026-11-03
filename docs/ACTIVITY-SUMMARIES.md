@@ -1,9 +1,9 @@
 # Activity narrative and completed-task Recap
 
-Perch presents each turn as one activity narrative shared by the bottom activity
-bar and the historical process rows. The narrative answers three questions without
-requiring a second model call: what phase the agent is in, what it is working on,
-and whether that stage is still updating or final.
+Perch presents each turn as one activity narrative inline in the transcript's
+process rows and completed-turn fold headers. The narrative answers three questions
+without requiring a second model call: what phase the agent is in, what it is working
+on, and whether that stage is still updating or final.
 
 The source priority is fixed:
 
@@ -28,13 +28,12 @@ turn does not mount an unbounded view tree. That rendering split does not create
 new semantic stage or change its ID. A tool phase transition, provider summary, or
 explicit progress can open a new stage.
 
-While a stage is open, the bottom activity bar is the only owner of its full headline.
-The transcript removes the matching provider-summary or progress source row and keeps
-tool rows as evidence (action, target, and status) without repeating the headline.
-When the stage closes or another stage opens, its full headline is handed to exactly
-one stable transcript anchor; supporting tool rows remain evidence-only. Ownership is
-determined by stage and entry IDs, never by comparing rendered strings. After the turn
-ends, the bar says that the turn ended instead of repeating the final historical stage.
+While a stage is open, its anchor activity disclosure (`KimiActivityView`) displays
+its headline inline in the transcript and shimmers when progress arrives. When the
+stage closes or another stage opens, its full headline remains on that stable
+transcript anchor; supporting tool rows remain evidence-only. Ownership is determined
+by stage and entry IDs, never by comparing rendered strings. When the turn ends and
+folds its process, an external stage summary headline labels the `ProcessFoldRow`.
 
 Running, failed, missing-result, disconnected, and approval tools remain visible
 under the process disclosure. Expanding preserves source order across thoughts,
@@ -150,18 +149,16 @@ results.
 While the reader is away from the latest transcript position, already-published row
 text and ownership state (anchor, open, or closed) stay frozen; new rows may initialize.
 The deferred projection is published in one update when the reader returns to the
-latest position. The status line continues to show a short live narrative as its
-headline while the turn runs; the task panel's 本轮 section shows the full one with
-its phase and source.
+latest position.
 
 ## Completed-task Recap
 
 A completed Kimi or native-bridge task with no pending interaction exposes a compact
-**Recap** action on the status line's result (while it shows) and in the task panel's
-本轮 section of the open session. Generation starts only after the user opens that
-popover; it never runs for an active task or merely because historical sessions
-were loaded. The popover shows loading and retry states, a structured outcome, changes,
-validation, remaining work and next steps, plus copy and regenerate actions.
+**Recap** action alongside Copy at the bottom of the latest settled assistant reply in
+the transcript. Generation starts only after the user opens that popover; it never
+runs for an active task or merely because historical sessions were loaded. The popover
+shows loading and retry states, a structured outcome, changes, validation, remaining
+work and next steps, plus copy and regenerate actions.
 
 Recap reuses the configured OpenAI-compatible endpoint but is independent from the
 original Agent conversation. If the locally retained transcript is incomplete, Perch

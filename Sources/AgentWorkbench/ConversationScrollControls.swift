@@ -97,30 +97,51 @@ struct ConversationScrollObserver: NSViewRepresentable {
 struct ReturnToLatestButton: View {
     let isVisible: Bool
     var hasNewReply = false
+    var waitingRequest: TurnRequest? = nil
+    var pendingCount = 0
     let action: () -> Void
+    @UILocalization private var L
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hovered = false
+
+    private var waitingText: String? {
+        if let waitingRequest {
+            return waitingRequest.kind == .question
+                ? L("需要你回答：\(waitingRequest.text)")
+                : L("需要你确认：\(waitingRequest.text)")
+        }
+        if pendingCount > 0 { return L("等待你确认 · \(pendingCount) 项") }
+        return nil
+    }
+
     var body: some View {
         // Mount glass only when shown: opacity toggling can leave its pixels
         // invisible on macOS 27 while the accessibility hit target remains.
         if isVisible {
+            let waiting = waitingText
+            let showsLabel = waiting != nil || hasNewReply
             Button(action: action) {
                 HStack(spacing: 5) {
                     Image(systemName: "arrow.down")
-                    if hasNewReply { Text("有新内容") }
+                    if let waiting {
+                        Text(verbatim: waiting).lineLimit(1).truncationMode(.tail).frame(maxWidth: 320)
+                    } else if hasNewReply {
+                        Text("有新内容")
+                    }
                 }.font(.system(size: ReplyStyle.labelSize, weight: .medium))
-                    .padding(.horizontal, hasNewReply ? 12 : 0)
-                    .frame(width: hasNewReply ? nil : 32, height: 32)
+                    .foregroundStyle(waiting != nil ? Color.orange : Color.primary)
+                    .padding(.horizontal, showsLabel ? 12 : 0)
+                    .frame(width: showsLabel ? nil : 32, height: 32)
                     .workbenchFloatingSurface()
                     .overlay(Capsule().fill(hovered && isVisible ? WorkbenchTheme.Fill.hover : .clear))
-                    .overlay(Capsule().strokeBorder(WorkbenchTheme.Stroke.hairline))
+                    .overlay(Capsule().strokeBorder(waiting != nil ? Color.orange.opacity(0.45) : WorkbenchTheme.Stroke.hairline))
                     .shadow(color: .black.opacity(0.08), radius: 5, y: 2)
                     .contentShape(Capsule())
             }.buttonStyle(.plain).accessibilityIdentifier("return-to-latest")
-                .help(hasNewReply ? Text("有新内容，返回最新") : Text("返回最新"))
-                .accessibilityLabel(hasNewReply ? Text("有新内容，返回最新") : Text("返回最新"))
+                .help(waiting.map { Text(verbatim: $0) } ?? (hasNewReply ? Text("有新内容，返回最新") : Text("返回最新")))
+                .accessibilityLabel(waiting.map { Text(verbatim: $0) } ?? (hasNewReply ? Text("有新内容，返回最新") : Text("返回最新")))
                 .onHover { hovered = $0 }
-                .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: hasNewReply)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: showsLabel)
         }
     }
 }
@@ -128,10 +149,10 @@ struct ReturnToLatestButton: View {
 /// Keep transcript placement eager: native text caches bound repeated measurement,
 /// without SwiftUI lazy phase resolution or system-table accessibility traversal.
 ///
-/// `bar` (activity bar, notices and the composer) floats over the transcript's
-/// bottom edge as a safe-area bar: the reply scrolls beneath the composer glass
-/// with a soft fade, and the tail stops above the bar. A fixed top gutter keeps
-/// scrolled text away from the sheet's rounded top edge without an extra overlay.
+/// `bar` (notices and the composer) floats over the transcript's bottom edge as
+/// a safe-area bar: the reply scrolls beneath the composer glass with a soft fade,
+/// and the tail stops above the bar. A fixed top gutter keeps scrolled text away
+/// from the sheet's rounded top edge without an extra overlay.
 struct ConversationScrollView<Content: View, Bar: View>: View {
     var showsScrollIndicator = false
     var hasOlderHistory = false
@@ -140,6 +161,8 @@ struct ConversationScrollView<Content: View, Bar: View>: View {
     var onNearTop: () -> Void = {}
     var showsReturnToLatest = false
     var hasNewReply = false
+    var waitingRequest: TurnRequest? = nil
+    var pendingCount = 0
     var onReturnToLatest: (() -> Void)? = nil
     let content: Content
     let bar: Bar
@@ -149,6 +172,7 @@ struct ConversationScrollView<Content: View, Bar: View>: View {
     init(showsScrollIndicator: Bool = false, hasOlderHistory: Bool = false,
          onScroll: @escaping (Bool) -> Void = { _ in }, onContentSizeChange: @escaping () -> Void = {},
          onNearTop: @escaping () -> Void = {}, showsReturnToLatest: Bool = false, hasNewReply: Bool = false,
+         waitingRequest: TurnRequest? = nil, pendingCount: Int = 0,
          onReturnToLatest: (() -> Void)? = nil,
          @ViewBuilder content: () -> Content, @ViewBuilder bar: () -> Bar) {
         self.showsScrollIndicator = showsScrollIndicator
@@ -158,6 +182,8 @@ struct ConversationScrollView<Content: View, Bar: View>: View {
         self.onNearTop = onNearTop
         self.showsReturnToLatest = showsReturnToLatest
         self.hasNewReply = hasNewReply
+        self.waitingRequest = waitingRequest
+        self.pendingCount = pendingCount
         self.onReturnToLatest = onReturnToLatest
         self.content = content()
         self.bar = bar()
@@ -202,7 +228,9 @@ struct ConversationScrollView<Content: View, Bar: View>: View {
                 Spacer(minLength: 0)
             }.padding(.bottom, 6)
             if let onReturnToLatest {
-                ReturnToLatestButton(isVisible: showsReturnToLatest, hasNewReply: hasNewReply, action: onReturnToLatest)
+                ReturnToLatestButton(isVisible: showsReturnToLatest, hasNewReply: hasNewReply,
+                                     waitingRequest: waitingRequest, pendingCount: pendingCount,
+                                     action: onReturnToLatest)
                     .padding(.bottom, 8)
             }
         }.frame(maxWidth: .infinity)
@@ -222,10 +250,12 @@ extension ConversationScrollView where Bar == EmptyView {
     init(showsScrollIndicator: Bool = false, hasOlderHistory: Bool = false,
          onScroll: @escaping (Bool) -> Void = { _ in }, onContentSizeChange: @escaping () -> Void = {},
          onNearTop: @escaping () -> Void = {}, showsReturnToLatest: Bool = false, hasNewReply: Bool = false,
+         waitingRequest: TurnRequest? = nil, pendingCount: Int = 0,
          onReturnToLatest: (() -> Void)? = nil, @ViewBuilder content: () -> Content) {
         self.init(showsScrollIndicator: showsScrollIndicator, hasOlderHistory: hasOlderHistory,
                   onScroll: onScroll, onContentSizeChange: onContentSizeChange, onNearTop: onNearTop,
                   showsReturnToLatest: showsReturnToLatest, hasNewReply: hasNewReply,
+                  waitingRequest: waitingRequest, pendingCount: pendingCount,
                   onReturnToLatest: onReturnToLatest, content: content, bar: { EmptyView() })
     }
 }

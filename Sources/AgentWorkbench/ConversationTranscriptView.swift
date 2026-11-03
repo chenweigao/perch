@@ -260,6 +260,8 @@ struct ConversationTranscript: View {
     /// The connection's clock for the latest turn; its duration labels that turn's
     /// process fold once this view has watched the turn end.
     var timing: ConversationTiming? = nil
+    /// Active Todo plan progress for the live stage header in a running turn.
+    var planProgress: TurnStatus.Progress? = nil
     @Environment(\.conversationPresentations) private var presentations
     @State private var presentation = ConversationPresentationHandle()
     @ObservedObject private var summarySettings = ActivitySummarySettings.shared
@@ -288,14 +290,17 @@ struct ConversationTranscript: View {
         let foldParents = presented.foldParents
         let clock = ConversationProcessClock.shared
         let _ = clock.observe(session: sessionId, rows: presented.rows, isRunning: isRunning, timing: timing)
+        let liveActivityID = isRunning ? ConversationProcessClock.lastActivityOfLatestTurn(presented.rows) : nil
         // A streaming thought reads in place ("思考中 · 12秒", four lines that follow
-        // the stream) and settles into "已思考 12秒" once done; the status line
-        // keeps only the phase.
+        // the stream) and settles into "已思考 12秒" once done; the live activity
+        // header carries the stage headline, plan progress and elapsed clock.
         let contents = presented.rows.map { row in
-            ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
+            let isLiveActivity = row.entry.id == liveActivityID
+            return ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
                 memoryKey: key + ":" + row.entry.id, activityNarrative: row.activity, foldedRows: row.foldedRows,
                 processSeconds: clock.seconds(session: sessionId, entry: row.entry),
-                liveSince: clock.liveStart(session: sessionId, entry: row.entry))
+                liveSince: isLiveActivity ? (timing?.startedAt ?? clock.turnStart(session: sessionId)) : clock.liveStart(session: sessionId, entry: row.entry),
+                planProgress: isLiveActivity ? planProgress : nil)
         }
         let _ = PerfDiagnostics.end("snapshot_projection", projectionProbe,
                                     detail: "messages=\(messages.count) rows=\(contents.count)")
@@ -1846,6 +1851,9 @@ private final class ConversationEntryController: NSViewController {
                 } else {
                     if let host { host.view.removeFromSuperview(); host.removeFromParent(); self.host = nil }
                     if nativeAssistant == nil {
+                        if NativeAssistantMessageView.makeRecapButton == nil {
+                            NativeAssistantMessageView.makeRecapButton = { AnyView(RecapActionButton(key: $0)) }
+                        }
                         nativeAssistant = NativeAssistantMessageView.acquire()
                         if isViewLoaded { view.addSubview(nativeAssistant!) }
                     }
@@ -2010,6 +2018,9 @@ private struct AssistantEntryActions: View {
                             .frame(width: 24, height: 24).contentShape(Rectangle())
                     }.buttonStyle(.plain).foregroundStyle(.secondary).help("重新生成（重发上一条提问）")
                         .accessibilityLabel("重新生成")
+                    if let recapKey = context.recapKey, context.recapMessageID == messageID {
+                        RecapActionButton(key: recapKey)
+                    }
                 }
             }
         }
@@ -2117,8 +2128,10 @@ private struct ConversationEntryView: View, Equatable {
     var foldedRows: [ConversationPresentationModel.Row]? = nil
     /// How long this thought streamed, or this fold's turn took, as watched here.
     var processSeconds: TimeInterval? = nil
-    /// When this app first saw a thought that is still streaming.
+    /// When this app first saw a thought or live stage that is still streaming.
     var liveSince: Date? = nil
+    /// Active plan progress for the live stage header in a running turn.
+    var planProgress: TurnStatus.Progress? = nil
     @RememberedExpansion("commentary") private var commentaryExpanded
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.entry == rhs.entry && lhs.tools == rhs.tools && lhs.api === rhs.api
@@ -2127,6 +2140,7 @@ private struct ConversationEntryView: View, Equatable {
             && lhs.markdownPreparation == rhs.markdownPreparation
             && lhs.foldedRows == rhs.foldedRows
             && lhs.processSeconds == rhs.processSeconds && lhs.liveSince == rhs.liveSince
+            && lhs.planProgress == rhs.planProgress
     }
     var isProgressNote: Bool {
         guard let activityNarrative else { return false }
@@ -2144,8 +2158,8 @@ private struct ConversationEntryView: View, Equatable {
                 case .activity:
                     KimiActivityView(entry: entry, tools: tools, api: api, sessionId: sessionId,
                                      narrative: activityNarrative.flatMap {
-                                         $0.isAnchor && $0.stageClosed ? $0.narrative : nil
-                                     })
+                                         $0.isAnchor ? $0.narrative : nil
+                                     }, liveSince: liveSince, planProgress: planProgress)
                 case .commentary:
                     DisclosureGroup("此前的进度说明 · \(entry.messages.count) 条", isExpanded: $commentaryExpanded) {
                         if commentaryExpanded { VStack(alignment: .leading, spacing: ReplyStyle.entryPartSpacing) {
@@ -2209,6 +2223,7 @@ struct ProcessFoldRow: View {
     @UILocalization private var L
     @Environment(\.locale) private var locale
     @Environment(\.conversationMemoryKey) private var memoryKey
+    @Environment(\.conversationActionContext) private var actionContext
     @RememberedExpansion("process-fold") private var expanded
     @Environment(\.conversationDisclosureWillChange) private var disclosureWillChange
     @State private var pageRevision = 0
@@ -2234,6 +2249,9 @@ struct ProcessFoldRow: View {
         SessionEditStats.derive(from: rows.flatMap(\.entry.messages)).map {
             (files: $0.perFile.count, additions: $0.total.additions, deletions: $0.total.deletions)
         }
+    }
+    private var externalHeadline: String? {
+        rows.lazy.compactMap { $0.activity?.narrative }.last { $0.source == .external && !$0.headline.isEmpty }?.headline
     }
     var body: some View {
         DisclosureGroup(isExpanded: $expanded) {
@@ -2265,9 +2283,13 @@ struct ProcessFoldRow: View {
             // Secondary ink at regular weight, like the live process rows it replaces.
             HStack(spacing: 7) {
                 Image(systemName: "list.bullet.rectangle").accessibilityHidden(true)
-                Text("思考与工具")
+                if let externalHeadline {
+                    Text(verbatim: externalHeadline).lineLimit(1).truncationMode(.tail)
+                } else {
+                    Text("思考与工具")
+                }
                 Text(toolCalls > 0 ? L("\(toolCalls) 次调用") : L("\(rows.count) 条记录"))
-                if let editStat {
+                if let editStat, actionContext == nil {
                     Text(L("· \(editStat.files) 个文件 +\(editStat.additions) −\(editStat.deletions)"))
                         .monospacedDigit()
                 }
@@ -2282,6 +2304,21 @@ struct ProcessFoldRow: View {
             }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(.secondary)
         }.disclosureGroupStyle(ProcessDisclosureStyle())
             .accessibilityValue(Text(expanded ? "已展开" : "已收起"))
+            .overlay(alignment: .topTrailing) {
+                if let editStat, let actionContext {
+                    Button { actionContext.post(.showChanges) } label: {
+                        HStack(spacing: 5) {
+                            Text(L("\(editStat.files) 个文件")).foregroundStyle(.secondary)
+                            EditStatText(stat: SessionEditStat(additions: editStat.additions, deletions: editStat.deletions))
+                        }
+                            .font(.system(size: ReplyStyle.captionSize))
+                            .padding(.horizontal, 4).frame(height: 28).contentShape(Rectangle())
+                    }.buttonStyle(WorkbenchDisclosureButtonStyle())
+                        .help(Text("查看改动：本轮改了 \(editStat.files) 个文件"))
+                        .accessibilityLabel(Text("查看改动"))
+                        .accessibilityValue(Text(verbatim: L("本轮改了 \(editStat.files) 个文件") + " +\(editStat.additions) −\(editStat.deletions)"))
+                }
+            }
     }
 }
 
@@ -2294,6 +2331,9 @@ struct ProcessFoldRow: View {
 @MainActor final class ConversationProcessClock {
     static let shared = ConversationProcessClock()
     private var starts: [String: Date] = [:]
+    private var turnStarts: [String: Date] = [:]
+    private var toolStarts: [String: Date] = [:]
+    private var liveTools: [String: Set<String>] = [:]
     /// By entry id ("thinking:<message>:<offset>") and by message id, for
     /// thoughts that render inside a process group without their entry.
     private var thoughts: [String: TimeInterval] = [:]
@@ -2308,8 +2348,26 @@ struct ProcessFoldRow: View {
     func observe(session: String, rows: [ConversationPresentationModel.Row], isRunning: Bool,
                  timing: ConversationTiming?, now: Date = Date()) {
         var liveNow: [String: String] = [:]
-        for row in rows where row.entry.presentation == .thinkingPreview {
-            liveNow[row.entry.id] = row.entry.messages.first?.id
+        var runningToolsNow: Set<String> = []
+        for row in rows {
+            if row.entry.presentation == .thinkingPreview {
+                liveNow[row.entry.id] = row.entry.messages.first?.id
+            }
+            if isRunning {
+                for tool in row.tools.values where tool.status == .running {
+                    runningToolsNow.insert(tool.id)
+                }
+            }
+        }
+        let previousTools = liveTools[session] ?? []
+        if previousTools != runningToolsNow {
+            for id in runningToolsNow.subtracting(previousTools) where toolStarts[key(session, id)] == nil {
+                toolStarts[key(session, id)] = now
+            }
+            for id in previousTools.subtracting(runningToolsNow) {
+                toolStarts.removeValue(forKey: key(session, id))
+            }
+            liveTools[session] = runningToolsNow.isEmpty ? nil : runningToolsNow
         }
         let previous = live[session] ?? []
         let current = Set(liveNow.keys)
@@ -2333,6 +2391,11 @@ struct ProcessFoldRow: View {
         }
         let wasRunning = running[session] ?? false
         running[session] = isRunning
+        if isRunning && !wasRunning {
+            turnStarts[session] = timing?.startedAt ?? now
+        } else if !isRunning {
+            turnStarts.removeValue(forKey: session)
+        }
         // Only a turn this view saw finish takes the connection's clock, so a
         // stale clock from an earlier turn never labels a later one.
         guard wasRunning, !isRunning, let timing, !timing.observedOnly, let end = timing.endedAt,
@@ -2354,8 +2417,19 @@ struct ProcessFoldRow: View {
         entry.presentation == .thinkingPreview ? starts[key(session, entry.id)] : nil
     }
 
+    func turnStart(session: String) -> Date? { turnStarts[session] }
+
+    func toolStart(session: String, toolID: String) -> Date? { toolStarts[key(session, toolID)] }
+
     func thoughtSeconds(session: String, message: String) -> TimeInterval? {
         thoughts[key(session, "message:" + message)]
+    }
+
+    static func lastActivityOfLatestTurn(_ rows: [ConversationPresentationModel.Row]) -> String? {
+        let prompt = rows.lastIndex { $0.entry.presentation == .message && $0.entry.messages.first?.isUserPrompt == true }
+        let start = prompt.map { $0 + 1 } ?? 0
+        guard start < rows.count else { return nil }
+        return rows[start...].last { $0.entry.presentation == .activity }?.entry.id
     }
 
     private static func firstFoldOfLatestTurn(_ rows: [ConversationPresentationModel.Row]) -> String? {

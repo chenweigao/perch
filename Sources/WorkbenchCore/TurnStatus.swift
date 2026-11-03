@@ -73,6 +73,14 @@ public struct TurnStatus: Equatable, Sendable {
     public struct Progress: Equatable, Sendable {
         public let done: Int
         public let total: Int
+        public init(done: Int, total: Int) { self.done = done; self.total = total }
+        public static func live(in messages: [KimiMessage], isRunning: Bool) -> Self? {
+            guard isRunning else { return nil }
+            let start = messages.lastIndex(where: \.isUserPrompt) ?? 0
+            let todos = ConversationTodo.floating(in: Array(messages.dropFirst(start)), isRunning: true)
+            guard !todos.isEmpty else { return nil }
+            return Self(done: todos.filter { $0.status == .done }.count, total: todos.count)
+        }
     }
 
     /// This turn's edit churn from its own edit-class tool calls, the figure the
