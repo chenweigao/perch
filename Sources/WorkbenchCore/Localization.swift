@@ -47,7 +47,6 @@ public func L(_ value: String.LocalizationValue, locale: Locale = AppLanguage.cu
 /// Label dynamic keys explicitly so interpolated literals retain placeholders.
 public func L(key: String) -> String { L(String.LocalizationValue(key)) }
 
-
 // Resource bundles are immutable; resolve the user's language on each call above.
 private enum LocalizationBundles {
     static let values: [String: Bundle] = Dictionary(uniqueKeysWithValues:

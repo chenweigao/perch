@@ -22,12 +22,12 @@ func checkConversationPresentationModel() throws {
             : ["type": "thinking", "thinking": "检查构建结果"]
         return try KimiWire.decoder().decode([KimiMessage].self,
             from: JSONSerialization.data(withJSONObject: [
-                ["id": "shell-user", "role": "user", "content": [["type": "text", "text": "验证构建"]]],
-                ["id": "shell-call", "role": "assistant", "content": [
+                ["id": "shell-user", "role": "user", "created_at": "", "content": [["type": "text", "text": "验证构建"]]],
+                ["id": "shell-call", "role": "assistant", "created_at": "", "content": [
                     thought,
                     ["type": "tool_use", "tool_call_id": "shell", "tool_name": "Bash",
                      "input": ["command": "cd '/project with spaces' && env MODE=ci bash -lc 'swift build && swift test'"]]]],
-                ["id": "shell-result", "role": "tool", "content": [
+                ["id": "shell-result", "role": "tool", "created_at": "", "content": [
                     ["type": "tool_result", "tool_call_id": "shell", "output": output]]]
             ] as [[String: Any]]))
     }
