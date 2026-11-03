@@ -80,17 +80,17 @@ struct KimiWorkspaceView: View {
                 "\(connection.host.id):kimi:\(sessionID):\($0)"
             }
             let actions = ConversationActionContext(hostID: connection.host.id, kind: .kimi, sessionID: sessionID)
+            let turn = SessionTurn(kimi: conversation.snapshot)
             let activityProbe = PerfDiagnostics.begin()
             let messages = conversation.displayMessages
             let activity = ConversationActivity(
-                messages: messages, isRunning: conversation.snapshot.session.isTurnRunning,
+                messages: messages, isRunning: turn.running,
                 liveTools: conversation.live?.runningTools ?? [], online: connection.online,
                 isThinking: conversation.live?.thinkingText.isEmpty == false && conversation.live?.assistantText.isEmpty != false,
                 isResponding: conversation.live?.assistantText.isEmpty == false,
                 pendingCount: pending, isStopping: connection.isStopping)
             let _ = PerfDiagnostics.end("activity_derive", activityProbe, detail: "messages=\(messages.count)")
-            ConversationActivityBar(activity: activity,
-                isRunning: conversation.snapshot.session.isTurnRunning,
+            ConversationActivityBar(activity: activity, turn: turn,
                 timing: connection.timings.turns[sessionID],
                 online: connection.online, offlineDetail: connection.error, pendingCount: pending,
                 request: TurnRequest.kimi(approvals: conversation.snapshot.pendingApprovals,

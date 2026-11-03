@@ -38,6 +38,7 @@ struct ProtocolTests {
         try checkConversationTodos()
         try checkConversationActivity()
         try checkTurnStatus()
+        try checkSessionTurn()
         try checkTaskContextFiles()
         checkTaskContextDetail()
         checkConversationTiming()

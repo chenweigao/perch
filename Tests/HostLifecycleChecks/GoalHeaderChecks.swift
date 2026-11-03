@@ -8,7 +8,7 @@ import WorkbenchCore
     let goal = KimiGoal(objective: objective, status: "active", turnsUsed: 12, tokensUsed: 48320)
     var controls: [String] = []
     var measuredHeight: CGFloat = 0
-    let bar = GoalHeaderBar(goal: goal, isRunning: true, isStale: false, controlsEnabled: true) { controls.append($0) }
+    let bar = GoalHeaderBar(goal: goal, turn: .running, isStale: false, controlsEnabled: true) { controls.append($0) }
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { measuredHeight = $0 }
     let host = NSHostingView(rootView: bar.frame(maxHeight: .infinity, alignment: .top).environment(\.locale, Locale(identifier: "zh-Hans")))
     let window = NSWindow(contentRect: NSRect(x: 60, y: 80, width: 720, height: 360), styleMask: [.titled], backing: .buffered, defer: false)
@@ -46,7 +46,7 @@ import WorkbenchCore
         ("offline-narrow", "active", true, true, 420.0)
     ] {
         let preview = GoalHeaderBar(goal: KimiGoal(objective: objective, status: state, turnsUsed: 12, tokensUsed: 48320),
-                                    isRunning: running, isStale: stale, controlsEnabled: true, onControl: { _ in })
+                                    turn: running ? .running : .idle, isStale: stale, controlsEnabled: true, onControl: { _ in })
             .frame(width: width).environment(\.locale, Locale(identifier: "zh-Hans"))
         let layoutHost = NSHostingView(rootView: preview)
         window.contentView = layoutHost
@@ -58,20 +58,22 @@ import WorkbenchCore
     // The header sits above the transcript: a turn starting or ending must not
     // change its height when the running indicator replaces the waiting label.
     // A one-line objective lets the status column, not the text, set the height.
-    for running in [true, false] {
+    // Waiting for the reader and a failed turn replace the label, never the height.
+    for (name, turn) in [("short-running", SessionTurn.State.running), ("short-waiting", .idle),
+                         ("short-reader", .waiting), ("short-failed", .failed)] {
         let preview = GoalHeaderBar(goal: KimiGoal(objective: "整理阅读画布", status: "active", turnsUsed: 1, tokensUsed: 900),
-                                    isRunning: running, isStale: false, controlsEnabled: true, onControl: { _ in })
+                                    turn: turn, isStale: false, controlsEnabled: true, onControl: { _ in })
             .frame(width: 720).environment(\.locale, Locale(identifier: "zh-Hans"))
         let layoutHost = NSHostingView(rootView: preview)
         window.contentView = layoutHost
         window.setContentSize(NSSize(width: 720, height: 200))
         try await Task.sleep(for: .milliseconds(100))
-        wideHeights[running ? "short-running" : "short-waiting"] = layoutHost.fittingSize.height
+        wideHeights[name] = layoutHost.fittingSize.height
     }
     let reference = wideHeights["running"]!
     precondition(wideHeights.filter { !$0.key.hasPrefix("short") }.values.allSatisfy { abs($0 - reference) < 0.5 },
                  "Goal header height changes with run state: \(wideHeights)")
-    precondition(abs(wideHeights["short-running"]! - wideHeights["short-waiting"]!) < 0.5,
-                 "Short goal header height changes when a turn starts: \(wideHeights)")
+    precondition(["short-waiting", "short-reader", "short-failed"].allSatisfy { abs(wideHeights["short-running"]! - wideHeights[$0]!) < 0.5 },
+                 "Short goal header height changes with the turn: \(wideHeights)")
     print("PASS: goal header disclosure, direct pause, compact running/paused/complete/stale layouts, run-state-independent height")
 }

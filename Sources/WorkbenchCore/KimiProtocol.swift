@@ -121,6 +121,7 @@ public struct KimiSession: Decodable, Identifiable, Equatable, Sendable {
     public var status: String {
         if pendingInteraction == "approval" { return L("等待确认") }
         if pendingInteraction == "question" { return L("等待回答") }
+        if SessionTurn(kimi: self).pending { return L("等你处理") }
         if isTurnRunning { return L("运行中") }
         if lastTurnReason == "failed" { return L("出错") }
         return L("就绪")

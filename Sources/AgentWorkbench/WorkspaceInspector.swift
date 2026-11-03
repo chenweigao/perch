@@ -127,6 +127,9 @@ struct ChangesInspectorView: View {
     @State private var refresh = 0
     /// The file the reader chose; it stays selected across refreshes.
     @State private var preferredPath: String?
+    /// Working-tree entries the latest turn edited (repository-relative), read
+    /// with each status load: the status line's +a −d counts these files.
+    @State private var turnPaths: Set<String> = []
 
     private var browser: RemoteFileBrowser { model.changesBrowser }
     private var item: WorkspaceSession? { model.showDashboard ? nil : model.selectedItem }
@@ -157,13 +160,22 @@ struct ChangesInspectorView: View {
                 browser.loadGitStatus()
             }
             .workbenchHostedTask(id: item?.reference) { preferredPath = nil }
-            .workbenchHostedTask(id: browser.gitStatus) { selectDefaultEntry() }
+            .workbenchHostedTask(id: browser.gitStatus) { refreshTurnPaths(); selectDefaultEntry() }
             .workbenchHostedTask(id: browser.loading) { selectDefaultEntry() }
     }
 
+    /// This turn's files first, then the rest of the working tree in Git's order.
     private var entries: [RemoteGitEntry] {
-        if case .changes(_, _, let entries) = browser.gitStatus { return entries }
-        return []
+        guard case .changes(_, _, let entries) = browser.gitStatus else { return [] }
+        return entries.filter { turnPaths.contains($0.path) } + entries.filter { !turnPaths.contains($0.path) }
+    }
+    private func refreshTurnPaths() {
+        guard let item, let root = browser.gitStatus?.root, let edits = model.latestTurnEdits(item.reference) else {
+            if !turnPaths.isEmpty { turnPaths = [] }
+            return
+        }
+        let next = TurnEditPaths.relative(edits.paths, directory: edits.directory, root: root)
+        if next != turnPaths { turnPaths = next }
     }
 
     private var header: some View {
@@ -190,7 +202,9 @@ struct ChangesInspectorView: View {
 
     private var summary: String {
         switch browser.gitStatus {
-        case .changes(_, _, let entries): return L("\(entries.count) 个文件")
+        case .changes(_, _, let entries):
+            let turn = entries.filter { turnPaths.contains($0.path) }.count
+            return turn > 0 ? L("\(entries.count) 个文件 · 本轮 \(turn)") : L("\(entries.count) 个文件")
         case .clean: return L("没有未提交的改动")
         case .notARepository, nil: return L("改动")
         }
@@ -212,7 +226,7 @@ struct ChangesInspectorView: View {
                 notice(L("所选目录不是可用的 Git 工作树。"), symbol: "questionmark.folder")
             case .clean:
                 notice(L("所选工作树干净，没有未提交的改动。"), symbol: "checkmark.circle")
-            case .changes(_, _, let entries):
+            case .changes:
                 VStack(spacing: 0) {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 1) {
@@ -235,6 +249,13 @@ struct ChangesInspectorView: View {
                 Image(systemName: symbol(for: entry)).foregroundStyle(.secondary).frame(width: 16)
                 Text((entry.path as NSString).lastPathComponent).font(.system(size: WorkbenchTheme.Typography.body))
                     .lineLimit(1).truncationMode(.middle)
+                if turnPaths.contains(entry.path) {
+                    // The same tag the task panel gives files this turn wrote.
+                    Text("本轮").font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet)
+                        .padding(.horizontal, 6).frame(minHeight: 18)
+                        .background(WorkbenchTheme.Fill.surface, in: Capsule())
+                        .help("本轮 Agent 编辑过这个文件")
+                }
                 Spacer(minLength: 0)
                 Text(entry.untracked ? "?" : String(entry.worktreeStatus == " " ? entry.indexStatus : entry.worktreeStatus))
                     .font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium)).foregroundStyle(.tertiary)

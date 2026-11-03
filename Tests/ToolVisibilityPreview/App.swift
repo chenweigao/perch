@@ -151,7 +151,8 @@ private struct ToolPreview: View {
                                                                    liveTools: !qualityPreview && !processPreview && !thoughtPreview && !native && phase < 2 ? live : [],
                                                                    running: qualityPreview ? ["quality-wait"] : processPreview ? ["process-live"] : !thoughtPreview && native && phase < 2 ? ["read-1"] : [],
                                                                    online: phase != 5, isThinking: !processPreview && phase == 0, pendingCount: !processPreview && phase == 7 ? 1 : 0),
-                                    isRunning: processPreview || thoughtPreview || phase < 3, timing: processPreview ? nil : timing, online: phase != 5,
+                                    turn: SessionTurn(running: processPreview || thoughtPreview || phase < 3, pending: !processPreview && phase == 7),
+                                    timing: processPreview ? nil : timing, online: phase != 5,
                                     pendingCount: !processPreview && phase == 7 ? 1 : 0,
                                     narrativeSession: qualityPreview ? "summary-quality-fixture" : nil, onReview: { showApproval = true })
             Text("无远端连接、无真实消息、无审批按钮；独立 bundle ID 与状态目录。").font(.caption).foregroundStyle(.secondary)

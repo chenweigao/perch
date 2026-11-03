@@ -477,8 +477,8 @@ final class KimiConnection {
         guard token == generation else { throw CancellationError() }
         var clocks = timings
         for session in all {
-            clocks.observe(sessionID: session.id, running: session.isTurnRunning,
-                           waiting: ["approval", "question"].contains(session.pendingInteraction ?? ""))
+            let turn = SessionTurn(kimi: session)
+            clocks.observe(sessionID: session.id, running: turn.running, waiting: turn.pending)
         }
         if clocks != timings { timings = clocks }
         if sessions != all { sessions = all; onSessionsChanged?() }
@@ -584,9 +584,9 @@ final class KimiConnection {
             return
         }
         if conversation != nil { conversation?.reconcile(value) } else { conversation = KimiConversation(value) }
+        let turn = SessionTurn(kimi: value)
         timings.observe(sessionID: id, turnID: value.inFlightTurn.map { String($0.turnId) },
-                        requestID: value.inFlightTurn?.currentPromptId, running: value.session.isTurnRunning,
-                        waiting: !value.pendingApprovals.isEmpty || !value.pendingQuestions.isEmpty)
+                        requestID: value.inFlightTurn?.currentPromptId, running: turn.running, waiting: turn.pending)
         // Catalog observers may select another session synchronously. Publish this
         // snapshot's state before notifying them, never after their new selection.
         snapshotReady = true; loading = false

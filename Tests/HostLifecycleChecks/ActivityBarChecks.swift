@@ -8,6 +8,8 @@ import WorkbenchCore
     var width: CGFloat = 720
     var reviews = 0
     var reconnects = 0
+    var details = 0
+    var changes = 0
     var barFrame = CGRect.zero
 }
 
@@ -32,11 +34,13 @@ private struct ActivityBarCheckFixture: View {
                     ForEach(0..<60, id: \.self) { index in Text(verbatim: "正文第 \(index) 行 reading position stays put.") }
                 }.frame(maxWidth: .infinity, alignment: .leading)
             }
-            ConversationActivityBar(activity: phase.activity, isRunning: phase.running, timing: phase.timing,
+            ConversationActivityBar(activity: phase.activity, turn: SessionTurn(running: phase.running, pending: phase.pending > 0),
+                                    timing: phase.timing,
                                     online: phase.online,
                                     offlineDetail: phase.online ? nil : "ssh: connect to host fixture.invalid: Network is unreachable",
                                     pendingCount: phase.pending,
-                                    onReview: { state.reviews += 1 }, onReconnect: { state.reconnects += 1 })
+                                    onReview: { state.reviews += 1 }, onReconnect: { state.reconnects += 1 },
+                                    onDetails: { state.details += 1 }, onChanges: { state.changes += 1 })
                 .frame(width: state.width)
                 .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("activity-check")) } action: { state.barFrame = $0 }
             Color.secondary.opacity(0.15).frame(height: 64)
@@ -159,10 +163,25 @@ private struct ActivityBarCheckFixture: View {
             }
         }
     }
+    // The line itself is a button behind its text: a click on the (shimmering)
+    // title opens the task panel, or the pending card while waiting.
+    window.appearance = NSAppearance(named: .aqua)
+    state.width = 720
+    for (name, expectsDetails) in [("running", true), ("ended", true), ("pending", false)] {
+        let details = state.details, reviews = state.reviews
+        state.phase = name
+        try await Task.sleep(for: .milliseconds(150))
+        host.layoutSubtreeIfNeeded()
+        click(CGPoint(x: state.barFrame.minX + 60, y: state.barFrame.midY))
+        try await Task.sleep(for: .milliseconds(150))
+        precondition(state.details == details + (expectsDetails ? 1 : 0) && state.reviews == reviews + (expectsDetails ? 0 : 1),
+                     "A click on the \(name) line must reach the line: details \(state.details - details), reviews \(state.reviews - reviews)")
+    }
+    precondition(state.changes == 0, "Only the +a −d button opens the changes page")
     // A session this client never watched run has nothing to say and takes no space.
     state.phase = "idle"
     try await Task.sleep(for: .milliseconds(200))
     host.layoutSubtreeIfNeeded()
     precondition(state.barFrame.height < 0.5, "An idle status line must take no space: \(state.barFrame.height)pt")
-    print("PASS: idle status line takes no space; activity bar keeps one height and the reading viewport across running/pending/offline/stopping/failed/ended, wide/narrow, light/dark; pending review and reconnect actions respond")
+    print("PASS: status line clicks reach the line through its title; idle status line takes no space; activity bar keeps one height and the reading viewport across running/pending/offline/stopping/failed/ended, wide/narrow, light/dark; pending review and reconnect actions respond")
 }

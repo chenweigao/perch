@@ -534,20 +534,23 @@ final class WorkbenchModel {
     private func rebuildCatalog() {
         let conversations = kimiEnvironments.values.flatMap { kimi in kimi.sessions.map { session in
             let reference = SessionReference(hostID: kimi.host.id, terminalID: session.id, kind: .kimi)
-            let section = workspace.kimiSection(session, on: kimi.host.id)
+            let turn = SessionTurn(kimi: session)
+            let section = turn.section(reviewed: workspace.reviewedKimiUpdates[reference.id])
             return WorkspaceSession(reference: reference,
                 title: workspace.displayTitle(session.displayTitle, for: reference), directory: session.cwd, hostName: kimi.host.name,
                 detail: section == .review ? L("Kimi · 结果待查看") : "Kimi · \(session.status)", online: kimi.online,
-                section: section, canMarkReviewed: section == .review, archived: archiveOverrides[reference.id] ?? (session.archived == true), updatedAt: sessionDateParser.date(from: session.updatedAt)?.timeIntervalSince1970 ?? 0)
+                section: section, canMarkReviewed: section == .review, archived: archiveOverrides[reference.id] ?? (session.archived == true), updatedAt: sessionDateParser.date(from: session.updatedAt)?.timeIntervalSince1970 ?? 0,
+                turn: turn)
         }
         }
         let agents = nativeEnvironments.values.flatMap { native in native.sessions.map { session in
             let reference = SessionReference(hostID: native.host.id, terminalID: session.id, kind: session.provider)
-            let review = session.completed > 0 && workspace.reviewedKimiUpdates[reference.id] != String(session.completed)
-            let section: WorkQueueSection = session.pending > 0 ? .attention : session.busy ? .running : session.error != nil ? .attention : review ? .review : .other
+            let turn = SessionTurn(native: session)
+            let section = turn.section(reviewed: workspace.reviewedKimiUpdates[reference.id])
             return WorkspaceSession(reference: reference, title: workspace.displayTitle(session.title, for: reference), directory: session.cwd, hostName: native.host.name,
                 detail: "\(session.provider.label) · \(section == .review ? L("结果待查看") : session.status)", online: native.online, section: section,
-                canMarkReviewed: section == .review, archived: archiveOverrides[reference.id] ?? session.archived, updatedAt: session.updated)
+                canMarkReviewed: section == .review, archived: archiveOverrides[reference.id] ?? session.archived, updatedAt: session.updated,
+                turn: turn)
         }
         }
         let next = (conversations + agents).sorted { $0.updatedAt == $1.updatedAt ? $0.id < $1.id : $0.updatedAt > $1.updatedAt }
@@ -858,10 +861,11 @@ final class WorkbenchModel {
             guard let session = native.sessions.first(where: { $0.id == item.reference.terminalID }) else {
                 return ArchiveSubject(reference: item.reference, fingerprint: "missing", online: false)
             }
+            let turn = SessionTurn(native: session)
             return ArchiveSubject(reference: item.reference,
                                   fingerprint: "\(session.completed):\(session.updated)",
-                                  archived: session.archived, online: native.online, busy: session.busy,
-                                  pendingInteraction: session.pending > 0, failed: session.error != nil,
+                                  archived: session.archived, online: native.online, busy: turn.running,
+                                  pendingInteraction: turn.pending, failed: turn.failed,
                                   stopped: session.cancelled == true, starred: starred,
                                   completedTurns: session.completed, reviewed: item.section != .review,
                                   queuedMessages: queued, hasCompletionSignal: true)
@@ -870,10 +874,11 @@ final class WorkbenchModel {
             guard let session = kimi.sessions.first(where: { $0.id == item.reference.terminalID }) else {
                 return ArchiveSubject(reference: item.reference, fingerprint: "missing", online: false)
             }
+            let turn = SessionTurn(kimi: session)
             return ArchiveSubject(reference: item.reference, fingerprint: session.updatedAt,
-                                  archived: session.archived == true, online: kimi.online, busy: session.isTurnRunning,
-                                  pendingInteraction: session.pendingInteraction != nil,
-                                  failed: session.lastTurnReason == "failed", stopped: false, starred: starred,
+                                  archived: session.archived == true, online: kimi.online, busy: turn.running,
+                                  pendingInteraction: turn.pending,
+                                  failed: turn.failed, stopped: false, starred: starred,
                                   completedTurns: session.lastTurnReason == "completed" ? 1 : 0,
                                   reviewed: item.section != .review, queuedMessages: queued,
                                   hasCompletionSignal: session.lastTurnReason != nil)
@@ -1402,21 +1407,12 @@ final class WorkbenchModel {
                                       sessions: connection.sessions, workspace: workspace, allSessions: allSessions)
         }
     }
+    /// Notifications compare each row's turn facts with the previous ones: the
+    /// same `SessionTurn` the sidebar section and the Dock badge come from.
     private func updateTaskEvents() {
+        let visible = showDashboard ? nil : selectedReference?.id
         for item in allSessions where !item.archived {
-            guard let kimi = kimiEnvironments[item.reference.hostID], let native = nativeEnvironments[item.reference.hostID] else { continue }
-            let subject = archiveSubject(item)
-            let completion: String?
-            if item.reference.kind == .kimi {
-                let session = kimi.sessions.first { $0.id == item.reference.terminalID }
-                completion = session?.lastTurnReason == "completed" ? session?.updatedAt : nil
-            } else {
-                let count = native.sessions.first { $0.id == item.reference.terminalID }?.completed ?? 0
-                completion = count > 0 ? String(count) : nil
-            }
-            let state = TaskEventState(running: subject.busy, pending: subject.pendingInteraction, failed: subject.failed, completion: completion)
-            taskNotifications.observe(state, id: item.id, title: item.title, online: item.online,
-                                      visibleSessionID: showDashboard ? nil : selectedReference?.id)
+            taskNotifications.observe(item.turn, id: item.id, title: item.title, online: item.online, visibleSessionID: visible)
         }
     }
     func openNotifiedTask(_ id: String) {

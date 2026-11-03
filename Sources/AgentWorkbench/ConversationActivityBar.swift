@@ -2,11 +2,10 @@ import AppKit
 import SwiftUI
 import WorkbenchCore
 
-/// Running in session lists: the Perch sun turning on its own, the arc the status
-/// bar turns on its branch, so "running" looks the same everywhere. CoreAnimation
+/// Running in session lists: the Perch sun chasing on its own. CoreAnimation
 /// only; the transcript graph is never invalidated.
 struct ConversationBusyIndicator: View {
-    var body: some View { PerchBusyIndicator(style: .sun) }
+    var body: some View { PerchBusyIndicator() }
 }
 
 /// Results the reader has moved on from, by session and end time. In memory only:
@@ -24,16 +23,20 @@ struct ConversationBusyIndicator: View {
 
 /// The status line between the transcript and the composer. It answers three
 /// questions only (`TurnStatus`): is the turn alive, what is it doing, what does
-/// it need from the reader. Everything else (plan, edits by file, timing,
-/// subagents and background tasks) is in the task panel's 本轮 section, which a
-/// click on the line opens. Every visible state shares one transparent row
-/// height, so a run starting, waiting or failing never resizes the transcript;
-/// an idle session takes no space. Only the clock redraws on its own, once a
-/// second for the first minute and once a minute after.
+/// it need from the reader. It has no leading mark: a running turn's title
+/// shimmers (`ShimmerGlint`), and everything that needs the reader is orange text
+/// with its own button. A click on the line opens the task panel's 本轮 section
+/// (plan, edits by file, timing, subagents and background tasks), shown by a
+/// trailing chevron; the turn's +a −d on the right opens the changes page.
+/// Every visible state shares one transparent row height, so a run starting,
+/// waiting or failing never resizes the transcript; an idle session takes no
+/// space. Only the clock and the shimmer move on their own.
 struct ConversationActivityBar: View {
     static let height: CGFloat = 32
     let activity: ConversationActivity
-    let isRunning: Bool
+    /// The session's turn facts, built by the constructors the sidebar and
+    /// notifications use, so all of them agree on running, waiting and failed.
+    let turn: SessionTurn
     var timing: ConversationTiming? = nil
     var online = true
     /// Last connection error; the reconnect tooltip shows it.
@@ -75,8 +78,8 @@ struct ConversationActivityBar: View {
         return "\(narrativeSession):\(end.timeIntervalSinceReferenceDate)"
     }
     private var status: TurnStatus {
-        TurnStatus(activity: activity, isRunning: isRunning, online: online, pendingCount: pendingCount,
-                   request: request, timing: timing, narrativeHeadline: isRunning ? narrative?.headline : nil,
+        TurnStatus(activity: activity, turn: turn, online: online, pendingCount: pendingCount,
+                   request: request, timing: timing, narrativeHeadline: turn.running ? narrative?.headline : nil,
                    stalledMinutes: activity.animates ? stalledMinutes : nil,
                    resultDismissed: resultKey.map { TurnResultMemory.contains($0) } ?? false, locale: locale)
     }
@@ -88,10 +91,7 @@ struct ConversationActivityBar: View {
         let status = self.status
         ZStack {
             if status.state != .hidden {
-                HStack(spacing: 8) {
-                    line(status)
-                    actions(status)
-                }.font(.system(size: WorkbenchTheme.Reading.labelSize))
+                line(status).font(.system(size: WorkbenchTheme.Reading.labelSize))
                     .foregroundStyle(WorkbenchTheme.quiet)
                     .padding(.horizontal, 2).frame(height: Self.height)
                     .transition(reduceMotion ? .identity : .opacity)
@@ -137,23 +137,28 @@ struct ConversationActivityBar: View {
         }
     }
 
-    /// The whole line opens the details; a pending decision goes to its card.
+    /// The line is a button behind the row: the task panel, or the pending card
+    /// while waiting. The turn's edits, Recap and the state's own action are
+    /// buttons on top; text and facts let clicks through to the line.
     private func line(_ status: TurnStatus) -> some View {
+        HStack(spacing: 8) {
+            ViewThatFits(in: .horizontal) {
+                headline(status, level: 1)
+                headline(status, level: 0)
+            }.layoutPriority(1).allowsHitTesting(false)
+            if status.state == .running && status.attention > 0 {
+                // A running agent may still recover: a count, not a new color for the action.
+                Text("\(status.attention) 项需关注").foregroundStyle(Color.orange).fixedSize().allowsHitTesting(false)
+            }
+            Spacer(minLength: 6).layoutPriority(-2)
+            trailing(status)
+        }.padding(.horizontal, 8).frame(height: 28)
+            .background { lineButton(status) }
+    }
+
+    private func lineButton(_ status: TurnStatus) -> some View {
         Button { status.state == .waiting ? onReview() : onDetails() } label: {
-            HStack(spacing: 8) {
-                indicator(status)
-                ViewThatFits(in: .horizontal) {
-                    headline(status, level: 2)
-                    headline(status, level: 1)
-                    headline(status, level: 0)
-                }.layoutPriority(1)
-                if status.state == .running && status.attention > 0 {
-                    // A running agent may still recover: a count, not a new color for the action.
-                    Text("\(status.attention) 项需关注").foregroundStyle(Color.orange).fixedSize()
-                }
-                Spacer(minLength: 6).layoutPriority(-2)
-                facts(status)
-            }.padding(.horizontal, 6).frame(height: 28).contentShape(Rectangle())
+            Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity).contentShape(Rectangle())
         }.buttonStyle(WorkbenchDisclosureButtonStyle())
             .accessibilityLabel(Text("本轮状态"))
             .accessibilityValue(Text(verbatim: accessibilityValue(status)))
@@ -161,78 +166,75 @@ struct ConversationActivityBar: View {
             .help(status.state == .waiting ? Text(verbatim: status.headline) : Text("在任务面板查看本轮详情"))
     }
 
-    /// The Perch mark carries execution: its sun turns while a turn runs and
-    /// closes into the resting mark when the turn ends cleanly. It stays mounted
-    /// in every state, so a run's end closes this same arc even when a native
-    /// agent reports the end time after the run state.
-    private func indicator(_ status: TurnStatus) -> some View {
-        ZStack {
-            PerchBusyIndicator(running: activity.animates, motion: motion).opacity(status.symbol == nil ? 1 : 0)
-            if let symbol = status.symbol {
-                Image(systemName: symbol).font(.system(size: WorkbenchTheme.Reading.labelSize)).frame(width: 16, height: 16)
-                    .foregroundStyle(status.needsReader ? Color.orange : WorkbenchTheme.quiet)
-                    .accessibilityHidden(true)
-            }
-        }.frame(width: 16, height: 16)
-    }
-    /// Each phase of a running turn moves the mark its own way.
-    private var motion: PerchBusyIndicator.Motion {
-        switch activity.phase {
-        case .thinking: .thinking
-        case .reading: .reading
-        case .writing: .writing
-        case .working, nil: .working
-        }
-    }
-
-    /// Level 2 says everything; level 1 drops the result's words; level 0 is the
-    /// headline alone, which truncates last.
+    /// Level 1 says everything; level 0 is the title alone, which truncates last.
     private func headline(_ status: TurnStatus, level: Int) -> some View {
         HStack(spacing: status.result == nil ? 6 : 4) {
-            Text(verbatim: status.headline).fontWeight(status.isBlocking ? .medium : .regular)
-                .foregroundStyle(status.needsReader ? Color.orange : highlight ? Color.primary : WorkbenchTheme.quiet)
-                .lineLimit(1).truncationMode(.tail).layoutPriority(1)
+            title(status).layoutPriority(1)
             if let detail = status.detail, level > 0 {
                 Text(verbatim: detail).foregroundStyle(WorkbenchTheme.quiet)
                     .lineLimit(1).truncationMode(.middle)
             }
-            if let result = status.result, level > 0 { resultFacts(result, words: level > 1) }
-        }.contentTransition(.opacity)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: status.headline)
-    }
-    private func resultFacts(_ result: TurnStatus.Result, words: Bool) -> some View {
-        HStack(spacing: 4) {
-            if result.files > 0 {
-                Text(verbatim: "·")
-                if words { Text("改了 \(result.files) 个文件") }
-                EditStatText(stat: SessionEditStat(additions: result.additions, deletions: result.deletions))
-            }
-            if let duration = result.duration {
-                Text(verbatim: "·")
+            if let result = status.result, let duration = result.duration, level > 0 {
                 let value = TurnStatus.clock(duration, chinese: chinese)
-                if result.observedOnly { Text("观察时长 \(value)") } else { Text("用时 \(value)") }
+                Group {
+                    if result.observedOnly { Text("· 观察时长 \(value)") } else { Text("· 用时 \(value)") }
+                }.fixedSize()
             }
-        }.fixedSize()
+        }.accessibilityHidden(true)
     }
 
-    /// Progress facts for work in flight or a plan left over; a state that needs
-    /// the reader shows only its action. Plan steps fold away before the clock.
-    @ViewBuilder private func facts(_ status: TurnStatus) -> some View {
+    /// Every title is plain text in its tone. A running one shimmers: an ink copy
+    /// over it, shown through a moving band (`ShimmerGlint`).
+    private func title(_ status: TurnStatus) -> some View {
+        Text(verbatim: status.headline).fontWeight(status.needsReader ? .medium : .regular)
+            .foregroundStyle(status.needsReader ? Color.orange : highlight ? Color.primary : WorkbenchTheme.quiet)
+            .lineLimit(1).truncationMode(.tail)
+            .contentTransition(.opacity)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: status.headline)
+            .overlay {
+                if status.shimmers && !reduceMotion {
+                    ShimmerGlint(text: status.headline, size: WorkbenchTheme.Reading.labelSize)
+                }
+            }
+    }
+
+    /// Plan steps, this turn's edits and the clock, then the state's own buttons
+    /// and the chevron. In a narrow window plan steps fold first, then edits.
+    @ViewBuilder private func trailing(_ status: TurnStatus) -> some View {
         let clock = status.state == .running || status.state == .stopping ? timing : nil
         let progress = [.running, .stopping, .plan].contains(status.state) ? status.progress : nil
-        if progress != nil || clock != nil {
+        let changes = onChanges == nil ? nil : status.changes
+        if progress != nil || changes != nil || clock != nil {
             ViewThatFits(in: .horizontal) {
-                factsRow(progress, clock: clock)
-                factsRow(nil, clock: clock)
+                facts(progress, changes, clock)
+                facts(nil, changes, clock)
+                facts(nil, nil, clock)
                 Color.clear.frame(width: 0, height: 0)
             }.font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
                 .layoutPriority(-1)
         }
+        // The state's own buttons keep their size; the title yields first.
+        actions(status).fixedSize()
+        if status.opensDetails {
+            Image(systemName: "chevron.right").font(.system(size: WorkbenchTheme.Reading.captionSize - 1, weight: .semibold))
+                .foregroundStyle(WorkbenchTheme.quiet).allowsHitTesting(false).accessibilityHidden(true)
+        }
     }
-    private func factsRow(_ progress: TurnStatus.Progress?, clock: ConversationTiming?) -> some View {
+    private func facts(_ progress: TurnStatus.Progress?, _ changes: TurnStatus.Changes?, _ clock: ConversationTiming?) -> some View {
         HStack(spacing: 10) {
-            if let progress { Text(verbatim: "\(progress.done) / \(progress.total)") }
-            if let clock { TurnClock(timing: clock) }
+            if let progress {
+                Text(verbatim: "\(progress.done) / \(progress.total)").allowsHitTesting(false).accessibilityHidden(true)
+            }
+            if let changes, let onChanges {
+                Button(action: onChanges) {
+                    EditStatText(stat: SessionEditStat(additions: changes.additions, deletions: changes.deletions))
+                        .padding(.horizontal, 4).frame(height: 22).contentShape(Rectangle())
+                }.buttonStyle(WorkbenchDisclosureButtonStyle())
+                    .help(Text("查看改动：本轮改了 \(changes.files) 个文件"))
+                    .accessibilityLabel(Text("查看改动"))
+                    .accessibilityValue(Text(verbatim: L("本轮改了 \(changes.files) 个文件") + " +\(changes.additions) −\(changes.deletions)"))
+            }
+            if let clock { TurnClock(timing: clock).allowsHitTesting(false) }
         }.fixedSize().monospacedDigit()
     }
 
@@ -243,8 +245,8 @@ struct ConversationActivityBar: View {
         if let detail = status.detail { parts.append(detail) }
         if status.state == .running && status.attention > 0 { parts.append(L("\(status.attention) 项需关注")) }
         if let progress = status.progress { parts.append(L("\(progress.done)/\(progress.total) 步")) }
-        if let result = status.result, result.files > 0 {
-            parts.append(L("改了 \(result.files) 个文件") + " +\(result.additions) −\(result.deletions)")
+        if let changes = status.changes {
+            parts.append(L("本轮改了 \(changes.files) 个文件") + " +\(changes.additions) −\(changes.deletions)")
         }
         return parts.joined(separator: ", ")
     }
@@ -260,11 +262,10 @@ struct ConversationActivityBar: View {
         case .review:
             Button("查看", action: onDetails).buttonStyle(.bordered).controlSize(.small).tint(.orange)
                 .help("在任务面板查看需要关注的工具结果").accessibilityHint(Text("在任务面板查看需要关注的工具结果"))
+        case .failed:
+            Button("查看", action: onDetails).buttonStyle(.bordered).controlSize(.small).tint(.orange)
+                .help("在任务面板查看失败原因").accessibilityHint(Text("在任务面板查看失败原因"))
         case .done:
-            if let onChanges, (status.result?.files ?? 0) > 0 {
-                Button("查看改动", action: onChanges).buttonStyle(.borderless).controlSize(.small)
-                    .help("在右栏查看工作区改动")
-            }
             if let recapKey {
                 Button { recapPresented = true } label: {
                     Label("Recap", systemImage: "sparkles")
@@ -280,6 +281,115 @@ struct ConversationActivityBar: View {
         case .running, .stopping, .plan, .hidden:
             EmptyView()
         }
+    }
+}
+
+/// The shimmer over a running turn's title, the way Codex's status line does it
+/// (codex-rs/tui/src/shimmer.rs): an ink copy of the title, seen through a band
+/// that sweeps left to right in 1.6 s, then rests 0.8 s. The copy is the same
+/// SwiftUI text rendered once to an image at the title's own frame, so it lines
+/// up glyph for glyph and truncates the same way; CoreAnimation moves the band's
+/// gradient mask, so nothing is laid out or drawn per frame.
+struct ShimmerGlint: NSViewRepresentable {
+    let text: String
+    let size: CGFloat
+    func makeNSView(context: Context) -> ShimmerGlintView { ShimmerGlintView() }
+    func updateNSView(_ view: ShimmerGlintView, context: Context) { view.configure(text: text, size: size) }
+}
+
+final class ShimmerGlintView: NSView {
+    static let sweep: CFTimeInterval = 1.6
+    static let rest: CFTimeInterval = 0.8
+    /// The band's peak: nearly the body ink, as Codex blends 90%.
+    static let peak: CGFloat = 0.9
+    private let copy = CALayer()
+    private let band = CAGradientLayer()
+    private var text = ""
+    private var size: CGFloat = 0
+    private var rendered: (text: String, size: CGFloat, bounds: CGSize, scale: CGFloat, dark: Bool)?
+
+    override var isFlipped: Bool { true }
+    /// Clicks reach the status line behind the title.
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    init() {
+        super.init(frame: .zero)
+        wantsLayer = true
+        layer?.addSublayer(copy)
+        copy.contentsGravity = .topLeft
+        band.startPoint = CGPoint(x: 0, y: 0.5)
+        band.endPoint = CGPoint(x: 1, y: 0.5)
+        band.colors = [NSColor(white: 1, alpha: 0).cgColor, NSColor(white: 1, alpha: Self.peak).cgColor,
+                       NSColor(white: 1, alpha: 0).cgColor]
+        copy.mask = band
+        setAccessibilityElement(false)
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    func configure(text: String, size: CGFloat) {
+        guard text != self.text || size != self.size else { return }
+        self.text = text; self.size = size
+        refresh()
+    }
+
+    override func layout() {
+        super.layout()
+        refresh()
+    }
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        rendered = nil
+        refresh()
+    }
+    override func viewDidChangeBackingProperties() {
+        super.viewDidChangeBackingProperties()
+        refresh()
+    }
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        refresh()
+    }
+
+    /// Renders the ink copy when the text, its frame, the scale or the
+    /// appearance changed, and restarts the sweep when the width did.
+    private func refresh() {
+        guard let window, bounds.width > 0, bounds.height > 0, !text.isEmpty else {
+            band.removeAllAnimations()
+            copy.contents = nil
+            rendered = nil
+            return
+        }
+        let scale = window.backingScaleFactor
+        let dark = effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+        let key = (text: text, size: size, bounds: bounds.size, scale: scale, dark: dark)
+        if let rendered, rendered.text == key.text, rendered.size == key.size, rendered.bounds == key.bounds,
+           rendered.scale == key.scale, rendered.dark == key.dark, band.animation(forKey: "sweep") != nil { return }
+        var ink = WorkbenchTheme.inkNS
+        effectiveAppearance.performAsCurrentDrawingAppearance { ink = WorkbenchTheme.inkNS.usingColorSpace(.sRGB) ?? WorkbenchTheme.inkNS }
+        let renderer = ImageRenderer(content: Text(verbatim: text).font(.system(size: size)).foregroundStyle(Color(nsColor: ink))
+            .lineLimit(1).truncationMode(.tail)
+            .frame(width: bounds.width, height: bounds.height, alignment: .leading))
+        renderer.scale = scale
+        let widthChanged = rendered?.bounds.width != bounds.width
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        copy.frame = bounds
+        copy.contentsScale = scale
+        copy.contents = renderer.cgImage
+        let width = max(24, bounds.height * 2.4)
+        band.frame = CGRect(x: -width, y: 0, width: width, height: bounds.height)
+        CATransaction.commit()
+        rendered = key
+        guard widthChanged || band.animation(forKey: "sweep") == nil else { return }
+        // The band starts just off the left edge and ends just off the right,
+        // then holds there for the rest.
+        let move = CAKeyframeAnimation(keyPath: "position.x")
+        move.values = [-width / 2, bounds.width + width / 2, bounds.width + width / 2]
+        move.keyTimes = [0, NSNumber(value: Self.sweep / (Self.sweep + Self.rest)), 1]
+        move.duration = Self.sweep + Self.rest
+        move.repeatCount = .infinity
+        band.add(move, forKey: "sweep")
     }
 }
 

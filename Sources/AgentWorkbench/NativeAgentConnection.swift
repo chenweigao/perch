@@ -341,8 +341,9 @@ final class NativeAgentConnection {
         }
         var clocks = timings
         for session in next {
+            let turn = SessionTurn(native: session)
             clocks.observe(sessionID: session.id, turnID: session.turnId, requestID: session.turnId,
-                           running: session.busy, waiting: session.pending > 0)
+                           running: turn.running, waiting: turn.pending)
         }
         if clocks != timings { timings = clocks }
         if let id = selectedID, !next.contains(where: { $0.id == id }) { conversation.select(nil); subagents.present(nil) }

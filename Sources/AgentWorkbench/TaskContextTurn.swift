@@ -38,6 +38,26 @@ extension WorkbenchModel {
     }
 }
 
+extension WorkbenchModel {
+    /// The files the latest turn edited, as its tools named them, and the
+    /// directory relative names resolve against. Only for the conversation the
+    /// connection has loaded; read on demand, never observed per token.
+    func latestTurnEdits(_ source: SessionReference) -> (paths: [String], directory: String)? {
+        guard source.kind != .terminal, let agents = agentConnections(for: source.hostID) else { return nil }
+        let messages: [KimiMessage], directory: String
+        if source.kind == .kimi {
+            guard let conversation = agents.kimi.conversation, conversation.snapshot.session.id == source.terminalID else { return nil }
+            messages = conversation.displayMessages; directory = conversation.snapshot.session.cwd
+        } else {
+            guard let snapshot = agents.native.snapshot, snapshot.id == source.terminalID else { return nil }
+            messages = snapshot.messages; directory = snapshot.cwd
+        }
+        let start = messages.lastIndex(where: \.isUserPrompt) ?? 0
+        guard let edits = SessionEditStats.derive(from: Array(messages[start...])) else { return nil }
+        return (Array(edits.perFile.keys), directory)
+    }
+}
+
 /// The task page's 本轮 section: what the status line leaves out. The agent's
 /// narrative and where it came from, the plan, this turn's edits by file, the
 /// timing breakdown and Recap. The status line opens the panel here.

@@ -19,20 +19,7 @@ public struct ConversationActivity {
     /// A stop was requested and nothing outranks it (a lost connection or a pending decision).
     public let isStopping: Bool
     public let animates: Bool
-    /// What a running turn is doing, for the status bar's motion; nil unless it animates.
-    /// Same precedence as the title: an active tool, then thinking, then the reply.
-    public let phase: Phase?
     public let isVisible: Bool
-
-    public enum Phase: Equatable, Sendable {
-        case thinking
-        /// Reading, searching or finding files (`ToolPresentation.isExploration`).
-        case reading
-        /// Running a command, editing, or any other tool or unnamed work.
-        case working
-        /// Writing the reply.
-        case writing
-    }
     public var activeTools: [VisibleTool] { tools.filter { $0.status == .running } }
     public var attentionTools: [VisibleTool] { tools.filter { $0.staysVisible && $0.status != .running } }
     public var completedSteps: Int { todos.filter { $0.status == .done }.count }
@@ -78,11 +65,6 @@ public struct ConversationActivity {
         needsAttention = !online || pendingCount > 0 || uncertain
         self.isStopping = online && pendingCount == 0 && isStopping
         animates = online && isRunning && pendingCount == 0 && !isStopping
-        if !animates { phase = nil }
-        else if let tool = active.first { phase = ToolPresentation.isExploration(tool.name) ? .reading : .working }
-        else if isThinking { phase = .thinking }
-        else if isResponding { phase = .writing }
-        else { phase = .working }
         isVisible = !online || isRunning || pendingCount > 0 || !todos.isEmpty || uncertain
         if !online { title = "Connection lost"; symbol = "wifi.exclamationmark" }
         else if pendingCount > 0 { title = "Needs your input"; symbol = "hand.raised" }

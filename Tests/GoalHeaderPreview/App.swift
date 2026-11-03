@@ -26,7 +26,7 @@ private struct GoalPreview: View {
             }.padding(.horizontal, 24).padding(.vertical, 16)
             if !removed {
                 GoalHeaderBar(goal: .init(objective: objective, status: status, turnsUsed: 12, tokensUsed: 48320),
-                              isRunning: running, isStale: offline, controlsEnabled: !offline,
+                              turn: running ? .running : .idle, isStale: offline, controlsEnabled: !offline,
                               onControl: { action in
                                   if action == "cancel" { removed = true }
                                   else { status = action == "pause" ? "paused" : "active" }
