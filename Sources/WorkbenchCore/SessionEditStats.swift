@@ -17,8 +17,9 @@ public struct SessionEditStat: Equatable, Sendable {
 /// session's total churn, not the last call's. The tool names are the ones
 /// Perch's runtimes actually emit (see ConversationActivity's title mapping).
 public enum SessionEditStats {
-    /// Whole-session tally; nil when no edit resolved a file, so the caller
-    /// hides the stats instead of showing zeros.
+    /// Tally of the given messages (the status line and the process fold pass
+    /// one turn); nil when no edit resolved a file, so the caller hides the
+    /// stats instead of showing zeros.
     public static func derive(from messages: [KimiMessage]) -> (perFile: [String: SessionEditStat], total: SessionEditStat)? {
         var perFile: [String: SessionEditStat] = [:]
         tally(messages[...], into: &perFile)
@@ -153,34 +154,5 @@ public enum SessionEditStats {
             newEnd -= 1
         }
         return SessionEditStat(additions: newEnd - start, deletions: oldEnd - start)
-    }
-}
-
-/// The activity bar derives the whole-session tally on every update of the
-/// loaded window. Messages before the latest user prompt only change on paging,
-/// a new prompt or history replacement; their tally is kept and the latest turn
-/// is added. A page of older messages or a newly completed turn only adds its own.
-public final class SessionEditStatsCache {
-    private var source: ArraySlice<KimiMessage> = []
-    private var earlier: [String: SessionEditStat] = [:]
-    public init() {}
-
-    public func derive(from messages: [KimiMessage]) -> (perFile: [String: SessionEditStat], total: SessionEditStat)? {
-        let split = messages.lastIndex(where: \.isUserPrompt) ?? 0
-        if source.count != split || !messages[..<split].elementsEqual(source) {
-            let older = split - source.count
-            if older >= 0, messages[older..<split].elementsEqual(source) {
-                SessionEditStats.tally(messages[..<older], into: &earlier)
-            } else if older >= 0, messages[..<source.count].elementsEqual(source) {
-                SessionEditStats.tally(messages[source.count..<split], into: &earlier)
-            } else {
-                earlier = [:]
-                SessionEditStats.tally(messages[..<split], into: &earlier)
-            }
-            source = messages[..<split]
-        }
-        var perFile = earlier
-        SessionEditStats.tally(messages[split...], into: &perFile)
-        return SessionEditStats.summary(perFile)
     }
 }

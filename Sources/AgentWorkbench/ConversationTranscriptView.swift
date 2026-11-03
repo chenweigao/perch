@@ -288,12 +288,14 @@ struct ConversationTranscript: View {
         let foldParents = presented.foldParents
         let clock = ConversationProcessClock.shared
         let _ = clock.observe(session: sessionId, rows: presented.rows, isRunning: isRunning, timing: timing)
-        // A thought still streaming has no row of its own: the activity bar owns
-        // the live phase. It joins the transcript as "thought for N s" once done.
-        let contents = presented.rows.filter { $0.entry.presentation != .thinkingPreview }.map { row in
+        // A streaming thought reads in place ("思考中 · 12秒", four lines that follow
+        // the stream) and settles into "已思考 12秒" once done; the status line
+        // keeps only the phase.
+        let contents = presented.rows.map { row in
             ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
                 memoryKey: key + ":" + row.entry.id, activityNarrative: row.activity, foldedRows: row.foldedRows,
-                processSeconds: clock.seconds(session: sessionId, entry: row.entry))
+                processSeconds: clock.seconds(session: sessionId, entry: row.entry),
+                liveSince: clock.liveStart(session: sessionId, entry: row.entry))
         }
         let _ = PerfDiagnostics.end("snapshot_projection", projectionProbe,
                                     detail: "messages=\(messages.count) rows=\(contents.count)")
@@ -2115,6 +2117,8 @@ private struct ConversationEntryView: View, Equatable {
     var foldedRows: [ConversationPresentationModel.Row]? = nil
     /// How long this thought streamed, or this fold's turn took, as watched here.
     var processSeconds: TimeInterval? = nil
+    /// When this app first saw a thought that is still streaming.
+    var liveSince: Date? = nil
     @RememberedExpansion("commentary") private var commentaryExpanded
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.entry == rhs.entry && lhs.tools == rhs.tools && lhs.api === rhs.api
@@ -2122,7 +2126,7 @@ private struct ConversationEntryView: View, Equatable {
             && lhs.activityNarrative == rhs.activityNarrative
             && lhs.markdownPreparation == rhs.markdownPreparation
             && lhs.foldedRows == rhs.foldedRows
-            && lhs.processSeconds == rhs.processSeconds
+            && lhs.processSeconds == rhs.processSeconds && lhs.liveSince == rhs.liveSince
     }
     var isProgressNote: Bool {
         guard let activityNarrative else { return false }
@@ -2157,7 +2161,7 @@ private struct ConversationEntryView: View, Equatable {
                                       seconds: processSeconds)
                 case .thinkingPreview, .thinkingRecord:
                     ThoughtOutput(messages: entry.messages, finished: entry.presentation == .thinkingRecord,
-                                  seconds: processSeconds)
+                                  seconds: processSeconds, liveSince: liveSince)
                         .id(entry.presentation == .thinkingRecord)
                 case .emptyOutput:
                     Text("本轮未返回文字回复，可展开工具记录查看结果。")
@@ -2345,6 +2349,11 @@ struct ProcessFoldRow: View {
         }
     }
 
+    /// When this app first saw a thought that is still streaming, for its live title.
+    func liveStart(session: String, entry: ConversationTimelineEntry) -> Date? {
+        entry.presentation == .thinkingPreview ? starts[key(session, entry.id)] : nil
+    }
+
     func thoughtSeconds(session: String, message: String) -> TimeInterval? {
         thoughts[key(session, "message:" + message)]
     }
@@ -2434,12 +2443,21 @@ struct ThoughtDisclosure: View {
     }
 }
 
+/// A thought still streaming, open by default at four lines that follow the
+/// stream, under a title that counts its seconds; or one that ended the turn
+/// without a reply.
 private struct ThoughtOutput: View {
     let messages: [KimiMessage]
     let finished: Bool
     var seconds: TimeInterval? = nil
+    var liveSince: Date? = nil
     private var fullText: String { messages.flatMap(\.content).compactMap(\.thinking).joined(separator: "\n\n") }
-    @RememberedExpansion("live-thought") private var expanded
+    @RememberedExpansion private var expanded: Bool
+    init(messages: [KimiMessage], finished: Bool, seconds: TimeInterval? = nil, liveSince: Date? = nil) {
+        self.messages = messages; self.finished = finished; self.seconds = seconds; self.liveSince = liveSince
+        // Open while it streams; a record of a turn without a reply stays folded.
+        _expanded = RememberedExpansion("live-thought", initial: !finished)
+    }
     @State private var showFullText = false
     @State private var previewOverflows = false
     @Environment(\.locale) private var locale
@@ -2447,8 +2465,16 @@ private struct ThoughtOutput: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
             HStack {
-                ThoughtToggle(title: finished ? ThoughtTitle(seconds: seconds, noResponse: true).text(locale: locale, L: L)
-                                              : Text("Thinking"), expanded: $expanded)
+                if !finished, let liveSince {
+                    // Only the title redraws each second.
+                    TimelineView(.periodic(from: liveSince, by: 1)) { context in
+                        ThoughtToggle(title: Text(verbatim: L("思考中 · \(duration(context.date.timeIntervalSince(liveSince)))")),
+                                      expanded: $expanded)
+                    }
+                } else {
+                    ThoughtToggle(title: finished ? ThoughtTitle(seconds: seconds, noResponse: true).text(locale: locale, L: L)
+                                                  : Text("Thinking"), expanded: $expanded)
+                }
                 if expanded && !finished && previewOverflows {
                     Button { showFullText = true } label: {
                         Label("View full thoughts", systemImage: "arrow.up.right")
@@ -2469,6 +2495,9 @@ private struct ThoughtOutput: View {
             }
                 .frame(width: 560, height: 360)
         }
+    }
+    private func duration(_ interval: TimeInterval) -> String {
+        ConversationTiming.duration(max(0, interval), chinese: locale.language.languageCode?.identifier == "zh")
     }
 }
 

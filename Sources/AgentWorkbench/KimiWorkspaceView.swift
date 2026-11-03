@@ -13,7 +13,6 @@ struct KimiWorkspaceView: View {
     let onInput: () -> Void
     let onResultDisplayed: (KimiSession) -> Void
     @State private var activityReview = 0
-    @State private var editStats = SessionEditStatsCache()
     var body: some View {
         #if PERCH_ACCEPTANCE
         let _ = { NativeAcceptanceProbe.shared.kimiBodyEvaluations += 1 }()
@@ -76,9 +75,11 @@ struct KimiWorkspaceView: View {
                 ConversationNotice(text: problem, action: connection.snapshotReady ? nil : reloadAction)
             }
             let pending = conversation.snapshot.pendingApprovals.count + conversation.snapshot.pendingQuestions.count
+            let sessionID = conversation.snapshot.session.id
             let recapKey = conversation.taskRecapRevision.map {
-                "\(connection.host.id):kimi:\(conversation.snapshot.session.id):\($0)"
+                "\(connection.host.id):kimi:\(sessionID):\($0)"
             }
+            let actions = ConversationActionContext(hostID: connection.host.id, kind: .kimi, sessionID: sessionID)
             let activityProbe = PerfDiagnostics.begin()
             let messages = conversation.displayMessages
             let activity = ConversationActivity(
@@ -86,25 +87,22 @@ struct KimiWorkspaceView: View {
                 liveTools: conversation.live?.runningTools ?? [], online: connection.online,
                 isThinking: conversation.live?.thinkingText.isEmpty == false && conversation.live?.assistantText.isEmpty != false,
                 isResponding: conversation.live?.assistantText.isEmpty == false,
-                pendingCount: pending, isStopping: connection.isStopping, editStats: editStats)
+                pendingCount: pending, isStopping: connection.isStopping)
             let _ = PerfDiagnostics.end("activity_derive", activityProbe, detail: "messages=\(messages.count)")
             ConversationActivityBar(activity: activity,
                 isRunning: conversation.snapshot.session.isTurnRunning,
-                timing: connection.timings.turns[conversation.snapshot.session.id],
+                timing: connection.timings.turns[sessionID],
                 online: connection.online, offlineDetail: connection.error, pendingCount: pending,
-                narrativeSession: "\(connection.host.id):kimi:\(conversation.snapshot.session.id)",
+                request: TurnRequest.kimi(approvals: conversation.snapshot.pendingApprovals,
+                                          questions: conversation.snapshot.pendingQuestions),
+                narrativeSession: "\(connection.host.id):kimi:\(sessionID)",
                 recapKey: recapKey,
-                recapMessages: { try await connection.recapMessages(for: conversation.snapshot.session.id) },
+                recapMessages: { try await connection.recapMessages(for: sessionID) },
                 onReview: { activityReview += 1 }, onReconnect: { connection.connect() },
-                board: conversation.tasks,
-                loadingTaskOutput: connection.loadingTaskOutput,
-                stoppingTasks: connection.stoppingTasks,
-                taskListError: connection.taskListError,
-                onTaskOutput: { connection.loadTaskOutput($0) },
-                onTaskStop: { connection.cancelTask($0) },
-                onTasksRefresh: { Task { await connection.refreshTasks() } },
-                onOpenTranscript: { connection.presentTranscript($0, in: conversation.snapshot.session.id) })
-                .id(conversation.snapshot.session.id)
+                onDetails: { actions.post(.showTurnDetails) },
+                onChanges: { actions.post(.showChanges) },
+                onStall: { actions.post(.turnStalled(minutes: $0)) })
+                .id(sessionID)
                 .frame(maxWidth: kimiReadingWidth).padding(.horizontal, ReplyStyle.horizontalPadding).frame(maxWidth: .infinity, alignment: .center).padding(.top, 4)
             KimiComposerView(connection: connection, sessionID: conversation.snapshot.session.id, onInput: onInput)
                 .id(conversation.snapshot.session.id)

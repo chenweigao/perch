@@ -2,8 +2,6 @@ import AppKit
 import SwiftUI
 import WorkbenchCore
 
-private let stressTaskCount = Int(ProcessInfo.processInfo.environment["ACTIVITY_BAR_TASKS"] ?? "0") ?? 0
-
 @main struct ActivityPreviewApp: App {
     @NSApplicationDelegateAdaptor(ActivityDelegate.self) private var delegate
     var body: some Scene {
@@ -20,16 +18,12 @@ private struct ActivityPreview: View {
     @State private var includeDescription = true
     @State private var reviewCount = 0
     @State private var reconnectCount = 0
-    @State private var retryCount = 0
+    @State private var detailsCount = 0
+    @State private var changesCount = 0
+    @State private var stalls = 0
     @State private var turn = 1
     @State private var clocks = ConversationTimings()
     @State private var observedOnly = false
-    @State private var includeTasks = true
-    @State private var failTaskList = false
-    @State private var readOutputs: Set<String> = []
-    @State private var stops = 0
-    @State private var listRefreshes = 0
-    @State private var transcriptOpens = 0
     @State private var recapMode = "Result"
     @State private var recapGenerations = 0
     private var busy: Bool { phase != "Done" && phase != "Failed" }
@@ -78,6 +72,8 @@ private struct ActivityPreview: View {
             ]
             if ["Done", "Failed", "Responding"].contains(phase) {
                 rows.append(["id": "result", "role": "tool", "created_at": "", "content": [["type": "tool_result", "tool_call_id": "read", "is_error": phase == "Failed", "output": phase == "Failed" ? "Permission denied (fixture)" : "Read complete"]]])
+                rows.append(["id": "edit", "role": "assistant", "created_at": "", "content": [["type": "tool_use", "tool_call_id": "edit", "tool_name": "Edit", "input": ["path": "/fixture/Sample.swift", "old_string": "a\nb", "new_string": "a\nc\nd"]]]])
+                rows.append(["id": "edit-result", "role": "tool", "created_at": "", "content": [["type": "tool_result", "tool_call_id": "edit", "is_error": false, "output": "ok"]]])
             }
             if !busy {
                 rows.append(["id": "answer", "role": "assistant", "created_at": "", "content": [
@@ -106,10 +102,6 @@ private struct ActivityPreview: View {
             source = .external
             headline = "Refining the activity narrative presentation"
             detail = nil
-        case "External failure":
-            source = .local
-            headline = "Validating the activity narrative locally"
-            detail = nil
         case "Local":
             source = .local
             headline = "Reviewing Sample.swift"
@@ -124,56 +116,23 @@ private struct ActivityPreview: View {
             phase: narrativePhase, subject: headline, headline: headline, detail: detail,
             source: source, evidenceIDs: ["read"], lifecycle: busy ? .streaming : .final)
     }
-    /// Roster and task-list fixtures in the server's own wire shapes.
-    private var board: KimiTaskBoard {
-        guard includeTasks else { return KimiTaskBoard() }
-        func stamp(_ secondsAgo: TimeInterval) -> String {
-            let formatter = ISO8601DateFormatter()
-            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            return formatter.string(from: Date().addingTimeInterval(-secondsAgo))
-        }
-        let roster = try! KimiWire.decoder().decode([KimiTask].self, from: Data("""
-        [{"id":"agent_01","session_id":"preview","kind":"subagent","description":"Inspect the existing layout","status":"running","created_at":"\(stamp(95))","started_at":"\(stamp(90))","run_in_background":false,"subagent_phase":"working","subagent_type":"coder","parent_tool_call_id":"agent-call","model":"kimi-k2","thinking_effort":"high","swarm_index":0},
-         {"id":"agent_02","session_id":"preview","kind":"subagent","description":"Check the activity presentation","status":"running","created_at":"\(stamp(40))","run_in_background":false,"subagent_phase":"queued","subagent_type":"explore","parent_tool_call_id":"agent-call"},
-         {"id":"agent_03","session_id":"preview","kind":"subagent","description":"Verify keyboard and narrow layouts","status":"failed","created_at":"\(stamp(200))","started_at":"\(stamp(198))","completed_at":"\(stamp(180))","run_in_background":false,"subagent_phase":"failed","subagent_type":"coder","parent_tool_call_id":"agent-call"},
-         {"id":"agent_04","session_id":"preview","kind":"subagent","description":"Wait for a permission decision","status":"running","created_at":"\(stamp(60))","started_at":"\(stamp(58))","run_in_background":false,"subagent_phase":"suspended","suspended_reason":"approval","subagent_type":"coder","parent_tool_call_id":"agent-call"}]
-        """.utf8))
-        var tasks = try! KimiWire.decoder().decode([KimiTask].self, from: Data("""
-        [{"id":"task_1","session_id":"preview","kind":"bash","description":"Run the fixture test suite","status":"running","command":"swift test --filter FixtureTests","created_at":"\(stamp(125))","started_at":"\(stamp(125))","run_in_background":true},
-         {"id":"task_2","session_id":"preview","kind":"subagent","description":"Search the transcript history","status":"completed","created_at":"\(stamp(300))","started_at":"\(stamp(300))","completed_at":"\(stamp(240))","agent_id":"agent_09","subagent_type":"explore","model":"kimi-k2","run_in_background":true,"output_preview":"Test Suite passed\\n12 tests, 0 failures"},
-         {"id":"task_3","session_id":"preview","kind":"tool","description":"Wait for the fixture answer","status":"cancelled","created_at":"\(stamp(400))","started_at":"\(stamp(400))","completed_at":"\(stamp(380))","run_in_background":true}]
-        """.utf8))
-        tasks += (0..<stressTaskCount).map { index in
-            KimiTask(id: "stress_\(index)", kind: "tool", description: "Completed stress task \(index + 1)",
-                     status: "completed", createdAt: "2026-10-09T08:00:00.000Z",
-                     startedAt: "2026-10-09T08:00:01.000Z", completedAt: "2026-10-09T08:00:02.000Z",
-                     runInBackground: true)
-        }
-        var board = KimiTaskBoard(subagents: roster)
-        board.reconcile(background: tasks)
-        for id in readOutputs { board.store(output: "PASS: fixture suite\n24 tests, 0 failures", for: id) }
-        return board
-    }
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack { Text("Local fixture · No agent connections").font(.headline); Spacer(); Toggle("Narrow", isOn: $narrow) }
-            Toggle("Include 20 historical tool calls (hidden from the popover)", isOn: $includeHistory)
+            Toggle("Include 20 historical tool calls", isOn: $includeHistory)
             Toggle("Include task plan", isOn: $includePlan)
             Toggle("Include tool description", isOn: $includeDescription)
             Toggle("Joined an existing turn (unknown start)", isOn: $observedOnly)
-            Toggle("Include subagents and background tasks", isOn: $includeTasks)
-            Toggle("Fail the task list read", isOn: $failTaskList)
             Picker("Scenario", selection: $phase) {
                 ForEach(["Thinking", "Tools", "Approval", "Offline", "Stopping", "Responding", "Done", "Failed"], id: \.self) { Text($0) }
             }.pickerStyle(.segmented)
             Picker("Narrative", selection: $narrativeMode) {
-                ForEach(["Commentary", "Provider", "Local", "External", "External failure", "None"], id: \.self) { Text($0) }
+                ForEach(["Commentary", "Provider", "Local", "External", "None"], id: \.self) { Text($0) }
             }.pickerStyle(.segmented)
             Picker("Recap", selection: $recapMode) {
                 ForEach(["Disabled", "Loading", "Result", "Failure"], id: \.self) { Text($0) }
             }.pickerStyle(.segmented)
-            Text("Reviews: \(reviewCount) · Reconnects: \(reconnectCount) · External retries: \(retryCount) · Recap generations: \(recapGenerations) · Turn: \(turn)")
-            Text("Output reads: \(readOutputs.sorted().joined(separator: ", ")) · Stops: \(stops) · List refreshes: \(listRefreshes) · Transcripts: \(transcriptOpens)")
+            Text("Reviews: \(reviewCount) · Reconnects: \(reconnectCount) · Details: \(detailsCount) · Changes: \(changesCount) · Stalls: \(stalls) · Recap generations: \(recapGenerations) · Turn: \(turn)")
             Button("Next turn") { turn += 1; phase = "Thinking" }
             Spacer()
             VStack(alignment: .leading, spacing: 9) {
@@ -206,8 +165,9 @@ private struct ActivityPreview: View {
                 isRunning: busy, timing: clocks.turns["preview"], online: phase != "Offline",
                 offlineDetail: phase == "Offline" ? "ssh: connect to host fixture.invalid: Network is unreachable" : nil,
                 pendingCount: phase == "Approval" ? 2 : 0,
+                request: phase == "Approval" ? TurnRequest(kind: .approval, text: "Run rm -rf build/fixture") : nil,
+                narrativeSession: "preview",
                 narrativeOverride: narrative,
-                externalFailureOverride: narrativeMode == "External failure" ? "Fixture timeout; the local title remains available." : nil,
                 recapKey: phase == "Done" ? "preview-\(turn)" : nil,
                 recapMessages: { messages }, recapStateOverride: recapState,
                 recapConfiguredOverride: recapMode != "Disabled",
@@ -220,11 +180,8 @@ private struct ActivityPreview: View {
                     }
                 },
                 onReview: { reviewCount += 1 }, onReconnect: { reconnectCount += 1 },
-                onRetryExternal: narrativeMode == "External failure" ? { retryCount += 1 } : nil,
-                board: board,
-                taskListError: failTaskList ? "Fixture task list unavailable" : nil,
-                onTaskOutput: { readOutputs.insert($0.id) }, onTaskStop: { _ in stops += 1 },
-                onTasksRefresh: { listRefreshes += 1 }, onOpenTranscript: { _ in transcriptOpens += 1 })
+                onDetails: { detailsCount += 1 }, onChanges: { changesCount += 1 },
+                onStall: { _ in stalls += 1 })
                 .frame(width: narrow ? 340 : 840)
             Text("Continue this task, or share a new idea…").foregroundStyle(.secondary)
                 .frame(width: narrow ? 308 : 808, height: 64, alignment: .topLeading).padding(16).workbenchControlSurface()

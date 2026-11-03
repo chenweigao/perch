@@ -18,10 +18,11 @@ enum PerchLineMark {
 
     /// Running is a chase: the arc's head runs out from a quarter to most of the
     /// ring, then its tail catches up, once per revolution. The arc never drops
-    /// below a quarter, so the sun never shrinks to a dot.
-    static let revolution: CFTimeInterval = 1.6
+    /// below a quarter, so the sun never shrinks to a dot. Slow and narrow
+    /// enough to stay at the edge of the reader's eye.
+    static let revolution: CFTimeInterval = 2
     static let shortArc: CGFloat = 90
-    static let longArc: CGFloat = 310
+    static let longArc: CGFloat = 270
     /// Reduce Motion holds this share of the ring still.
     static let stillArc: CGFloat = 0.75
     static let openDuration: CFTimeInterval = 0.25
@@ -29,18 +30,18 @@ enum PerchLineMark {
 
     /// The status bar gives each phase of a turn its own motion of the same mark.
     /// Thinking: the whole sun breathes, shrinking and fading a little.
-    static let thinkPeriod: CFTimeInterval = 2.4
-    static let thinkShrink: CGFloat = 1
-    static let thinkFade: Float = 0.55
+    static let thinkPeriod: CFTimeInterval = 2.8
+    static let thinkShrink: CGFloat = 0.6
+    static let thinkFade: Float = 0.7
     /// Reading or searching: a short arc sweeps back and forth over the top.
-    static let scanPeriod: CFTimeInterval = 1.8
+    static let scanPeriod: CFTimeInterval = 2.2
     static let scanArc: CGFloat = 110
-    static let scanSwing: CGFloat = 115
+    static let scanSwing: CGFloat = 80
     /// Writing the reply: the sun rests whole and the branch is written left to
     /// right like a line of text, then fades for the next line.
-    static let writePeriod: CFTimeInterval = 1.8
+    static let writePeriod: CFTimeInterval = 2.2
     static let writeDrawShare: Double = 0.62
-    static let writeBaseOpacity: Float = 0.2
+    static let writeBaseOpacity: Float = 0.35
     /// Phases cross-fade, and each holds at least `phaseDwell`, so a burst of short
     /// tool calls does not flicker between motions.
     static let phaseCrossfade: CFTimeInterval = 0.3
@@ -91,9 +92,9 @@ enum PerchLineMark {
 /// CoreAnimation on shape layers inside one NSView, so the transcript's SwiftUI
 /// graph is never invalidated. Reduce Motion holds a still open arc.
 ///
-/// `.bar` (status bar) draws branch and sun fitted to the slot; it runs in the
-/// body `ink` and rests in `quiet`, so the moving mark is the one live element
-/// beside a quiet title. `.sun` (list rows, Goal header) is the sun alone in
+/// `.bar` (status bar) draws branch and sun fitted to the slot, in `quiet` like
+/// the title beside it: running is peripheral information, and what needs the
+/// reader is called out by color and reminders instead. `.sun` (list rows, Goal header) is the sun alone in
 /// `quiet`, at the 24-box size the system spinner had, and always chases: a list
 /// of running sessions should not each change motion.
 struct PerchBusyIndicator: View {
@@ -247,9 +248,9 @@ private final class PerchBusyView: NSView {
         CATransaction.commit()
     }
 
-    /// The bar runs in the body ink and rests in quiet; the lone sun is quiet.
+    /// Every style and state draws in quiet, the status line's own ink.
     private func ink(for state: Shown) -> CGColor {
-        let color = style == .bar && state != .rest ? WorkbenchTheme.inkNS : WorkbenchTheme.quietNS
+        let color = WorkbenchTheme.quietNS
         var resolved = color.cgColor
         effectiveAppearance.performAsCurrentDrawingAppearance { resolved = color.cgColor }
         return resolved
@@ -427,7 +428,7 @@ private final class PerchBusyView: NSView {
 
     /// Ends a turn: freezes whatever is on screen, then closes it into the resting
     /// mark. Arcs grow to the full ring while coasting a quarter turn; a breathing
-    /// sun returns to full size; a half-written branch fills in. The ink fades to quiet.
+    /// sun returns to full size; a half-written branch fills in.
     private func settle() {
         guard let m = marks else { show(.rest, fade: 0); return }
         let l = PerchLineMark.self

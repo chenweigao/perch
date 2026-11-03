@@ -98,7 +98,8 @@ private struct ActivityBarCheckFixture: View {
         "offline": phase(runningMessages, running: true, online: false, timing: live),
         "stopping": phase(runningMessages, running: true, stopping: true, timing: live),
         "failed": phase(failedMessages, running: false, timing: finished),
-        "ended": phase(endedMessages, running: false, timing: finished)
+        "ended": phase(endedMessages, running: false, timing: finished),
+        "idle": phase(try decode([prompt] + edit), running: false, timing: nil)
     ]
     precondition(phases["failed"]!.activity.attentionTools.count == 1, "Fixture failure must be an uncertain result")
     precondition(phases["running"]!.activity.activeTools.count == 1, "Fixture command must be running")
@@ -158,5 +159,10 @@ private struct ActivityBarCheckFixture: View {
             }
         }
     }
-    print("PASS: activity bar keeps one height and the reading viewport across running/pending/offline/stopping/failed/ended, wide/narrow, light/dark; pending review and reconnect actions respond")
+    // A session this client never watched run has nothing to say and takes no space.
+    state.phase = "idle"
+    try await Task.sleep(for: .milliseconds(200))
+    host.layoutSubtreeIfNeeded()
+    precondition(state.barFrame.height < 0.5, "An idle status line must take no space: \(state.barFrame.height)pt")
+    print("PASS: idle status line takes no space; activity bar keeps one height and the reading viewport across running/pending/offline/stopping/failed/ended, wide/narrow, light/dark; pending review and reconnect actions respond")
 }

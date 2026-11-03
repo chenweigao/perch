@@ -5,7 +5,7 @@ The reply is the primary reading surface. Process is available without dominatin
 - Shared native/SwiftUI typography from one `ReadingScale` (see [ui-spec 正文刻度](ui-spec.md#正文刻度)); narrow windows wrap the same content. Dynamic system colors preserve dark mode.
 - User prompts retain their existing bubble, actions and full content. Code retains its language label, copy button, gutter and horizontal scrolling. No new global text cache or syntax engine.
 - Completed thoughts, intermediate commentary and successful tools share a clear “Thoughts and tools” disclosure with a count. The open group uses a simple leading rule. Expansion remains scoped to the conversation and row.
-- A thought that is still streaming has no transcript row; the activity bar communicates the live phase. Settled thoughts read 已思考 N秒 when this app watched them. Successful single-tool stages now use the same disclosure as larger stages. Running, failed, pending and uncertain tools stay visible.
+- A thought that is still streaming reads in place as 思考中 · N秒 with a four-line preview that follows the stream; the status line keeps only the phase. Settled thoughts read 已思考 N秒 when this app watched them. Successful single-tool stages now use the same disclosure as larger stages. Running, failed, pending and uncertain tools stay visible.
 - Existing copy/quote/regenerate, file links, search-to-fold navigation, bookmarks, turn navigation and manual scroll-follow intent remain connected to their current handlers. Sidebar and composer glass remain unchanged.
 
 ## Progress while a turn is running

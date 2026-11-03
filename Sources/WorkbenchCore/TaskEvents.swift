@@ -9,7 +9,9 @@ public struct TaskEventState: Equatable {
         self.running = running; self.pending = pending; self.failed = failed; self.completion = completion
     }
 }
-public enum TaskEventKind: String { case completed, needsInput, failed }
+/// `stalled` never comes from the tracker: only the status line of an open
+/// session can tell that a running turn stopped making progress.
+public enum TaskEventKind: String { case completed, needsInput, failed, stalled }
 public struct TaskEventTracker {
     private var previous: [String: TaskEventState] = [:]
     public init() {}
