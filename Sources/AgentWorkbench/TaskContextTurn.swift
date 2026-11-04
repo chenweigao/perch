@@ -73,7 +73,7 @@ struct TaskTurnSection: View {
         let context = model.turnContext(item.reference, busy: snapshot.busy)
         let failure = context.flatMap { narratives.failure(session: $0.narrativeKey)?.message }
         if failure != nil || !snapshot.todos.isEmpty || snapshot.edits != nil {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 22) {
                 if let failure, let context { externalFailure(failure, key: context.narrativeKey) }
                 if !snapshot.todos.isEmpty { plan }
                 if let edits = snapshot.edits { self.edits(edits) }
@@ -96,12 +96,12 @@ struct TaskTurnSection: View {
 
     private var plan: some View {
         let done = snapshot.todos.filter { $0.status == .done }.count
-        return VStack(alignment: .leading, spacing: 6) {
+        return VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("计划").fontWeight(.medium)
                 Spacer()
                 Text(verbatim: "\(done) / \(snapshot.todos.count)").monospacedDigit().foregroundStyle(WorkbenchTheme.quiet)
-            }
+            }.padding(.bottom, 2)
             ForEach(snapshot.todos) { todo in
                 HStack(alignment: .top, spacing: 9) {
                     Image(systemName: todo.status == .done ? "checkmark.circle.fill"
@@ -111,7 +111,8 @@ struct TaskTurnSection: View {
                     Text(todo.title).fontWeight(todo.status == .inProgress ? .medium : .regular)
                         .foregroundStyle(todo.status == .done ? WorkbenchTheme.quiet : Color.primary)
                         .fixedSize(horizontal: false, vertical: true)
-                }.accessibilityElement(children: .combine)
+                }.padding(.vertical, 2)
+                    .accessibilityElement(children: .combine)
                     .accessibilityLabel(Text(verbatim: "\(state(todo.status)): \(todo.title)"))
             }
         }
@@ -127,24 +128,38 @@ struct TaskTurnSection: View {
     private func edits(_ edits: (perFile: [String: SessionEditStat], total: SessionEditStat)) -> some View {
         let paths = edits.perFile.keys.sorted()
         let shown = allEdits ? paths : Array(paths.prefix(6))
-        return VStack(alignment: .leading, spacing: 6) {
+        return VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 10) {
                 Text("编辑文件 · \(paths.count)").fontWeight(.medium)
                 Spacer()
-                EditStatText(stat: edits.total)
+                if edits.total.additions > 0 || edits.total.deletions > 0 {
+                    EditStatText(stat: edits.total)
+                }
                 Button("查看改动") { model.taskContextWindow.showPage(.changes, model: model) }
                     .buttonStyle(.borderless).help("在右栏查看工作区改动")
-            }
+            }.padding(.bottom, 4)
             ForEach(shown, id: \.self) { path in
+                let stat = edits.perFile[path]!
                 HStack {
                     Text((path as NSString).lastPathComponent).lineLimit(1).truncationMode(.middle)
                     Spacer(minLength: 6)
-                    EditStatText(stat: edits.perFile[path]!)
+                    if stat.additions > 0 || stat.deletions > 0 {
+                        EditStatText(stat: stat)
+                    }
                 }.font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet)
+                    .frame(minHeight: 28)
                     .help(path)
             }
             if paths.count > shown.count || allEdits && paths.count > 6 {
-                Button(allEdits ? "收起" : "查看全部文件") { allEdits.toggle() }.buttonStyle(.borderless)
+                Button { withAnimation(.snappy(duration: 0.18)) { allEdits.toggle() } } label: {
+                    HStack(spacing: 10) {
+                        Text(allEdits ? "收起" : "查看全部文件").foregroundStyle(WorkbenchTheme.quiet)
+                        Spacer(minLength: 4)
+                        Image(systemName: "chevron.right").font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
+                            .foregroundStyle(WorkbenchTheme.quiet).rotationEffect(.degrees(allEdits ? 90 : 0))
+                            .accessibilityHidden(true)
+                    }.frame(minHeight: 30).contentShape(Rectangle())
+                }.buttonStyle(.plain)
                     .font(.system(size: WorkbenchTheme.Typography.caption))
             }
         }
