@@ -39,7 +39,7 @@ struct KimiActivityView: View {
     let api: KimiAPI?
     let sessionId: String
     var narrative: ActivityNarrative? = nil
-    var liveSince: Date? = nil
+    var isLive = false
     var planProgress: TurnStatus.Progress? = nil
     private var reduceMotion: Bool { systemReduceMotion || conversationReduceMotion }
 
@@ -56,7 +56,7 @@ struct KimiActivityView: View {
 
     var body: some View {
         let items = entry.messages.flatMap(\.content).compactMap { tools[$0.toolCallId ?? ""] }
-        let isLive = liveSince != nil || items.contains { $0.status == .running }
+        let activeStage = isLive || items.contains { $0.status == .running }
         let editStat = SessionEditStats.derive(from: entry.messages)
         #if TRANSCRIPT_CHECKS
         // Occurrences only, and a declaration because ViewBuilder rejects bare
@@ -74,7 +74,7 @@ struct KimiActivityView: View {
                             let label = L("\(narrative.headline) · \(items.count) 次调用")
                             Text(verbatim: label).lineLimit(1).truncationMode(.tail)
                                 .overlay {
-                                    if isLive && !reduceMotion {
+                                    if activeStage && !reduceMotion {
                                         ShimmerGlint(text: narrative.headline, size: ReplyStyle.captionSize, pulse: progressPulse(items))
                                     }
                                 }
@@ -82,7 +82,7 @@ struct KimiActivityView: View {
                             let label = L("读取与搜索 · \(items.count) 次调用")
                             Text(verbatim: label).fixedSize()
                                 .overlay {
-                                    if isLive && !reduceMotion {
+                                    if activeStage && !reduceMotion {
                                         ShimmerGlint(text: label, size: ReplyStyle.captionSize, pulse: progressPulse(items))
                                     }
                                 }
@@ -90,7 +90,7 @@ struct KimiActivityView: View {
                             let label = L("思考与工具 · \(items.count) 次调用")
                             Text(verbatim: label).fixedSize()
                                 .overlay {
-                                    if isLive && !reduceMotion {
+                                    if activeStage && !reduceMotion {
                                         ShimmerGlint(text: label, size: ReplyStyle.captionSize, pulse: progressPulse(items))
                                     }
                                 }
@@ -115,7 +115,7 @@ struct KimiActivityView: View {
                         }
                     }.font(.system(size: ReplyStyle.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
                 }.disclosureGroupStyle(ProcessDisclosureStyle())
-                if planProgress != nil || editStat != nil || liveSince != nil {
+                if planProgress != nil || editStat != nil {
                     HStack(spacing: 8) {
                         if let planProgress {
                             if let actionContext {
@@ -145,9 +145,6 @@ struct KimiActivityView: View {
                                 EditStatText(stat: editStat.total)
                             }
                         }
-                        if let liveSince {
-                            TurnStartClock(start: liveSince).allowsHitTesting(false)
-                        }
                     }.font(.system(size: ReplyStyle.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
                         .monospacedDigit().fixedSize()
                 }
@@ -160,7 +157,7 @@ struct KimiActivityView: View {
             ForEach(Array(entry.messages.enumerated()), id: \.offset) { index, message in
                 if let id = message.content.first?.toolCallId, let tool = tools[id] {
                     if expanded || tool.staysVisible {
-                        KimiToolCard(tool: tool, liveSince: tool.status == .running ? ConversationProcessClock.shared.toolStart(session: sessionId, toolID: tool.id) : nil)
+                        KimiToolCard(tool: tool)
                             .environment(\.conversationMemoryKey, memoryKey + ":tool:" + tool.id)
                             .padding(.leading, expanded ? ReplyStyle.Process.nestedIndent : 0)
                     }
@@ -186,7 +183,6 @@ extension KimiActivityView {
 
 struct KimiToolCard: View {
     let tool: VisibleTool
-    var liveSince: Date? = nil
     var onExpand: (() -> Void)? = nil
     /// Opens the process of the subagent this Agent/Task call started. Left nil,
     /// a transcript row's action context provides it when the session's bridge
@@ -266,9 +262,6 @@ struct KimiToolCard: View {
                 Spacer(minLength: 0)
                 // A returned error keeps its quiet status label; only uncertainty
                 // or a user decision earns the orange attention treatment.
-                if tool.status == .running, let liveSince {
-                    TurnToolElapsedLabel(start: liveSince).font(.system(size: ReplyStyle.captionSize))
-                }
                 if showsAttention || tool.status == .running || tool.status == .failed {
                     Image(systemName: symbol(exitReport: exitReport)).font(.system(size: ReplyStyle.captionSize)).accessibilityHidden(true)
                     Text(statusLabel).font(.system(size: ReplyStyle.captionSize)).fixedSize()

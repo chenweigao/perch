@@ -47,13 +47,11 @@
 
 ## 思考与过程
 
-- **运行中的思考就地显示**：思考仍在流式输出时（`.thinkingPreview`），正文显示「思考中 · N秒」一行（只有标题每秒刷新），
-  默认展开最多四行、跟随流式内容的预览（`ThinkingTextViewport`），超出时可打开全文；状态条只说阶段与动作。
-  计时起点是本机第一次看到这段思考（`ConversationProcessClock.liveStart`）。只在流式期间默认展开；
+- **运行中的思考就地显示**：思考仍在流式输出时（`.thinkingPreview`），正文显示「思考中」一行，
+  默认展开最多四行、跟随流式内容的预览（`ThinkingTextViewport`），超出时可打开全文。只在流式期间默认展开；
   轮次结束仍没有回复的思考记录默认收起。
-- **思考结束后显示用时**：该段思考出现在正文中，折叠头写「已思考 N秒」，展开为次要正文字号的全文；
-  本轮结束后与工具记录一起收进「思考与工具」（或外部摘要标题），折叠头不重复显示整轮用时。
-- **只显示亲眼看到的时间**：思考用时来自本机客户端观察（`ConversationProcessClock`，仅内存），历史会话或重启后的轮次不显示数字，仍写「思考」，不做估计。
+- **思考与工具不显示计时**：思考结束后折叠头统一写「思考」，展开为次要正文字号的全文；
+  本轮结束后与工具记录一起收进「思考与工具」（或外部摘要标题），不显示思考秒数或工具运行秒表。
 
 ## 窗口框架
 
@@ -142,8 +140,7 @@
 - **输入框上方不挂独立状态栏**：`KimiWorkspaceView` 与 `NativeAgentView` 的底部栏只承载提示条（`ConversationNotice`）与输入框（Composer），不再在正文与输入框之间插入常驻 `ConversationActivityBar`。
 - **进行中的阶段状态归正文 `KimiActivityView`**（`Sources/AgentWorkbench/ToolActivityView.swift`）：
   - 当前阶段处于打开状态时，折叠头直接展示阶段叙事 `narrative.headline`（含外部摘要模型精炼结果，不受 48 字截断限制），并在有新进展时扫光（`ShimmerGlint`）。
-  - 折叠头右侧采用纯文字（无胶囊描边，仅悬停浮现浅底 `WorkbenchDisclosureButtonStyle`）展示计划步数 `c / n ›`（点击打开右栏任务面板）、本轮增删 `+a −d`（`EditStatText`，点击打开右栏改动页）与实时用时（`TurnClock`）。
-  - 运行超过 15 秒的工具卡片右侧显示 `已运行 X`（`TurnToolElapsedLabel`）。
+  - 折叠头右侧采用纯文字（无胶囊描边，仅悬停浮现浅底 `WorkbenchDisclosureButtonStyle`）展示计划步数 `c / n ›`（点击打开右栏任务面板）与本轮增删 `+a −d`（`EditStatText`，点击打开右栏改动页），不显示秒表计时。
 - **完成后的归档归 `ProcessFoldRow` 与回复操作栏**（`Sources/AgentWorkbench/ConversationTranscriptView.swift`、`ReplyMarkdownView.swift`）：
   - 折叠头优先显示外部摘要标题（未配置时显示「思考与工具」），右侧纯文字 `N 个文件 +a −d` 点击打开右栏改动页。
   - 最新已完成回复底部的操作栏（`NativeAssistantActions` / `AssistantEntryActions`）常驻纯文字 `Recap` 按钮（`RecapActionButton`），点击原位弹出 `TaskRecapPopover`，切换会话不消失。
@@ -151,7 +148,6 @@
 - **改动页标出本轮。** 右栏改动页列的是 Git 工作区（含你自己和之前几轮的改动）；本轮编辑过的文件排在前面并带「本轮」标签，
   标题旁写「N 个文件 · 本轮 M」（`TurnEditPaths.relative` 把工具给出的绝对或相对路径换成仓库内路径；`~` 开头的路径无法解析，不标）。
   标签在每次读取 Git 状态时按当前对话刷新，运行中不随每个流式片段重算。
-- **用时 1 分钟内按秒，之后按分钟**（`TurnStatus.clock`），只在读数变化时重绘（`TurnClockSchedule`）；悬停说明计时起点。
 - **“运行中”在列表里仍是日弧。** 侧栏与会话列表的运行中（`ConversationBusyIndicator`）和 Goal 头部的“当前一轮正在执行”
   是同一个追逐日弧（`PerchBusyIndicator`，几何在 `PerchLineMark`）：`quiet`、24 格尺寸、2 秒一圈，减少动态效果时停在 270° 的静止弧。
   品牌标识采用 D1 小鸟：App 图标为深珊瑚 `#E36D55` 底白线，首页品牌位（`PerchMark`）为随外观适配的单色小鸟。

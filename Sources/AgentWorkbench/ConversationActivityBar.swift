@@ -495,33 +495,6 @@ struct TurnClock: View {
     }
 }
 
-struct TurnStartClock: View {
-    let start: Date
-    @Environment(\.locale) private var locale
-    var body: some View {
-        TimelineView(TurnClockSchedule(start: start)) { context in
-            Text(verbatim: TurnStatus.clock(context.date.timeIntervalSince(start),
-                                            chinese: locale.language.languageCode?.identifier == "zh"))
-        }.monospacedDigit().fixedSize()
-    }
-}
-
-/// Elapsed time on a running tool card once it has run for at least 15 seconds.
-struct TurnToolElapsedLabel: View {
-    let start: Date
-    @UILocalization private var L
-    @Environment(\.locale) private var locale
-    var body: some View {
-        TimelineView(TurnClockSchedule(start: start)) { context in
-            let elapsed = context.date.timeIntervalSince(start)
-            if elapsed >= 15 {
-                let value = TurnStatus.clock(elapsed, chinese: locale.language.languageCode?.identifier == "zh")
-                Text(verbatim: L("已运行 \(value)"))
-            }
-        }.monospacedDigit().fixedSize()
-    }
-}
-
 /// Watches a running turn's progress without rendering a bottom status bar,
 /// reporting once per quiet stretch past the stall threshold.
 struct TurnStallMonitor: View {
