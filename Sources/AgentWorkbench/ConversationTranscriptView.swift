@@ -694,7 +694,7 @@ private final class ConversationDocumentView: NSView {
             let scope = sessionId + ":" + fold
             ConversationReadingMemory.shared.expansions[scope + ":process-fold"] = true
             ConversationReadingMemory.shared.processPages[scope] = id
-            for name in ["thought", "live-thought", "commentary", "expanded", "full-output"] {
+            for name in ["thought", "live-thought", "full-thought", "commentary", "expanded", "full-output"] {
                 ConversationReadingMemory.shared.expansions[scope + "/" + id + ":" + name] = true
             }
             if let index = indices[fold], let row = contents[index].foldedRows?.first(where: { $0.entry.id == id }) {
@@ -2287,20 +2287,25 @@ struct ProcessFoldRow: View {
             }
         } label: {
             // Secondary ink at regular weight, like the live process rows it replaces.
-            HStack(spacing: 7) {
+            HStack(alignment: .firstTextBaseline, spacing: 7) {
                 Image(systemName: "list.bullet.rectangle").accessibilityHidden(true)
                 if let externalHeadline {
-                    Text(verbatim: externalHeadline).lineLimit(1).truncationMode(.tail)
+                    Text(verbatim: externalHeadline)
+                        .lineLimit(2)
+                        .truncationMode(.tail)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .layoutPriority(1)
+                        .help(Text(verbatim: externalHeadline))
                 } else {
-                    Text("思考与工具")
+                    Text("思考与工具").fixedSize()
                 }
-                Text(toolCalls > 0 ? L("\(toolCalls) 次调用") : L("\(rows.count) 条记录"))
+                Text(toolCalls > 0 ? L("\(toolCalls) 次调用") : L("\(rows.count) 条记录")).fixedSize()
                 if let editStat, actionContext == nil {
                     Text(L("· \(editStat.files) 个文件 +\(editStat.additions) −\(editStat.deletions)"))
-                        .monospacedDigit()
+                        .monospacedDigit().fixedSize()
                 }
                 if attention > 0 {
-                    Text(L("· \(attention) 项需关注")).foregroundStyle(.orange)
+                    Text(L("· \(attention) 项需关注")).foregroundStyle(.orange).fixedSize()
                 }
             }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(.secondary)
         }.disclosureGroupStyle(ProcessDisclosureStyle())
@@ -2332,20 +2337,166 @@ struct ProcessFoldRow: View {
     }
 }
 
-/// Live and historical thoughts share one TextKit style. The full-text popover is
-/// a reading surface of its own and uses the body style.
+/// Live and historical thoughts share one TextKit style, with inline code,
+/// emphasis, compact paragraph spacing and a leading reasoning rail.
 private enum ThoughtTextStyle {
     /// Built at the current reading size; cheap enough to rebuild per view update.
     static var attributes: [NSAttributedString.Key: Any] {
         make(size: ReplyStyle.Process.thoughtSize, lineHeight: ReplyStyle.Process.thoughtLineHeight, ink: WorkbenchTheme.quietNS)
     }
-    static var fullTextAttributes: [NSAttributedString.Key: Any] {
-        make(size: ReplyStyle.bodySize, lineHeight: ReplyStyle.lineHeight, ink: ReplyStyle.nativeInk)
+    private static let codeTint = NSColor(name: nil) { appearance in
+        var color = NSColor.labelColor
+        appearance.performAsCurrentDrawingAppearance { color = NSColor.labelColor.withAlphaComponent(0.055) }
+        return color
     }
-    private static func make(size: CGFloat, lineHeight: CGFloat, ink: NSColor) -> [NSAttributedString.Key: Any] {
+    private static let emphasisInk = NSColor(name: nil) { appearance in
+        var color = NSColor.labelColor
+        appearance.performAsCurrentDrawingAppearance { color = NSColor.labelColor.withAlphaComponent(0.78) }
+        return color
+    }
+    private static func paragraphStyle(lineHeight: CGFloat, spacing: CGFloat = ReplyStyle.compactParagraphSpacing) -> NSMutableParagraphStyle {
         let paragraph = NSMutableParagraphStyle()
         paragraph.minimumLineHeight = lineHeight
-        return [.font: NSFont.systemFont(ofSize: size, weight: .regular), .foregroundColor: ink, .paragraphStyle: paragraph]
+        paragraph.maximumLineHeight = lineHeight
+        paragraph.paragraphSpacing = spacing
+        paragraph.lineBreakMode = .byWordWrapping
+        return paragraph
+    }
+    private static func make(size: CGFloat, lineHeight: CGFloat, ink: NSColor) -> [NSAttributedString.Key: Any] {
+        [.font: NSFont.systemFont(ofSize: size, weight: .regular), .foregroundColor: ink,
+         .paragraphStyle: paragraphStyle(lineHeight: lineHeight)]
+    }
+    static func attributed(_ source: String) -> NSAttributedString {
+        guard !source.isEmpty else { return NSAttributedString(string: "", attributes: attributes) }
+        if !source.contains("`") && !source.contains("*") && !source.contains("#")
+            && !source.contains("\n\n") && !source.hasPrefix("- ") && !source.contains("\n- ") && !source.contains("\n* ") {
+            return NSAttributedString(string: source, attributes: attributes)
+        }
+        let size = ReplyStyle.Process.thoughtSize
+        let lineHeight = ReplyStyle.Process.thoughtLineHeight
+        let ink = WorkbenchTheme.quietNS
+        let regularFont = NSFont.systemFont(ofSize: size, weight: .regular)
+        let boldFont = NSFont.systemFont(ofSize: size, weight: .medium)
+        let codeFont = NSFont.monospacedSystemFont(ofSize: size, weight: .regular)
+        let tightParagraph = paragraphStyle(lineHeight: lineHeight, spacing: 2)
+        let separatedParagraph = paragraphStyle(lineHeight: lineHeight, spacing: ReplyStyle.compactParagraphSpacing)
+        let result = NSMutableAttributedString()
+        var lastLineRange: NSRange?
+        var inCodeBlock = false
+        for rawLine in source.components(separatedBy: "\n") {
+            let trimmed = rawLine.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("```") { // l10n-ignore
+                inCodeBlock.toggle()
+                continue
+            }
+            if trimmed.isEmpty {
+                if let range = lastLineRange {
+                    result.addAttribute(.paragraphStyle, value: separatedParagraph, range: range)
+                }
+                continue
+            }
+            if result.length > 0 {
+                let newlineAttributes = result.attributes(at: result.length - 1, effectiveRange: nil)
+                result.append(NSAttributedString(string: "\n", attributes: newlineAttributes))
+            }
+            let start = result.length
+            if inCodeBlock {
+                result.append(NSAttributedString(string: rawLine, attributes: [
+                    .font: codeFont, .foregroundColor: emphasisInk, .paragraphStyle: tightParagraph
+                ]))
+            } else {
+                var line = rawLine
+                var isHeading = false
+                for prefix in ["#### ", "### ", "## ", "# "] where trimmed.hasPrefix(prefix) { // l10n-ignore
+                    line = String(trimmed.dropFirst(prefix.count))
+                    isHeading = true
+                    break
+                }
+                if !isHeading {
+                    if let marker = line.range(of: #"^(\s*)[-*]\s+"#, options: .regularExpression) {
+                        let indent = String(line[..<marker.upperBound].prefix { $0 == " " || $0 == "\t" })
+                        line.replaceSubrange(marker, with: indent + "• ")
+                    }
+                }
+                appendInline(line, into: result, regularFont: isHeading ? boldFont : regularFont,
+                             boldFont: boldFont, codeFont: codeFont,
+                             baseInk: isHeading ? emphasisInk : ink, paragraph: tightParagraph)
+            }
+            lastLineRange = NSRange(location: start, length: result.length - start)
+        }
+        return result.length > 0 ? result : NSAttributedString(string: source, attributes: attributes)
+    }
+    private static func appendInline(_ line: String, into result: NSMutableAttributedString,
+                                     regularFont: NSFont, boldFont: NSFont, codeFont: NSFont,
+                                     baseInk: NSColor, paragraph: NSParagraphStyle) {
+        let baseAttributes: [NSAttributedString.Key: Any] = [
+            .font: regularFont, .foregroundColor: baseInk, .paragraphStyle: paragraph
+        ]
+        var index = line.startIndex
+        var plainStart = index
+        func flushPlain(upTo end: String.Index) {
+            guard plainStart < end else { return }
+            result.append(NSAttributedString(string: String(line[plainStart..<end]), attributes: baseAttributes))
+        }
+        while index < line.endIndex {
+            if line[index] == "`" {
+                let contentStart = line.index(after: index)
+                if contentStart < line.endIndex, let close = line[contentStart...].firstIndex(of: "`"), close > contentStart {
+                    flushPlain(upTo: index)
+                    let codeText = String(line[contentStart..<close])
+                    result.append(NSAttributedString(string: codeText, attributes: [
+                        .font: codeFont, .foregroundColor: emphasisInk,
+                        .backgroundColor: codeTint, .paragraphStyle: paragraph
+                    ]))
+                    index = line.index(after: close)
+                    plainStart = index
+                    continue
+                }
+            } else if line[index...].hasPrefix("**") {
+                let contentStart = line.index(index, offsetBy: 2)
+                if contentStart < line.endIndex, let close = line.range(of: "**", range: contentStart..<line.endIndex),
+                   close.lowerBound > contentStart {
+                    flushPlain(upTo: index)
+                    let boldText = String(line[contentStart..<close.lowerBound])
+                    result.append(NSAttributedString(string: boldText, attributes: [
+                        .font: boldFont, .foregroundColor: emphasisInk, .paragraphStyle: paragraph
+                    ]))
+                    index = close.upperBound
+                    plainStart = index
+                    continue
+                }
+            }
+            index = line.index(after: index)
+        }
+        flushPlain(upTo: line.endIndex)
+    }
+}
+
+private struct ThoughtRail<Content: View>: View {
+    @ViewBuilder let content: Content
+    var body: some View {
+        content
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.leading, ReplyStyle.Process.nestedIndent)
+            .overlay(alignment: .leading) {
+                Capsule()
+                    .fill(Color.primary.opacity(0.11))
+                    .frame(width: ReplyStyle.Process.thoughtRailWidth)
+                    .padding(.leading, ReplyStyle.Process.thoughtRailLeading)
+                    .padding(.vertical, 2)
+            }
+    }
+}
+
+private struct ThoughtTopFade: View {
+    let active: Bool
+    var body: some View {
+        VStack(spacing: 0) {
+            LinearGradient(colors: [active ? Color.clear : Color.black, Color.black],
+                           startPoint: .top, endPoint: .bottom)
+                .frame(height: ReplyStyle.Process.thoughtTopFadeHeight)
+            Rectangle().fill(Color.black)
+        }
     }
 }
 
@@ -2353,9 +2504,10 @@ private enum ThoughtTextStyle {
 private struct ThoughtText: View {
     let text: String
     var body: some View {
-        DisclosureReplyText(text: text, attributes: ThoughtTextStyle.attributes)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.leading, ReplyStyle.Process.nestedIndent)
+        ThoughtRail {
+            DisclosureReplyText(text: text, attributes: ThoughtTextStyle.attributes,
+                                attributedText: ThoughtTextStyle.attributed)
+        }
     }
 }
 
@@ -2381,55 +2533,50 @@ struct ThoughtDisclosure: View {
     }
 }
 
-/// A thought still streaming, open by default at four lines that follow the
-/// stream, or one that ended the turn without a reply.
+/// A thought still streaming, open by default at six lines that follow the
+/// stream (with in-place full expansion), or one that ended the turn without a reply.
 private struct ThoughtOutput: View {
     let messages: [KimiMessage]
     let finished: Bool
     private var fullText: String { messages.flatMap(\.content).compactMap(\.thinking).joined(separator: "\n\n") }
     @RememberedExpansion private var expanded: Bool
+    @RememberedExpansion("full-thought") private var showFullText
     init(messages: [KimiMessage], finished: Bool) {
         self.messages = messages; self.finished = finished
         // Open while it streams; a record of a turn without a reply stays folded.
         _expanded = RememberedExpansion("live-thought", initial: !finished)
     }
-    @State private var showFullText = false
     @State private var previewOverflows = false
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
             HStack {
                 ThoughtToggle(title: finished ? Text("Thoughts · No response") : Text("Thinking"), expanded: $expanded)
-                if expanded && !finished && previewOverflows {
-                    Button { showFullText = true } label: {
-                        Label("View full thoughts", systemImage: "arrow.up.right")
+                if expanded && !finished && (previewOverflows || showFullText) {
+                    Button { showFullText.toggle() } label: {
+                        Label(showFullText ? "Collapse full thoughts" : "View full thoughts",
+                              systemImage: showFullText ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
                     }.buttonStyle(.plain).font(.system(size: ReplyStyle.captionSize)).foregroundStyle(.secondary).fixedSize()
                 }
             }
-            if expanded && finished {
+            if expanded && (finished || showFullText) {
                 ThoughtText(text: fullText)
             } else if expanded {
-                ThinkingTextViewport(text: fullText, overflows: $previewOverflows)
-                    .padding(.leading, ReplyStyle.Process.nestedIndent)
+                ThoughtRail {
+                    ThinkingTextViewport(text: fullText, overflows: $previewOverflows)
+                        .mask { ThoughtTopFade(active: previewOverflows) }
+                }
             }
-        }
-        .popover(isPresented: $showFullText, arrowEdge: .top) {
-            ScrollView {
-                SelectableReplyText(attributed: NSAttributedString(string: fullText, attributes: ThoughtTextStyle.fullTextAttributes))
-                    .frame(maxWidth: .infinity, alignment: .leading).padding(16)
-            }
-                .frame(width: 560, height: 360)
         }
     }
 }
 
 /// TextKit keeps wrapped layout for existing text while a reasoning stream appends.
-/// Reuse TextKit layout to fit short thoughts and cap a growing preview at four lines.
+/// Reuse TextKit layout to fit short thoughts and cap a growing preview at six lines.
 private struct ThinkingTextViewport: NSViewRepresentable {
     let text: String
     @Binding var overflows: Bool
     final class Coordinator {
         var previous = ""
-        let attributes = ThoughtTextStyle.attributes
     }
     func makeCoordinator() -> Coordinator { Coordinator() }
     func makeNSView(context: Context) -> FollowingThoughtScrollView {
@@ -2459,13 +2606,7 @@ private struct ThinkingTextViewport: NSViewRepresentable {
         scroll.overflowChanged = { if overflows != $0 { overflows = $0 } }
         guard context.coordinator.previous != text,
               let view = scroll.documentView as? NSTextView, let storage = view.textStorage else { return }
-        let prior = context.coordinator.previous
-        if text.utf8.starts(with: prior.utf8) {
-            let suffix = (text as NSString).substring(from: (prior as NSString).length)
-            storage.append(NSAttributedString(string: suffix, attributes: context.coordinator.attributes))
-        } else {
-            storage.setAttributedString(NSAttributedString(string: text, attributes: context.coordinator.attributes))
-        }
+        storage.setAttributedString(ThoughtTextStyle.attributed(text))
         context.coordinator.previous = text
         scroll.scheduleFollow()
     }

@@ -1368,6 +1368,7 @@ final class ReplyTextView: NSTextView {
 struct DisclosureReplyText: View {
     let text: String
     var attributes: [NSAttributedString.Key: Any]? = nil
+    var attributedText: ((String) -> NSAttributedString)? = nil
     @State private var fullOverride: Bool?
     @Environment(\.conversationMemoryKey) private var memoryKey
     private var showingAll: Bool {
@@ -1407,7 +1408,9 @@ struct DisclosureReplyText: View {
                     .frame(height: 360)
             } else {
                 Group {
-                    if let attributes {
+                    if let attributedText {
+                        SelectableReplyText(attributed: attributedText(visible))
+                    } else if let attributes {
                         SelectableReplyText(attributed: NSAttributedString(string: visible, attributes: attributes))
                     } else {
                         SelectableReplyText(visible)

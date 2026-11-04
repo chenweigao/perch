@@ -267,6 +267,7 @@
 "找到多个同名文件，请选择：" = "找到多个同名文件，请选择：";
 
 "View full thoughts" = "查看完整思考";
+"Collapse full thoughts" = "收起完整思考";
 /* Turn timing and activity */
 "用时 %@" = "用时 %@";
 "观察时长 %@" = "观察时长 %@";
