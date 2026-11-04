@@ -396,6 +396,32 @@ class ProtocolTests(unittest.TestCase):
         self.assertEqual(selected_sent[-1],{'type':'prompt','id':'qoder-model','message':'work',
             'permissionMode':'default','model':'qoder-pro','thinking':'high',
             'outerProvider':'trusted-provider','contextWindow':131072})
+    def test_snapshot_page_is_capped_by_message_count(self):
+        # A Codex-style history: few prompts, thousands of tool/thinking entries.
+        # The turn window alone would ship everything on first read.
+        s = self.session()
+        messages = []
+        for turn in range(3):
+            messages.append({'id':f'prompt-{turn}','role':'user','content':[{'type':'text','text':f'第 {turn} 轮'}]})
+            for i in range(400):
+                messages.append({'id':f'{turn}-{i}','role':'assistant','content':[{'type':'thinking','thinking':'t'}]})
+        s.state['messages'] = messages; s.reset_history_index()
+        page = s.snapshot(turns='50')
+        self.assertEqual(len(page['messages']), broker.SNAPSHOT_PAGE_MESSAGES)
+        self.assertEqual(page['history']['start'], len(messages) - broker.SNAPSHOT_PAGE_MESSAGES)
+        self.assertGreater(page['history']['start'], 0)
+        # Older history stays reachable through the same cursor.
+        older = s.snapshot(turns='50', before=str(page['history']['start']), epoch=page['history']['epoch'])
+        self.assertEqual(len(older['messages']), broker.SNAPSHOT_PAGE_MESSAGES)
+        self.assertEqual(older['history']['start'], len(messages) - 2 * broker.SNAPSHOT_PAGE_MESSAGES)
+        # An established window's delta reads are not re-capped.
+        revision = s.state['revision']
+        self.assertEqual(s.snapshot(revision=str(revision), start=str(page['history']['start']),
+            epoch=page['history']['epoch']), {'unchanged':True})
+        # Short histories are unaffected.
+        small = self.session(); small.state['messages'] = messages[:100]; small.reset_history_index()
+        self.assertEqual(len(small.snapshot(turns='50')['messages']), 100)
+        self.assertEqual(small.snapshot(turns='50')['history']['start'], 0)
     def test_available_commands_reach_snapshot_without_churning_revision(self):
         s=self.session()
         commands=[{'name':'compact','description':'Compact the conversation',
