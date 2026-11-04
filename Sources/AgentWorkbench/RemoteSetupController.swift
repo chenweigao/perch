@@ -7,11 +7,16 @@ final class RemoteSetupController: ObservableObject {
     enum Step: Int, CaseIterable { case machine, agent, project }
     enum Status: Equatable { case waiting, checking, passed, needsAction, information }
     struct Check: Identifiable {
+        struct Action {
+            let title: String
+            let perform: () -> Void
+        }
         let id: String
         var title: String
         var status: Status = .waiting
         var detail = ""
         var needsManualRestart = false
+        var action: Action? = nil
     }
     @Published var step = Step.machine
     @Published var destination: String
@@ -31,6 +36,8 @@ final class RemoteSetupController: ObservableObject {
     @Published private(set) var busy = false
     @Published private(set) var ready = false
     @Published private(set) var awaitingInstallCheck = false
+    /// Set by the pending-restart row; the sheet confirms before interrupting turns.
+    @Published var pendingKimiRestart = false
     @Published private(set) var error: String?
     @Published private(set) var hint = ""
     @Published private(set) var failedCheck: String?
@@ -253,7 +260,10 @@ final class RemoteSetupController: ObservableObject {
         if let managed, managed.owned {
             if let notice = RuntimeVersion.managedNotice(managed) {
                 let title = managed.restartReason == .settings ? L("Kimi Web 配置待生效") : L("Kimi 更新待生效")
-                checks.append(Check(id: "process", title: title, status: .information, detail: notice))
+                let action = managed.canForceRestart
+                    ? Check.Action(title: L("立即重启")) { [weak self] in self?.pendingKimiRestart = true }
+                    : nil
+                checks.append(Check(id: "process", title: title, status: .information, detail: notice, action: action))
                 return
             }
             var detail = RuntimeVersion.detail(installed: kimiInstalledVersion, running: running)
@@ -426,6 +436,33 @@ final class RemoteSetupController: ObservableObject {
             _ = try await self.checkKimiRuntime()
             self.hint = L("正在启动并连接 Kimi Web。")
             // The service script returns once the instance it started answers.
+            try await self.checkKimiServiceAndModels()
+            try Task.checkCancellation()
+            self.ready = true
+        }
+    }
+
+    /// Applies a pending update or launch-setting change now, even while sessions are
+    /// busy. The sheet confirmed the interruption; the check afterward connects to the
+    /// new instance and reads its version and models.
+    func restartKimi() {
+        awaitingInstallCheck = false
+        run {
+            self.ready = false; self.verifiedDirectory = nil; self.disconnectProbes(); self.models = []
+            try RemoteSetup.validate(self.host)
+            _ = try RemoteSetup.parseKimiEnvironment(self.kimiEnvironment)
+            defer { if !Task.isCancelled { self.disconnectProbes() } }
+            _ = try await self.checkKimiRuntime()
+            self.hint = L("正在重启 Kimi Web…")
+            if self.host.isLocal {
+                _ = try await LocalAgentRuntime.endpoint(for: .kimi, host: self.host, forceRestart: true)
+            } else {
+                let command = RemoteSetup.kimiEnsureCommand(script: try RemoteSetup.kimiServiceScript(),
+                                                            port: self.host.kimiPort, tokenPath: self.host.kimiTokenPath,
+                                                            environment: self.host.kimiEnvironment, forceRestart: true)
+                _ = try await self.ssh(command, timeout: RemoteSetup.kimiEnsureTimeout)
+            }
+            self.hint = L("正在连接重启后的 Kimi Web。")
             try await self.checkKimiServiceAndModels()
             try Task.checkCancellation()
             self.ready = true

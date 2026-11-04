@@ -174,6 +174,27 @@ class LocalServiceTests(unittest.TestCase):
                 self.assertEqual(service.ensure_kimi('/fixture/kimi', 58627, home)['restartPending'], -1)
                 stop.assert_not_called()
 
+    def test_confirmed_restart_replaces_a_busy_service(self):
+        with tempfile.TemporaryDirectory() as root:
+            home, record = owned_home(root, RECORD)
+            started = {'port':58627,'token':'fixture-token','owned':True}
+            with patch.object(service, 'alive', return_value=True), patch.object(service, 'kimi_meta', return_value=META), patch.object(service, 'installed_version', return_value='2.4.0'), patch.object(service, 'busy_sessions', return_value=2) as busy, patch.object(service, 'stop_kimi', return_value=True) as stop, patch.object(service, 'start_kimi', return_value=started) as start:
+                endpoint = service.ensure_kimi('/fixture/kimi', 58627, home, force_restart=True)
+            busy.assert_not_called(); stop.assert_called_once()
+            start.assert_called_once()
+            self.assertTrue(endpoint['replaced'])
+            self.assertEqual(endpoint['restartReason'], 'update')
+            self.assertFalse(record.exists())
+
+    def test_confirmed_restart_does_not_repeat_a_stuck_version(self):
+        with tempfile.TemporaryDirectory() as root:
+            home, _ = owned_home(root, dict(RECORD, replacedFor='2.4.0'))
+            with patch.object(service, 'alive', return_value=True), patch.object(service, 'kimi_meta', return_value=META), patch.object(service, 'installed_version', return_value='2.4.0'), patch.object(service, 'busy_sessions') as busy, patch.object(service, 'stop_kimi') as stop:
+                endpoint = service.ensure_kimi('/fixture/kimi', 58627, home, force_restart=True)
+                busy.assert_not_called(); stop.assert_not_called()
+            self.assertEqual(endpoint['restartPending'], -1)
+            self.assertTrue(endpoint['restartStuck'])
+
     def test_idle_update_replaces_the_service_on_its_port(self):
         with tempfile.TemporaryDirectory() as root:
             home, record = owned_home(root, dict(RECORD, port=58628))

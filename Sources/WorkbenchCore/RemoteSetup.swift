@@ -40,13 +40,25 @@ public struct KimiServiceEndpoint: Equatable, Sendable {
     /// Busy sessions an update or new settings wait for; -1 when Perch cannot confirm
     /// the service is idle, or a restart already failed to apply the update.
     public let restartPending: Int?
+    /// A previous restart already started this package and the service still reports
+    /// another version: retrying would not change it.
+    public let restartStuck: Bool
+
+    /// An explicit restart may replace this instance without waiting for idle. A
+    /// stuck version is never retried, and a service Perch did not start is never
+    /// signalled.
+    public var canForceRestart: Bool {
+        owned && !restartStuck && (restartPending ?? 0) != 0
+    }
 
     public init(port: Int, token: String, owned: Bool = false, replaced: Bool = false,
                 installedVersion: String? = nil, runningVersion: String? = nil,
-                restartReason: RestartReason? = nil, restartPending: Int? = nil) {
+                restartReason: RestartReason? = nil, restartPending: Int? = nil,
+                restartStuck: Bool = false) {
         self.port = port; self.token = token; self.owned = owned; self.replaced = replaced
         self.installedVersion = installedVersion; self.runningVersion = runningVersion
         self.restartReason = restartReason; self.restartPending = restartPending
+        self.restartStuck = restartStuck
     }
 }
 
@@ -224,15 +236,17 @@ public enum RemoteSetup {
     static let streamedScriptLoader = #"import base64,sys;exec(compile(base64.b64decode(sys.argv.pop(1)),"perch-kimi-web","exec"))"#
 
     /// Starts, reuses or replaces Perch's Kimi Web on the host and prints its endpoint.
-    /// Only the 127.0.0.1 instance Perch started is ever stopped, and only while idle;
-    /// a service the user runs is reused untouched. Only a custom token path is passed:
-    /// the default one follows `KIMI_CODE_HOME` from the launch environment on the host.
+    /// Only the 127.0.0.1 instance Perch started is ever stopped; normally only while
+    /// idle, or immediately when the user confirmed a forced restart. A service the
+    /// user runs is reused untouched. Only a custom token path is passed: the default
+    /// one follows `KIMI_CODE_HOME` from the launch environment on the host.
     public static func kimiEnsureCommand(script: String, port: Int, tokenPath: String,
-                                         environment: [String: String]) -> String {
+                                         environment: [String: String], forceRestart: Bool = false) -> String {
         var arguments = ["python3", "-c", streamedScriptLoader, Data(script.utf8).base64EncodedString(),
                          "--agent", "kimi", "--port", String(port)]
         if tokenPath != SSHHost.defaultKimiTokenPath { arguments += ["--token-path", tokenPath] }
         for name in environment.keys.sorted() { arguments += ["--env", name + "=" + (environment[name] ?? "")] }
+        if forceRestart { arguments.append("--force-restart") }
         return arguments.map(SSHCommand.quote).joined(separator: " ")
     }
 
@@ -257,7 +271,8 @@ public enum RemoteSetup {
                                    installedVersion: value["installedVersion"].string,
                                    runningVersion: value["runningVersion"].string,
                                    restartReason: value["restartReason"].string.flatMap { KimiServiceEndpoint.RestartReason(rawValue: $0) },
-                                   restartPending: value["restartPending"].int)
+                                   restartPending: value["restartPending"].int,
+                                   restartStuck: value["restartStuck"] == .bool(true))
     }
 
     /// `NAME=value` entries separated by spaces or new lines.

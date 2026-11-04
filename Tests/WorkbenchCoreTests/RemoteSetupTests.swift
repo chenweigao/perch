@@ -47,8 +47,12 @@ func checkRemoteSetup() async throws {
     let waiting = try RemoteSetup.parseKimiServiceEndpoint(Data(#"{"port":58628,"token":"t","owned":true,"runningVersion":"2.3.0","installedVersion":"2.4.0","restartReason":"update","restartPending":2}"#.utf8))
     precondition(waiting == KimiServiceEndpoint(port: 58628, token: "t", owned: true, installedVersion: "2.4.0",
                                                 runningVersion: "2.3.0", restartReason: .update, restartPending: 2))
+    precondition(waiting.canForceRestart)
+    let stuck = try RemoteSetup.parseKimiServiceEndpoint(Data(#"{"port":58628,"token":"t","owned":true,"runningVersion":"2.3.0","installedVersion":"2.4.0","restartReason":"update","restartPending":-1,"restartStuck":true}"#.utf8))
+    precondition(stuck.restartStuck && !stuck.canForceRestart)
     let foreign = try RemoteSetup.parseKimiServiceEndpoint(Data(#"{"port":58627,"token":"t"}"#.utf8))
     precondition(!foreign.owned && !foreign.replaced && foreign.restartPending == nil && foreign.restartReason == nil)
+    precondition(!foreign.canForceRestart)
     do { _ = try RemoteSetup.parseKimiServiceEndpoint(Data(#"{"port":58627}"#.utf8)); preconditionFailure("endpoint without a token accepted") } catch {}
     let codexHost = SSHHost(id: id, name: "Codex", destination: "fixture", enabledAgents: [.codex])
     precondition(codexHost.hasNativeAgents)
@@ -145,6 +149,13 @@ func checkRemoteSetup() async throws {
         precondition(echoed == ["--agent", "kimi", "--port", "60123", "--token-path", hostileToken,
                                 "--env", "KIMI_CODE_INFINITE_RETRY=true", "--env", "QUOTE=it's $HOME"])
     }
+    let forced = RemoteSetup.kimiEnsureCommand(script: echo, port: 60123, tokenPath: hostileToken,
+                                               environment: ["QUOTE": "it's $HOME", "KIMI_CODE_INFINITE_RETRY": "true"],
+                                               forceRestart: true)
+    let forcedArguments = try JSONDecoder().decode([String].self, from: try await SetupCommandRunner.run("/bin/sh", ["-c", forced]))
+    precondition(forcedArguments == ["--agent", "kimi", "--port", "60123", "--token-path", hostileToken,
+                                     "--env", "KIMI_CODE_INFINITE_RETRY=true", "--env", "QUOTE=it's $HOME",
+                                     "--force-restart"])
     // The default token path is left to the host, where it follows KIMI_CODE_HOME.
     let moved = RemoteSetup.kimiEnsureCommand(script: echo, port: 60123, tokenPath: SSHHost.defaultKimiTokenPath,
                                               environment: ["KIMI_CODE_HOME": "/srv/kimi home"])

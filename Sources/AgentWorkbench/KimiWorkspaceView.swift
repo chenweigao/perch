@@ -13,6 +13,8 @@ struct KimiWorkspaceView: View {
     let onInput: () -> Void
     let onResultDisplayed: (KimiSession) -> Void
     @State private var activityReview = 0
+    @State private var confirmingRestart = false
+    @State private var restartFailure: String?
     var body: some View {
         #if PERCH_ACCEPTANCE
         let _ = { NativeAcceptanceProbe.shared.kimiBodyEvaluations += 1 }()
@@ -47,9 +49,17 @@ struct KimiWorkspaceView: View {
                 ConversationNotice(text: L("连接中断，显示的是最近同步的内容。") + "\n" + problem, symbol: "wifi.exclamationmark")
             }
             // An upgraded package with an older service still running. Informational: the
-            // session keeps working. Perch restarts only the Kimi Web it started, once idle.
-            if let notice = connection.staleRuntimeNotice {
-                ConversationNotice(text: notice, symbol: "info.circle", tint: .secondary)
+            // session keeps working. Perch restarts only the Kimi Web it started, once idle;
+            // the reader can apply it now and accept the interrupted turns.
+            if connection.restarting {
+                ConversationNotice(text: L("正在重启 Kimi Web，完成后会自动重连。"),
+                                   symbol: "arrow.triangle.2.circlepath", tint: .secondary)
+            } else if let notice = connection.staleRuntimeNotice {
+                ConversationNotice(text: notice, symbol: "info.circle", tint: .secondary,
+                                   action: connection.canForceRestart
+                                   ? .init(title: L("立即重启"), isDisabled: connection.restarting,
+                                           perform: { confirmingRestart = true })
+                                   : nil)
             }
         }.frame(maxWidth: .infinity, maxHeight: .infinity).background(WorkbenchTheme.contentBackground)
             .tint(kimiAccent)
@@ -58,6 +68,20 @@ struct KimiWorkspaceView: View {
             .sheet(item: transcriptSheet) { task in
                 KimiSubagentTranscriptSheet(agentId: task.transcriptAgentId ?? task.id, subject: task,
                                             connection: connection)
+            }
+            .alert("立即重启 Kimi Web？", isPresented: $confirmingRestart) {
+                Button("取消", role: .cancel) {}
+                Button("立即重启", role: .destructive) {
+                    Task { restartFailure = await connection.restartManagedService() }
+                }
+            } message: {
+                Text("正在运行的回合、后台任务和待处理的审批或提问会中断。会话历史会保留，重连后可继续。")
+            }
+            .alert("无法重启 Kimi Web", isPresented: Binding(
+                get: { restartFailure != nil }, set: { if !$0 { restartFailure = nil } })) {
+                Button("好", role: .cancel) {}
+            } message: {
+                Text(verbatim: restartFailure ?? "")
             }
 
     }

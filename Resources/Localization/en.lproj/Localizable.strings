@@ -1785,8 +1785,8 @@
 /* Managed Kimi Web (2026-10-22) */
 "由 Perch 托管 Kimi Web" = "Let Perch manage Kimi Web";
 "启动环境变量" = "Launch environment";
-"托管时，服务未运行则由 Perch 启动；Kimi 升级或启动配置修改后，等所有会话空闲再自动重启。Perch 只重启自己启动的 Kimi Web。" = "When managed, Perch starts the service if it is not running, and restarts it automatically once every session is idle after a Kimi upgrade or a change to its launch settings. Perch only restarts a Kimi Web it started.";
-"由 Perch 启动的 Kimi Web 由 Perch 托管：Kimi 升级后，Perch 会在所有会话空闲时自动重启它。" = "A Kimi Web started by Perch is managed by Perch: after a Kimi upgrade, Perch restarts it automatically once every session is idle.";
+"托管时，服务未运行则由 Perch 启动；Kimi 升级或启动配置修改后，等所有会话空闲再自动重启，也可以在检查结果中立即重启。Perch 只重启自己启动的 Kimi Web。" = "When managed, Perch starts the service if it is not running, and after a Kimi upgrade or a change to its launch settings, restarts it automatically once every session is idle, or immediately from the check result. Perch only restarts a Kimi Web it started.";
+"由 Perch 启动的 Kimi Web 由 Perch 托管：Kimi 升级后，Perch 会在所有会话空闲时自动重启它，也可以立即重启。" = "A Kimi Web started by Perch is managed by Perch: after a Kimi upgrade, Perch restarts it automatically once every session is idle, or you can restart it now.";
 "由 Perch 托管" = "managed by Perch";
 "正在准备由 Perch 托管的 Kimi Web；远端需要 Python 3。" = "Preparing the Kimi Web managed by Perch; the remote needs Python 3.";
 "Kimi Web 配置待生效" = "Kimi Web settings pending restart";
@@ -1797,8 +1797,17 @@
 "此构建缺少 Kimi Web 托管组件。请使用 scripts/build.sh 打包的 Perch.app。" = "This build lacks the Kimi Web management component. Use the Perch.app packaged by scripts/build.sh.";
 "这个 Kimi Web 不是 Perch 启动的，Perch 不会重启它；停止它后，Perch 会在重新连接时接管。" = "This Kimi Web was not started by Perch, so Perch will not restart it. Once it stops, Perch takes over when it reconnects.";
 "Kimi %@ 已安装，当前仍使用 %@，可以继续使用。还有 %@ 个会话在运行，全部空闲后 Perch 会自动重启 Kimi Web。" = "Kimi %1$@ is installed; this connection still uses %2$@ and keeps working. Sessions still running: %3$@. Once all are idle, Perch restarts Kimi Web automatically.";
-"Kimi %@ 已安装，当前仍使用 %@。Perch 无法确认服务空闲，或重启后版本仍未变化，因此不会自动重启；请在这台机器上手动重启 Kimi Web。" = "Kimi %1$@ is installed; this connection still uses %2$@. Perch cannot confirm the service is idle, or a restart left the version unchanged, so it will not restart it automatically. Restart Kimi Web on that machine by hand.";
-"Perch 无法确认 Kimi Web 是否空闲，暂不自动重启。可以在这台机器上手动重启 Kimi Web。" = "Perch cannot confirm that Kimi Web is idle, so it will not restart it automatically for now. You can restart Kimi Web on that machine by hand.";
+"此前的重启已启动安装的 %@，但运行进程仍报告 %@。再次重启不会改变版本；请检查这台机器上的安装路径或 PATH。" = "An earlier restart started the installed %1$@, but the running process still reports %2$@. Restarting again will not change the version; check the installation path or PATH on that machine.";
+"Kimi %@ 已安装，当前仍使用 %@。Perch 无法确认服务空闲，暂不自动重启；可以立即重启，正在运行的任务会中断。" = "Kimi %1$@ is installed; this connection still uses %2$@. Perch cannot confirm the service is idle, so it will not restart it automatically for now. You can restart it now; running tasks will be interrupted.";
+"Perch 无法确认 Kimi Web 是否空闲，暂不自动重启；可以立即重启，正在运行的任务会中断。" = "Perch cannot confirm that Kimi Web is idle, so it will not restart it automatically for now. You can restart it now; running tasks will be interrupted.";
+"立即重启" = "Restart Now";
+"正在重启 Kimi Web，完成后会自动重连。" = "Restarting Kimi Web; Perch reconnects when it is ready.";
+"正在重启 Kimi Web…" = "Restarting Kimi Web…";
+"正在连接重启后的 Kimi Web。" = "Connecting to the restarted Kimi Web.";
+"立即重启 Kimi Web？" = "Restart Kimi Web now?";
+"正在运行的回合、后台任务和待处理的审批或提问会中断。会话历史会保留，重连后可继续。" = "Running turns, background tasks, and pending approvals or questions will be interrupted. Session history is kept, and you can continue after reconnecting.";
+"无法重启 Kimi Web" = "Could Not Restart Kimi Web";
+"好" = "OK";
 "Kimi Web 的启动配置已修改。还有 %@ 个会话在运行，全部空闲后 Perch 会自动重启它，新配置随之生效。" = "Kimi Web's launch settings changed. Sessions still running: %@. Once all are idle, Perch restarts it automatically and the new settings take effect.";
 "↑↓ 选择 · 回车打开 · Esc 关闭" = "↑↓ Select · Return to open · Esc to close";
 

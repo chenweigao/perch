@@ -38,10 +38,17 @@ func checkRuntimeFreshness() throws {
                                       restartReason: .update, restartPending: -1)
     let manual = RuntimeVersion.managedNotice(unknown) ?? ""
     precondition(manual.contains("2.4.0") && manual != waiting)
+    precondition(unknown.canForceRestart, "a confirmed restart is possible when the idle state is unknown")
+    let stuck = KimiServiceEndpoint(port: 58627, token: "t", owned: true, installedVersion: "2.4.0", runningVersion: "2.3.0",
+                                    restartReason: .update, restartPending: -1, restartStuck: true)
+    let stuckNotice = RuntimeVersion.managedNotice(stuck) ?? ""
+    precondition(!stuckNotice.isEmpty && stuckNotice != manual && !stuck.canForceRestart,
+                "a version that survived a restart is not retried")
     let settings = KimiServiceEndpoint(port: 58627, token: "t", owned: true, installedVersion: "2.3.0", runningVersion: "2.3.0",
                                        restartReason: .settings, restartPending: 1)
     let configured = RuntimeVersion.managedNotice(settings) ?? ""
     precondition(!configured.isEmpty && !configured.contains("2.3.0") && configured.contains("1"))
+    precondition(settings.canForceRestart)
     precondition(!RuntimeVersion.foreignServiceNote().isEmpty)
 
     // Start timestamps: fractional seconds, `Z` and both offset spellings parse.

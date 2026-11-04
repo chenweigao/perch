@@ -3,7 +3,7 @@ import Foundation
 /// Only connection establishment differs locally; conversation, approval and
 /// recovery continue through the same authenticated APIs as remote sessions.
 public enum LocalAgentRuntime {
-    public static func endpoint(for kind: SessionKind, host: SSHHost) async throws -> Data {
+    public static func endpoint(for kind: SessionKind, host: SSHHost, forceRestart: Bool = false) async throws -> Data {
         guard host.isLocal, LocalAgentDiscovery.supported.contains(kind) else {
             throw WorkbenchError(L("此 Agent 尚未接入本机对话"))
         }
@@ -17,8 +17,9 @@ public enum LocalAgentRuntime {
             throw WorkbenchError(L("本机服务组件缺失，请重新构建应用。"))
         }
         // Kimi may first replace an idle outdated instance Perch started, which waits for its shutdown.
-        return try await SetupCommandRunner.run("/usr/bin/python3",
-            [script.path, "--agent", kind.rawValue, "--binary", binary, "--port", String(host.kimiPort)],
+        var arguments = [script.path, "--agent", kind.rawValue, "--binary", binary, "--port", String(host.kimiPort)]
+        if forceRestart { arguments.append("--force-restart") }
+        return try await SetupCommandRunner.run("/usr/bin/python3", arguments,
             timeout: kind == .kimi ? RemoteSetup.kimiEnsureTimeout : 20, environment: LocalAgentDiscovery.environment)
     }
 }
