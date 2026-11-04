@@ -186,6 +186,14 @@ func checkRemoteSetup() async throws {
     let unreadableBridge = try await probeBridge(home: bridgeHome)
     precondition(unreadableBridge == .unreadable)
     precondition(RemoteSetup.parseBridgeProbe(Data("installed\0x\0".utf8)) == .invalid(output: "installed\0x\0"))
+    // The upgrade transition window: only the verified version pairs keep a
+    // waiting old bridge serving; every other gap stays gated. v13 differs from
+    // v12 only by capping snapshot pages, so that pair is safe both ways.
+    precondition(RemoteSetup.bridgeTransitionCompatible(serving: RemoteSetup.bridgeServiceVersion))
+    precondition(RemoteSetup.bridgeTransitionCompatible(serving: 12, expected: 13))
+    precondition(!RemoteSetup.bridgeTransitionCompatible(serving: 11, expected: 13))
+    precondition(!RemoteSetup.bridgeTransitionCompatible(serving: 12, expected: 14))
+    precondition(!RemoteSetup.bridgeTransitionCompatible(serving: 14, expected: 13))
 
     let args = try RemoteSetup.sshArguments("fixture", command: "true")
     precondition(args.contains("StrictHostKeyChecking=yes") && args.contains("BatchMode=yes"))

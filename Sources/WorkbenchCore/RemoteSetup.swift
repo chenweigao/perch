@@ -70,6 +70,16 @@ public enum RemoteSetup {
     /// remote/native-agent-service.py; scripts/check-version.py enforces that.
     public static let bridgeServiceVersion = 13
 
+    /// Whether a bridge still serving an older protocol keeps every request this
+    /// build may send meaningful while its replacement waits for a safe window.
+    /// v13 only caps snapshot pages at 500 messages (commit 1173a9c); every v13
+    /// request exists in v12 with the same meaning, and the same version with a
+    /// different source digest is the same protocol by definition. Any other gap
+    /// stays gated: the connection refuses the old process instead of guessing.
+    public static func bridgeTransitionCompatible(serving: Int, expected: Int = bridgeServiceVersion) -> Bool {
+        serving == expected || (serving == 12 && expected == 13)
+    }
+
     public static func sshAliases(_ config: String) -> [String] {
         var aliases = Set<String>()
         for line in config.split(separator: "\n") {

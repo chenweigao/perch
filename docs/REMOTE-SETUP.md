@@ -41,6 +41,11 @@ controls. This takes inspiration from [Codex's SSH connection workflow](https://
   in the conversation as well. It never blocks the wizard. Perch does not
   restart or stop a service the user is running; it restarts only the managed
   Kimi Web it started, once every session is idle (see `docs/KIMI.md`).
+- A staged native bridge update whose old process is still protected by running
+  work does not fail the wizard either: when the serving protocol is one this
+  build can safely speak (see `RemoteSetup.bridgeTransitionCompatible`), the
+  check passes through the old process and an informational row names the
+  pending switch and the task count protecting it.
 - The same machine UUID, agent, checked project path and selected model are
   passed to the existing task composer. No duplicate task-creation path is added.
 - Removing a machine only disconnects the Mac and removes the local entry. The

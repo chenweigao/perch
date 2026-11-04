@@ -286,12 +286,20 @@ final class RemoteSetupController: ObservableObject {
     }
     /// The bridge process serving this check. `--ensure` already replaces an idle
     /// service whose source differs, so this row only makes the running one visible;
-    /// an agent CLI upgraded mid-session still applies from its next session.
-    private func reportBridgeProcess(running: RunningRuntime) {
+    /// an agent CLI upgraded mid-session still applies from its next session. While
+    /// a staged update waits for running tasks, the row names that transition
+    /// instead: the check passes through the compatible old process.
+    private func reportBridgeProcess(running: RunningRuntime, transition: BridgeTransition? = nil) {
         checks.removeAll { $0.id == "process" }
         var parts: [String] = []
         if let source = running.version, !source.isEmpty { parts.append(L("桥接源码 \(source)")) }
         if let started = RuntimeVersion.startedLabel(running.startedAt) { parts.append(started) }
+        if let transition {
+            var detail = L("运行中的服务仍是 v\(transition.serving)，\(transition.activeTasks) 个任务运行中；全部结束后 Perch 自动安全切换，目录与会话不受影响。")
+            if !parts.isEmpty { detail += "\n" + parts.joined(separator: " · ") }
+            checks.append(Check(id: "process", title: L("桥接更新待生效"), status: .information, detail: detail))
+            return
+        }
         guard !parts.isEmpty else { return }
         checks.append(Check(id: "process", title: L("运行进程"), status: .information,
                             detail: parts.joined(separator: " · ")))
@@ -332,7 +340,7 @@ final class RemoteSetupController: ObservableObject {
         let status = try await connection.setupStatus(provider: provider)
         try Task.checkCancellation()
         mark("service", .passed, L("桥接组件 v\(bridge)"))
-        reportBridgeProcess(running: connection.runtime)
+        reportBridgeProcess(running: connection.runtime, transition: connection.bridgeTransition)
         mark("models", .checking)
         hint = L("在远端安装所选 Agent、完成登录和模型配置，然后重新检查。")
         guard status["installed"] == .bool(true) else {

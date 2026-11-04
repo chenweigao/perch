@@ -745,6 +745,7 @@ private struct ConnectionControls: View {
                                     agentStatus("原生 Agent · \(providers.count)",
                                                 online: native.online, error: bridgeUpdateError ?? native.error,
                                                 needsBridgeUpdate: native.needsBridgeUpdate, updating: bridgeUpdating,
+                                                transition: native.bridgeTransition,
                                                 update: { updateBridge(destination: connection.host.destination) }) { native.connect() }
                                 }
                                 if expanded {
@@ -788,6 +789,7 @@ private struct ConnectionControls: View {
     }
     private func agentStatus(_ name: String, online: Bool, error: String?,
                              needsBridgeUpdate: Bool = false, updating: Bool = false,
+                             transition: BridgeTransition? = nil,
                              update: (() -> Void)? = nil, reconnect: @escaping () -> Void) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack {
@@ -811,6 +813,13 @@ private struct ConnectionControls: View {
             }
             if let error, !online {
                 Text(error).font(.system(size: SidebarMetrics.detailSize)).foregroundStyle(.orange).lineLimit(3).textSelection(.enabled)
+            } else if let transition {
+                // A staged bridge update waiting for its safe window. The old
+                // process keeps serving, so the catalog stays live; this line
+                // discloses the pending switch instead of hiding it.
+                Text("桥接更新待生效 · \(transition.activeTasks) 个任务运行中")
+                    .font(.system(size: SidebarMetrics.detailSize)).foregroundStyle(.secondary).lineLimit(3).textSelection(.enabled)
+                    .help("远端桥接组件已更新；为保护正在运行的任务，旧服务（v\(transition.serving)）继续服务，目录与会话照常同步。全部任务结束后 Perch 自动安全切换。")
             }
         }.padding(.leading, 12)
     }
