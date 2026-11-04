@@ -77,6 +77,10 @@ public enum RemoteFileCommand {
     static func script(limit: Int, fromEnd: Bool = false) -> String {
         """
         p=$1
+        case "$p" in
+          "~") p=$HOME ;;
+          "~/"*) p="$HOME/${p#\\~/}" ;;
+        esac
         \(readScript(limit: limit, fromEnd: fromEnd))
         """
     }

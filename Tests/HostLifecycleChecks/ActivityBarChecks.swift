@@ -237,22 +237,20 @@ private struct ActivityBarCheckFixture: View {
     var returned = 0
     let context = ConversationActionContext(hostID: UUID(), kind: .kimi, sessionID: "inline-check",
                                             recapKey: "inline-check:1", recapMessageID: "final-answer")
+    let activityEntry = ConversationTimelineEntry.make(runningMessages, isRunning: true).last { $0.presentation == .activity }!
+    let projectedTools = ToolVisibilityProjection().update(runningMessages, sessionID: "inline-running", running: busyIDs, online: true).tools
     let inlineHost = NSHostingView(rootView: VStack(spacing: 12) {
-        ConversationTranscript(messages: runningMessages, sessionId: "inline-running",
-                               running: busyIDs, isRunning: true, foldsProcess: true,
-                               timing: live, planProgress: progressLive)
+        KimiActivityView(entry: activityEntry, tools: projectedTools, api: nil, sessionId: "inline-running",
+                         isLive: true, planProgress: progressLive, reduceMotionOverride: false)
             .environment(\.conversationActionContext, context)
-            .environment(\.conversationReduceMotion, false)
         ReturnToLatestButton(isVisible: true,
                              waitingRequest: TurnRequest(kind: .approval, text: "rm -rf .build/release"),
                              pendingCount: 1,
                              action: { returned += 1 })
-    }.environment(\.locale, Locale(identifier: "zh-Hans")).frame(width: 720, height: 360))
+    }.environment(\.locale, Locale(identifier: "zh-Hans")).frame(width: 720, height: 200))
     window.contentView = inlineHost
     try await Task.sleep(for: .milliseconds(350))
     inlineHost.layoutSubtreeIfNeeded()
     precondition(!glints(inlineHost).isEmpty, "Live inline KimiActivityView header carries ShimmerGlint")
-    let pill = inlineHost.subviews.flatMap { [$0] + $0.subviews }.first { _ in true }
-    _ = pill
     print("PASS: the running title sweeps once per progress event; status line clicks reach the line through its title; idle status line takes no space; activity bar keeps one height and the reading viewport across running/pending/offline/stopping/failed/ended, wide/narrow, light/dark; pending review and reconnect actions respond; inline stage header and Recap target verified")
 }

@@ -41,7 +41,8 @@ struct KimiActivityView: View {
     var narrative: ActivityNarrative? = nil
     var isLive = false
     var planProgress: TurnStatus.Progress? = nil
-    private var reduceMotion: Bool { systemReduceMotion || conversationReduceMotion }
+    var reduceMotionOverride: Bool? = nil
+    private var reduceMotion: Bool { reduceMotionOverride ?? (systemReduceMotion || conversationReduceMotion) }
 
     private func progressPulse(_ items: [VisibleTool]) -> Int {
         var hasher = Hasher()
