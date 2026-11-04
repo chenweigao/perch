@@ -66,12 +66,20 @@ public enum SessionNaming {
     /// the final closing tag is a candidate title.
     public static func sanitize(_ text: String, limit: Int = 40) -> String {
         var answer = text
-        if let end = answer.range(of: "</think>", options: .backwards) {
+        if let end = answer.range(of: "</think>", options: [.backwards, .caseInsensitive]) {
             answer = String(answer[end.upperBound...])
+        } else if answer.range(of: "<think>", options: [.caseInsensitive]) != nil {
+            return ""
         }
         var value = answer.components(separatedBy: .newlines).first { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } ?? ""
         value = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        let pairs = [("\"", "\""), ("'", "'"), ("“", "”"), ("‘", "’"), ("「", "」"), ("『", "』"), ("《", "》")]
+        for marker in ["### ", "## ", "# ", "**"] where value.hasPrefix(marker) {
+            value.removeFirst(marker.count)
+            if marker == "**" { value = value.replacingOccurrences(of: "**", with: "") }
+            value = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            break
+        }
+        let pairs = [("\"", "\""), ("'", "'"), ("`", "`"), ("“", "”"), ("‘", "’"), ("「", "」"), ("『", "』"), ("《", "》")]
         for (open, close) in pairs where value.count > open.count + close.count - 1
             && value.hasPrefix(open) && value.hasSuffix(close) {
             value = String(value.dropFirst(open.count).dropLast(close.count))

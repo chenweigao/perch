@@ -23,11 +23,22 @@ public enum ToolPresentation {
     }
 
     public static func path(_ tool: VisibleTool) -> String? {
-        tool.input?["file_path"].string ?? tool.input?["path"].string
+        if let direct = tool.input?["file_path"].string ?? tool.input?["filePath"].string ?? tool.input?["path"].string,
+           !direct.isEmpty {
+            return direct
+        }
+        if let first = tool.input?["changes"].array.first {
+            return first["move_path"].string ?? first["path"].string
+        }
+        return nil
     }
 
     public static func target(_ tool: VisibleTool) -> String {
-        if let path = path(tool), !path.isEmpty { return (path as NSString).lastPathComponent }
+        if let path = path(tool), !path.isEmpty {
+            let base = (path as NSString).lastPathComponent
+            let changeCount = tool.input?["changes"].array.count ?? 0
+            return changeCount > 1 ? "\(base) (+\(changeCount - 1))" : base
+        }
         return tool.input?["description"].string ?? tool.input?["pattern"].string
             ?? tool.input?["command"].string ?? tool.name
     }

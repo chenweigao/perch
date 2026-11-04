@@ -26,6 +26,13 @@ public enum SidebarProjectEvidence {
                     call.append((path as NSString).deletingLastPathComponent)
                 }
             }
+            for change in input["changes"].array {
+                if let raw = change["move_path"].string ?? change["path"].string,
+                   let path = absolute(raw, base: base) {
+                    call.append(path)
+                    call.append((path as NSString).deletingLastPathComponent)
+                }
+            }
             if let command = input["command"].string ?? input["cmd"].string {
                 // A heredoc body is program text, not shell navigation evidence.
                 let shell = command.components(separatedBy: "<<")[0]

@@ -330,6 +330,14 @@ private func checkSubagentToolNames() {
     }
     expectEqual(ToolPresentation.action("Read"), L("读取"))
     expectEqual(ToolPresentation.action("agent/wait"), "agent/wait")
+    let codexPatch = VisibleTool(id: "patch-1", name: "apply_patch", input: .object([
+        "changes": .array([
+            .object(["path": .string("/repo/src/Table.tsx")]),
+            .object(["path": .string("/repo/src/Matrix.ts")])
+        ])
+    ]), status: .succeeded)
+    expectEqual(ToolPresentation.path(codexPatch), "/repo/src/Table.tsx")
+    expectEqual(ToolPresentation.target(codexPatch), "Table.tsx (+1)")
     print("PASS: Agent, Task and agent/spawnAgent read as subagent calls with the subagent action label")
 }
 

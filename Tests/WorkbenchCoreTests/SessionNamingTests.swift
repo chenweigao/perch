@@ -80,6 +80,9 @@ func checkSessionNaming() throws {
     precondition(SessionNaming.sanitize(String(repeating: "a", count: 80)).count == 40)
     precondition(SessionNaming.sanitize("<think>\nThe user wants a title.\n</think>\n\n修复登录跳转") == "修复登录跳转",
                  "A reasoning model's thinking is not the title")
+    precondition(SessionNaming.sanitize("<think>\nUnclosed thinking block") == "",
+                 "Unclosed thinking blocks must never leak as a session title")
+    precondition(SessionNaming.sanitize("**`修复登录跳转`**") == "修复登录跳转")
     precondition(SessionNaming.sanitize("</think>\n排查登录重定向") == "排查登录重定向")
 
     let client = SessionNamingClient()
