@@ -81,9 +81,12 @@ public enum RuntimeVersion {
         let installed = service.installedVersion ?? "", running = service.runningVersion ?? ""
         let versions = service.restartReason == .update && !installed.isEmpty && !running.isEmpty
         if pending < 0 {
+            if service.restartStuck {
+                return L("此前的重启已启动安装的 \(installed)，但运行进程仍报告 \(running)。再次重启不会改变版本；请检查这台机器上的安装路径或 PATH。", locale: locale)
+            }
             return versions
-                ? L("Kimi \(installed) 已安装，当前仍使用 \(running)。Perch 无法确认服务空闲，或重启后版本仍未变化，因此不会自动重启；请在这台机器上手动重启 Kimi Web。", locale: locale)
-                : L("Perch 无法确认 Kimi Web 是否空闲，暂不自动重启。可以在这台机器上手动重启 Kimi Web。", locale: locale)
+                ? L("Kimi \(installed) 已安装，当前仍使用 \(running)。Perch 无法确认服务空闲，暂不自动重启；可以立即重启，正在运行的任务会中断。", locale: locale)
+                : L("Perch 无法确认 Kimi Web 是否空闲，暂不自动重启；可以立即重启，正在运行的任务会中断。", locale: locale)
         }
         let count = String(pending)
         if versions {

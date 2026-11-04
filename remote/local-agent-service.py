@@ -3,8 +3,9 @@
 
 Kimi Web started here is recorded as Perch's own. Only that instance is ever
 stopped: when the installed package or its saved launch environment changed and
-no session is busy, it is replaced on the same port and keeps its token. A
-service someone else started is reused as-is and never signalled.
+no session is busy, it is replaced on the same port and keeps its token; a
+user-confirmed restart may replace it while busy. A service someone else started
+is reused as-is and never signalled.
 
 Runs both on the Mac and, streamed over SSH, on remote hosts, so the Kimi path
 stays compatible with Python 3.6.
@@ -236,7 +237,7 @@ def stop_kimi(pid, port, timeout):
     return False
 
 
-def refresh_owned(binary, home, env, kimi_dir, token_path, record_path, record, service, token, environment, stop_timeout):
+def refresh_owned(binary, home, env, kimi_dir, token_path, record_path, record, service, token, environment, stop_timeout, force_restart=False):
     port = record['port']
     endpoint = {'port': port, 'token': token, 'owned': True}
     running = parse_version(service.get('server_version'))
@@ -249,15 +250,18 @@ def refresh_owned(binary, home, env, kimi_dir, token_path, record_path, record, 
         # version (a staged native update, another PATH entry): report it, do not loop.
         if record.get('replacedFor') == installed:
             endpoint['restartPending'] = -1
+            endpoint['restartStuck'] = True
             return endpoint
     elif record.get('environment') != environment:
         endpoint['restartReason'] = 'settings'
     else:
         return endpoint
-    busy = busy_sessions(port, token)
-    if busy is None or busy:
-        endpoint['restartPending'] = -1 if busy is None else busy
-        return endpoint
+    # A user-confirmed restart skips the idle wait; a stuck version still does not.
+    if not force_restart:
+        busy = busy_sessions(port, token)
+        if busy is None or busy:
+            endpoint['restartPending'] = -1 if busy is None else busy
+            return endpoint
     if not stop_kimi(record['pid'], port, stop_timeout):
         endpoint['restartPending'] = -1
         return endpoint
@@ -269,7 +273,7 @@ def refresh_owned(binary, home, env, kimi_dir, token_path, record_path, record, 
     return started
 
 
-def ensure_kimi(binary, port, home, token_path=None, environment=None, stop_timeout=STOP_TIMEOUT):
+def ensure_kimi(binary, port, home, token_path=None, environment=None, stop_timeout=STOP_TIMEOUT, force_restart=False):
     environment = dict(environment or {})
     env = dict(os.environ)
     env.update(environment)
@@ -286,7 +290,7 @@ def ensure_kimi(binary, port, home, token_path=None, environment=None, stop_time
         service = owned_service(record, token)
         if service is not None:
             return refresh_owned(binary, home, env, kimi_dir, token_path, record_path, record, service,
-                                 token, environment, stop_timeout)
+                                 token, environment, stop_timeout, force_restart)
         if record is not None: remove_record(record_path)
         endpoint = kimi_endpoint(port, token_path)
         if endpoint: return endpoint
@@ -324,6 +328,8 @@ def main():
     parser.add_argument('--token-path')
     parser.add_argument('--env', action='append', default=[])
     parser.add_argument('--stop-timeout', type=float, default=STOP_TIMEOUT)
+    # The user confirmed that running turns may be interrupted.
+    parser.add_argument('--force-restart', action='store_true')
     args = parser.parse_args()
     os.umask(0o077)
     binary = args.binary or (resolve_kimi() if args.agent == 'kimi' else None)
@@ -333,7 +339,7 @@ def main():
     os.environ['PATH'] = str(pathlib.Path(binary).parent) + os.pathsep + os.environ.get('PATH', '')
     if args.agent == 'kimi':
         endpoint = ensure_kimi(binary, args.port, pathlib.Path.home(), args.token_path,
-                               parse_environment(args.env), args.stop_timeout)
+                               parse_environment(args.env), args.stop_timeout, args.force_restart)
         print(json.dumps(endpoint))
     else:
         os.environ['AWB_NATIVE_ROOT'] = str(pathlib.Path.home() / '.local/share/perch/local-native')

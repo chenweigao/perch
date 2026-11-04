@@ -168,8 +168,14 @@ final class KimiConnection {
     private(set) var runtime = RunningRuntime.unknown
     /// Set when the remote package is newer than the running service. For a service the
     /// user runs, Perch only reports it. For the instance Perch manages, it says what
-    /// the automatic restart waits for, or why Perch will not restart it.
+    /// the automatic restart waits for, or why Perch will not restart it; the reader
+    /// can apply a waiting restart immediately from the notice.
     private(set) var staleRuntimeNotice: String?
+    /// A user-confirmed replacement of the managed Kimi Web is in flight.
+    private(set) var restarting = false
+    /// The notice offers an immediate restart only for the instance Perch started,
+    /// when a restart would actually change something.
+    var canForceRestart: Bool { managedService?.canForceRestart == true }
     /// The last report about the Kimi Web Perch manages on this host.
     @ObservationIgnored private(set) var managedService: KimiServiceEndpoint?
     @ObservationIgnored private var managedCheckedAt: Date?
@@ -336,6 +342,24 @@ final class KimiConnection {
         }
     }
 
+    /// Replaces the Kimi Web Perch manages even though sessions are busy. The caller
+    /// has confirmed that running turns may be interrupted; the reconnect afterward
+    /// restores the saved session selection.
+    func restartManagedService() async -> String? {
+        guard !restarting, managedService?.canForceRestart == true else { return nil }
+        restarting = true
+        defer { restarting = false }
+        disconnect()
+        do {
+            _ = try await ensureManagedService(force: true)
+            connect()
+            return nil
+        } catch {
+            connect()
+            return error.localizedDescription
+        }
+    }
+
     func disconnect() {
         generation = UUID(); detail.cancelLoads()
         freshnessCheck?.cancel(); freshnessCheck = nil
@@ -441,14 +465,17 @@ final class KimiConnection {
         } catch {}
     }
     /// Runs the service script for this host. It starts Perch's Kimi Web when none
-    /// answers, reuses it, or replaces it once every session is idle. A service the user
-    /// started is reused and never stopped.
-    private func ensureManagedService() async throws -> KimiServiceEndpoint {
+    /// answers, reuses it, or replaces it once every session is idle. A confirmed
+    /// forced restart skips the idle wait. A service the user started is reused and
+    /// never stopped.
+    private func ensureManagedService(force: Bool = false) async throws -> KimiServiceEndpoint {
         if host.isLocal {
-            return try RemoteSetup.parseKimiServiceEndpoint(try await LocalAgentRuntime.endpoint(for: .kimi, host: host))
+            return try RemoteSetup.parseKimiServiceEndpoint(
+                try await LocalAgentRuntime.endpoint(for: .kimi, host: host, forceRestart: force))
         }
         let command = RemoteSetup.kimiEnsureCommand(script: try RemoteSetup.kimiServiceScript(), port: host.kimiPort,
-                                                    tokenPath: host.kimiTokenPath, environment: host.kimiEnvironment)
+                                                    tokenPath: host.kimiTokenPath, environment: host.kimiEnvironment,
+                                                    forceRestart: force)
         let output = try await SetupCommandRunner.run("/usr/bin/ssh", RemoteSetup.sshArguments(host.destination, command: command),
                                                       timeout: RemoteSetup.kimiEnsureTimeout)
         return try RemoteSetup.parseKimiServiceEndpoint(output)

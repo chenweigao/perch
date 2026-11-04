@@ -50,6 +50,12 @@ struct AddHostSheet: View {
             .onChange(of: setup.tokenPath) { _, _ in setup.invalidateAgent() }
             .onChange(of: setup.kimiEnvironment) { _, _ in setup.invalidateAgent() }
             .onChange(of: setup.directory) { _, _ in setup.invalidateProject() }
+            .alert("立即重启 Kimi Web？", isPresented: $setup.pendingKimiRestart) {
+                Button("取消", role: .cancel) {}
+                Button("立即重启", role: .destructive) { setup.restartKimi() }
+            } message: {
+                Text("正在运行的回合、后台任务和待处理的审批或提问会中断。会话历史会保留，重连后可继续。")
+            }
     }
     private func stepLabel(_ title: LocalizedStringKey, step: RemoteSetupController.Step) -> some View {
         HStack(spacing: 6) {
@@ -113,7 +119,7 @@ struct AddHostSheet: View {
             } footer: {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("服务只通过 SSH 访问远端 127.0.0.1。填写文件路径即可，令牌不保存在 Mac 配置中。")
-                    Text("托管时，服务未运行则由 Perch 启动；Kimi 升级或启动配置修改后，等所有会话空闲再自动重启。Perch 只重启自己启动的 Kimi Web。")
+                    Text("托管时，服务未运行则由 Perch 启动；Kimi 升级或启动配置修改后，等所有会话空闲再自动重启，也可以在检查结果中立即重启。Perch 只重启自己启动的 Kimi Web。")
                 }
             }
             .disabled(setup.busy)
@@ -168,6 +174,10 @@ struct AddHostSheet: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(check.title).font(.callout.weight(.medium))
                 if !check.detail.isEmpty { Text(check.detail).font(.subheadline).foregroundStyle(.secondary).textSelection(.enabled) }
+                if let action = check.action {
+                    Button(action.title, action: action.perform)
+                        .buttonStyle(.bordered).controlSize(.small).disabled(setup.busy)
+                }
                 if check.needsManualRestart {
                     DisclosureGroup("重启步骤") {
                         VStack(alignment: .leading, spacing: 8) {
@@ -181,7 +191,7 @@ struct AddHostSheet: View {
                     }.font(.subheadline).padding(.top, 4)
                 }
             }
-        }.accessibilityElement(children: check.needsManualRestart ? .contain : .combine)
+        }.accessibilityElement(children: check.needsManualRestart || check.action != nil ? .contain : .combine)
     }
     private var repairs: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -210,7 +220,7 @@ struct AddHostSheet: View {
                 }
             }
             if setup.provider == .kimi && setup.failedCheck == "service" && !setup.kimiManaged {
-                Text("由 Perch 启动的 Kimi Web 由 Perch 托管：Kimi 升级后，Perch 会在所有会话空闲时自动重启它。")
+                Text("由 Perch 启动的 Kimi Web 由 Perch 托管：Kimi 升级后，Perch 会在所有会话空闲时自动重启它，也可以立即重启。")
                     .font(.subheadline).foregroundStyle(.secondary)
             }
             if setup.provider == .dsh {
