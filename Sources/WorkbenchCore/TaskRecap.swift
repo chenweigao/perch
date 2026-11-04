@@ -259,12 +259,8 @@ public final class TaskRecapClient: NSObject, URLSessionTaskDelegate, @unchecked
     }
 
     public static func responseResult(_ data: Data) throws -> TaskRecapResult {
-        let response = try JSONDecoder().decode(Response.self, from: data)
-        if response.choices.first?.finishReason == "length" { throw ActivitySummaryError.truncated }
-        let text = response.choices.first?.message.content?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        guard !text.isEmpty else { throw ActivitySummaryError.emptyResponse }
-        guard let start = text.firstIndex(of: "{"), let end = text.lastIndex(of: "}"), start <= end,
-              let payload = String(text[start...end]).data(using: .utf8),
+        let text = try ActivitySummaryClient.completionText(data)
+        guard let payload = ActivitySummaryClient.extractJSONPayload(text),
               let result = try? JSONDecoder().decode(TaskRecapResult.self, from: payload) else {
             throw ActivitySummaryError.invalidResponse
         }

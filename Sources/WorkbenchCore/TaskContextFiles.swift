@@ -28,6 +28,13 @@ public enum TaskContextFiles {
                 let clean = (raw as NSString).standardizingPath
                 if !toolPaths.contains(clean) { toolPaths.append(clean) }
             }
+            for change in tool.input?["changes"].array ?? [] {
+                let kind = (change["kind"]["type"].string ?? change["kind"].string)?.lowercased()
+                guard kind != "delete" && kind != "remove",
+                      let raw = change["move_path"].string ?? change["path"].string, raw.hasPrefix("/") else { continue }
+                let clean = (raw as NSString).standardizingPath
+                if !toolPaths.contains(clean) { toolPaths.append(clean) }
+            }
         }
         func add(_ raw: String, written: Bool = false, link: Bool = false) {
             let reference: ConversationFileReference?
@@ -69,9 +76,16 @@ public enum TaskContextFiles {
         for tool in tools.reversed() {
             let name = tool.name.lowercased()
             if tool.status == .succeeded,
-               ["write", "write_file", "writefile", "edit", "edit_file", "editfile"].contains(name),
-               let path = tool.input?["file_path"].string ?? tool.input?["path"].string {
-                add(path, written: true)
+               ["write", "write_file", "writefile", "edit", "edit_file", "editfile", "apply_patch", "filechange"].contains(name) {
+                if let path = tool.input?["file_path"].string ?? tool.input?["path"].string {
+                    add(path, written: true)
+                }
+                for change in tool.input?["changes"].array ?? [] {
+                    let kind = (change["kind"]["type"].string ?? change["kind"].string)?.lowercased()
+                    guard kind != "delete" && kind != "remove",
+                          let path = change["move_path"].string ?? change["path"].string else { continue }
+                    add(path, written: true)
+                }
             } else if (tool.status == .succeeded || tool.status == .returned),
                       ["read", "read_file", "readfile", "readmediafile", "view_image"].contains(name),
                       let path = tool.input?["file_path"].string ?? tool.input?["path"].string {

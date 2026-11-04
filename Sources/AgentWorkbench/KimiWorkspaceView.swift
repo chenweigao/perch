@@ -85,9 +85,7 @@ struct KimiWorkspaceView: View {
                 let pending = conversation.snapshot.pendingApprovals.count + conversation.snapshot.pendingQuestions.count
                 let actions = ConversationActionContext(hostID: connection.host.id, kind: .kimi, sessionID: sessionID)
                 let animates = connection.online && pending == 0 && !connection.isStopping
-                let sig = conversation.lastSeq ^ ((conversation.live?.assistantText.utf16.count ?? 0) &<< 8)
-                    ^ ((conversation.live?.thinkingText.utf16.count ?? 0) &<< 16)
-                    ^ ((conversation.live?.runningTools.count ?? 0) &<< 24)
+                let sig = stallSignature(conversation)
                 TurnStallMonitor(animates: animates, signature: sig, activeToolID: conversation.live?.runningTools.first?.id) {
                     actions.post(.turnStalled(minutes: $0))
                 }.id(sessionID)
@@ -95,6 +93,15 @@ struct KimiWorkspaceView: View {
             KimiComposerView(connection: connection, sessionID: sessionID, onInput: onInput)
                 .id(sessionID)
         }
+    }
+
+    private func stallSignature(_ conversation: KimiConversation) -> Int {
+        var hasher = Hasher()
+        hasher.combine(conversation.lastSeq)
+        hasher.combine(conversation.live?.assistantText.utf16.count ?? 0)
+        hasher.combine(conversation.live?.thinkingText.utf16.count ?? 0)
+        hasher.combine(conversation.live?.runningTools.count ?? 0)
+        return hasher.finalize()
     }
 
     /// Offered with an error while the selected session's snapshot is not ready.

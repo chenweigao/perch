@@ -491,6 +491,19 @@ func checkActivitySummaries() throws {
         ```
         """), evidenceIDs: Set(["bounded"]))
     precondition(fenced.phase == .validating && fenced.evidenceIDs == ["bounded"])
+    let withThinkingBraces = try ActivitySummaryClient.responseResult(try completion("""
+        <think>Inspecting { cellStatus, coverage } in useScenarioMatrix</think>
+        {"subject":"Matrix","phase":"editing","summary":"更新场景矩阵行字段与覆盖率状态。","evidence_ids":["bounded"],"should_update":true}
+        """), evidenceIDs: Set(["bounded"]))
+    precondition(withThinkingBraces.phase == .editing && withThinkingBraces.summary == "更新场景矩阵行字段与覆盖率状态。")
+    let noUpdateMinimal = try ActivitySummaryClient.responseResult(
+        try completion(#"{"should_update":false}"#), evidenceIDs: [])
+    precondition(!noUpdateMinimal.shouldUpdate && noUpdateMinimal.summary.isEmpty)
+    do {
+        _ = try ActivitySummaryClient.responseResult(
+            try completion("<think>Unclosed thinking with {braces}"), evidenceIDs: [])
+        preconditionFailure("Unclosed thinking block must report truncation")
+    } catch ActivitySummaryError.truncated {}
     let plain = try ActivitySummaryClient.responseResult(
         try completion(" Kept a compatible plain-text summary. "), evidenceIDs: [])
     precondition(plain.subject.isEmpty && plain.phase == .mixed)

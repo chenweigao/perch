@@ -36,11 +36,16 @@ func checkTaskContextFiles() throws {
         ["id": "b", "role": "assistant", "created_at": "", "content": [["type": "text", "text": "已更新 `DRAFT.md` 与 `mock.png`（位于 `docs/2026-11-04/mock.png`）。"]]]
     ]))
     let readTools = [
-        VisibleTool(id: "read-draft", name: "Read", input: .object(["path": .string("/worktree/docs/DRAFT.md")]), status: .returned)
+        VisibleTool(id: "read-draft", name: "Read", input: .object(["path": .string("/worktree/docs/DRAFT.md")]), status: .returned),
+        VisibleTool(id: "patch-mr", name: "apply_patch", input: .object(["changes": .array([
+            .object(["path": .string("/worktree/MR_DESCRIPTION.md"), "kind": .object(["type": .string("add")])])
+        ])]), status: .succeeded)
     ]
     let resolved = TaskContextFiles.collect(messages: nestedMessage, tools: readTools, directory: "/workspace")
     precondition(resolved.contains { $0.path == "/worktree/docs/DRAFT.md" && $0.reference == "/worktree/docs/DRAFT.md" && !$0.written },
                  "Bare prose mentions match known Read tool paths instead of guessing the session root")
+    precondition(resolved.contains { $0.path == "/worktree/MR_DESCRIPTION.md" && $0.written },
+                 "Codex apply_patch changes collect written document artifacts")
     precondition(resolved.filter { $0.name == "mock.png" }.map(\.path) == ["/workspace/docs/2026-11-04/mock.png"],
                  "A bare filename mention merges with a more specific relative path in the same conversation")
     print("PASS: task panel document links, host-relative paths, deduplication and write evidence")

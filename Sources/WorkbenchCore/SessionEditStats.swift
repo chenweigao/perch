@@ -34,11 +34,12 @@ public enum SessionEditStats {
                 let edits: [(stat: SessionEditStat, path: String?)]
                 if tool.lowercased() == "apply_patch", !input["changes"].array.isEmpty {
                     // Codex fileChange is normalized by native-agent-service.py to
-                    // one changes array, with a path and unified diff per file.
+                    // one changes array, with a path and unified diff or raw body per file.
                     edits = input["changes"].array.compactMap { change in
                         guard let path = change["path"].string, !path.contains("://"),
                               let diff = change["diff"].string else { return nil }
-                        return (patchStat(diff), path)
+                        let kind = change["kind"]["type"].string ?? change["kind"].string
+                        return (changeStat(kind: kind, diff: diff), path)
                     }
                 } else {
                     edits = compute(tool: tool, input: input).map { [$0] } ?? []
@@ -81,6 +82,23 @@ public enum SessionEditStats {
             return (patchStat(patch), path)
         default:
             return nil
+        }
+    }
+
+    private static func changeStat(kind: String?, diff: String) -> SessionEditStat {
+        switch kind?.lowercased() {
+        case "add", "create":
+            let diffLines = lines(diff)
+            let isPatch = diffLines.contains { $0.hasPrefix("@@") || $0.hasPrefix("+++ ") || $0.hasPrefix("--- ") }
+                || (!diffLines.isEmpty && diffLines.allSatisfy { $0.isEmpty || $0.hasPrefix("+") })
+            return isPatch ? patchStat(diff) : SessionEditStat(additions: lineCount(diff), deletions: 0)
+        case "delete", "remove":
+            let diffLines = lines(diff)
+            let isPatch = diffLines.contains { $0.hasPrefix("@@") || $0.hasPrefix("+++ ") || $0.hasPrefix("--- ") }
+                || (!diffLines.isEmpty && diffLines.allSatisfy { $0.isEmpty || $0.hasPrefix("-") })
+            return isPatch ? patchStat(diff) : SessionEditStat(additions: 0, deletions: lineCount(diff))
+        default:
+            return patchStat(diff)
         }
     }
 
