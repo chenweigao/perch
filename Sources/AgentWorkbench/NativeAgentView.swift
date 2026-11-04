@@ -38,13 +38,9 @@ struct NativeAgentView: View {
                     .accessibilityHidden(!isCurrent(s))
                     .overlay { if !isCurrent(s) { selectionPlaceholder } }
             } else { selectionPlaceholder }
-            // A visible conversation reports disconnection in its activity bar,
-            // with the same reconnect action; keep this line for every other state.
             if !connection.online {
-                if !(connection.conversation.presentationSnapshot.map(isCurrent) ?? false) {
-                    ConversationNotice(text: connection.error ?? L("正在连接远端服务"), symbol: "wifi.exclamationmark",
-                                       action: ConversationNotice.Action(title: L("重新连接")) { connection.connect() })
-                }
+                ConversationNotice(text: connection.error ?? L("正在连接远端服务"), symbol: "wifi.exclamationmark",
+                                   action: ConversationNotice.Action(title: L("重新连接")) { connection.connect() })
             } else { NativeStaleSyncHint(connection: connection) }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in appActive = true }
@@ -78,6 +74,7 @@ struct NativeAgentView: View {
     private func content(_ s: NativeAgentSnapshot) -> some View {
         VStack(spacing: 0) {
             let readingKey = "\(connection.host.id):native:\(s.id)"
+            let waitingRequest = TurnRequest.native(s.interactions)
             ScrollViewReader { proxy in
                 ConversationScrollView(showsScrollIndicator: !follow, hasOlderHistory: s.hasOlder, onScroll: { guard isCurrent(s) else { return }; if follow || $0 { ConversationReadingMemory.shared.seenRevision[readingKey] = String(s.revision) }; follow = $0; ConversationReadingMemory.shared.following[readingKey] = $0 }, onContentSizeChange: {
                     if isCurrent(s), ConversationReadingMemory.shared.following[readingKey] ?? true { proxy.scrollTo("bottom", anchor: .bottom) }
@@ -87,6 +84,7 @@ struct NativeAgentView: View {
                     if isCurrent(s), ConversationReadingMemory.shared.following[readingKey] == false { connection.loadOlder() }
                 }, showsReturnToLatest: !follow,
                    hasNewReply: ConversationReadingMemory.shared.seenRevision[readingKey] != String(s.revision),
+                   waitingRequest: waitingRequest, pendingCount: s.interactions.count,
                    onReturnToLatest: {
                        guard isCurrent(s) else { return }
                        follow = true
@@ -107,15 +105,24 @@ struct NativeAgentView: View {
                             }
                         }.font(.system(size: ReplyStyle.captionSize)).foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.vertical, 2)
                     }
+                    let recapKey: String? = (isCurrent(s) && !s.busy ? s.taskRecapRevision : nil).map { "\(readingKey):\($0)" }
+                    let recapMessageID = ConversationActionContext.recapTargetID(in: s.messages, recapKey: recapKey)
+                    let _ = TaskRecapStore.shared.registerMessages(for: recapKey) {
+                        guard isCurrent(s) else { throw CancellationError() }
+                        return try await connection.recapMessages(for: s.id)
+                    }
+                    let planProgress = TurnStatus.Progress.live(in: s.messages, isRunning: s.busy)
                     ConversationTranscript(messages: s.messages, sessionId: s.id,
                                            running: ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy),
                                            isRunning: s.busy, online: connection.online, memoryKey: readingKey,
                                            allowsActivitySummaries: isCurrent(s), followsLatest: follow, historyEpoch: s.history?.epoch,
                                            isSuspended: !isCurrent(s), foldsProcess: true, waitsForInitialPosition: true,
-                                           timing: connection.timings.turns[s.id])
+                                           timing: connection.timings.turns[s.id],
+                                           planProgress: planProgress)
                         .environment(\.conversationActionContext,
                                      ConversationActionContext(hostID: connection.host.id, kind: s.provider, sessionID: s.id,
-                                                               opensSubagents: s.opensSubagents))
+                                                               opensSubagents: s.opensSubagents,
+                                                               recapKey: recapKey, recapMessageID: recapMessageID))
                     NativeRunControls(connection: connection, sessionID: s.id).id(s.id)
                     Color.clear.frame(height: 1).id("pending-interactions")
                     ForEach(s.interactions.filter { NativePlanReview($0) == nil }, id: \.display) { request in NativeInteractionView(connection: connection, request: request, sessionID: s.id) }.id(s.id)
@@ -152,39 +159,19 @@ struct NativeAgentView: View {
         }
     }
 
-    /// Activity, notices and the composer float over the transcript's bottom
-    /// edge; the reply scrolls beneath the composer glass.
+    /// Notices and the composer float over the transcript's bottom edge; the
+    /// reply scrolls beneath the composer glass.
     @ViewBuilder private func bottomBar(_ s: NativeAgentSnapshot, readingKey: String) -> some View {
         VStack(spacing: 0) {
-            let recapKey = (isCurrent(s) ? s.taskRecapRevision : nil).map { "\(readingKey):\($0)" }
-            let actions = ConversationActionContext(hostID: connection.host.id, kind: s.provider, sessionID: s.id)
             let turn = SessionTurn(native: s)
-            let activityProbe = PerfDiagnostics.begin()
-            let activity = ConversationActivity(
-                messages: s.messages, isRunning: turn.running,
-                running: ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy),
-                online: connection.online,
-                isThinking: s.messages.last?.role == "assistant" && s.messages.last?.content.last?.type == "thinking",
-                isResponding: s.messages.last?.role == "assistant" && s.messages.last?.content.last?.type == "text",
-                pendingCount: s.interactions.count, isStopping: connection.isStopping)
-            let _ = PerfDiagnostics.end("activity_derive", activityProbe, detail: "messages=\(s.messages.count)")
-            // Subagents and background tasks are in the task panel, which the line opens.
-            ConversationActivityBar(activity: activity, turn: turn,
-                timing: connection.timings.turns[s.id],
-                online: connection.online, offlineDetail: connection.error, pendingCount: s.interactions.count,
-                request: TurnRequest.native(s.interactions),
-                narrativeSession: readingKey,
-                recapKey: recapKey,
-                recapMessages: {
-                    guard isCurrent(s) else { throw CancellationError() }
-                    return try await connection.recapMessages(for: s.id)
-                },
-                onReview: { activityReview += 1 }, onReconnect: { connection.connect() },
-                onDetails: { actions.post(.showTurnDetails) },
-                onChanges: { actions.post(.showChanges) },
-                onStall: { actions.post(.turnStalled(minutes: $0)) })
-                .id(s.id).frame(maxWidth: ReplyStyle.readingWidth).padding(.horizontal, ReplyStyle.horizontalPadding)
-                .frame(maxWidth: .infinity, alignment: .center).padding(.vertical, 6)
+            if turn.running {
+                let actions = ConversationActionContext(hostID: connection.host.id, kind: s.provider, sessionID: s.id)
+                let animates = connection.online && s.interactions.isEmpty && !connection.isStopping
+                let activeToolID = ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy).first
+                TurnStallMonitor(animates: animates, signature: s.revision, activeToolID: activeToolID) {
+                    actions.post(.turnStalled(minutes: $0))
+                }.id(s.id)
+            }
             // Long upstream errors scroll inside the notice instead of displacing the conversation.
             if let error = connection.actionError ?? s.error { ConversationNotice(text: error) }
             if let command = s.commandResult {

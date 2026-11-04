@@ -26,17 +26,38 @@ struct ActivityNarrativeHistoryView: View {
 /// uncertain tools remain visible even when the stage is collapsed.
 struct KimiActivityView: View {
     @Environment(\.conversationMemoryKey) private var memoryKey
+    @Environment(\.conversationActionContext) private var actionContext
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @Environment(\.conversationReduceMotion) private var conversationReduceMotion
     /// Core lookups (recent targets) read the app language; depending on the
     /// locale re-runs them when the language changes.
     @Environment(\.locale) private var locale
+    @UILocalization private var L
     @RememberedExpansion("expanded") private var expanded
     let entry: ConversationTimelineEntry
     let tools: [String: VisibleTool]
     let api: KimiAPI?
     let sessionId: String
     var narrative: ActivityNarrative? = nil
+    var liveSince: Date? = nil
+    var planProgress: TurnStatus.Progress? = nil
+    private var reduceMotion: Bool { systemReduceMotion || conversationReduceMotion }
+
+    private func progressPulse(_ items: [VisibleTool]) -> Int {
+        var hasher = Hasher()
+        hasher.combine(narrative?.revision ?? 0)
+        for item in items {
+            hasher.combine(item.id)
+            hasher.combine(item.status)
+            if item.status == .running { hasher.combine(item.progress?.display.utf16.count ?? -1) }
+        }
+        return hasher.finalize()
+    }
+
     var body: some View {
         let items = entry.messages.flatMap(\.content).compactMap { tools[$0.toolCallId ?? ""] }
+        let isLive = liveSince != nil || items.contains { $0.status == .running }
+        let editStat = SessionEditStats.derive(from: entry.messages)
         #if TRANSCRIPT_CHECKS
         // Occurrences only, and a declaration because ViewBuilder rejects bare
         // expression statements. Records that a collapsed activity row still walks
@@ -46,13 +67,36 @@ struct KimiActivityView: View {
         let _ = NavigationRenderMetrics.count("activity_row_tool_scan", by: items.count)
         #endif
         VStack(alignment: .leading, spacing: 2) {
-            DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
+            HStack(spacing: 8) {
+                DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
                     HStack(spacing: 8) {
                         if let narrative {
-                            Text("\(narrative.headline) · \(items.count) 次调用").lineLimit(1).truncationMode(.tail)
-                        } else if entry.isExploration { Text("读取与搜索 · \(items.count) 次调用").fixedSize() }
-                        else if !items.isEmpty { Text("思考与工具 · \(items.count) 次调用").fixedSize() }
-                        else { Text("运行上下文").fixedSize() }
+                            let label = L("\(narrative.headline) · \(items.count) 次调用")
+                            Text(verbatim: label).lineLimit(1).truncationMode(.tail)
+                                .overlay {
+                                    if isLive && !reduceMotion {
+                                        ShimmerGlint(text: narrative.headline, size: ReplyStyle.captionSize, pulse: progressPulse(items))
+                                    }
+                                }
+                        } else if entry.isExploration {
+                            let label = L("读取与搜索 · \(items.count) 次调用")
+                            Text(verbatim: label).fixedSize()
+                                .overlay {
+                                    if isLive && !reduceMotion {
+                                        ShimmerGlint(text: label, size: ReplyStyle.captionSize, pulse: progressPulse(items))
+                                    }
+                                }
+                        } else if !items.isEmpty {
+                            let label = L("思考与工具 · \(items.count) 次调用")
+                            Text(verbatim: label).fixedSize()
+                                .overlay {
+                                    if isLive && !reduceMotion {
+                                        ShimmerGlint(text: label, size: ReplyStyle.captionSize, pulse: progressPulse(items))
+                                    }
+                                }
+                        } else {
+                            Text("运行上下文").fixedSize()
+                        }
                         if !expanded {
                             let targets = ToolPresentation.recentTargets(items)
                             // Command names read as code; a sentence-like description stays prose.
@@ -71,6 +115,43 @@ struct KimiActivityView: View {
                         }
                     }.font(.system(size: ReplyStyle.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
                 }.disclosureGroupStyle(ProcessDisclosureStyle())
+                if planProgress != nil || editStat != nil || liveSince != nil {
+                    HStack(spacing: 8) {
+                        if let planProgress {
+                            if let actionContext {
+                                Button { actionContext.post(.showTurnDetails) } label: {
+                                    HStack(spacing: 3) {
+                                        Text(verbatim: "\(planProgress.done) / \(planProgress.total)")
+                                        Image(systemName: "chevron.right").font(.system(size: ReplyStyle.captionSize - 2, weight: .semibold))
+                                    }.padding(.horizontal, 4).frame(height: 22).contentShape(Rectangle())
+                                }.buttonStyle(WorkbenchDisclosureButtonStyle())
+                                    .help(Text("在任务面板查看本轮详情"))
+                                    .accessibilityLabel(Text("本轮状态"))
+                                    .accessibilityValue(Text(verbatim: L("\(planProgress.done)/\(planProgress.total) 步")))
+                            } else {
+                                Text(verbatim: "\(planProgress.done) / \(planProgress.total)")
+                            }
+                        }
+                        if let editStat {
+                            if let actionContext {
+                                Button { actionContext.post(.showChanges) } label: {
+                                    EditStatText(stat: editStat.total)
+                                        .padding(.horizontal, 4).frame(height: 22).contentShape(Rectangle())
+                                }.buttonStyle(WorkbenchDisclosureButtonStyle())
+                                    .help(Text("查看改动：本轮改了 \(editStat.perFile.count) 个文件"))
+                                    .accessibilityLabel(Text("查看改动"))
+                                    .accessibilityValue(Text(verbatim: L("本轮改了 \(editStat.perFile.count) 个文件") + " +\(editStat.total.additions) −\(editStat.total.deletions)"))
+                            } else {
+                                EditStatText(stat: editStat.total)
+                            }
+                        }
+                        if let liveSince {
+                            TurnStartClock(start: liveSince).allowsHitTesting(false)
+                        }
+                    }.font(.system(size: ReplyStyle.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
+                        .monospacedDigit().fixedSize()
+                }
+            }
             if expanded, let narrative {
                 ActivityNarrativeHistoryView(narrative: narrative).padding(.leading, ReplyStyle.Process.nestedIndent)
             }
@@ -79,7 +160,7 @@ struct KimiActivityView: View {
             ForEach(Array(entry.messages.enumerated()), id: \.offset) { index, message in
                 if let id = message.content.first?.toolCallId, let tool = tools[id] {
                     if expanded || tool.staysVisible {
-                        KimiToolCard(tool: tool)
+                        KimiToolCard(tool: tool, liveSince: tool.status == .running ? ConversationProcessClock.shared.toolStart(session: sessionId, toolID: tool.id) : nil)
                             .environment(\.conversationMemoryKey, memoryKey + ":tool:" + tool.id)
                             .padding(.leading, expanded ? ReplyStyle.Process.nestedIndent : 0)
                     }
@@ -105,6 +186,7 @@ extension KimiActivityView {
 
 struct KimiToolCard: View {
     let tool: VisibleTool
+    var liveSince: Date? = nil
     var onExpand: (() -> Void)? = nil
     /// Opens the process of the subagent this Agent/Task call started. Left nil,
     /// a transcript row's action context provides it when the session's bridge
@@ -184,6 +266,9 @@ struct KimiToolCard: View {
                 Spacer(minLength: 0)
                 // A returned error keeps its quiet status label; only uncertainty
                 // or a user decision earns the orange attention treatment.
+                if tool.status == .running, let liveSince {
+                    TurnToolElapsedLabel(start: liveSince).font(.system(size: ReplyStyle.captionSize))
+                }
                 if showsAttention || tool.status == .running || tool.status == .failed {
                     Image(systemName: symbol(exitReport: exitReport)).font(.system(size: ReplyStyle.captionSize)).accessibilityHidden(true)
                     Text(statusLabel).font(.system(size: ReplyStyle.captionSize)).fixedSize()

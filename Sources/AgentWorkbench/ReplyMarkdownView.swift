@@ -1127,6 +1127,10 @@ private struct NativeAssistantActions: View {
                             .frame(width: 24, height: 24).contentShape(Rectangle())
                     }.buttonStyle(.plain).foregroundStyle(.secondary).help("重新生成（重发上一条提问）")
                         .accessibilityLabel("重新生成")
+                    if let recapKey = context.recapKey, context.recapMessageID == messageID,
+                       let makeRecap = NativeAssistantMessageView.makeRecapButton {
+                        makeRecap(recapKey).disabled(!configuration.enabled)
+                    }
                 }
             }
         }
@@ -1134,6 +1138,7 @@ private struct NativeAssistantActions: View {
 }
 
 final class NativeAssistantMessageView: NSView {
+    @MainActor static var makeRecapButton: ((String) -> AnyView)?
     private static var recycled: [NativeAssistantMessageView] = []
     private let links = SelectableReplyText.Coordinator()
     private let stack: NativeAssistantStackView
@@ -1165,6 +1170,7 @@ final class NativeAssistantMessageView: NSView {
         view.actionModel.update(source: nil)
         view.actions.isHidden = false
         view.showsActions = true
+        view.showsRecap = false
         // Block containers are torn down; their text views return to the shared pool
         // cleared of content and selection, so recycled shells hold no conversation data.
         view.stack.teardown()
@@ -1184,9 +1190,14 @@ final class NativeAssistantMessageView: NSView {
         // The hosting view hugs its buttons so hit targets never sit in padding.
         actionButtonCount = (source == nil ? 0 : 1) + (actionContext != nil && source != nil ? 1 : 0)
             + (actionContext != nil && messageID?.isEmpty == false ? 1 : 0)
+        showsRecap = actionContext?.recapKey != nil && messageID?.isEmpty == false && actionContext?.recapMessageID == messageID
     }
     private var actionButtonCount = 1
-    private var actionsWidth: CGFloat { CGFloat(actionButtonCount) * 24 + CGFloat(max(0, actionButtonCount - 1)) * 2 }
+    private var showsRecap = false
+    private var actionsWidth: CGFloat {
+        let base = CGFloat(actionButtonCount) * 24 + CGFloat(max(0, actionButtonCount - 1)) * 2
+        return showsRecap ? max(base + 76, ceil(actions.fittingSize.width)) : base
+    }
     func measure(width: CGFloat) -> CGSize {
         let actionsHeight = showsActions ? ReplyStyle.entryPartSpacing + 24 : 0
         return CGSize(width: width, height: stack.contentHeight(width: width) + actionsHeight)

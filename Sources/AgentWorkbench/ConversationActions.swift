@@ -29,6 +29,21 @@ struct ConversationActionContext: Equatable, Sendable {
     /// The session's bridge records subagents, so Agent/Task tool cards offer
     /// `openSubagent`. Set once per session load; it never changes per token.
     var opensSubagents = false
+    /// Completed-task Recap key and the settled assistant message that hosts
+    /// its action button. Both stay nil while a turn runs.
+    var recapKey: String? = nil
+    var recapMessageID: String? = nil
+
+    static func recapTargetID(in messages: [KimiMessage], recapKey: String?) -> String? {
+        guard recapKey != nil else { return nil }
+        for message in messages.reversed() {
+            guard message.role == "assistant", !message.isCompactionSummary else { continue }
+            if message.content.contains(where: { $0.type == "text" && !$0.isRuntimeContext }) {
+                return message.id
+            }
+        }
+        return nil
+    }
 }
 
 struct ConversationActionPayload {

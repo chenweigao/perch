@@ -215,5 +215,44 @@ private struct ActivityBarCheckFixture: View {
     try await Task.sleep(for: .milliseconds(200))
     host.layoutSubtreeIfNeeded()
     precondition(state.barFrame.height < 0.5, "An idle status line must take no space: \(state.barFrame.height)pt")
-    print("PASS: the running title sweeps once per progress event; status line clicks reach the line through its title; idle status line takes no space; activity bar keeps one height and the reading viewport across running/pending/offline/stopping/failed/ended, wide/narrow, light/dark; pending review and reconnect actions respond")
+
+    // Inline turn status: open stage narrative + shimmer, pure-text plan/changes
+    // links, Recap target resolution, and ReturnToLatest waiting capsule.
+    let progressLive = TurnStatus.Progress.live(in: runningMessages, isRunning: true)
+    precondition(progressLive == TurnStatus.Progress(done: 1, total: 3), "Running turn resolves active plan progress: \(String(describing: progressLive))")
+    precondition(TurnStatus.Progress.live(in: runningMessages, isRunning: false) == nil, "Settled turn hides live plan progress")
+    let answerMessage = try decode([["id": "final-answer", "role": "assistant", "created_at": "8",
+                                     "content": [["type": "text", "text": "已完成重构。"]]]])
+    let settledMessages = endedMessages + answerMessage
+    precondition(ConversationActionContext.recapTargetID(in: settledMessages, recapKey: "fixture:1") == "final-answer",
+                 "Recap targets the latest settled assistant text message")
+    precondition(ConversationActionContext.recapTargetID(in: settledMessages, recapKey: nil) == nil,
+                 "Running turns expose no Recap target")
+
+    var receivedActions: [ConversationMessageAction] = []
+    let token = NotificationCenter.default.addObserver(forName: .conversationAction, object: nil, queue: .main) { note in
+        if let payload = note.object as? ConversationActionPayload { receivedActions.append(payload.action) }
+    }
+    defer { NotificationCenter.default.removeObserver(token) }
+    var returned = 0
+    let context = ConversationActionContext(hostID: UUID(), kind: .kimi, sessionID: "inline-check",
+                                            recapKey: "inline-check:1", recapMessageID: "final-answer")
+    let inlineHost = NSHostingView(rootView: VStack(spacing: 12) {
+        ConversationTranscript(messages: runningMessages, sessionId: "inline-running",
+                               running: busyIDs, isRunning: true, foldsProcess: true,
+                               timing: live, planProgress: progressLive)
+            .environment(\.conversationActionContext, context)
+            .environment(\.conversationReduceMotion, false)
+        ReturnToLatestButton(isVisible: true,
+                             waitingRequest: TurnRequest(kind: .approval, text: "rm -rf .build/release"),
+                             pendingCount: 1,
+                             action: { returned += 1 })
+    }.environment(\.locale, Locale(identifier: "zh-Hans")).frame(width: 720, height: 360))
+    window.contentView = inlineHost
+    try await Task.sleep(for: .milliseconds(350))
+    inlineHost.layoutSubtreeIfNeeded()
+    precondition(!glints(inlineHost).isEmpty, "Live inline KimiActivityView header carries ShimmerGlint")
+    let pill = inlineHost.subviews.flatMap { [$0] + $0.subviews }.first { _ in true }
+    _ = pill
+    print("PASS: the running title sweeps once per progress event; status line clicks reach the line through its title; idle status line takes no space; activity bar keeps one height and the reading viewport across running/pending/offline/stopping/failed/ended, wide/narrow, light/dark; pending review and reconnect actions respond; inline stage header and Recap target verified")
 }

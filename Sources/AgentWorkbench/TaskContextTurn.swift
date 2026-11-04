@@ -58,69 +58,29 @@ extension WorkbenchModel {
     }
 }
 
-/// The task page's 本轮 section: what the status line leaves out, as an
-/// inventory rather than a live feed. The plan and this turn's edits by file
-/// update in place without motion; the agent's narrative with its source, the
-/// timing breakdown and Recap appear once the turn has ended. The status line
-/// opens the panel here.
+/// The task page's turn inventory: plan steps and per-file edits, without
+/// repeating the transcript's stage narrative or elapsed clock.
 struct TaskTurnSection: View {
     let model: WorkbenchModel
     let item: WorkspaceSession
     let snapshot: TaskContextSnapshot
     @ObservedObject private var narratives = ActivityNarrativeStore.shared
     @ObservedObject private var summarySettings = ActivitySummarySettings.shared
-    @State private var recapPresented = false
     @State private var allEdits = false
     @UILocalization private var L
 
     var body: some View {
         let context = model.turnContext(item.reference, busy: snapshot.busy)
-        // While the turn runs the status line says what it does; the panel shows
-        // the narrative and the timing once the turn has ended.
-        let narrative = snapshot.busy ? nil : context.flatMap { narratives.narrative(session: $0.narrativeKey) }
-        let timing = context?.timing.flatMap { $0.endedAt == nil ? nil : $0 }
         let failure = context.flatMap { narratives.failure(session: $0.narrativeKey)?.message }
-        if narrative != nil || failure != nil || !snapshot.todos.isEmpty || snapshot.edits != nil
-            || timing != nil || context?.recapKey != nil {
-            VStack(alignment: .leading, spacing: 12) {
-                header(context)
-                if let narrative { self.narrative(narrative) }
+        if failure != nil || !snapshot.todos.isEmpty || snapshot.edits != nil {
+            VStack(alignment: .leading, spacing: 14) {
                 if let failure, let context { externalFailure(failure, key: context.narrativeKey) }
                 if !snapshot.todos.isEmpty { plan }
                 if let edits = snapshot.edits { self.edits(edits) }
-                if let timing { TurnTimingDetails(timing: timing) }
             }.font(.system(size: WorkbenchTheme.Typography.body))
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("task-context-turn")
         }
-    }
-
-    private func header(_ context: TaskTurnContext?) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "list.bullet.rectangle").font(.system(size: 12, weight: .medium))
-                .foregroundStyle(WorkbenchTheme.quiet).frame(width: 16).accessibilityHidden(true)
-            Text("本轮").font(.system(size: 13, weight: .semibold)).accessibilityAddTraits(.isHeader)
-            Spacer(minLength: 0)
-            if let context, let key = context.recapKey {
-                Button { recapPresented = true } label: { Label("Recap", systemImage: "sparkles") }
-                    .buttonStyle(.borderless).help("总结本次任务，不会向 Agent 发送消息")
-                    .popover(isPresented: $recapPresented, arrowEdge: .leading) {
-                        TaskRecapPopover(key: key, messages: context.recapMessages, stateOverride: nil,
-                                         configuredOverride: nil, onGenerateOverride: nil)
-                    }
-            }
-        }.padding(.bottom, 2)
-    }
-
-    private func narrative(_ narrative: ActivityNarrative) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(narrative.headline).fontWeight(.medium).textSelection(.enabled)
-            if let detail = narrative.detail, !detail.isEmpty {
-                Text(detail).foregroundStyle(WorkbenchTheme.quiet).textSelection(.enabled)
-            }
-            Text(verbatim: [narrative.phase.label, narrative.source.label].joined(separator: " · "))
-                .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet)
-        }.fixedSize(horizontal: false, vertical: true)
     }
 
     private func externalFailure(_ message: String, key: String) -> some View {

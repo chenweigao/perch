@@ -335,8 +335,7 @@ struct TaskContextView: View {
         }
         if value.files.isEmpty && value.tasks.isEmpty && uncertain.isEmpty &&
             value.requests.isEmpty && value.failure == nil && value.todos.isEmpty && value.edits == nil {
-            emptyState(value.busy ? "hourglass" : "tray",
-                       value.busy ? "任务正在进行，计划、改动和文件会显示在这里。" : "此任务暂时没有计划、改动或文件。")
+            emptyState("tray", "此任务暂时没有计划、改动或文件。")
         }
     }
     private func emptyState(_ icon: String, _ text: LocalizedStringKey) -> some View {

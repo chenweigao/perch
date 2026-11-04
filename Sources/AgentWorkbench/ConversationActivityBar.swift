@@ -481,7 +481,7 @@ final class TurnProgressClock {
 
 /// The running turn's clock: seconds for the first minute, then minutes, and it
 /// redraws only when the reading changes.
-private struct TurnClock: View {
+struct TurnClock: View {
     let timing: ConversationTiming
     @Environment(\.locale) private var locale
     var body: some View {
@@ -492,6 +492,85 @@ private struct TurnClock: View {
             .help(timing.observedOnly
                   ? Text("从客户端首次观察到本轮开始计时，包含等待；此前用时未知。")
                   : Text("从提交本轮请求到现在的经过时间，包含通信、工具调用和等待。"))
+    }
+}
+
+struct TurnStartClock: View {
+    let start: Date
+    @Environment(\.locale) private var locale
+    var body: some View {
+        TimelineView(TurnClockSchedule(start: start)) { context in
+            Text(verbatim: TurnStatus.clock(context.date.timeIntervalSince(start),
+                                            chinese: locale.language.languageCode?.identifier == "zh"))
+        }.monospacedDigit().fixedSize()
+    }
+}
+
+/// Elapsed time on a running tool card once it has run for at least 15 seconds.
+struct TurnToolElapsedLabel: View {
+    let start: Date
+    @UILocalization private var L
+    @Environment(\.locale) private var locale
+    var body: some View {
+        TimelineView(TurnClockSchedule(start: start)) { context in
+            let elapsed = context.date.timeIntervalSince(start)
+            if elapsed >= 15 {
+                let value = TurnStatus.clock(elapsed, chinese: locale.language.languageCode?.identifier == "zh")
+                Text(verbatim: L("已运行 \(value)"))
+            }
+        }.monospacedDigit().fixedSize()
+    }
+}
+
+/// Watches a running turn's progress without rendering a bottom status bar,
+/// reporting once per quiet stretch past the stall threshold.
+struct TurnStallMonitor: View {
+    let animates: Bool
+    let signature: Int
+    let activeToolID: String?
+    let onStall: (Int) -> Void
+    @State private var progress = TurnProgressClock()
+    private var progressKey: TurnProgressClock.Key {
+        TurnProgressClock.Key(signature: signature, tool: activeToolID)
+    }
+    var body: some View {
+        Color.clear.frame(width: 0, height: 0)
+            .onChange(of: progressKey, initial: true) { _, key in progress.mark(key) }
+            .task(id: animates) {
+                guard animates else { return }
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(15))
+                    guard !Task.isCancelled else { return }
+                    if let next = progress.quiet(now: Date()), !progress.reported,
+                       let minutes = TurnStatus.stalledMinutes(quietFor: next.seconds, toolRunning: next.toolSeconds != nil) {
+                        progress.reported = true
+                        onStall(minutes)
+                    }
+                }
+            }
+    }
+}
+
+/// Pure-text Recap action placed alongside Copy in a settled reply's footer.
+struct RecapActionButton: View {
+    let key: String
+    var messages: (@MainActor () async throws -> [KimiMessage])? = nil
+    @State private var presented = false
+    var body: some View {
+        Button { presented = true } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "sparkles")
+                Text("Recap")
+            }.font(.system(size: WorkbenchTheme.Reading.captionSize, weight: .medium))
+                .padding(.horizontal, 6).frame(height: 24).contentShape(Rectangle())
+        }.buttonStyle(WorkbenchDisclosureButtonStyle())
+            .foregroundStyle(.secondary)
+            .help("总结本次任务，不会向 Agent 发送消息")
+            .accessibilityLabel(Text("Recap"))
+            .popover(isPresented: $presented, arrowEdge: .top) {
+                TaskRecapPopover(key: key, messages: messages, stateOverride: nil,
+                                 configuredOverride: nil, onGenerateOverride: nil)
+            }
     }
 }
 
@@ -632,7 +711,7 @@ struct TaskRecapPopover: View {
     private func generate(force: Bool) {
         copied = false
         if let onGenerateOverride { onGenerateOverride(force); return }
-        guard let messages else { return }
+        guard let messages = messages ?? store.messages(for: key) else { return }
         store.generate(key: key, force: force, messages: messages, settings: settings)
     }
 
