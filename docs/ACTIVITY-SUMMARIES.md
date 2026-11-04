@@ -110,9 +110,10 @@ The optional API key is sent only in the Authorization header. The response may
 reference at most three known evidence IDs; unknown and duplicate IDs are discarded.
 
 The service returns `subject`, one of the six valid phases, a compact `summary`,
-`evidence_ids`, and `should_update`. Unknown structured phases are rejected. Plain
-text remains accepted for compatibility and is assigned the mixed phase. A
-`returned` status is not treated as verified success.
+`evidence_ids`, and `should_update`. Non-standard or localized phase strings are
+normalized to the closest phase (or `mixed`). Plain text remains accepted for
+compatibility and is assigned the mixed phase. A `returned` status is not treated
+as verified success.
 
 ## Scheduling and failure behavior
 

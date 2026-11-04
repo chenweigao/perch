@@ -261,9 +261,17 @@ public final class TaskRecapClient: NSObject, URLSessionTaskDelegate, @unchecked
     public static func responseResult(_ data: Data) throws -> TaskRecapResult {
         let text = try ActivitySummaryClient.completionText(data)
         guard let payload = ActivitySummaryClient.extractJSONPayload(text),
-              let result = try? JSONDecoder().decode(TaskRecapResult.self, from: payload) else {
+              let dict = (try? JSONSerialization.jsonObject(with: payload)) as? [String: Any] else {
             throw ActivitySummaryError.invalidResponse
         }
+        let outcome = ActivitySummaryClient.cleanString(dict["outcome"] ?? dict["summary"])
+        let result = TaskRecapResult(
+            outcome: outcome,
+            changes: ActivitySummaryClient.parseStringList(dict["changes"]),
+            validation: ActivitySummaryClient.parseStringList(dict["validation"]),
+            remaining: ActivitySummaryClient.parseStringList(dict["remaining"]),
+            nextSteps: ActivitySummaryClient.parseStringList(dict["next_steps"] ?? dict["nextSteps"])
+        )
         let bounded = result.bounded()
         guard !bounded.outcome.isEmpty else { throw ActivitySummaryError.invalidResponse }
         return bounded

@@ -265,21 +265,22 @@ public final class ActivitySummaryClient: NSObject, URLSessionTaskDelegate, @unc
             case groupClosed = "group_closed"
         }
     }
-    private struct ModelResult: Decodable {
-        let subject: String?
-        let phase: ActivityNarrativePhase?
-        let summary: String?
-        let evidenceIDs: [String]?
-        let shouldUpdate: Bool?
-        enum CodingKeys: String, CodingKey {
-            case subject, phase, summary
-            case evidenceIDs = "evidence_ids"
-            case shouldUpdate = "should_update"
-        }
-    }
     private struct Response: Decodable {
         struct Choice: Decodable {
-            struct Message: Decodable { let content: String? }
+            struct Message: Decodable {
+                let content: String?
+                enum CodingKeys: String, CodingKey { case content }
+                init(from decoder: Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                    if let string = try? container.decodeIfPresent(String.self, forKey: .content) {
+                        content = string
+                    } else if let parts = try? container.decode([[String: JSONValue]].self, forKey: .content) {
+                        content = parts.compactMap { $0["text"]?.string }.joined(separator: "\n")
+                    } else {
+                        content = nil
+                    }
+                }
+            }
             let message: Message
             let finishReason: String?
             enum CodingKeys: String, CodingKey { case message; case finishReason = "finish_reason" }
@@ -344,25 +345,98 @@ public final class ActivitySummaryClient: NSObject, URLSessionTaskDelegate, @unc
         try completionText(data)
     }
 
+    private static let summarySchemaKeys: Set<String> = [
+        "subject", "phase", "summary", "headline", "description", "text",
+        "evidence_ids", "evidenceIds", "should_update", "shouldUpdate"
+    ]
+    private static let recapSchemaKeys: Set<String> = [
+        "outcome", "changes", "validation", "remaining", "next_steps", "nextSteps", "summary"
+    ]
+    private static let allSchemaKeys: Set<String> = summarySchemaKeys.union(recapSchemaKeys)
+
     public static func responseResult(_ data: Data, evidenceIDs: Set<String>) throws -> ActivitySummaryResult {
         let text = try completionText(data)
         guard let payload = extractJSONPayload(text) else {
             return ActivitySummaryResult(subject: "", phase: .mixed, summary: text)
         }
-        guard let result = try? JSONDecoder().decode(ModelResult.self, from: payload) else {
+        guard let dict = (try? JSONSerialization.jsonObject(with: payload)) as? [String: Any],
+              !summarySchemaKeys.isDisjoint(with: dict.keys) else {
             throw ActivitySummaryError.invalidResponse
         }
-        let shouldUpdate = result.shouldUpdate ?? true
-        let summary = result.summary?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        guard !summary.isEmpty || !shouldUpdate else { throw ActivitySummaryError.invalidResponse }
+        let explicitShouldUpdate = parseBool(dict["should_update"] ?? dict["shouldUpdate"])
+        let subject = String(cleanString(dict["subject"] ?? dict["title"] ?? dict["topic"]).prefix(80))
+        let rawSummary = cleanString(dict["summary"] ?? dict["headline"] ?? dict["description"] ?? dict["text"])
+        let summary = rawSummary.isEmpty ? subject : rawSummary
+        let shouldUpdate: Bool
+        if let explicitShouldUpdate {
+            shouldUpdate = summary.isEmpty ? false : explicitShouldUpdate
+        } else {
+            shouldUpdate = !summary.isEmpty
+        }
         var seenEvidence: Set<String> = []
-        let evidence = (result.evidenceIDs ?? []).filter {
+        let rawEvidence = parseStringList(dict["evidence_ids"] ?? dict["evidenceIds"] ?? dict["evidence"])
+        let evidence = rawEvidence.filter {
             evidenceIDs.contains($0) && seenEvidence.insert($0).inserted
         }.prefix(3)
+        let phase = parsePhase(cleanString(dict["phase"]))
         return ActivitySummaryResult(
-            subject: String((result.subject ?? "").trimmingCharacters(in: .whitespacesAndNewlines).prefix(80)),
-            phase: result.phase ?? .mixed, summary: summary, evidenceIDs: Array(evidence),
-            shouldUpdate: shouldUpdate)
+            subject: subject, phase: phase, summary: summary,
+            evidenceIDs: Array(evidence), shouldUpdate: shouldUpdate)
+    }
+
+    static func parseBool(_ value: Any?) -> Bool? {
+        if let flag = value as? Bool { return flag }
+        if let number = value as? NSNumber { return number.boolValue }
+        if let string = (value as? String)?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+            if ["true", "1", "yes"].contains(string) { return true }
+            if ["false", "0", "no"].contains(string) { return false }
+        }
+        return nil
+    }
+
+    static func cleanString(_ value: Any?) -> String {
+        guard let string = value as? String else { return "" }
+        return string.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    static func parseStringList(_ value: Any?) -> [String] {
+        if let array = value as? [Any] {
+            return array.compactMap { item -> String? in
+                if let str = item as? String {
+                    let trimmed = str.trimmingCharacters(in: .whitespacesAndNewlines)
+                    return trimmed.isEmpty ? nil : trimmed
+                }
+                if let num = item as? NSNumber { return num.stringValue }
+                return nil
+            }
+        }
+        if let single = value as? String {
+            return single.split(whereSeparator: { $0 == "," || $0 == "\n" })
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+        }
+        return []
+    }
+
+    static func parsePhase(_ raw: String?) -> ActivityNarrativePhase {
+        guard let value = raw?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), !value.isEmpty else {
+            return .mixed
+        }
+        if let exact = ActivityNarrativePhase(rawValue: value) { return exact }
+        if value.contains("explor") || value.contains("read") || value.contains("search")
+            || value.contains("inspect") || value.contains("analy")
+            || value.contains("探索") || value.contains("读取") || value.contains("搜索") || value.contains("分析") { return .exploring } // l10n-ignore
+        if value.contains("edit") || value.contains("write") || value.contains("implement")
+            || value.contains("fix") || value.contains("cod")
+            || value.contains("修改") || value.contains("实现") || value.contains("修复") || value.contains("编写") { return .editing } // l10n-ignore
+        if value.contains("validat") || value.contains("test") || value.contains("build")
+            || value.contains("check") || value.contains("verif")
+            || value.contains("验证") || value.contains("测试") || value.contains("构建") || value.contains("检查") { return .validating } // l10n-ignore
+        if value.contains("integrat") || value.contains("merge") || value.contains("commit") || value.contains("push")
+            || value.contains("整合") || value.contains("合并") || value.contains("提交") { return .integrating } // l10n-ignore
+        if value.contains("block") || value.contains("fail") || value.contains("error")
+            || value.contains("受阻") || value.contains("失败") || value.contains("错误") { return .blocked } // l10n-ignore
+        return .mixed
     }
 
     static func completionText(_ data: Data) throws -> String {
@@ -371,10 +445,12 @@ public final class ActivitySummaryClient: NSObject, URLSessionTaskDelegate, @unc
         let raw = response.choices.first?.message.content?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard !raw.isEmpty else { throw ActivitySummaryError.emptyResponse }
         var text = raw
-        if let end = text.range(of: "</think>", options: [.backwards, .caseInsensitive]) {
-            text = String(text[end.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
-        } else if text.range(of: "<think>", options: [.caseInsensitive]) != nil {
-            throw ActivitySummaryError.truncated
+        for (openTag, closeTag) in [("<think>", "</think>"), ("<thought>", "</thought>"), ("<reasoning>", "</reasoning>")] {
+            if let end = text.range(of: closeTag, options: [.backwards, .caseInsensitive]) {
+                text = String(text[end.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+            } else if text.range(of: openTag, options: [.caseInsensitive]) != nil {
+                throw ActivitySummaryError.truncated
+            }
         }
         guard !text.isEmpty else { throw ActivitySummaryError.emptyResponse }
         return text
@@ -383,7 +459,7 @@ public final class ActivitySummaryClient: NSObject, URLSessionTaskDelegate, @unc
     static func extractJSONPayload(_ text: String) -> Data? {
         guard let firstBrace = text.firstIndex(of: "{"), let lastBrace = text.lastIndex(of: "}"),
               firstBrace <= lastBrace else { return nil }
-        var candidates: [Data] = []
+        var candidates: [(data: Data, dict: [String: Any])] = []
         var index = text.startIndex
         while index < text.endIndex {
             guard text[index] == "{" else {
@@ -394,6 +470,7 @@ public final class ActivitySummaryClient: NSObject, URLSessionTaskDelegate, @unc
             var inString = false
             var escaped = false
             var cursor = index
+            var matchedEnd: String.Index?
             while cursor < text.endIndex {
                 let ch = text[cursor]
                 if inString {
@@ -406,9 +483,10 @@ public final class ActivitySummaryClient: NSObject, URLSessionTaskDelegate, @unc
                     else if ch == "}" {
                         depth -= 1
                         if depth == 0 {
-                            if let data = String(text[index...cursor]).data(using: .utf8),
-                               (try? JSONSerialization.jsonObject(with: data)) is [String: Any] {
-                                candidates.append(data)
+                            let slice = String(text[index...cursor])
+                            if let parsed = decodeJSONObjectSlice(slice) {
+                                candidates.append(parsed)
+                                matchedEnd = cursor
                             }
                             break
                         }
@@ -416,9 +494,125 @@ public final class ActivitySummaryClient: NSObject, URLSessionTaskDelegate, @unc
                 }
                 cursor = text.index(after: cursor)
             }
-            index = text.index(after: index)
+            if let matchedEnd {
+                // Skip past the complete top-level object so inner `{}` inside its
+                // strings or nested fields never shadow the outer payload.
+                index = text.index(after: matchedEnd)
+            } else {
+                index = text.index(after: index)
+            }
         }
-        if let lastValid = candidates.last { return lastValid }
-        return String(text[firstBrace...lastBrace]).data(using: .utf8)
+        if let schemaMatch = candidates.last(where: { !allSchemaKeys.isDisjoint(with: $0.dict.keys) }) {
+            return schemaMatch.data
+        }
+        let body = stripCodeFences(text)
+        let slice = String(text[firstBrace...lastBrace])
+        if let salvaged = salvageLooseJSONObject(slice) {
+            return salvaged
+        }
+        if body.hasPrefix("{") || containsSchemaKeyMarker(slice) {
+            return candidates.last?.data ?? slice.data(using: .utf8)
+        }
+        return nil
+    }
+
+    private static func stripCodeFences(_ text: String) -> String {
+        var value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if value.hasPrefix("```") { // l10n-ignore
+            if let firstNewline = value.firstIndex(of: "\n") {
+                value = String(value[value.index(after: firstNewline)...])
+            }
+            if let closingFence = value.range(of: "```", options: .backwards) { // l10n-ignore
+                value = String(value[..<closingFence.lowerBound])
+            }
+            value = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return value
+    }
+
+    private static func containsSchemaKeyMarker(_ text: String) -> Bool {
+        for key in allSchemaKeys {
+            if text.range(of: "\"\(key)\"\\s*:", options: .regularExpression) != nil { return true }
+        }
+        return false
+    }
+
+    private static func decodeJSONObjectSlice(_ slice: String) -> (data: Data, dict: [String: Any])? {
+        if let data = slice.data(using: .utf8),
+           let dict = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] {
+            return (data, dict)
+        }
+        let repaired = slice.replacingOccurrences(of: #",\s*([}\]])"#, with: "$1", options: .regularExpression)
+        if let data = repaired.data(using: .utf8),
+           let dict = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] {
+            return (data, dict)
+        }
+        return nil
+    }
+
+    /// Rescues a JSON object when the model emitted unescaped ASCII quotes inside a
+    /// string value (common in Chinese summaries such as `"修复"思考概述"截断"`).
+    private static func salvageLooseJSONObject(_ slice: String) -> Data? {
+        guard slice.hasPrefix("{"), slice.hasSuffix("}") else { return nil }
+        let inner = String(slice.dropFirst().dropLast())
+        struct KeyMatch {
+            let key: String
+            let keyRange: Range<String.Index>
+        }
+        var matches: [KeyMatch] = []
+        for key in allSchemaKeys {
+            let pattern = "\"\(NSRegularExpression.escapedPattern(for: key))\"\\s*:"
+            guard let regex = try? NSRegularExpression(pattern: pattern) else { continue }
+            for hit in regex.matches(in: inner, range: NSRange(inner.startIndex..., in: inner)) {
+                if let range = Range(hit.range, in: inner) {
+                    matches.append(KeyMatch(key: key, keyRange: range))
+                }
+            }
+        }
+        guard !matches.isEmpty else { return nil }
+        matches.sort { $0.keyRange.lowerBound < $1.keyRange.lowerBound }
+        var deduped: [KeyMatch] = []
+        for match in matches {
+            if let last = deduped.last, match.keyRange.lowerBound < last.keyRange.upperBound { continue }
+            deduped.append(match)
+        }
+        var dict: [String: Any] = [:]
+        for (idx, match) in deduped.enumerated() {
+            let valueStart = match.keyRange.upperBound
+            let valueEnd = idx + 1 < deduped.count ? deduped[idx + 1].keyRange.lowerBound : inner.endIndex
+            var raw = String(inner[valueStart..<valueEnd]).trimmingCharacters(in: .whitespacesAndNewlines)
+            if idx + 1 < deduped.count {
+                guard raw.hasSuffix(",") else { return nil }
+                raw = String(raw.dropLast()).trimmingCharacters(in: .whitespacesAndNewlines)
+            } else if raw.hasSuffix(",") {
+                raw = String(raw.dropLast()).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            guard !raw.isEmpty else { return nil }
+            if raw == "null" { continue }
+            if let flag = parseBool(raw) {
+                dict[match.key] = flag
+            } else if raw.hasPrefix("[") && raw.hasSuffix("]") {
+                if let data = raw.data(using: .utf8),
+                   let arr = (try? JSONSerialization.jsonObject(with: data)) as? [Any] {
+                    dict[match.key] = arr
+                } else {
+                    let body = String(raw.dropFirst().dropLast()).trimmingCharacters(in: .whitespacesAndNewlines)
+                    dict[match.key] = body.isEmpty ? [] : body.split(separator: ",").map {
+                        $0.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: "\"'")))
+                    }.filter { !$0.isEmpty }
+                }
+            } else if raw.count >= 2 && raw.hasPrefix("\"") && raw.hasSuffix("\"") {
+                let unquoted = String(raw.dropFirst().dropLast())
+                    .replacingOccurrences(of: "\\\"", with: "\"")
+                    .replacingOccurrences(of: "\\n", with: "\n")
+                    .replacingOccurrences(of: "\\t", with: "\t")
+                    .replacingOccurrences(of: "\\\\", with: "\\")
+                dict[match.key] = unquoted
+            } else {
+                return nil
+            }
+        }
+        guard !dict.isEmpty, JSONSerialization.isValidJSONObject(dict) else { return nil }
+        return try? JSONSerialization.data(withJSONObject: dict)
     }
 }
