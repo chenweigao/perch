@@ -70,15 +70,22 @@ struct KimiActivityView: View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 8) {
                 DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
-                    HStack(spacing: 8) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
                         if let narrative {
-                            let label = L("\(narrative.headline) · \(items.count) 次调用")
-                            Text(verbatim: label).lineLimit(1).truncationMode(.tail)
-                                .overlay {
+                            Text(verbatim: narrative.headline)
+                                .lineLimit(2)
+                                .truncationMode(.tail)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .layoutPriority(1)
+                                .help(Text(verbatim: narrative.headline))
+                                .overlay(alignment: .topLeading) {
                                     if activeStage && !reduceMotion {
                                         ShimmerGlint(text: narrative.headline, size: ReplyStyle.captionSize, pulse: progressPulse(items))
                                     }
                                 }
+                            if !items.isEmpty {
+                                Text(verbatim: "· " + L("\(items.count) 次调用")).fixedSize()
+                            }
                         } else if entry.isExploration {
                             let label = L("读取与搜索 · \(items.count) 次调用")
                             Text(verbatim: label).fixedSize()
@@ -98,7 +105,7 @@ struct KimiActivityView: View {
                         } else {
                             Text("运行上下文").fixedSize()
                         }
-                        if !expanded {
+                        if !expanded && narrative == nil {
                             let targets = ToolPresentation.recentTargets(items)
                             // Command names read as code; a sentence-like description stays prose.
                             Text(targets).font(.system(size: ReplyStyle.captionSize,

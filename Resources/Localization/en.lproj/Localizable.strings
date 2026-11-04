@@ -309,6 +309,7 @@
 "找到多个同名文件，请选择：" = "Multiple files match. Choose a path:";
 
 "View full thoughts" = "View full thoughts";
+"Collapse full thoughts" = "Collapse full thoughts";
 /* Turn timing and activity */
 "用时 %@" = "Took %@";
 "观察时长 %@" = "Observed duration %@";

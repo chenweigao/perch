@@ -62,7 +62,7 @@ private struct ReadingDesignFixture: View {
     """
     let records: [[String: Any]] = [
         ["id":"prompt", "role":"user", "created_at":"1", "content":[["type":"text", "text":"帮我整理这次设计调整，先说结果。"]]],
-        ["id":"thought", "role":"assistant", "created_at":"2", "content":[["type":"thinking", "thinking":"PRIVATE_PROCESS_MARKER 检查已有阅读结构，保留必要操作。"]]],
+        ["id":"thought", "role":"assistant", "created_at":"2", "content":[["type":"thinking", "thinking":"PRIVATE_PROCESS_MARKER 检查 `!busy` 守卫，保留必要操作。\n\n继续验证。"]]],
         ["id":"answer", "role":"assistant", "created_at":"3", "content":[["type":"text", "text":text]]]
     ]
     let messages = try KimiWire.decoder().decode([KimiMessage].self, from: JSONSerialization.data(withJSONObject: records))
@@ -133,6 +133,8 @@ private struct ReadingDesignFixture: View {
     try expanded.representation(using: .png, properties: [:])!.write(to: output.appendingPathComponent("expanded.png"))
     precondition(readingTextViews(host).contains { $0.string.contains("PRIVATE_PROCESS_MARKER") }, "Process contents remain reachable")
     let thoughtText = readingTextViews(host).first { $0.string.contains("PRIVATE_PROCESS_MARKER") }!
+    precondition(!thoughtText.string.contains("`") && !thoughtText.string.contains("\n\n"),
+                 "Thoughts format inline code and collapse empty paragraph lines")
     let thoughtFont = thoughtText.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont
     precondition(thoughtFont.pointSize == 14, "Expanded thoughts remain as readable as the reply")
     clickHeader(mounted(foldID), height: foldHeaderHeight)
