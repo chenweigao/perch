@@ -74,9 +74,9 @@ struct TaskTurnSection: View {
         let failure = context.flatMap { narratives.failure(session: $0.narrativeKey)?.message }
         if failure != nil || !snapshot.todos.isEmpty || snapshot.edits != nil {
             VStack(alignment: .leading, spacing: 22) {
-                if let failure, let context { externalFailure(failure, key: context.narrativeKey) }
                 if !snapshot.todos.isEmpty { plan }
                 if let edits = snapshot.edits { self.edits(edits) }
+                if let failure, let context { externalFailure(failure, key: context.narrativeKey) }
             }.font(.system(size: WorkbenchTheme.Typography.body))
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("task-context-turn")
@@ -84,14 +84,26 @@ struct TaskTurnSection: View {
     }
 
     private func externalFailure(_ message: String, key: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("外部摘要更新失败：\(message)").font(.system(size: WorkbenchTheme.Typography.caption))
-                .foregroundStyle(.orange).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: "exclamationmark.triangle")
+                .foregroundStyle(.orange)
+                .accessibilityHidden(true)
+            Text("外部摘要更新失败：\(message)")
+                .foregroundStyle(WorkbenchTheme.quiet)
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 6)
             if narratives.canRetry(session: key) {
                 Button("重试外部摘要") { narratives.retry(session: key, settings: summarySettings) }
                     .buttonStyle(.borderless)
+                    .fontWeight(.medium)
+                    .foregroundStyle(WorkbenchTheme.accent)
             }
-        }
+        }.font(.system(size: WorkbenchTheme.Typography.caption))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(WorkbenchTheme.Fill.surface,
+                        in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row, style: .continuous))
     }
 
     private var plan: some View {

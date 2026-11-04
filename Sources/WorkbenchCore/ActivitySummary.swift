@@ -346,33 +346,79 @@ public final class ActivitySummaryClient: NSObject, URLSessionTaskDelegate, @unc
 
     public static func responseResult(_ data: Data, evidenceIDs: Set<String>) throws -> ActivitySummaryResult {
         let text = try completionText(data)
-        guard let payload = jsonPayload(text) else {
+        guard let payload = extractJSONPayload(text) else {
             return ActivitySummaryResult(subject: "", phase: .mixed, summary: text)
         }
-        guard let result = try? JSONDecoder().decode(ModelResult.self, from: payload),
-              let phase = result.phase,
-              let summary = result.summary?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !summary.isEmpty else { throw ActivitySummaryError.invalidResponse }
+        guard let result = try? JSONDecoder().decode(ModelResult.self, from: payload) else {
+            throw ActivitySummaryError.invalidResponse
+        }
+        let shouldUpdate = result.shouldUpdate ?? true
+        let summary = result.summary?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !summary.isEmpty || !shouldUpdate else { throw ActivitySummaryError.invalidResponse }
         var seenEvidence: Set<String> = []
         let evidence = (result.evidenceIDs ?? []).filter {
             evidenceIDs.contains($0) && seenEvidence.insert($0).inserted
         }.prefix(3)
         return ActivitySummaryResult(
             subject: String((result.subject ?? "").trimmingCharacters(in: .whitespacesAndNewlines).prefix(80)),
-            phase: phase, summary: summary, evidenceIDs: Array(evidence),
-            shouldUpdate: result.shouldUpdate ?? true)
+            phase: result.phase ?? .mixed, summary: summary, evidenceIDs: Array(evidence),
+            shouldUpdate: shouldUpdate)
     }
 
-    private static func completionText(_ data: Data) throws -> String {
+    static func completionText(_ data: Data) throws -> String {
         let response = try JSONDecoder().decode(Response.self, from: data)
         if response.choices.first?.finishReason == "length" { throw ActivitySummaryError.truncated }
-        let text = response.choices.first?.message.content?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let raw = response.choices.first?.message.content?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !raw.isEmpty else { throw ActivitySummaryError.emptyResponse }
+        var text = raw
+        if let end = text.range(of: "</think>", options: [.backwards, .caseInsensitive]) {
+            text = String(text[end.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+        } else if text.range(of: "<think>", options: [.caseInsensitive]) != nil {
+            throw ActivitySummaryError.truncated
+        }
         guard !text.isEmpty else { throw ActivitySummaryError.emptyResponse }
         return text
     }
 
-    private static func jsonPayload(_ text: String) -> Data? {
-        guard let start = text.firstIndex(of: "{"), let end = text.lastIndex(of: "}"), start <= end else { return nil }
-        return String(text[start...end]).data(using: .utf8)
+    static func extractJSONPayload(_ text: String) -> Data? {
+        guard let firstBrace = text.firstIndex(of: "{"), let lastBrace = text.lastIndex(of: "}"),
+              firstBrace <= lastBrace else { return nil }
+        var candidates: [Data] = []
+        var index = text.startIndex
+        while index < text.endIndex {
+            guard text[index] == "{" else {
+                index = text.index(after: index)
+                continue
+            }
+            var depth = 0
+            var inString = false
+            var escaped = false
+            var cursor = index
+            while cursor < text.endIndex {
+                let ch = text[cursor]
+                if inString {
+                    if escaped { escaped = false }
+                    else if ch == "\\" { escaped = true }
+                    else if ch == "\"" { inString = false }
+                } else {
+                    if ch == "\"" { inString = true }
+                    else if ch == "{" { depth += 1 }
+                    else if ch == "}" {
+                        depth -= 1
+                        if depth == 0 {
+                            if let data = String(text[index...cursor]).data(using: .utf8),
+                               (try? JSONSerialization.jsonObject(with: data)) is [String: Any] {
+                                candidates.append(data)
+                            }
+                            break
+                        }
+                    }
+                }
+                cursor = text.index(after: cursor)
+            }
+            index = text.index(after: index)
+        }
+        if let lastValid = candidates.last { return lastValid }
+        return String(text[firstBrace...lastBrace]).data(using: .utf8)
     }
 }

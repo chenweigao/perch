@@ -56,11 +56,13 @@ func checkSessionEditStats() throws {
     expectEqual(SessionEditStats.derive(from: [next])?.perFile,
                 ["second.swift": SessionEditStat(additions: 2, deletions: 0)])
     // Exact bridge fileChange envelope, including multiple files and diff headers.
-    let codex = try editMessage("codex", "apply_patch", #"{"changes":[{"path":"one.swift","kind":{"type":"update"},"diff":"--- a/one.swift\n+++ b/one.swift\n@@ -1 +1 @@\n-old\n+new"},{"path":"two.swift","kind":{"type":"add"},"diff":"+first\n+second"}]}"#)
+    let codex = try editMessage("codex", "apply_patch", ##"{"changes":[{"path":"one.swift","kind":{"type":"update"},"diff":"--- a/one.swift\n+++ b/one.swift\n@@ -1 +1 @@\n-old\n+new"},{"path":"two.swift","kind":{"type":"add"},"diff":"+first\n+second"},{"path":"POD_BEFORE.json","kind":{"type":"add"},"diff":"{\n  \"status\": \"running\"\n}"},{"path":"MR_DESCRIPTION.md","kind":{"type":"add"},"diff":"# Summary\n- item 1\n- item 2"}]}"##)
     let codexStats = SessionEditStats.derive(from: [codex])
     expectEqual(codexStats?.perFile["one.swift"], SessionEditStat(additions: 1, deletions: 1))
     expectEqual(codexStats?.perFile["two.swift"], SessionEditStat(additions: 2, deletions: 0))
-    expectEqual(codexStats?.total, SessionEditStat(additions: 3, deletions: 1))
+    expectEqual(codexStats?.perFile["POD_BEFORE.json"], SessionEditStat(additions: 3, deletions: 0))
+    expectEqual(codexStats?.perFile["MR_DESCRIPTION.md"], SessionEditStat(additions: 3, deletions: 0))
+    expectEqual(codexStats?.total, SessionEditStat(additions: 9, deletions: 1))
     // Line boundaries are Character boundaries: CR LF is one Character, so it does
     // not separate lines, while a trailing LF still counts; equal lines compare by
     // canonical equivalence, and a combining mark changes a patch line's marker.
