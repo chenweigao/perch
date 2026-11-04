@@ -525,17 +525,19 @@ struct TurnToolElapsedLabel: View {
 /// Watches a running turn's progress without rendering a bottom status bar,
 /// reporting once per quiet stretch past the stall threshold.
 struct TurnStallMonitor: View {
-    let activity: ConversationActivity
+    let animates: Bool
+    let signature: Int
+    let activeToolID: String?
     let onStall: (Int) -> Void
     @State private var progress = TurnProgressClock()
     private var progressKey: TurnProgressClock.Key {
-        TurnProgressClock.Key(signature: activity.progressSignature, tool: activity.activeTools.first?.id)
+        TurnProgressClock.Key(signature: signature, tool: activeToolID)
     }
     var body: some View {
         Color.clear.frame(width: 0, height: 0)
             .onChange(of: progressKey, initial: true) { _, key in progress.mark(key) }
-            .task(id: activity.animates) {
-                guard activity.animates else { return }
+            .task(id: animates) {
+                guard animates else { return }
                 while !Task.isCancelled {
                     try? await Task.sleep(for: .seconds(15))
                     guard !Task.isCancelled else { return }

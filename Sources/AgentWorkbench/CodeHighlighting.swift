@@ -163,10 +163,14 @@ private final class HighlightTokens: NSObject, XMLParserDelegate {
     func update(source: String, language: String, debounce: Bool = false) {
         let language = CodeLanguage.canonical(language)
         guard self.source != source || self.language != language else { return }
+        let appending = !self.source.isEmpty && self.language == language && source.hasPrefix(self.source)
         task?.cancel(); self.source = source; self.language = language
-        tokens = []; ready = false; error = nil
-        view?.needsDisplay = true
-        guard !language.isEmpty, !source.isEmpty else { ready = true; return }
+        if !appending {
+            tokens = []
+            view?.needsDisplay = true
+        }
+        ready = false; error = nil
+        guard !language.isEmpty, !source.isEmpty else { tokens = []; ready = true; return }
         task = Task { [weak self] in
             do {
                 if debounce { try await Task.sleep(for: .milliseconds(150)) }

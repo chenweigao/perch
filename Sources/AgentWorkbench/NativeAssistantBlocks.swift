@@ -526,6 +526,7 @@ final class NativeAssistantStackView: NSView {
     private let links: SelectableReplyText.Coordinator
     private(set) var blocks: [NativeAssistantBlock] = []
     private var blockViews: [NativeAssistantBlockView] = []
+    private var dirtyBlocks: Set<ObjectIdentifier> = []
     override var isFlipped: Bool { true }
 
     init(compact: Bool, links: SelectableReplyText.Coordinator) {
@@ -553,6 +554,7 @@ final class NativeAssistantStackView: NSView {
             if index < blockViews.count, type(of: blockViews[index]) == makeViewType(for: block) {
                 if index >= previous.count || previous[index] != block {
                     blockViews[index].update(block)
+                    dirtyBlocks.insert(ObjectIdentifier(blockViews[index]))
                     #if TRANSCRIPT_CHECKS
                     NavigationRenderMetrics.count("native_assistant_block_update")
                     #endif
@@ -565,6 +567,7 @@ final class NativeAssistantStackView: NSView {
             } else {
                 let view = makeView(for: block)
                 view.update(block)
+                dirtyBlocks.insert(ObjectIdentifier(view))
                 next.append(view)
                 #if TRANSCRIPT_CHECKS
                 NavigationRenderMetrics.count("native_assistant_block_create")
@@ -573,10 +576,14 @@ final class NativeAssistantStackView: NSView {
         }
         let kept = Set(next.map { ObjectIdentifier($0) })
         for view in blockViews where !kept.contains(ObjectIdentifier(view)) {
+            dirtyBlocks.remove(ObjectIdentifier(view))
             view.teardown(); view.removeFromSuperview()
         }
         blockViews = next
-        subviews = blockViews.map { $0 as NSView }
+        let views = blockViews.map { $0 as NSView }
+        if subviews.count != views.count || !zip(subviews, views).allSatisfy(===) {
+            subviews = views
+        }
     }
     private func makeViewType(for block: NativeAssistantBlock) -> NativeAssistantBlockView.Type {
         switch block {
@@ -605,16 +612,21 @@ final class NativeAssistantStackView: NSView {
             }
             let height = view.contentHeight(width: width)
             let frame = CGRect(x: 0, y: y, width: width, height: height)
+            let sizeChanged = view.frame.size != frame.size
             if view.frame != frame { view.frame = frame }
-            view.placeContent(width: width)
+            if sizeChanged || dirtyBlocks.contains(ObjectIdentifier(view)) {
+                view.placeContent(width: width)
+            }
             y += height
         }
+        dirtyBlocks.removeAll(keepingCapacity: true)
     }
     /// Return all text views to the shared pool and detach every block view.
     func teardown() {
         for view in blockViews { view.teardown(); view.removeFromSuperview() }
         blockViews = []
         blocks = []
+        dirtyBlocks.removeAll(keepingCapacity: true)
         subviews = []
     }
     func textViews() -> [ReplyTextView] { blockViews.flatMap { $0.textViews() } }

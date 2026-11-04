@@ -84,14 +84,13 @@ struct KimiWorkspaceView: View {
             if turn.running {
                 let pending = conversation.snapshot.pendingApprovals.count + conversation.snapshot.pendingQuestions.count
                 let actions = ConversationActionContext(hostID: connection.host.id, kind: .kimi, sessionID: sessionID)
-                let activity = ConversationActivity(
-                    messages: conversation.displayMessages, isRunning: true,
-                    liveTools: conversation.live?.runningTools ?? [], online: connection.online,
-                    isThinking: conversation.live?.thinkingText.isEmpty == false && conversation.live?.assistantText.isEmpty != false,
-                    isResponding: conversation.live?.assistantText.isEmpty == false,
-                    pendingCount: pending, isStopping: connection.isStopping)
-                TurnStallMonitor(activity: activity) { actions.post(.turnStalled(minutes: $0)) }
-                    .id(sessionID)
+                let animates = connection.online && pending == 0 && !connection.isStopping
+                let sig = conversation.lastSeq ^ ((conversation.live?.assistantText.utf16.count ?? 0) &<< 8)
+                    ^ ((conversation.live?.thinkingText.utf16.count ?? 0) &<< 16)
+                    ^ ((conversation.live?.runningTools.count ?? 0) &<< 24)
+                TurnStallMonitor(animates: animates, signature: sig, activeToolID: conversation.live?.runningTools.first?.id) {
+                    actions.post(.turnStalled(minutes: $0))
+                }.id(sessionID)
             }
             KimiComposerView(connection: connection, sessionID: sessionID, onInput: onInput)
                 .id(sessionID)
@@ -405,11 +404,11 @@ private struct KimiTimeline<Bar: View>: View {
                     let isTurnRunning = c.snapshot.session.isTurnRunning
                     let running = Set((c.live?.runningTools ?? []).map(\.id))
                     let recapKey: String? = isTurnRunning ? nil : c.taskRecapRevision.map { "\(connection.host.id):kimi:\(sessionID):\($0)" }
-                    let recapMessageID = ConversationActionContext.recapTargetID(in: c.displayMessages, recapKey: recapKey)
+                    let recapMessageID = ConversationActionContext.recapTargetID(in: c.messages, recapKey: recapKey)
                     let _ = TaskRecapStore.shared.registerMessages(for: recapKey) {
                         try await connection.recapMessages(for: sessionID)
                     }
-                    let planProgress = TurnStatus.Progress.live(in: c.displayMessages, isRunning: isTurnRunning)
+                    let planProgress = TurnStatus.Progress.live(in: c.messages, isRunning: isTurnRunning)
                     ConversationTranscript(messages: c.displayMessages, api: connection.api, sessionId: sessionID,
                                            running: running, isRunning: isTurnRunning,
                                            liveTools: c.live?.runningTools ?? [], online: connection.online, memoryKey: readingKey,

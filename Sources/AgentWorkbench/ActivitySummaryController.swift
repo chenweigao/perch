@@ -31,7 +31,7 @@ struct ActivityNarrativeFailure: Equatable {
         let force: Bool
     }
 
-    @Published private var sessions: [String: SessionState] = [:]
+    private var sessions: [String: SessionState] = [:]
     private var pending: Pending?
     private var worker: Task<Void, Never>?
     private var activeSession: String?
@@ -59,6 +59,12 @@ struct ActivityNarrativeFailure: Equatable {
     func narrative(session: String) -> ActivityNarrative? { sessions[session]?.current }
     func row(session: String, entryID: String) -> ActivityNarrativeRow? { sessions[session]?.rows[entryID] }
     func rows(session: String) -> [String: ActivityNarrativeRow] { sessions[session]?.rows ?? [:] }
+    func rows(session: String, snapshot: ActivityNarrativeSnapshot, following: Bool) -> [String: ActivityNarrativeRow] {
+        guard let state = sessions[session] else { return [:] }
+        if !following, !state.rows.isEmpty { return state.rows }
+        guard !state.results.isEmpty else { return [:] }
+        return Self.rows(in: snapshot.applying(state.results))
+    }
     func failure(session: String) -> ActivityNarrativeFailure? { sessions[session]?.failure }
     func canRetry(session: String) -> Bool { sessions[session]?.retryBatch != nil }
 
@@ -68,6 +74,7 @@ struct ActivityNarrativeFailure: Equatable {
         if let observedSession, observedSession != session { cancelRequest() }
         observedSession = session
         var state = sessions[session] ?? SessionState()
+        let hadDeferred = state.deferred != nil
         state.touched = Date()
         state.base = snapshot
         if running { state.observedRunning = true }
@@ -90,6 +97,7 @@ struct ActivityNarrativeFailure: Equatable {
             state.deferred = rendered
         }
         sessions[session] = state
+        if hadDeferred && following && !state.results.isEmpty { objectWillChange.send() }
         trimSessions()
 
         guard settings.configuration.enabled, online, state.observedRunning, let batch else {
@@ -103,7 +111,10 @@ struct ActivityNarrativeFailure: Equatable {
 
     func retry(session: String, settings: ActivitySummarySettings) {
         guard settings.configuration.enabled, let batch = sessions[session]?.retryBatch else { return }
-        if sessions[session] != nil { sessions[session]!.failure = nil }
+        if sessions[session] != nil {
+            sessions[session]!.failure = nil
+            objectWillChange.send()
+        }
         enqueue(Pending(session: session, batch: batch, configuration: settings.configuration,
                         settingsRevision: settings.revision, force: true), settings: settings)
     }
@@ -177,6 +188,7 @@ struct ActivityNarrativeFailure: Equatable {
                         // A no-change response can keep only this stage's existing
                         // refinement. Earlier stages already own their headlines
                         // in history; copying one here would display it twice.
+                        let hadFailure = current.failure != nil
                         current.failure = nil
                         current.retryBatch = nil
                         let rendered = current.base.applying(current.results)
@@ -184,6 +196,7 @@ struct ActivityNarrativeFailure: Equatable {
                         if current.deferred == nil { current.rows = Self.rows(in: rendered) }
                         else { current.deferred = rendered }
                         self.sessions[next.session] = current
+                        if result.shouldUpdate || hadFailure { self.objectWillChange.send() }
                         self.trimStages()
                     }
                 } catch {
@@ -193,6 +206,7 @@ struct ActivityNarrativeFailure: Equatable {
                     current.failure = ActivityNarrativeFailure(message: error.localizedDescription, date: Date())
                     current.retryBatch = next.batch
                     self.sessions[next.session] = current
+                    self.objectWillChange.send()
                 }
             }
         }

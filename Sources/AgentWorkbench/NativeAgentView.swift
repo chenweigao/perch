@@ -166,15 +166,11 @@ struct NativeAgentView: View {
             let turn = SessionTurn(native: s)
             if turn.running {
                 let actions = ConversationActionContext(hostID: connection.host.id, kind: s.provider, sessionID: s.id)
-                let activity = ConversationActivity(
-                    messages: s.messages, isRunning: true,
-                    running: ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy),
-                    online: connection.online,
-                    isThinking: s.messages.last?.role == "assistant" && s.messages.last?.content.last?.type == "thinking",
-                    isResponding: s.messages.last?.role == "assistant" && s.messages.last?.content.last?.type == "text",
-                    pendingCount: s.interactions.count, isStopping: connection.isStopping)
-                TurnStallMonitor(activity: activity) { actions.post(.turnStalled(minutes: $0)) }
-                    .id(s.id)
+                let animates = connection.online && s.interactions.isEmpty && !connection.isStopping
+                let activeToolID = ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy).first
+                TurnStallMonitor(animates: animates, signature: s.revision, activeToolID: activeToolID) {
+                    actions.post(.turnStalled(minutes: $0))
+                }.id(s.id)
             }
             // Long upstream errors scroll inside the notice instead of displacing the conversation.
             if let error = connection.actionError ?? s.error { ConversationNotice(text: error) }

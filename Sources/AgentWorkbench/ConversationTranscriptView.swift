@@ -267,7 +267,6 @@ struct ConversationTranscript: View {
     @ObservedObject private var summarySettings = ActivitySummarySettings.shared
     @ObservedObject var narrativeStore = ActivityNarrativeStore.shared
     @Environment(\.self) private var environment
-    @State private var measured: (session: String, height: CGFloat)?
     @State private var documentLayout = ConversationDocumentLayout()
     var body: some View {
         // Connection snapshots land here; their state types stay probe-free.
@@ -281,7 +280,7 @@ struct ConversationTranscript: View {
         let observation = SummaryObservation(session: key, batch: snapshot.batch, narrativeKey: snapshot.narrativeKey,
             running: isRunning, online: online && allowsActivitySummaries && allowsActivitySummaryRequests, following: followsLatest,
             settingsRevision: summarySettings.revision)
-        let narratives = narrativeStore.rows(session: key)
+        let narratives = narrativeStore.rows(session: key, snapshot: snapshot.narrative, following: followsLatest)
         let identity = ConversationContentIdentity(snapshot: snapshot, narratives: narratives,
             api: api, session: sessionId, memoryKey: key)
         // Earlier turns are presented once per summary overlay; a streamed token
@@ -304,13 +303,11 @@ struct ConversationTranscript: View {
         }
         let _ = PerfDiagnostics.end("snapshot_projection", projectionProbe,
                                     detail: "messages=\(messages.count) rows=\(contents.count)")
-        ConversationDocumentHost(contents: contents, contentIdentity: identity, navigation: snapshot.navigation, sessionId: key,
-                                 appearance: ConversationEntryAppearance(environment), foldParents: foldParents,
-                                 viewport: environment.conversationViewport,
-                                 layout: documentLayout, measuredHeight: measured?.session == sessionId ? measured?.height : nil,
-                                 suspended: isSuspended, waitsForInitialPosition: waitsForInitialPosition) { height in
-            measured = (sessionId, height)
-        }
+        ConversationDocumentSizingHost(contents: contents, contentIdentity: identity, navigation: snapshot.navigation,
+                                       sessionId: sessionId, key: key, appearance: ConversationEntryAppearance(environment),
+                                       foldParents: foldParents, viewport: environment.conversationViewport,
+                                       layout: documentLayout, suspended: isSuspended,
+                                       waitsForInitialPosition: waitsForInitialPosition)
         // The native measurement is the single source of document height.
         // An asynchronously updated outer fixed frame can keep the scroll view
         // taller than its already-shrunken transcript for one display pass.
@@ -331,6 +328,32 @@ struct ConversationTranscript: View {
         let online: Bool
         let following: Bool
         let settingsRevision: Int
+    }
+}
+
+/// Isolates measured-height state from `ConversationTranscript.body` so height
+/// publications during streaming never re-project the transcript rows.
+private struct ConversationDocumentSizingHost: View {
+    let contents: [ConversationEntryView]
+    let contentIdentity: ConversationContentIdentity
+    let navigation: [ConversationTurnSummary]
+    let sessionId: String
+    let key: String
+    let appearance: ConversationEntryAppearance
+    let foldParents: [String: String]
+    let viewport: ConversationViewport?
+    let layout: ConversationDocumentLayout
+    let suspended: Bool
+    let waitsForInitialPosition: Bool
+    @State private var measured: (session: String, height: CGFloat)?
+    var body: some View {
+        ConversationDocumentHost(contents: contents, contentIdentity: contentIdentity, navigation: navigation, sessionId: key,
+                                 appearance: appearance, foldParents: foldParents,
+                                 viewport: viewport,
+                                 layout: layout, measuredHeight: measured?.session == sessionId ? measured?.height : nil,
+                                 suspended: suspended, waitsForInitialPosition: waitsForInitialPosition) { height in
+            measured = (sessionId, height)
+        }
     }
 }
 

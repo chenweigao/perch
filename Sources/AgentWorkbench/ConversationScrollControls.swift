@@ -166,7 +166,6 @@ struct ConversationScrollView<Content: View, Bar: View>: View {
     var onReturnToLatest: (() -> Void)? = nil
     let content: Content
     let bar: Bar
-    @State private var contentSize = CGSize.zero
     @State private var conversationViewport = ConversationViewport()
 
     init(showsScrollIndicator: Bool = false, hasOlderHistory: Bool = false,
@@ -237,11 +236,10 @@ struct ConversationScrollView<Content: View, Bar: View>: View {
     }
 
     var body: some View {
-        transcript.onScrollGeometryChange(for: CGSize.self) { $0.contentSize } action: { _, size in
-            contentSize = size
-        }.task(id: contentSize) {
-            await Task.yield()
-            if !Task.isCancelled { onContentSizeChange() }
+        transcript.onScrollGeometryChange(for: CGSize.self) { $0.contentSize } action: { old, size in
+            guard old != size else { return }
+            let notify = onContentSizeChange
+            DispatchQueue.main.async { notify() }
         }
     }
 }
