@@ -209,10 +209,25 @@ struct ActivityNarrativeFailure: Equatable {
                     if Task.isCancelled || self.generation != version || settings.revision != next.settingsRevision { return }
                     if self.pending?.session == next.session { continue }
                     guard var current = self.sessions[next.session] else { continue }
-                    current.failure = ActivityNarrativeFailure(message: error.localizedDescription, date: Date())
                     current.retryBatch = next.batch
-                    self.sessions[next.session] = current
-                    self.objectWillChange.send()
+                    let quietContentFailure: Bool
+                    if !next.force, let summaryError = error as? ActivitySummaryError {
+                        switch summaryError {
+                        case .invalidResponse, .emptyResponse, .truncated:
+                            quietContentFailure = true
+                        case .configuration, .http, .echoedPrompt:
+                            quietContentFailure = false
+                        }
+                    } else {
+                        quietContentFailure = false
+                    }
+                    if quietContentFailure {
+                        self.sessions[next.session] = current
+                    } else {
+                        current.failure = ActivityNarrativeFailure(message: error.localizedDescription, date: Date())
+                        self.sessions[next.session] = current
+                        self.objectWillChange.send()
+                    }
                 }
             }
         }

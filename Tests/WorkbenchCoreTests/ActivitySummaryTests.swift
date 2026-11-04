@@ -517,11 +517,26 @@ func checkActivitySummaries() throws {
     let fullExternal = try ActivitySummaryClient.responseResult(try completion(completeProgress), evidenceIDs: [])
     precondition(fullExternal.summary == completeProgress)
     precondition(localProjection.applying([localProjection.current!.stageID: fullExternal]).current?.headline == completeProgress)
-    do {
-        _ = try ActivitySummaryClient.responseResult(try completion(
-            #"{"subject":"Bad","phase":"planning","summary":"Invalid phase"}"#), evidenceIDs: [])
-        preconditionFailure("Unknown structured phases must be rejected")
-    } catch ActivitySummaryError.invalidResponse {}
+    let flexiblePhase = try ActivitySummaryClient.responseResult(try completion(
+        #"{"subject":"Plan","phase":"planning","summary":"Mapped non-standard phase to mixed."}"#), evidenceIDs: [])
+    precondition(flexiblePhase.phase == .mixed && flexiblePhase.summary == "Mapped non-standard phase to mixed." && flexiblePhase.shouldUpdate)
+    let localizedPhase = try ActivitySummaryClient.responseResult(try completion(
+        #"{"subject":"搜索","phase":"探索","summary":"正在检索相关实现。"}"#), evidenceIDs: [])
+    precondition(localizedPhase.phase == .exploring && localizedPhase.summary == "正在检索相关实现。")
+    let emptyNoUpdate = try ActivitySummaryClient.responseResult(try completion(
+        #"{"subject":"","phase":"","summary":"","evidence_ids":[],"should_update":false}"#), evidenceIDs: [])
+    precondition(!emptyNoUpdate.shouldUpdate && emptyNoUpdate.summary.isEmpty)
+    let withInnerBraces = try ActivitySummaryClient.responseResult(try completion(
+        #"{"subject":"SwiftUI","phase":"editing","summary":"调整 EmptyView {} 与 ThoughtRail { content } 的折叠头布局。","evidence_ids":["bounded"],"should_update":true}"#),
+        evidenceIDs: Set(["bounded"]))
+    precondition(withInnerBraces.phase == .editing && withInnerBraces.summary == "调整 EmptyView {} 与 ThoughtRail { content } 的折叠头布局。")
+    let unescapedQuotes = try ActivitySummaryClient.responseResult(try completion(
+        #"{"subject":"思考排版","phase":"editing","summary":"修复"思考概述"被截断的问题","evidence_ids":["bounded"],"should_update":true}"#),
+        evidenceIDs: Set(["bounded"]))
+    precondition(unescapedQuotes.phase == .editing && unescapedQuotes.summary == #"修复"思考概述"被截断的问题"# && unescapedQuotes.evidenceIDs == ["bounded"])
+    let plainWithBraces = try ActivitySummaryClient.responseResult(
+        try completion("正在检查 EmptyView {} 与 {config} 的配置。"), evidenceIDs: [])
+    precondition(plainWithBraces.phase == .mixed && plainWithBraces.summary == "正在检查 EmptyView {} 与 {config} 的配置。")
     do {
         _ = try ActivitySummaryClient.responseResult(try completion(#"{"summary": }"#), evidenceIDs: [])
         preconditionFailure("Malformed structured output must not replace a valid summary")
