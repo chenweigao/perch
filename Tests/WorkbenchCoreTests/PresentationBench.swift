@@ -183,3 +183,57 @@ func benchPresentationRealTranscript() throws {
     ], options: [.prettyPrinted, .sortedKeys])
     print(String(decoding: report, as: UTF8.self))
 }
+
+/// Streaming-tail updates over a real long-window transcript: each round grows the
+/// final assistant message, as a live provider stream does. WORKBENCH_BENCH=real-stream,
+/// WORKBENCH_BENCH_FILE points at a JSON array of wire messages.
+func benchPresentationRealStream() throws {
+    guard let path = ProcessInfo.processInfo.environment["WORKBENCH_BENCH_FILE"] else {
+        throw WorkbenchError("WORKBENCH_BENCH_FILE required")
+    }
+    let input = try KimiWire.decoder().decode([KimiMessage].self, from: Data(contentsOf: URL(fileURLWithPath: path)))
+    // Precompute grown tail variants outside the timed rounds.
+    var tails: [KimiMessage] = []
+    var grown = input[input.count - 1].content[0].text ?? ""
+    for i in 0..<10 {
+        grown += "\n\n追加的流式正文 \(i)，包含 **强调** 与 `identifier`。"
+        tails.append(try KimiWire.decoder().decode(KimiMessage.self, from: JSONSerialization.data(withJSONObject: [
+            "id": input[input.count - 1].id, "role": "assistant", "created_at": "tail",
+            "content": [["type": "text", "text": grown]]] as [String: Any])))
+    }
+    var lastMetrics: ConversationPresentationUpdateMetrics?
+    let model = ConversationPresentationModel(key: "real-stream", metricsHandler: { lastMetrics = $0 })
+    _ = model.update(.init(messages: input, isRunning: true, language: "zh"))
+    var samples: [Double] = []
+    var current = input
+    for i in 0..<10 {
+        var tail = current
+        tail[tail.count - 1] = tails[i]
+        let t0 = CACurrentMediaTime()
+        _ = model.update(.init(messages: tail, isRunning: true, language: "zh"))
+        samples.append((CACurrentMediaTime() - t0) * 1000)
+        current = tail
+    }
+    samples.sort()
+    var breakdown: [String: Any] = [:]
+    if let m = lastMetrics {
+        breakdown = [
+            "tool_ms": Double(m.toolProjectionNanoseconds) / 1e6,
+            "turns_ms": Double(m.turnProjectionNanoseconds) / 1e6,
+            "narrative_ms": Double(m.narrativeNanoseconds) / 1e6,
+            "rows_ms": Double(m.rowProjectionNanoseconds) / 1e6,
+            "summary_ms": Double(m.summaryNanoseconds) / 1e6,
+            "retained_ms": Double(m.retainedCostNanoseconds) / 1e6,
+            "compare_ms": Double(m.inputComparisonNanoseconds) / 1e6,
+        ]
+    }
+    print(String(decoding: try JSONSerialization.data(withJSONObject: [
+        "benchmark": "real-stream",
+        "messages": input.count,
+        "update_median_ms": samples[5], "update_max_ms": samples[9],
+        "last_update_breakdown": breakdown,
+        "scope": "release WorkbenchCore; repeated tail-growth updates on one established window"
+    ], options: [.prettyPrinted, .sortedKeys]), as: UTF8.self))
+}
+
+

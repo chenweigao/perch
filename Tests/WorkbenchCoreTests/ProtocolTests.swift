@@ -18,6 +18,9 @@ struct ProtocolTests {
         case "streaming":
             try benchStreamingDelta()
             return
+        case "real-stream":
+            try benchPresentationRealStream()
+            return
         case "real-transcript":
             try benchPresentationRealTranscript()
             return
