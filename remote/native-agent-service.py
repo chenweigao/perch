@@ -7,7 +7,7 @@ ROOT = pathlib.Path(os.environ.get('AWB_NATIVE_ROOT', '~/.local/share/agent-work
 ROOT.mkdir(parents=True, exist_ok=True, mode=0o700)
 ROOT.chmod(0o700)
 os.umask(0o077)
-SERVICE_VERSION = 12
+SERVICE_VERSION = 13
 # Subagent text and thinking are forwarded into each subagent's own transcript.
 # Probe 2026-10-18 (SDK 0.3.280, CLI 2.1.302): every subagent assistant/user
 # message carried parent_tool_use_id, and no unparented stream delta held
@@ -45,6 +45,10 @@ CODEX_PENDING_SECONDS = 30.0
 # A child's history is read at most this many pages of 100, and retried this late.
 CODEX_BACKFILL_PAGES = 200
 CODEX_BACKFILL_RETRY = 30.0
+# A snapshot page is turn-delimited but also capped in messages: a Codex turn can
+# hold thousands of tool/thinking entries, and shipping all of them at once makes
+# opening a long session take seconds on a slow link.
+SNAPSHOT_PAGE_MESSAGES = 500
 
 def source_fingerprint(path=None):
     """Identity of the code a service is executing. SERVICE_VERSION is bumped by
@@ -2468,6 +2472,8 @@ class Session:
         else:
             prompts = bisect.bisect_left(self.prompt_indices, end)
             first = self.prompt_indices[prompts-limit] if prompts > limit else 0
+            # A turn window can still be thousands of messages; bound the page.
+            first = max(first, end - SNAPSHOT_PAGE_MESSAGES)
         history = {'epoch':self.history_epoch, 'start':first, 'total':total, 'end':end}
         since = int(revision) if revision is not None else None
         delta = before is None and start is not None and epoch == self.history_epoch and since is not None and 0 <= since <= self.state['revision']

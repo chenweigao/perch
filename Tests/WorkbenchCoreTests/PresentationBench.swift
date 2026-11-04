@@ -145,3 +145,41 @@ func benchPresentationTokenUpdates() throws {
     ], options: [.prettyPrinted, .sortedKeys])
     print(String(decoding: data, as: UTF8.self))
 }
+
+/// One-off measurement for the first-visit cost of a real session transcript.
+/// Not part of the checked-in suite; run with WORKBENCH_BENCH=real-transcript and
+/// WORKBENCH_BENCH_FILE pointing at a JSON array of wire messages.
+func benchPresentationRealTranscript() throws {
+    guard let path = ProcessInfo.processInfo.environment["WORKBENCH_BENCH_FILE"] else {
+        throw WorkbenchError("WORKBENCH_BENCH_FILE required")
+    }
+    let data = try Data(contentsOf: URL(fileURLWithPath: path))
+    let decodeStart = CACurrentMediaTime()
+    let input = try KimiWire.decoder().decode([KimiMessage].self, from: data)
+    let decodeMS = (CACurrentMediaTime() - decodeStart) * 1000
+    var cold: [Double] = [], warm: [Double] = []
+    var rows = 0
+    for _ in 0..<5 {
+        let model = ConversationPresentationModel(key: "real-transcript")
+        let t0 = CACurrentMediaTime()
+        rows = model.update(.init(messages: input, language: "zh")).rows.count
+        cold.append((CACurrentMediaTime() - t0) * 1000)
+        let t1 = CACurrentMediaTime()
+        _ = model.update(.init(messages: input, language: "zh"))
+        warm.append((CACurrentMediaTime() - t1) * 1000)
+    }
+    cold.sort(); warm.sort()
+    let payload = input.reduce(0) { $0 + $1.content.reduce(0) { $0 + ($1.text?.utf8.count ?? 0) } }
+    let report = try JSONSerialization.data(withJSONObject: [
+        "benchmark": "real-transcript",
+        "messages": input.count,
+        "parts": input.reduce(0) { $0 + $1.content.count },
+        "text_bytes": payload,
+        "decode_ms": decodeMS,
+        "cold_median_ms": cold[2], "cold_max_ms": cold[4],
+        "warm_identical_median_ms": warm[2],
+        "rows": rows,
+        "scope": "release WorkbenchCore; excludes transport, SwiftUI/AppKit layout, FPS"
+    ], options: [.prettyPrinted, .sortedKeys])
+    print(String(decoding: report, as: UTF8.self))
+}
