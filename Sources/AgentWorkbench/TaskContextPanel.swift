@@ -278,9 +278,10 @@ struct TaskContextView: View {
             VStack(alignment: .leading, spacing: 4) {
                 sectionTitle("文档与产物", icon: "doc.text", count: value.files.count)
                 ForEach(allFiles ? value.files : Array(value.files.prefix(4))) { file in
-                    let missing = model.isWorkspaceFileMissing(hostID: item.reference.hostID, path: file.path)
+                    let missing = model.isWorkspaceFileMissing(hostID: item.reference.hostID, path: file.path) ||
+                        model.isWorkspaceFileMissing(hostID: item.reference.hostID, path: file.reference)
                     Button {
-                        model.openWorkspaceFile(GroupOutcome(title: file.name, link: file.path, source: item.reference))
+                        model.openWorkspaceFile(GroupOutcome(title: file.name, link: file.reference, source: item.reference))
                     } label: {
                         HStack(spacing: 10) {
                             Image(systemName: TaskContextFileIcon.name(file.name)).foregroundStyle(WorkbenchTheme.quiet).frame(width: 16)

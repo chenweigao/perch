@@ -24,14 +24,25 @@ func checkTaskContextFiles() throws {
         VisibleTool(id: "unknown", name: "Write", input: .object(["path": .string("unknown.md")]), status: .returned)
     ]
     let files = TaskContextFiles.collect(messages: messages, tools: tools, directory: "/project")
-    precondition(files.first?.path == "/project/notes.txt" && files.first?.written == true)
-    precondition(files.filter { $0.path == "/project/docs/报告 终版.md" }.count == 1)
-    precondition(files.contains { $0.path == "/project/figures/chart.png" && !$0.written })
+    precondition(files.first?.path == "/project/notes.txt" && files.first?.reference == "notes.txt" && files.first?.written == true)
+    precondition(files.filter { $0.path == "/project/docs/报告 终版.md" && $0.reference == "docs/报告 终版.md" }.count == 1)
+    precondition(files.contains { $0.path == "/project/figures/chart.png" && $0.reference == "figures/chart.png" && !$0.written })
     precondition(files.contains { $0.path == "~/remote.md" }, "Remote home references must not expand to this Mac's home")
     precondition(!files.contains { $0.path.contains("example.com") || $0.path.contains("javascript") ||
         $0.path.contains("failed") || $0.path.contains("unknown") || $0.path.hasSuffix(".swift") })
     let linkedOnly = TaskContextFiles.collect(messages: messages, tools: [], directory: "/other")
     precondition(linkedOnly.allSatisfy { !$0.written }, "A link is never proof of a successful write")
+    let nestedMessage = try KimiWire.decoder().decode([KimiMessage].self, from: JSONSerialization.data(withJSONObject: [
+        ["id": "b", "role": "assistant", "created_at": "", "content": [["type": "text", "text": "已更新 `DRAFT.md` 与 `mock.png`（位于 `docs/2026-11-04/mock.png`）。"]]]
+    ]))
+    let readTools = [
+        VisibleTool(id: "read-draft", name: "Read", input: .object(["path": .string("/worktree/docs/DRAFT.md")]), status: .returned)
+    ]
+    let resolved = TaskContextFiles.collect(messages: nestedMessage, tools: readTools, directory: "/workspace")
+    precondition(resolved.contains { $0.path == "/worktree/docs/DRAFT.md" && $0.reference == "/worktree/docs/DRAFT.md" && !$0.written },
+                 "Bare prose mentions match known Read tool paths instead of guessing the session root")
+    precondition(resolved.filter { $0.name == "mock.png" }.map(\.path) == ["/workspace/docs/2026-11-04/mock.png"],
+                 "A bare filename mention merges with a more specific relative path in the same conversation")
     print("PASS: task panel document links, host-relative paths, deduplication and write evidence")
 }
 

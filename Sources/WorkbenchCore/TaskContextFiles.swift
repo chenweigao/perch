@@ -5,14 +5,30 @@ import Markdown
 /// of an artifact existing; the normal reader verifies it when opened.
 public struct TaskContextFile: Identifiable, Equatable {
     public let path: String
+    /// Relative reference when the source was relative, so `referenceCommand`
+    /// searches worktrees/directoryHints and subdirectories instead of failing
+    /// at a guessed `directory + "/" + reference` path.
+    public let reference: String
     public var written: Bool
     public var id: String { path }
     public var name: String { (path as NSString).lastPathComponent }
+    public init(path: String, reference: String? = nil, written: Bool) {
+        self.path = path
+        self.reference = reference ?? path
+        self.written = written
+    }
 }
 
 public enum TaskContextFiles {
     public static func collect(messages: [KimiMessage], tools: [VisibleTool], directory: String) -> [TaskContextFile] {
         var files: [TaskContextFile] = []
+        var toolPaths: [String] = []
+        for tool in tools.reversed() where tool.status == .succeeded || tool.status == .returned {
+            if let raw = tool.input?["file_path"].string ?? tool.input?["path"].string, raw.hasPrefix("/") {
+                let clean = (raw as NSString).standardizingPath
+                if !toolPaths.contains(clean) { toolPaths.append(clean) }
+            }
+        }
         func add(_ raw: String, written: Bool = false, link: Bool = false) {
             let reference: ConversationFileReference?
             if let url = URL(string: raw), url.scheme == "perch-file" {
@@ -27,21 +43,39 @@ public enum TaskContextFiles {
                 } else { reference = ConversationFileReference(text: raw) }
             }
             guard let reference, !reference.path.isEmpty else { return }
-            let path = reference.path.hasPrefix("/") || reference.path.hasPrefix("~")
-                ? reference.path : (directory as NSString).appendingPathComponent(reference.path)
+            let isExplicit = reference.path.hasPrefix("/") || reference.path.hasPrefix("~")
+            let cleanRelative = isExplicit ? nil : (reference.path as NSString).standardizingPath
+            let matchedToolPath = cleanRelative.flatMap { rel in
+                toolPaths.first { $0.hasSuffix("/" + rel) }
+            }
+            let path = matchedToolPath ?? (isExplicit
+                ? reference.path : (directory as NSString).appendingPathComponent(reference.path))
             let normalized = path.hasPrefix("~") ? path : (path as NSString).standardizingPath
             guard documentExtensions.contains((normalized as NSString).pathExtension.lowercased()) else { return }
-            if let index = files.firstIndex(where: { $0.path == normalized }) {
+            let ref = matchedToolPath ?? cleanRelative ?? normalized
+            if let index = files.firstIndex(where: {
+                $0.path == normalized || (cleanRelative != nil && $0.path.hasSuffix("/" + cleanRelative!))
+            }) {
                 files[index].written = files[index].written || written
+            } else if let index = files.firstIndex(where: {
+                !$0.reference.hasPrefix("/") && !$0.reference.hasPrefix("~") && normalized.hasSuffix("/" + $0.reference)
+            }) {
+                files[index] = TaskContextFile(path: normalized, reference: ref, written: files[index].written || written)
             } else if files.count < 40 {
-                files.append(TaskContextFile(path: normalized, written: written))
+                files.append(TaskContextFile(path: normalized, reference: ref, written: written))
             }
         }
         // Writes with an uncertain or failed result must not acquire an "updated" label.
-        for tool in tools.reversed() where tool.status == .succeeded {
-            if ["write", "write_file", "writefile", "edit", "edit_file", "editfile"].contains(tool.name.lowercased()),
+        for tool in tools.reversed() {
+            let name = tool.name.lowercased()
+            if tool.status == .succeeded,
+               ["write", "write_file", "writefile", "edit", "edit_file", "editfile"].contains(name),
                let path = tool.input?["file_path"].string ?? tool.input?["path"].string {
                 add(path, written: true)
+            } else if (tool.status == .succeeded || tool.status == .returned),
+                      ["read", "read_file", "readfile", "readmediafile", "view_image"].contains(name),
+                      let path = tool.input?["file_path"].string ?? tool.input?["path"].string {
+                add(path, written: false)
             }
         }
         var remaining = 131_072

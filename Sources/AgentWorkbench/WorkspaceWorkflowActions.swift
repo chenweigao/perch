@@ -37,8 +37,9 @@ extension WorkbenchModel {
             return
         }
         pendingFileOutcome = nil
+        let cwd = source?.directory ?? location?.directory ?? ""
         fileBrowser.source = source?.reference
-        fileBrowser.configure(host: host, cwd: source?.directory ?? location?.directory ?? "")
+        fileBrowser.configure(host: host, cwd: cwd, directoryHints: selectedDirectoryHints(cwd, reference: source?.reference))
         fileBrowser.open(outcome.link, line: line, fromConversation: true, source: source?.reference)
         showFileViewer = true
         fileWindow.show(model: self)

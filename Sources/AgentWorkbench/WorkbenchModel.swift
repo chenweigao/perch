@@ -1325,18 +1325,19 @@ final class WorkbenchModel {
         changesBrowser.source = selectedReference
         changesBrowser.configure(host: selectedHost, cwd: directory, directoryHints: selectedDirectoryHints(directory))
     }
-    private func selectedDirectoryHints(_ directory: String) -> [String] {
+    func selectedDirectoryHints(_ directory: String, reference: SessionReference? = nil) -> [String] {
         var messages: [KimiMessage] = []
         var liveTools: [KimiLiveTool] = []
-        if let reference = selectedReference, reference.kind == .kimi,
-           let conversation = kimiEnvironments[reference.hostID]?.conversation,
-           conversation.snapshot.session.id == reference.terminalID {
+        let target = reference ?? selectedReference
+        if let target, target.kind == .kimi,
+           let conversation = kimiEnvironments[target.hostID]?.conversation,
+           conversation.snapshot.session.id == target.terminalID {
             messages = conversation.messages
             liveTools = conversation.live?.runningTools ?? []
-        } else if let reference = selectedReference,
-                  [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(reference.kind),
-                  let snapshot = nativeEnvironments[reference.hostID]?.snapshot,
-                  snapshot.id == reference.terminalID {
+        } else if let target,
+                  [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(target.kind),
+                  let snapshot = nativeEnvironments[target.hostID]?.snapshot,
+                  snapshot.id == target.terminalID {
             messages = snapshot.messages
         }
         return RemoteGitDirectoryHints.candidates(messages: messages, liveTools: liveTools,
