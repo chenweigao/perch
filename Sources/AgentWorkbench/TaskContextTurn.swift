@@ -152,14 +152,27 @@ struct TaskTurnSection: View {
             }.padding(.bottom, 4)
             ForEach(shown, id: \.self) { path in
                 let stat = edits.perFile[path]!
-                HStack {
-                    Text((path as NSString).lastPathComponent).lineLimit(1).truncationMode(.middle)
-                    Spacer(minLength: 6)
-                    if stat.additions > 0 || stat.deletions > 0 {
-                        EditStatText(stat: stat)
-                    }
-                }.font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet)
-                    .frame(minHeight: 28)
+                let name = (path as NSString).lastPathComponent
+                Button {
+                    model.openWorkspaceFile(GroupOutcome(title: name, link: path, source: item.reference))
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: TaskContextFileIcon.name(name))
+                            .foregroundStyle(WorkbenchTheme.quiet)
+                            .frame(width: 16)
+                            .accessibilityHidden(true)
+                        Text(name)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .foregroundStyle(.primary)
+                        Spacer(minLength: 6)
+                        if stat.additions > 0 || stat.deletions > 0 {
+                            EditStatText(stat: stat)
+                                .font(.system(size: WorkbenchTheme.Typography.caption))
+                        }
+                    }.frame(minHeight: 32).contentShape(Rectangle())
+                }.buttonStyle(TaskContextRowStyle())
+                    .disabled(!item.online)
                     .help(path)
             }
             if paths.count > shown.count || allEdits && paths.count > 6 {

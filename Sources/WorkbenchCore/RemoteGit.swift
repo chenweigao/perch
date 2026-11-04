@@ -109,6 +109,12 @@ public enum RemoteGitDirectoryHints {
                 appendHint(resolved)
                 appendHint((resolved as NSString).deletingLastPathComponent)
             }
+            for change in input["changes"].array {
+                guard let path = change["move_path"].string ?? change["path"].string,
+                      let resolved = absolute(path, relativeTo: directory ?? fallback) else { continue }
+                appendHint(resolved)
+                appendHint((resolved as NSString).deletingLastPathComponent)
+            }
         }
         if let fallback, seen.insert(fallback).inserted { result.append(fallback) }
         return result

@@ -75,6 +75,12 @@ struct ActivityNarrativeFailure: Equatable {
         observedSession = session
         var state = sessions[session] ?? SessionState()
         let hadDeferred = state.deferred != nil
+        let turnChanged = state.base.turnID != nil && state.base.turnID != snapshot.turnID
+        let clearedTurnFailure = turnChanged && state.failure != nil
+        if turnChanged {
+            state.failure = nil
+            state.retryBatch = nil
+        }
         state.touched = Date()
         state.base = snapshot
         if running { state.observedRunning = true }
@@ -97,7 +103,7 @@ struct ActivityNarrativeFailure: Equatable {
             state.deferred = rendered
         }
         sessions[session] = state
-        if hadDeferred && following && !state.results.isEmpty { objectWillChange.send() }
+        if (hadDeferred && following && !state.results.isEmpty) || clearedTurnFailure { objectWillChange.send() }
         trimSessions()
 
         guard settings.configuration.enabled, online, state.observedRunning, let batch else {
