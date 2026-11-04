@@ -504,13 +504,16 @@
 "服务连接超时。检查远端服务是否正在运行，以及 SSH 是否允许端口转发。" = "Service connection timed out. Check that the remote service is running and SSH allows forwarding.";
 "未找到可运行的 Agent。安装后请确认 SSH 命令可以读取其版本。" = "No runnable agent was found. After installing it, make sure its version command works over SSH.";
 "桥接组件 v%lld" = "Bridge v%lld";
-"桥接组件已更新，但远端仍有任务运行。任务结束后重新检查；Perch 会自动安全重启服务。" = "The bridge update is installed, but remote tasks are still running. Check again after they finish; Perch will restart the service safely.";
+"桥接组件已更新，但远端仍有任务运行，且旧服务协议 v%lld 不再兼容此 Perch（v%lld）。任务期间会话列表保留为离线状态；任务结束后 Perch 会自动安全重启服务。" = "The bridge update is installed, but remote tasks are still running and the old service protocol v%lld is no longer compatible with this Perch (v%lld). Sessions stay listed offline while tasks run; Perch restarts the service safely once they finish.";
 "桥接组件已更新，但无法确认旧服务是否空闲。为避免中断任务，请在远端终端手动重启桥接服务。" = "The bridge update is installed, but Perch could not verify that the old service is idle. To avoid interrupting tasks, restart the bridge manually in the remote terminal.";
+"桥接更新待生效" = "Bridge update pending";
+"运行中的服务仍是 v%lld，%lld 个任务运行中；全部结束后 Perch 自动安全切换，目录与会话不受影响。" = "The running service is still v%lld with %lld tasks active; Perch switches over safely once they all finish, and the catalog and sessions are unaffected.";
 "桥接进程未读取到 DEEPSEEK_API_KEY。请在远端配置服务环境；若桥已运行，等任务结束后重启再检查。" = "The bridge has no DEEPSEEK_API_KEY. Configure the remote service environment. If the bridge is running, wait for tasks to finish before restarting and checking again.";
 "远端未安装 Perch 桥接组件。请安装桥接组件后重新检查。" = "The Perch bridge is not installed on the remote machine. Install it, then check again.";
 "远端桥接组件是 v%lld，此 Perch 需要 v%lld。请安装 / 更新桥接组件后重新检查。" = "The remote bridge is v%lld, but this Perch needs v%lld. Install / update the bridge, then check again.";
 "远端桥接组件是 v%lld，比此 Perch 支持的 v%lld 更新。请升级 Perch；不要降级远端组件，其他客户端可能正在使用它。" = "The remote bridge is v%lld, newer than the v%lld this Perch supports. Update Perch; do not downgrade the remote bridge, because other clients may be using it.";
 "远端桥接服务是 v%lld，此 Perch 需要 v%lld。请在主机设置中安装 / 更新桥接组件。" = "The remote bridge service is v%lld, but this Perch needs v%lld. Install / update the bridge in the machine settings.";
+"远端桥接服务是 v%lld，比此 Perch 支持的 v%lld 更新。请升级 Perch；不要降级远端组件，其他客户端可能正在使用它。" = "The remote bridge service is v%lld, newer than the v%lld this Perch supports. Update Perch; do not downgrade the remote components, because other clients may be using them.";
 "无法读取远端桥接组件的版本。请重新安装桥接组件后检查。" = "Could not read the remote bridge's version. Reinstall the bridge, then check again.";
 "无法读取远端桥接服务的版本。请重新安装桥接组件后重试。" = "Could not read the remote bridge service's version. Reinstall the bridge and retry.";
 "检查 Agent" = "Check agent";
@@ -1612,6 +1615,8 @@
 "更新组件" = "Update Components";
 "远端桥接组件版本过旧；更新全部组件并自动重连" = "The remote bridge components are outdated; update everything and reconnect.";
 "原生 Agent · %lld" = "Native Agents · %lld";
+"桥接更新待生效 · %lld 个任务运行中" = "Bridge update pending · %lld tasks running";
+"远端桥接组件已更新；为保护正在运行的任务，旧服务（v%lld）继续服务，目录与会话照常同步。全部任务结束后 Perch 自动安全切换。" = "The remote bridge has been updated. To protect running tasks, the old service (v%lld) keeps serving and the catalog keeps syncing as usual; Perch switches over safely once every task finishes.";
 "有新版本时可在发布页下载安装包，或拉取最新代码重新构建。" = "When a newer version is available, download the package from the release page, or pull the latest code and rebuild.";
 "思考与工具 · %lld 次调用" = "Thoughts and tools · %lld calls";
 

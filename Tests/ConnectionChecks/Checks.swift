@@ -31,6 +31,14 @@ private final class TransportFixture {
     var abortedTurns: [(String, String?)] = []
     var holdSnapshots = false
     var failSnapshot = false
+    /// The `/health` answer of the process currently "serving" this fixture, and
+    /// the endpoint the `--ensure` probe returns; both flip to model the staged
+    /// component taking over once running work drains.
+    var healthVersion = RemoteSetup.bridgeServiceVersion
+    var healthImplementation = "fixture-implementation"
+    var healthRequests = 0
+    var ensureEndpoint: [String: Any] = ["port": 43210, "token": "fixture-token", "pid": 1234]
+    var ensureProbes = 0
     /// Models the bridge's `unchanged` delta answer: delta reads carry no payload.
     var unchangedSnapshots = false
     var snapshotRequests: [String] = []
@@ -38,6 +46,12 @@ private final class TransportFixture {
     var returnedSnapshots = 0
     /// Prompts the bridge already recorded, surfaced through the snapshot.
     var recordedMessages: [String: [[String: Any]]] = [:]
+
+    /// The `--ensure` probe a connection's `ensureOverride` serves from.
+    func ensureData() throws -> Data {
+        ensureProbes += 1
+        return try JSONSerialization.data(withJSONObject: ensureEndpoint)
+    }
 
     private func receipt(_ key: String) -> [String: Any] {
         var result: [String: Any] = ["id": key, "status": receipts[key] ?? "notFound"]
@@ -65,6 +79,11 @@ private final class TransportFixture {
     func request(_ path: String, _ body: JSONValue?) async throws -> Data {
         let parts = path.split(separator: "?")[0].split(separator: "/").map(String.init)
         var result: [String: Any] = [:]
+        if path == "/health" {
+            healthRequests += 1
+            return try JSONSerialization.data(withJSONObject: ["version": healthVersion,
+                "implementation": healthImplementation, "startedAt": "2026-11-04T00:00:00+08:00"])
+        }
         if path == "/models" {
             modelRequests += 1
             if failModels { throw WorkbenchError("catalog unavailable") }
@@ -262,11 +281,168 @@ struct ConnectionChecks {
         print("PASS: idle unchanged reads back off 2s/4s/8s; change and busy reset to full cadence")
     }
 
+    /// Bridge upgrade transition: a staged component update must not take the
+    /// native catalog down while the serving process is protected by running
+    /// work. The fixture plays both the old and the staged bridge; the drives are
+    /// the connection's own establish/poll paths, with `ensureOverride` standing
+    /// in for the SSH `--ensure` probe.
+    @MainActor
+    private static func transitionClient(_ fixture: TransportFixture, _ name: String) -> NativeAgentConnection {
+        let client = NativeAgentConnection(host: SSHHost(name: name, destination: "fixture"), transport: fixture.request)
+        client.ensureOverride = { try fixture.ensureData() }
+        client.bridgeRecheckInterval = 0.8
+        return client
+    }
+
+    /// The observed 2026-11-04 case: a v13 client meets the v12 process that still
+    /// runs a Codex task. The connection comes up through the old bridge, the
+    /// catalog loads on a cold start, selection and a steering write work, and the
+    /// transition names the protecting task.
+    @MainActor
+    static func checkBridgeTransitionKeepsCatalogLive() async throws {
+        let fixture = TransportFixture()
+        fixture.healthVersion = 12
+        fixture.sessions["a"]?["busy"] = true
+        fixture.ensureEndpoint = ["port": 43210, "token": "fixture-token", "pid": 1234, "restartPending": 1]
+        let client = transitionClient(fixture, "Transition")
+        await client.connectOnceForCheck()
+        precondition(client.online && client.error == nil,
+                     "A compatible old bridge keeps the connection up during the upgrade window")
+        precondition(client.bridgeTransition == BridgeTransition(serving: 12, activeTasks: 1))
+        precondition(!client.needsBridgeUpdate, "A staged update is not a missing update")
+        precondition(client.runtime.version == "fixture-implementation",
+                     "The serving process identity is still reported")
+        // Cold start inside the window: the first catalog read goes through the old bridge.
+        try await client.refresh()
+        precondition(client.catalogSynced && client.sessions.count == 2)
+        precondition(client.sessions.contains { $0.id == "a" && $0.busy },
+                     "The running task stays listed during the window")
+        client.select("a")
+        await settle { client.snapshot?.id == "a" }
+        // The v12 write path is identical for a steering message; it must flow.
+        precondition(client.modes(for: "a").contains(.steer))
+        client.drafts["a"] = "继续处理这个子任务"
+        client.send(mode: .steer)
+        await settle { fixture.steers.count == 1 && !client.sending }
+        client.disconnect()
+        print("PASS: bridge transition keeps the catalog live on a cold start, with reads and a steering write through the old bridge")
+    }
+
+    /// While work still protects the old process, rechecks only refresh the task
+    /// count; once everything drains, the staged service has taken over and the
+    /// connection switches without losing the catalog, the selection or the
+    /// transcript.
+    @MainActor
+    static func checkBridgeTransitionSwitchesWhenIdle() async throws {
+        let fixture = TransportFixture()
+        fixture.healthVersion = 12
+        fixture.sessions["a"]?["busy"] = true
+        fixture.ensureEndpoint = ["port": 43210, "token": "fixture-token", "pid": 1234, "restartPending": 2]
+        let client = transitionClient(fixture, "Switch")
+        await client.connectOnceForCheck()
+        try await client.refresh()
+        client.select("a")
+        await settle { client.snapshot?.id == "a" }
+        precondition(client.bridgeTransition?.activeTasks == 2)
+        let healthReadsBefore = fixture.healthRequests
+        let started = Date()
+        // The first recheck still finds two active sessions: only the count moves.
+        for tick in 0..<4 { try await client.poll(now: started.addingTimeInterval(Double(tick) * 0.4)) }
+        precondition(client.bridgeTransition == BridgeTransition(serving: 12, activeTasks: 2),
+                     "A busy window rechecks without switching")
+        precondition(fixture.ensureProbes >= 2, "The window re-probes the endpoint")
+        // The tasks finish and the staged service has replaced the old process.
+        fixture.sessions["a"]?["busy"] = false
+        fixture.healthVersion = RemoteSetup.bridgeServiceVersion
+        fixture.healthImplementation = "staged-implementation"
+        fixture.ensureEndpoint = ["port": 43211, "token": "new-token", "pid": 5678]
+        for tick in 4..<12 { try await client.poll(now: started.addingTimeInterval(Double(tick) * 0.4)) }
+        precondition(client.bridgeTransition == nil, "The switch clears the transition")
+        precondition(fixture.healthRequests > healthReadsBefore, "The switch re-gates on the new process")
+        precondition(client.runtime.version == "staged-implementation")
+        precondition(client.online && client.error == nil)
+        precondition(client.sessions.count == 2 && client.selectedID == "a",
+                     "The catalog and the selection survive the switch")
+        await settle { client.snapshot?.id == "a" }
+        client.disconnect()
+        print("PASS: transition rechecks keep the protecting count, then switch once without losing catalog or selection")
+    }
+
+    /// A staged update whose serving process is too old to read: the connection
+    /// refuses it, the last good catalog stays listed offline, and no write can
+    /// pass. The unverifiable (-1) answer is refused before any bridge read.
+    @MainActor
+    static func checkBridgeTransitionRejectsIncompatibleBridge() async throws {
+        let fixture = TransportFixture()
+        let client = transitionClient(fixture, "Gate")
+        await client.connectOnceForCheck()
+        try await client.refresh()
+        precondition(client.online && client.sessions.count == 2 && client.bridgeTransition == nil)
+        // The component is updated while a v11 process still serves a task.
+        fixture.healthVersion = 11
+        fixture.ensureEndpoint = ["port": 43210, "token": "fixture-token", "pid": 1234, "restartPending": 1]
+        await client.connectOnceForCheck()
+        precondition(!client.online && client.bridgeTransition == nil && client.error != nil,
+                     "An incompatible old bridge stays gated")
+        precondition(client.sessions.count == 2, "The last good catalog stays listed")
+        // No write may pass while the gate is closed.
+        client.select("a")
+        client.drafts["a"] = "不应发出"
+        client.send()
+        try? await Task.sleep(for: .milliseconds(200))
+        precondition(fixture.prompts.isEmpty && fixture.steers.isEmpty,
+                     "Offline by the version gate, no prompt or steer may leave")
+        precondition(!client.needsBridgeUpdate,
+                     "The update is already installed; the gate is the running task, not a missing component")
+        // A bridge newer than this build is refused as well.
+        fixture.healthVersion = RemoteSetup.bridgeServiceVersion + 1
+        await client.connectOnceForCheck()
+        precondition(!client.online && client.bridgeTransition == nil && !client.needsBridgeUpdate)
+        // Idleness that cannot be confirmed is refused before any bridge read.
+        fixture.healthVersion = 12
+        let healthBefore = fixture.healthRequests
+        fixture.ensureEndpoint = ["port": 43210, "token": "fixture-token", "pid": 1234, "restartPending": -1]
+        await client.connectOnceForCheck()
+        precondition(!client.online && client.error != nil && fixture.healthRequests == healthBefore,
+                     "Unverifiable idleness never reaches the serving process")
+        client.disconnect()
+        print("PASS: incompatible, newer and unverifiable bridges stay gated; the last catalog persists and no write passes")
+    }
+
+    /// One host's transition must not leak into another host's connection.
+    @MainActor
+    static func checkBridgeTransitionIsolationAcrossHosts() async throws {
+        let upgrading = TransportFixture()
+        upgrading.healthVersion = 12
+        upgrading.ensureEndpoint = ["port": 43210, "token": "fixture-token", "pid": 1234, "restartPending": 1]
+        let steady = TransportFixture()
+        let upgradingClient = transitionClient(upgrading, "Upgrading")
+        let steadyClient = transitionClient(steady, "Steady")
+        await upgradingClient.connectOnceForCheck()
+        await steadyClient.connectOnceForCheck()
+        try await upgradingClient.refresh()
+        try await steadyClient.refresh()
+        precondition(upgradingClient.bridgeTransition != nil && steadyClient.bridgeTransition == nil)
+        precondition(upgradingClient.sessions.count == 2 && steadyClient.sessions.count == 2)
+        // The steady host never probes for a window it does not have.
+        let steadyProbes = steady.ensureProbes
+        let started = Date()
+        for tick in 0..<6 { try await steadyClient.poll(now: started.addingTimeInterval(Double(tick) * 0.4)) }
+        precondition(steady.ensureProbes == steadyProbes, "No transition, no recheck probes")
+        upgradingClient.disconnect()
+        steadyClient.disconnect()
+        print("PASS: a bridge transition stays local to its host")
+    }
+
     @MainActor
     static func main() async throws {
         setbuf(stdout, nil)
         try await checkIdleSnapshotPolling()
         try await checkIdleSnapshotBackoff()
+        try await checkBridgeTransitionKeepsCatalogLive()
+        try await checkBridgeTransitionSwitchesWhenIdle()
+        try await checkBridgeTransitionRejectsIncompatibleBridge()
+        try await checkBridgeTransitionIsolationAcrossHosts()
         try await checkNativeLoading()
         try await checkNativeObservation()
         try await checkNativeSubagentConnection()

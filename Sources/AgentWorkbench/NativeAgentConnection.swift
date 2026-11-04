@@ -58,6 +58,13 @@ final class NativeAgentConnection {
     /// an in-place component update. A newer bridge sets no flag: that needs a
     /// newer Perch, not a reinstall.
     private(set) var needsBridgeUpdate = false
+    /// A staged bridge update waiting for a safe window: the deployed component is
+    /// newer than the process still serving, and that process is kept alive by
+    /// running tasks, pending approvals or live subagents. While the serving
+    /// protocol stays compatible (`RemoteSetup.bridgeTransitionCompatible`) the
+    /// connection keeps reading and writing through it, and `poll` re-checks the
+    /// staged update until it safely takes over.
+    private(set) var bridgeTransition: BridgeTransition?
     @ObservationIgnored var onOnlineChanged: (() -> Void)?
     @ObservationIgnored var onSnapshotChanged: ((NativeAgentSnapshot?) -> Void)?
     @ObservationIgnored var onSessionsChanged: (() -> Void)?
@@ -69,6 +76,13 @@ final class NativeAgentConnection {
     @ObservationIgnored private var historyWindows: [String: (start: Int, epoch: String)] = [:]
     @ObservationIgnored private var nextCatalogRefresh = Date.distantPast
     @ObservationIgnored private var nextIdleSnapshotRefresh = Date.distantPast
+    /// The next time a transition recheck may cost an SSH round trip.
+    @ObservationIgnored private var nextBridgeRecheck = Date.distantPast
+    /// Seconds between `--ensure` probes while a staged bridge update waits for a
+    /// safe window. ConnectionChecks lower it; production keeps SSH traffic rare.
+    @ObservationIgnored var bridgeRecheckInterval: TimeInterval = 10
+    /// ConnectionChecks replace the `--ensure` probe and skip SSH and the tunnel.
+    @ObservationIgnored var ensureOverride: (() async throws -> Data)?
     /// Idle snapshot reads double their interval while nothing changes (2s → 4s → 8s).
     @ObservationIgnored private var idleSnapshotInterval: TimeInterval = 2
     @ObservationIgnored private var pendingWake: CheckedContinuation<Void, Never>?
@@ -150,9 +164,10 @@ final class NativeAgentConnection {
         task?.cancel(); task = nil
         nextCatalogRefresh = .distantPast
         nextIdleSnapshotRefresh = .distantPast
+        nextBridgeRecheck = .distantPast
         idleSnapshotInterval = 2
         wakePolling()
-        online = false; catalogSynced = false; wantsConnection = false; error = nil; closeTunnel()
+        online = false; catalogSynced = false; wantsConnection = false; error = nil; bridgeTransition = nil; closeTunnel()
     }
     /// User actions that change remote state or force refreshes wake the poll loop
     /// before its next scheduled deadline.
@@ -196,26 +211,50 @@ final class NativeAgentConnection {
         if let directory { try? FileManager.default.removeItem(at: directory) }; directory = nil
     }
     private func establish(_ token: UUID) async throws {
-        let data: Data
-        if host.isLocal {
-            data = try await LocalAgentRuntime.endpoint(for: .codex, host: host)
-        } else {
-            try SSHCommand.validateDestination(host.destination)
-            data = try await SetupCommandRunner.run("/usr/bin/ssh", RemoteSetup.sshArguments(host.destination,
-                command: "python3 ~/.local/share/agent-workbench/native/native-agent-service.py --ensure"))
-        }
+        let data = try await ensureEndpointData()
         try Task.checkCancellation(); guard generation == token else { throw CancellationError() }
         let endpoint = try JSONDecoder().decode(JSONValue.self, from: data)
-        if let pending = endpoint["restartPending"].int {
-            if pending > 0 {
-                throw WorkbenchError(L("桥接组件已更新，但远端仍有任务运行。任务结束后重新检查；Perch 会自动安全重启服务。"))
-            }
+        let restartPending = endpoint["restartPending"].int
+        if let restartPending, restartPending < 0 {
             throw WorkbenchError(L("桥接组件已更新，但无法确认旧服务是否空闲。为避免中断任务，请在远端终端手动重启桥接服务。"))
         }
         guard let port = endpoint["port"].int, let secret = endpoint["token"].string else { throw WorkbenchError(L("原生对话托管服务未安装或不可用")) }
+        try await attach(port: port, token: secret, restartPending: restartPending)
+    }
+    /// ConnectionChecks drive a single connect pass — establish plus its success
+    /// publication, or the catch path's offline state — without SSH, a tunnel or
+    /// the reconnect loop. Production behavior lives in `connect()`.
+    func connectOnceForCheck() async {
+        disconnect()
+        let token = UUID(); generation = token; wantsConnection = true
+        do {
+            try await establish(token)
+            online = true; error = nil; onSessionsChanged?()
+        } catch {
+            online = false; catalogSynced = false; self.error = error.localizedDescription; closeTunnel(); onSessionsChanged?()
+        }
+    }
+    /// The `--ensure` probe: starts, reuses or safely retires the managed bridge and
+    /// reports its endpoint. A `restartPending` field means the deployed component
+    /// is newer than the serving process, which running work still protects.
+    private func ensureEndpointData() async throws -> Data {
+        if let ensureOverride { return try await ensureOverride() }
         if host.isLocal {
-            api = KimiAPI(baseURL: URL(string: "http://127.0.0.1:\(port)")!, token: secret)
-            try await readBridgeHealth()
+            return try await LocalAgentRuntime.endpoint(for: .codex, host: host)
+        }
+        try SSHCommand.validateDestination(host.destination)
+        return try await SetupCommandRunner.run("/usr/bin/ssh", RemoteSetup.sshArguments(host.destination,
+            command: "python3 ~/.local/share/agent-workbench/native/native-agent-service.py --ensure"))
+    }
+    /// Points this connection at the given bridge process: builds the API and, for
+    /// remote hosts, the SSH forwarding tunnel, then applies the protocol gate. An
+    /// update waiting for a safe window keeps a compatible old process serving.
+    private func attach(port: Int, token secret: String, restartPending: Int?) async throws {
+        if host.isLocal || requestTransport != nil {
+            if requestTransport == nil {
+                api = KimiAPI(baseURL: URL(string: "http://127.0.0.1:\(port)")!, token: secret)
+            }
+            try await readBridgeHealth(restartPending: restartPending)
             return
         }
         let local = try KimiAPI.availableLoopbackPort()
@@ -231,7 +270,7 @@ final class NativeAgentConnection {
             if !p.isRunning { throw WorkbenchError(L("原生对话 SSH 转发失败")) }
             if FileManager.default.fileExists(atPath: control) {
                 api = KimiAPI(baseURL: URL(string: "http://127.0.0.1:\(local)")!, token: secret)
-                try await readBridgeHealth()
+                try await readBridgeHealth(restartPending: restartPending)
                 return
             }
             try await Task.sleep(for: .milliseconds(100))
@@ -240,20 +279,72 @@ final class NativeAgentConnection {
     }
     /// The protocol gate plus the identity of the process actually serving: a
     /// hand-bumped version number does not say which source it is executing.
-    private func readBridgeHealth() async throws {
+    private func readBridgeHealth(restartPending: Int? = nil) async throws {
         let health: JSONValue = try await request("/health")
         let expected = RemoteSetup.bridgeServiceVersion
         guard let version = health["version"].int else {
             throw WorkbenchError(L("无法读取远端桥接服务的版本。请重新安装桥接组件后重试。"))
         }
+        runtime = RunningRuntime(version: health["implementation"].string,
+                                 startedAt: health["startedAt"].string)
+        if let pending = restartPending, pending > 0 {
+            // The staged component is newer than the process still serving. A
+            // compatible old protocol keeps the catalog live while the update
+            // waits; anything else keeps the last good catalog offline instead
+            // of letting unverified reads or writes through.
+            guard RemoteSetup.bridgeTransitionCompatible(serving: version) else {
+                needsBridgeUpdate = false; bridgeTransition = nil
+                if version > expected {
+                    throw WorkbenchError(L("远端桥接服务是 v\(version)，比此 Perch 支持的 v\(expected) 更新。请升级 Perch；不要降级远端组件，其他客户端可能正在使用它。"))
+                }
+                throw WorkbenchError(L("桥接组件已更新，但远端仍有任务运行，且旧服务协议 v\(version) 不再兼容此 Perch（v\(expected)）。任务期间会话列表保留为离线状态；任务结束后 Perch 会自动安全重启服务。"))
+            }
+            needsBridgeUpdate = false
+            bridgeTransition = BridgeTransition(serving: version, activeTasks: pending)
+            nextBridgeRecheck = Date().addingTimeInterval(bridgeRecheckInterval)
+            return
+        }
         guard version == expected else {
             // Only an older bridge can be fixed in place; a newer one needs a newer Perch.
             needsBridgeUpdate = version < expected
+            bridgeTransition = nil
             throw WorkbenchError(L("远端桥接服务是 v\(version)，此 Perch 需要 v\(expected)。请在主机设置中安装 / 更新桥接组件。"))
         }
         needsBridgeUpdate = false
-        runtime = RunningRuntime(version: health["implementation"].string,
-                                 startedAt: health["startedAt"].string)
+        bridgeTransition = nil
+    }
+    /// While a staged update waits for its safe window, re-probe the endpoint. The
+    /// probe keeps an up-to-date count of the work still protecting the old
+    /// process; once that work is gone the staged service has taken over, and the
+    /// connection moves without dropping the catalog, the selection or the
+    /// transcript. A failed probe keeps the working old connection and retries
+    /// next tick; a failure after the old tunnel came down propagates so the
+    /// reconnect loop re-establishes against the new endpoint.
+    private func recheckBridgeTransition() async throws {
+        guard let transition = bridgeTransition else { return }
+        let token = generation
+        let data: Data
+        do { data = try await ensureEndpointData() }
+        catch { return }
+        try Task.checkCancellation(); guard token == generation else { return }
+        guard let endpoint = try? JSONDecoder().decode(JSONValue.self, from: data) else { return }
+        if let pending = endpoint["restartPending"].int {
+            // -1 cannot confirm idleness; keep the last confirmed count.
+            if pending > 0, pending != transition.activeTasks {
+                bridgeTransition = BridgeTransition(serving: transition.serving, activeTasks: pending)
+            }
+            return
+        }
+        guard let port = endpoint["port"].int, let secret = endpoint["token"].string else { return }
+        closeTunnel()
+        try await attach(port: port, token: secret, restartPending: nil)
+        guard token == generation else { return }
+        // The new process loads the same sessions from disk with fresh history
+        // epochs, so the next reads re-page instead of trusting old cursors.
+        nextCatalogRefresh = .distantPast
+        nextIdleSnapshotRefresh = .distantPast
+        idleSnapshotInterval = 2
+        wakePolling()
     }
     /// Read a pinned panel without selecting it or replacing the main transcript.
     func readTaskContext(_ id: String) async throws -> TaskContextSnapshot {
@@ -299,6 +390,10 @@ final class NativeAgentConnection {
     /// Catalogs change much less often than the selected streaming reply.
     /// Receipts still advance at the regular tick so queued sends are not delayed.
     func poll(now: Date = Date()) async throws {
+        if bridgeTransition != nil, now >= nextBridgeRecheck {
+            nextBridgeRecheck = now.addingTimeInterval(bridgeRecheckInterval)
+            try await recheckBridgeTransition()
+        }
         if now >= nextCatalogRefresh {
             try await refresh()
             nextCatalogRefresh = now.addingTimeInterval(sessions.contains(where: \.busy) ? 2 : 5)
@@ -1044,6 +1139,19 @@ final class NativeAgentConnection {
     func setArchived(_ id: String, archived: Bool) async throws {
         let _: JSONValue = try await request("/sessions/\(id)/archive", body: .object(["archived": .bool(archived)]))
     }
+}
+
+/// A staged bridge update waiting for its safe window: the deployed component is
+/// newer than the process still serving this connection, and `activeTasks` counts
+/// the sessions still running, waiting on approval or running subagents. The old
+/// process keeps serving until they finish; then the next `--ensure` probe lets
+/// the staged service take over and the connection switches without dropping the
+/// catalog.
+struct BridgeTransition: Equatable {
+    /// Protocol version of the process still serving.
+    var serving: Int
+    /// Working sessions the last `--ensure` probe counted.
+    var activeTasks: Int
 }
 
 /// Claude and Codex receive attachments inline with the prompt. Their limits are

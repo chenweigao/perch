@@ -2721,15 +2721,16 @@ import json, os, pathlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 root=pathlib.Path(os.environ['AWB_NATIVE_ROOT'])
 token='legacy-token'
-busy=os.environ.get('LEGACY_BUSY')=='1'
+# The busy flag is a file so a test can drain the session while the fixture runs.
+def busy(): return (root/'legacy-busy').exists()
 class Handler(BaseHTTPRequestHandler):
     def log_message(self,*args): pass
     def do_GET(self):
         if self.headers.get('Authorization')!='Bearer '+token:
             body={'error':'Unauthorized'}; status=401
         elif self.path=='/health': body={'version':1}; status=200
-        elif self.path=='/sessions': body={'sessions':[{'id':'legacy-session','busy':busy,'pending':0}]}; status=200
-        elif self.path=='/sessions/legacy-session': body={'id':'legacy-session','busy':busy,'pending':0}; status=200
+        elif self.path=='/sessions': body={'sessions':[{'id':'legacy-session','busy':busy(),'pending':0}]}; status=200
+        elif self.path=='/sessions/legacy-session': body={'id':'legacy-session','busy':busy(),'pending':0}; status=200
         else: body={'error':'unknown'}; status=404
         data=json.dumps(body).encode(); self.send_response(status); self.send_header('Content-Length',str(len(data))); self.end_headers(); self.wfile.write(data)
 server=ThreadingHTTPServer(('127.0.0.1',0),Handler)
@@ -2836,7 +2837,10 @@ server.serve_forever()
                 self.assertIsNone(broker.reusable_endpoint(path))
                 kill.assert_called_once_with(1234,broker.signal.SIGTERM)
     def start_legacy(self, directory, busy=False):
-        env=dict(os.environ,AWB_NATIVE_ROOT=directory,LEGACY_BUSY='1' if busy else '0')
+        env=dict(os.environ,AWB_NATIVE_ROOT=directory)
+        flag=pathlib.Path(directory)/'legacy-busy'
+        if busy: flag.write_text('1')
+        else: flag.unlink(missing_ok=True)
         process=subprocess.Popen([sys.executable,'-c',self.legacy_server],env=env,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,text=True)
         path=pathlib.Path(directory)/'endpoint.json'
         for _ in range(100):
@@ -2873,6 +2877,42 @@ server.serve_forever()
                 self.assertEqual(health['implementation'],broker.SOURCE_FINGERPRINT)
                 started=broker.datetime.datetime.fromisoformat(health['startedAt'])
                 self.assertIsNotNone(started.tzinfo)
+                legacy.wait(timeout=2)
+            finally:
+                try:
+                    if endpoint is not None: self.stop_endpoint(endpoint)
+                finally:
+                    if legacy.poll() is None: legacy.terminate()
+                    legacy.wait(timeout=2); legacy.stderr.close()
+    def test_ensure_preserves_a_busy_legacy_process_then_replaces_it_once_idle(self):
+        # The client side of the upgrade window re-probes --ensure while it keeps
+        # reading the old bridge; the bridge must never restart mid-task and must
+        # take over on its own once the last task drains.
+        with tempfile.TemporaryDirectory() as directory:
+            legacy,path=self.start_legacy(directory,busy=True); endpoint=None
+            try:
+                env=dict(os.environ,AWB_NATIVE_ROOT=directory)
+                script=pathlib.Path(__file__).with_name('native-agent-service.py')
+                def ensure():
+                    run=subprocess.run([sys.executable,str(script),'--ensure'],env=env,capture_output=True,text=True,timeout=15)
+                    self.assertEqual(run.returncode,0,run.stderr)
+                    self.assertEqual(run.stderr,'')
+                    return json.loads(run.stdout)
+                waiting=ensure()
+                self.assertEqual(waiting.get('restartPending'),1)
+                self.assertEqual(waiting.get('port'),json.loads(path.read_text())['port'])
+                self.assertIsNone(legacy.poll(),'a busy legacy service is never restarted')
+                # A second probe while the task still runs still just waits.
+                again=ensure()
+                self.assertEqual(again.get('restartPending'),1)
+                self.assertIsNone(legacy.poll())
+                (pathlib.Path(directory)/'legacy-busy').unlink()
+                endpoint=ensure()
+                self.assertNotIn('restartPending',endpoint)
+                self.assertNotEqual(endpoint['token'],'legacy-token')
+                health=broker.endpoint_request(endpoint,'/health')
+                self.assertEqual(health['version'],broker.SERVICE_VERSION)
+                self.assertEqual(health['implementation'],broker.SOURCE_FINGERPRINT)
                 legacy.wait(timeout=2)
             finally:
                 try:
