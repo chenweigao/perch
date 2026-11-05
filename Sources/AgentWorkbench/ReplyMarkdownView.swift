@@ -645,6 +645,22 @@ enum ReplyTextAttributes {
                 result.addAttribute(.link, value: reference.url, range: range)
             }
         }
+        if result.string.contains("@\"") {
+            let mentionTint = NSColor(name: nil) { appearance in
+                var color = NSColor.labelColor
+                appearance.performAsCurrentDrawingAppearance { color = NSColor.labelColor.withAlphaComponent(0.06) }
+                return color
+            }
+            for ref in ProjectFileReference.references(in: result.string) {
+                var comps = URLComponents(); comps.scheme = "perch-file"
+                comps.queryItems = [URLQueryItem(name: "path", value: ref.path)]
+                if let url = comps.url {
+                    result.addAttribute(.link, value: url, range: ref.range)
+                }
+                result.addAttribute(.backgroundColor, value: mentionTint, range: ref.range)
+                result.addAttribute(.font, value: NSFont.monospacedSystemFont(ofSize: max(11, size - 1), weight: .medium), range: ref.range)
+            }
+        }
         let characters = result.length
         if characters <= 512_000 {
             while !paragraphsCacheOrder.isEmpty,
@@ -1610,9 +1626,11 @@ struct ReplyCodeBody: View {
 struct ReplyCode: View {
     let language: String
     let source: String
+    @State private var hovered = false
+    private var lineCount: Int { CodeLineNumbers.count(in: source) }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if CodeLineNumbers.count(in: source) == 1 {
+            if lineCount == 1 {
                 HStack(spacing: 0) {
                     ReplyCodeBody(source: source, language: language)
                     ReplyCopyButton(text: source, label: "复制代码")
@@ -1628,9 +1646,17 @@ struct ReplyCode: View {
                 }.padding(.horizontal, ReplyStyle.Code.headerHorizontalPadding).padding(.vertical, ReplyStyle.Code.headerVerticalPadding)
                 Rectangle().fill(.primary.opacity(0.055)).frame(height: 1)
                 ReplyCodeBody(source: source, language: language)
+                    .overlay(alignment: .bottomTrailing) {
+                        if hovered && lineCount > 8 {
+                            ReplyCopyButton(text: source, label: "复制代码")
+                                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row, style: .continuous))
+                                .padding(8)
+                        }
+                    }
             }
         }.background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius))
             .overlay(RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius).strokeBorder(.primary.opacity(0.055)))
+            .onHover { hovered = $0 }
     }
 }
 

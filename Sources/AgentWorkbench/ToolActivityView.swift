@@ -75,7 +75,7 @@ struct KimiActivityView: View {
                             let eyebrow = items.isEmpty ? narrative.phase.label : L("\(narrative.phase.label) · \(items.count) 次调用")
                             Text(verbatim: eyebrow).fixedSize()
                         } else if entry.isExploration {
-                            let label = L("读取与搜索 · \(items.count) 次调用")
+                            let label = ToolPresentation.explorationBucketSummary(items)
                             Text(verbatim: label).fixedSize()
                                 .overlay {
                                     if activeStage && !reduceMotion {
@@ -142,10 +142,12 @@ struct KimiActivityView: View {
             }
             // Each phase contains one part. Offset identity also handles thoughts
             // and tools originating in the same provider message without collisions.
+            let mergedRanges = expanded ? Self.mergedReadRangesByPath(items) : [:]
             ForEach(Array(entry.messages.enumerated()), id: \.offset) { index, message in
                 if let id = message.content.first?.toolCallId, let tool = tools[id] {
                     if expanded || tool.staysVisible {
-                        KimiToolCard(tool: tool)
+                        let rangeBadge = ToolPresentation.path(tool).flatMap { mergedRanges[$0] }
+                        KimiToolCard(tool: tool, mergedReadRange: rangeBadge)
                             .environment(\.conversationMemoryKey, memoryKey + ":tool:" + tool.id)
                             .padding(.leading, expanded ? ReplyStyle.Process.nestedIndent : 0)
                     }
@@ -156,6 +158,23 @@ struct KimiActivityView: View {
                 }
             }
         }
+    }
+
+    private static func mergedReadRangesByPath(_ tools: [VisibleTool]) -> [String: String] {
+        var rangesByPath: [String: [String]] = [:]
+        var countsByPath: [String: Int] = [:]
+        for tool in tools where ["read", "read_file", "readfile"].contains(tool.name.lowercased()) {
+            guard let path = ToolPresentation.path(tool), !path.isEmpty else { continue }
+            countsByPath[path, default: 0] += 1
+            if let range = ToolPresentation.readRange(tool) {
+                rangesByPath[path, default: []].append(range)
+            }
+        }
+        var result: [String: String] = [:]
+        for (path, ranges) in rangesByPath where (countsByPath[path] ?? 0) > 1 && !ranges.isEmpty {
+            result[path] = ToolPresentation.formatMergedReadRanges(ranges)
+        }
+        return result
     }
 
     private func trailingMetadata(planProgress: TurnStatus.Progress?,
@@ -209,6 +228,7 @@ extension KimiActivityView {
 
 struct KimiToolCard: View {
     let tool: VisibleTool
+    var mergedReadRange: String? = nil
     var onExpand: (() -> Void)? = nil
     /// Opens the process of the subagent this Agent/Task call started. Left nil,
     /// a transcript row's action context provides it when the session's bridge
@@ -282,10 +302,28 @@ struct KimiToolCard: View {
                 } else { details }
             }
         } label: {
+            let rangeSuffix = mergedReadRange ?? ToolPresentation.readRange(tool).map { ":\($0)" }
+            let slowLabel = ToolPresentation.slowDurationLabel(tool)
             HStack(spacing: 8) {
                 Text(ToolPresentation.action(tool.name)).font(.system(size: ReplyStyle.Process.labelSize)).lineLimit(1)
-                if summary != tool.name { Text(summary).lineLimit(1).truncationMode(.middle) }
+                if summary != tool.name {
+                    HStack(spacing: 0) {
+                        Text(summary).lineLimit(1).truncationMode(.middle)
+                        if let rangeSuffix {
+                            Text(verbatim: rangeSuffix)
+                                .font(.system(size: ReplyStyle.captionSize, design: .monospaced))
+                                .foregroundStyle(WorkbenchTheme.quiet)
+                                .fixedSize()
+                        }
+                    }
+                }
                 Spacer(minLength: 0)
+                if let slowLabel {
+                    Text(verbatim: slowLabel)
+                        .font(.system(size: ReplyStyle.captionSize, design: .monospaced))
+                        .foregroundStyle(WorkbenchTheme.quiet)
+                        .fixedSize()
+                }
                 // A returned error keeps its quiet status label; only uncertainty
                 // or a user decision earns the orange attention treatment.
                 if showsAttention || tool.status == .running || tool.status == .failed {
@@ -301,14 +339,91 @@ struct KimiToolCard: View {
     }
     private var details: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(tool.name).foregroundStyle(WorkbenchTheme.quiet)
-            if let input = tool.input { Text("Input").foregroundStyle(WorkbenchTheme.quiet); DisclosureReplyText(text: input.display) }
-            if let progress = tool.progress { Text("Progress").foregroundStyle(WorkbenchTheme.quiet); DisclosureReplyText(text: progress.display) }
-            if let output = tool.output { Text("Output").foregroundStyle(WorkbenchTheme.quiet); DisclosureReplyText(text: output.display) }
-            if tool.input == nil && tool.output == nil && tool.progress == nil { Text("No input or output").foregroundStyle(WorkbenchTheme.quiet) }
+            if let inlineDiff = ToolInlineDiff.derive(from: tool) {
+                ToolInlineDiffCard(diff: inlineDiff)
+                if let output = tool.output, tool.status == .failed {
+                    Text("Output").foregroundStyle(WorkbenchTheme.quiet)
+                    DisclosureReplyText(text: output.display)
+                }
+            } else {
+                Text(tool.name).foregroundStyle(WorkbenchTheme.quiet)
+                if let rawCommand = tool.input?["command"].string ?? tool.input?["cmd"].string,
+                   ["bash", "shell", "exec_command", "run_command"].contains(tool.name.lowercased()) {
+                    Text("Command").foregroundStyle(WorkbenchTheme.quiet)
+                    DisclosureReplyText(text: ToolPresentation.cleanShellCommand(rawCommand))
+                } else if let input = tool.input {
+                    Text("Input").foregroundStyle(WorkbenchTheme.quiet)
+                    DisclosureReplyText(text: input.display)
+                }
+                if let progress = tool.progress { Text("Progress").foregroundStyle(WorkbenchTheme.quiet); DisclosureReplyText(text: progress.display) }
+                if let output = tool.output { Text("Output").foregroundStyle(WorkbenchTheme.quiet); DisclosureReplyText(text: output.display) }
+                if tool.input == nil && tool.output == nil && tool.progress == nil { Text("No input or output").foregroundStyle(WorkbenchTheme.quiet) }
+            }
         }.font(.system(size: ReplyStyle.captionSize, design: .monospaced)).frame(maxWidth: .infinity, alignment: .leading)
             .padding(10)
             .background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius, style: .continuous))
             .padding(.leading, ReplyStyle.Process.nestedIndent).padding(.top, 5)
+    }
+}
+
+private struct ToolInlineDiffCard: View {
+    let diff: ToolInlineDiff
+    @UILocalization private var L
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                if !diff.path.isEmpty {
+                    Button {
+                        var url = URLComponents(); url.scheme = "perch-file"
+                        url.queryItems = [URLQueryItem(name: "path", value: diff.path)]
+                        if let target = url.url {
+                            NotificationCenter.default.post(name: .init("PerchOpenConversationFile"), object: target)
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "doc.text").font(.system(size: ReplyStyle.captionSize - 1))
+                            Text(verbatim: (diff.path as NSString).lastPathComponent)
+                                .lineLimit(1).truncationMode(.middle)
+                        }.foregroundStyle(Color.primary.opacity(0.82))
+                    }.buttonStyle(.plain).help(Text(verbatim: diff.path))
+                }
+                Spacer(minLength: 0)
+                if diff.stat.additions > 0 || diff.stat.deletions > 0 {
+                    EditStatText(stat: diff.stat)
+                }
+            }.font(.system(size: ReplyStyle.captionSize))
+            VStack(alignment: .leading, spacing: 1) {
+                ForEach(Array(diff.lines.enumerated()), id: \.offset) { _, line in
+                    Text(verbatim: line.text)
+                        .font(.system(size: ReplyStyle.captionSize, design: .monospaced))
+                        .foregroundStyle(foreground(for: line.kind))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 1.5)
+                        .background(background(for: line.kind))
+                }
+                if diff.truncatedCount > 0 {
+                    Text(verbatim: L("… 其余 \(diff.truncatedCount) 行已折叠"))
+                        .font(.system(size: ReplyStyle.captionSize))
+                        .foregroundStyle(WorkbenchTheme.quiet)
+                        .padding(.top, 4)
+                }
+            }.textSelection(.enabled)
+        }
+    }
+    private func foreground(for kind: ToolInlineDiff.LineKind) -> Color {
+        switch kind {
+        case .added: return Color.green.opacity(0.92)
+        case .removed: return Color.red.opacity(0.92)
+        case .header: return WorkbenchTheme.quiet
+        case .context: return Color.primary.opacity(0.75)
+        }
+    }
+    private func background(for kind: ToolInlineDiff.LineKind) -> Color {
+        switch kind {
+        case .added: return Color.green.opacity(0.09)
+        case .removed: return Color.red.opacity(0.09)
+        case .header, .context: return .clear
+        }
     }
 }

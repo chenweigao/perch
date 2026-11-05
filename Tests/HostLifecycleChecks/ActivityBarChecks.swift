@@ -234,16 +234,46 @@ private struct ActivityBarCheckFixture: View {
         if let payload = note.object as? ConversationActionPayload { receivedActions.append(payload.action) }
     }
     defer { NotificationCenter.default.removeObserver(token) }
-    var returned = 0
     let context = ConversationActionContext(hostID: UUID(), kind: .kimi, sessionID: "inline-check",
                                             recapKey: "inline-check:1", recapMessageID: "final-answer")
     let activityEntry = ConversationTimelineEntry.make(runningMessages, isRunning: true).last { $0.presentation == .activity }!
     let projectedTools = ToolVisibilityProjection().update(runningMessages, sessionID: "inline-running", running: busyIDs, online: true).tools
-    let liveNarrative = ActivityNarrative(
-        turnID: "turn", stageID: "stage:live", phase: .exploring,
-        subject: "RemoteSetupController",
-        headline: "正在阅读 RemoteSetupController 源码以确认远端连接与错误处理流程。",
-        source: .external, lifecycle: .streaming)
+    let userMentionMsg = try decode([[
+        "id": "u-mention", "role": "user", "created_at": "1",
+        "content": [["type": "text", "text": "@\"/workspace/Sources/AgentWorkbench/ToolActivityView.swift\" @\"/workspace/Sources/WorkbenchCore/ToolPresentation.swift\" 对齐正文与工具卡的视觉细节"]]
+    ]])[0]
+    let exploreRaw: [[String: Any]] = [
+        ["id": "e1", "role": "assistant", "created_at": "2", "content": [
+            ["type": "tool_use", "tool_call_id": "r1", "tool_name": "Read",
+             "input": ["path": "/workspace/Sources/AgentWorkbench/ToolActivityView.swift", "line_offset": 1, "n_lines": 120]],
+            ["type": "tool_use", "tool_call_id": "r2", "tool_name": "Read",
+             "input": ["path": "/workspace/Sources/AgentWorkbench/ToolActivityView.swift", "line_offset": 240, "n_lines": 95]],
+            ["type": "tool_use", "tool_call_id": "g1", "tool_name": "Grep",
+             "input": ["pattern": "ThoughtDisclosure"]]
+        ]],
+        ["id": "e1-res", "role": "tool", "created_at": "3", "content": [
+            ["type": "tool_result", "tool_call_id": "r1", "is_error": false, "output": "ok"],
+            ["type": "tool_result", "tool_call_id": "r2", "is_error": false, "output": "ok"],
+            ["type": "tool_result", "tool_call_id": "g1", "is_error": false, "output": "ok"]
+        ]]
+    ]
+    let exploreMessages = try decode(exploreRaw)
+    let exploreEntry = ConversationTimelineEntry.make(exploreMessages, isRunning: false).first!
+    let exploreTools = ToolVisibilityProjection().update(exploreMessages, sessionID: "explore-check", running: [], online: true).tools
+    let editTool = VisibleTool(
+        id: "edit-showcase", name: "Edit",
+        input: .object([
+            "path": .string("/workspace/Sources/AgentWorkbench/ToolActivityView.swift"),
+            "old_string": .string("let label = L(\"读取与搜索 · \\(items.count) 次调用\")\nText(verbatim: label).lineLimit(1)"),
+            "new_string": .string("let label = ToolPresentation.explorationBucketSummary(items)\nText(verbatim: label).fixedSize()")
+        ]),
+        output: .string("Replaced 1 occurrence"),
+        status: .succeeded)
+    let slowBashTool = VisibleTool(
+        id: "slow-bash", name: "Bash",
+        input: .object(["command": .string("/bin/zsh -lc \"cd /workspace && swift test --filter WorkbenchChecks\"")]),
+        output: .string("Wall time: 14.2 seconds\nAll tests passed."),
+        status: .succeeded)
     let longExternal = ActivityNarrative(
         turnID: "turn", stageID: "stage:external", phase: .exploring,
         subject: "性能分析",
@@ -252,30 +282,44 @@ private struct ActivityBarCheckFixture: View {
     let foldRowItem = ConversationPresentationModel.Row(
         entry: activityEntry, tools: projectedTools,
         activity: ActivityNarrativeRow(narrative: longExternal, isAnchor: true, stageClosed: true))
-    ConversationReadingMemory.shared.expansions["two-tier-showcase:thought"] = true
-    let sampleThought = """
-    **核对运行状态守卫**
-    - 检查 `RemoteSetupController.swift` 中的 `run` 入口，确认 `!busy` 守卫已生效且按钮在忙碌时自动禁用。
-
-    继续补充边界校验与单测断言。
-    """
-    let inlineHost = NSHostingView(rootView: VStack(alignment: .leading, spacing: 20) {
-        KimiActivityView(entry: activityEntry, tools: projectedTools, api: nil, sessionId: "inline-running",
-                         narrative: liveNarrative, isLive: true, planProgress: progressLive, reduceMotionOverride: false)
+    ConversationReadingMemory.shared.expansions["upgrade-showcase:edit:expanded"] = true
+    ConversationReadingMemory.shared.expansions["upgrade-showcase:collapsed-thought:thought"] = false
+    let collapsedThought = "先检查旧布局的截断原因。\n确认 `!busy` 守卫已生效，继续补充边界校验与内联 Diff 视图。"
+    let streamingThoughtMsg = try decode([[
+        "id": "t-live", "role": "assistant", "created_at": "4",
+        "content": [["type": "thinking", "thinking": """
+        **核对工具卡内联 Diff 与代码块折叠**
+        <!-- -->
+        - 将 `Edit` 工具卡的原始 JSON 替换为红绿双色 `ToolInlineDiffCard`，保留文件跳转与行数统计。
+        ```swift
+        struct ToolInlineDiffCard: View {
+            let diff: ToolInlineDiff
+            var body: some View { EmptyView() }
+        }
+        ```
+        继续验证 10 秒慢命令耗时阈值与收起态单行摘要。
+        """]]
+    ]])
+    let inlineHost = NSHostingView(rootView: VStack(alignment: .leading, spacing: 14) {
+        KimiMessageView(message: userMentionMsg, tools: [:], api: nil, sessionId: "inline-running")
+        KimiActivityView(entry: exploreEntry, tools: exploreTools, api: nil, sessionId: "explore-check",
+                         isLive: true, planProgress: progressLive, reduceMotionOverride: false)
             .environment(\.conversationActionContext, context)
-        ThoughtDisclosure(text: sampleThought)
-            .environment(\.conversationMemoryKey, "two-tier-showcase")
-        Divider().opacity(0.4)
+        KimiToolCard(tool: exploreTools["r1"]!, mergedReadRange: ":1–120, 240–334")
+        KimiToolCard(tool: slowBashTool)
+        ThoughtDisclosure(text: collapsedThought)
+            .environment(\.conversationMemoryKey, "upgrade-showcase:collapsed-thought")
+        ThoughtOutput(messages: streamingThoughtMsg, finished: false)
+            .environment(\.conversationMemoryKey, "upgrade-showcase:live-thought")
+        KimiToolCard(tool: editTool)
+            .environment(\.conversationMemoryKey, "upgrade-showcase:edit")
+        Divider().opacity(0.35)
         ProcessFoldRow(rows: [foldRowItem], api: nil, sessionId: "inline-running")
             .environment(\.conversationActionContext, context)
-        ReturnToLatestButton(isVisible: true,
-                             waitingRequest: TurnRequest(kind: .approval, text: "rm -rf .build/release"),
-                             pendingCount: 1,
-                             action: { returned += 1 })
-    }.padding(24).environment(\.locale, Locale(identifier: "zh-Hans")).frame(width: 680, height: 390)
+    }.padding(20).environment(\.locale, Locale(identifier: "zh-Hans")).frame(width: 680, height: 670)
         .background(WorkbenchTheme.contentBackground))
     window.contentView = inlineHost
-    window.setContentSize(NSSize(width: 680, height: 390))
+    window.setContentSize(NSSize(width: 680, height: 670))
     for (suffix, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
         window.appearance = NSAppearance(named: appearance)
         try await Task.sleep(for: .milliseconds(350))
@@ -283,7 +327,7 @@ private struct ActivityBarCheckFixture: View {
         if let bitmap = inlineHost.bitmapImageRepForCachingDisplay(in: inlineHost.bounds) {
             inlineHost.cacheDisplay(in: inlineHost.bounds, to: bitmap)
             try? bitmap.representation(using: .png, properties: [:])?.write(
-                to: URL(fileURLWithPath: "/private/tmp/perch-two-tier-\(suffix).png"))
+                to: URL(fileURLWithPath: "/private/tmp/perch-design-upgrade-\(suffix).png"))
         }
     }
     window.appearance = NSAppearance(named: .aqua)
