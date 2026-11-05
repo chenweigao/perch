@@ -347,11 +347,19 @@ struct ConversationTranscript: View {
         let presented = snapshot.presented(activity: narratives, foldsProcess: foldsProcess, isRunning: isRunning)
         let foldParents = presented.foldParents
         let liveActivityID = isRunning ? ConversationProcessClock.lastActivityOfLatestTurn(presented.rows) : nil
+        let latestFoldID = !isRunning ? ConversationProcessClock.lastFoldOfLatestTurn(presented.rows) : nil
+        let settledDuration: TimeInterval? = {
+            guard !isRunning, let timing, let ended = timing.endedAt else { return nil }
+            let seconds = timing.elapsed(at: ended).rounded()
+            return seconds >= 5 ? seconds : nil
+        }()
         let contents = presented.rows.map { row in
             let isLiveActivity = row.entry.id == liveActivityID
+            let foldDuration = row.entry.id == latestFoldID ? settledDuration : nil
             return ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
                 memoryKey: key + ":" + row.entry.id, activityNarrative: row.activity, foldedRows: row.foldedRows,
-                isLive: isLiveActivity, planProgress: isLiveActivity ? planProgress : nil)
+                isLive: isLiveActivity, planProgress: isLiveActivity ? planProgress : nil,
+                completedDuration: foldDuration)
         }
         let _ = PerfDiagnostics.end("snapshot_projection", projectionProbe,
                                     detail: "messages=\(messages.count) rows=\(contents.count)")
@@ -2205,6 +2213,8 @@ private struct ConversationEntryView: View, Equatable {
     var isLive = false
     /// Active plan progress for the live stage header in a running turn.
     var planProgress: TurnStatus.Progress? = nil
+    /// Static duration of a settled turn for its process fold header (>= 5s).
+    var completedDuration: TimeInterval? = nil
     @RememberedExpansion("commentary") private var commentaryExpanded
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.entry == rhs.entry && lhs.tools == rhs.tools && lhs.api === rhs.api
@@ -2214,6 +2224,7 @@ private struct ConversationEntryView: View, Equatable {
             && lhs.foldedRows == rhs.foldedRows
             && lhs.isLive == rhs.isLive
             && lhs.planProgress == rhs.planProgress
+            && lhs.completedDuration == rhs.completedDuration
     }
     var isProgressNote: Bool {
         guard let activityNarrative else { return false }
@@ -2253,7 +2264,8 @@ private struct ConversationEntryView: View, Equatable {
                         .font(.system(size: ReplyStyle.labelSize)).foregroundStyle(.secondary)
                 case .processFold:
                     if let foldedRows {
-                        ProcessFoldRow(rows: foldedRows, api: api, sessionId: sessionId)
+                        ProcessFoldRow(rows: foldedRows, api: api, sessionId: sessionId,
+                                       completedDuration: completedDuration)
                     }
                 default:
                     if entry.presentation == .record {
@@ -2289,7 +2301,9 @@ struct ProcessFoldRow: View {
     let rows: [ConversationPresentationModel.Row]
     let api: KimiAPI?
     let sessionId: String
+    var completedDuration: TimeInterval? = nil
     @UILocalization private var L
+    @Environment(\.locale) private var locale
     @Environment(\.conversationMemoryKey) private var memoryKey
     @Environment(\.conversationActionContext) private var actionContext
     @RememberedExpansion("process-fold") private var expanded
@@ -2329,6 +2343,11 @@ struct ProcessFoldRow: View {
                     HStack(spacing: 6) {
                         Text("思考与工具").fixedSize()
                         Text(verbatim: "· " + countLabel).fixedSize()
+                        if let completedDuration, completedDuration >= 5 {
+                            let isZh = locale.language.languageCode?.identifier.hasPrefix("zh") ?? true
+                            Text(verbatim: "· " + ConversationTiming.duration(completedDuration, chinese: isZh))
+                                .monospacedDigit().fixedSize()
+                        }
                         if let editStat, actionContext == nil {
                             Text(L("· \(editStat.files) 个文件 +\(editStat.additions) −\(editStat.deletions)"))
                                 .monospacedDigit().fixedSize()
@@ -2413,6 +2432,12 @@ struct ProcessFoldRow: View {
         let start = prompt.map { $0 + 1 } ?? 0
         guard start < rows.count else { return nil }
         return rows[start...].last { $0.entry.presentation == .activity }?.entry.id
+    }
+    static func lastFoldOfLatestTurn(_ rows: [ConversationPresentationModel.Row]) -> String? {
+        let prompt = rows.lastIndex { $0.entry.presentation == .message && $0.entry.messages.first?.isUserPrompt == true }
+        let start = prompt.map { $0 + 1 } ?? 0
+        guard start < rows.count else { return nil }
+        return rows[start...].last { $0.entry.presentation == .processFold }?.entry.id
     }
 }
 

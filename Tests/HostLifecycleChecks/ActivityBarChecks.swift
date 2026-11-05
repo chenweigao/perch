@@ -367,15 +367,34 @@ private struct ActivityBarCheckFixture: View {
         headline: "用户要求将任务耗时压缩至 1 天，正在调整 SQL 查询以优化性能。",
         source: .external, lifecycle: .streaming)
     let sqlActivityEntry = sqlEntries.last { $0.presentation == .activity }!
-    let liveTailHost = NSHostingView(rootView: VStack(alignment: .leading, spacing: 18) {
+    let streamingBenchTool = VisibleTool(
+        id: "bench-run", name: "Bash",
+        input: .object(["command": .string("python3 scripts/bench_window.py --shards 8")]),
+        progress: .string("[001/189] warming connection pool...\n[140/189] batch_key=shard_04 throughput=24,120/h\n[189/189] verifying 10 retry candidates..."),
+        status: .running)
+    let localNarrative = ActivityNarrative(
+        turnID: "turn", stageID: "stage:local", phase: .validating,
+        subject: "python3", headline: "运行测试", source: .local, lifecycle: .streaming)
+    let todoProgress = TurnStatus.Progress(done: 2, total: 4, currentTitle: "压测 2.3 万项/小时执行窗口与跨机吞吐")
+    let sqlFoldItem = ConversationPresentationModel.Row(
+        entry: sqlActivityEntry, tools: sqlTools,
+        activity: ActivityNarrativeRow(narrative: sqlEditNarrative, isAnchor: true, stageClosed: true))
+    let liveTailHost = NSHostingView(rootView: VStack(alignment: .leading, spacing: 16) {
         ActivityNarrativeHistoryView(narrative: sqlNoteNarrative, sourceText: sqlNoteText)
         KimiActivityView(entry: sqlActivityEntry, tools: sqlTools, api: nil, sessionId: "sql-live",
                          narrative: sqlEditNarrative, isLive: true, reduceMotionOverride: false)
             .environment(\.conversationActionContext, context)
-    }.padding(24).environment(\.locale, Locale(identifier: "zh-Hans")).frame(width: 680, height: 260)
+        Divider().opacity(0.35)
+        KimiActivityView(entry: activityEntry, tools: ["command": streamingBenchTool], api: nil, sessionId: "sql-bench",
+                         narrative: localNarrative, isLive: true, planProgress: todoProgress, reduceMotionOverride: false)
+            .environment(\.conversationActionContext, context)
+        Divider().opacity(0.35)
+        ProcessFoldRow(rows: [sqlFoldItem], api: nil, sessionId: "sql-live", completedDuration: 83)
+            .environment(\.conversationActionContext, context)
+    }.padding(24).environment(\.locale, Locale(identifier: "zh-Hans")).frame(width: 680, height: 440)
         .background(WorkbenchTheme.contentBackground))
     window.contentView = liveTailHost
-    window.setContentSize(NSSize(width: 680, height: 260))
+    window.setContentSize(NSSize(width: 680, height: 440))
     for (suffix, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
         window.appearance = NSAppearance(named: appearance)
         try await Task.sleep(for: .milliseconds(350))

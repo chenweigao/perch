@@ -192,6 +192,21 @@ public enum ToolPresentation {
         let rem = rounded % 60
         return rem > 0 ? "\(mins)m \(rem)s" : "\(mins)m"
     }
+
+    /// Codex CLI (`exec_cell/compact.rs`) & Claude Code CLI style: while a tool is
+    /// actively running, surface the last 1–2 non-empty progress lines so the reader
+    /// sees live build/test steps without manually opening the card.
+    public static func runningOutputTail(_ tool: VisibleTool, maxLines: Int = 2) -> [String] {
+        guard tool.status == .running, let progress = tool.progress else { return [] }
+        let raw = progress.string ?? progress["output"].string ?? progress["text"].string
+            ?? progress["stdout"].string ?? progress["stderr"].string
+        guard let raw, !raw.isEmpty else { return [] }
+        let suffix = raw.suffix(1_024)
+        let lines = suffix.split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return Array(lines.suffix(maxLines))
+    }
 }
 
 public struct ToolInlineDiff: Equatable, Sendable {

@@ -73,13 +73,22 @@ public struct TurnStatus: Equatable, Sendable {
     public struct Progress: Equatable, Sendable {
         public let done: Int
         public let total: Int
-        public init(done: Int, total: Int) { self.done = done; self.total = total }
+        public let currentTitle: String?
+        public init(done: Int, total: Int, currentTitle: String? = nil) {
+            self.done = done; self.total = total; self.currentTitle = currentTitle
+        }
+        public static func == (lhs: Self, rhs: Self) -> Bool {
+            lhs.done == rhs.done && lhs.total == rhs.total
+                && (lhs.currentTitle == rhs.currentTitle || lhs.currentTitle == nil || rhs.currentTitle == nil)
+        }
         public static func live(in messages: [KimiMessage], isRunning: Bool) -> Self? {
             guard isRunning else { return nil }
             let start = messages.lastIndex(where: \.isUserPrompt) ?? 0
             let todos = ConversationTodo.floating(in: Array(messages.dropFirst(start)), isRunning: true)
             guard !todos.isEmpty else { return nil }
-            return Self(done: todos.filter { $0.status == .done }.count, total: todos.count)
+            let active = todos.first(where: { $0.status == .inProgress })?.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            return Self(done: todos.filter { $0.status == .done }.count, total: todos.count,
+                        currentTitle: active?.isEmpty == false ? active : nil)
         }
     }
 
