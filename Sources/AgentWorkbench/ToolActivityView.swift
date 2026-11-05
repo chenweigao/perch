@@ -57,7 +57,9 @@ struct KimiActivityView: View {
 
     var body: some View {
         let items = entry.messages.flatMap(\.content).compactMap { tools[$0.toolCallId ?? ""] }
-        let activeStage = isLive || items.contains { $0.status == .running }
+        let hasRunningTool = items.contains { $0.status == .running }
+        let activeStage = isLive || hasRunningTool
+        let waitingForModel = isLive && !hasRunningTool
         let editStat = SessionEditStats.derive(from: entry.messages)
         #if TRANSCRIPT_CHECKS
         // Occurrences only, and a declaration because ViewBuilder rejects bare
@@ -74,6 +76,14 @@ struct KimiActivityView: View {
                         if let narrative {
                             let eyebrow = items.isEmpty ? narrative.phase.label : L("\(narrative.phase.label) · \(items.count) 次调用")
                             Text(verbatim: eyebrow).fixedSize()
+                            if !expanded, !hasRunningTool, let last = items.last {
+                                let action = ToolPresentation.action(last.name)
+                                let target = ToolPresentation.compactTarget(last)
+                                let lastDesc = target == last.name ? action : "\(action) \(target)"
+                                Text(verbatim: "· " + L("最近：\(lastDesc)"))
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                            }
                         } else if entry.isExploration {
                             let label = ToolPresentation.explorationBucketSummary(items)
                             Text(verbatim: label).fixedSize()
@@ -115,9 +125,14 @@ struct KimiActivityView: View {
                     trailingMetadata(planProgress: planProgress, editStat: editStat)
                 }
             }
-            if let narrative {
+            let tierTwoHeadline: String? = {
+                if let narrative, narrative.source != .local { return narrative.headline }
+                if let todoTitle = planProgress?.currentTitle, !todoTitle.isEmpty { return todoTitle }
+                return narrative?.headline
+            }()
+            if let tierTwoHeadline {
                 Button { expanded.toggle() } label: {
-                    Text(verbatim: narrative.headline)
+                    Text(verbatim: tierTwoHeadline)
                         .font(.system(size: ReplyStyle.Process.labelSize))
                         .foregroundStyle(Color.primary.opacity(0.76))
                         .lineLimit(2)
@@ -127,12 +142,12 @@ struct KimiActivityView: View {
                         .contentShape(Rectangle())
                         .overlay(alignment: .topLeading) {
                             if activeStage && !reduceMotion {
-                                ShimmerGlint(text: narrative.headline, size: ReplyStyle.Process.labelSize, pulse: progressPulse(items))
+                                ShimmerGlint(text: tierTwoHeadline, size: ReplyStyle.Process.labelSize, pulse: progressPulse(items))
                             }
                         }
                 }
                 .buttonStyle(.plain)
-                .help(Text(verbatim: narrative.headline))
+                .help(Text(verbatim: tierTwoHeadline))
                 .padding(.leading, ReplyStyle.Process.nestedIndent)
                 .padding(.bottom, 2)
             }
@@ -156,6 +171,17 @@ struct KimiActivityView: View {
                         .environment(\.conversationMemoryKey, memoryKey + ":part:\(index)")
                         .padding(.leading, ReplyStyle.Process.nestedIndent)
                 }
+            }
+            if waitingForModel {
+                HStack(spacing: 6) {
+                    PerchBusyIndicator(size: 13)
+                    Text("工具已返回，正在等待模型下一步推理…")
+                        .font(.system(size: ReplyStyle.captionSize))
+                        .foregroundStyle(WorkbenchTheme.quiet)
+                        .lineLimit(1)
+                }
+                .padding(.leading, ReplyStyle.Process.nestedIndent)
+                .padding(.top, 3)
             }
         }
     }
@@ -289,53 +315,73 @@ struct KimiToolCard: View {
         // A declaration, not an expression statement: ViewBuilder rejects the latter.
         let _ = NavigationRenderMetrics.count("tool_card_body")
         #endif
-        DisclosureGroup(isExpanded: $expanded) {
-            if expanded {
-                if let openProcess {
-                    VStack(alignment: .leading, spacing: 6) {
-                        details
-                        Button("查看过程", action: openProcess).buttonStyle(.borderless)
-                            .font(.system(size: ReplyStyle.Process.labelSize))
-                            .padding(.leading, ReplyStyle.Process.nestedIndent)
-                            .help("读取这个子 Agent 自己的轮次、思考与工具调用")
-                    }
-                } else { details }
-            }
-        } label: {
-            let rangeSuffix = mergedReadRange ?? ToolPresentation.readRange(tool).map { ":\($0)" }
-            let slowLabel = ToolPresentation.slowDurationLabel(tool)
-            HStack(spacing: 8) {
-                Text(ToolPresentation.action(tool.name)).font(.system(size: ReplyStyle.Process.labelSize)).lineLimit(1)
-                if summary != tool.name {
-                    HStack(spacing: 0) {
-                        Text(summary).lineLimit(1).truncationMode(.middle)
-                        if let rangeSuffix {
-                            Text(verbatim: rangeSuffix)
-                                .font(.system(size: ReplyStyle.captionSize, design: .monospaced))
-                                .foregroundStyle(WorkbenchTheme.quiet)
-                                .fixedSize()
+        let liveTail = !expanded && tool.status == .running ? ToolPresentation.runningOutputTail(tool) : []
+        VStack(alignment: .leading, spacing: 2) {
+            DisclosureGroup(isExpanded: $expanded) {
+                if expanded {
+                    if let openProcess {
+                        VStack(alignment: .leading, spacing: 6) {
+                            details
+                            Button("查看过程", action: openProcess).buttonStyle(.borderless)
+                                .font(.system(size: ReplyStyle.Process.labelSize))
+                                .padding(.leading, ReplyStyle.Process.nestedIndent)
+                                .help("读取这个子 Agent 自己的轮次、思考与工具调用")
+                        }
+                    } else { details }
+                }
+            } label: {
+                let rangeSuffix = mergedReadRange ?? ToolPresentation.readRange(tool).map { ":\($0)" }
+                let slowLabel = ToolPresentation.slowDurationLabel(tool)
+                HStack(spacing: 8) {
+                    Text(ToolPresentation.action(tool.name)).font(.system(size: ReplyStyle.Process.labelSize)).lineLimit(1)
+                    if summary != tool.name {
+                        HStack(spacing: 0) {
+                            Text(summary).lineLimit(1).truncationMode(.middle)
+                            if let rangeSuffix {
+                                Text(verbatim: rangeSuffix)
+                                    .font(.system(size: ReplyStyle.captionSize, design: .monospaced))
+                                    .foregroundStyle(WorkbenchTheme.quiet)
+                                    .fixedSize()
+                            }
                         }
                     }
-                }
-                Spacer(minLength: 0)
-                if let slowLabel {
-                    Text(verbatim: slowLabel)
+                    Spacer(minLength: 0)
+                    if let slowLabel {
+                        Text(verbatim: slowLabel)
+                            .font(.system(size: ReplyStyle.captionSize, design: .monospaced))
+                            .foregroundStyle(WorkbenchTheme.quiet)
+                            .fixedSize()
+                    }
+                    // A returned error keeps its quiet status label; only uncertainty
+                    // or a user decision earns the orange attention treatment.
+                    if showsAttention || tool.status == .running || tool.status == .failed {
+                        Image(systemName: symbol(exitReport: exitReport)).font(.system(size: ReplyStyle.captionSize)).accessibilityHidden(true)
+                        Text(statusLabel).font(.system(size: ReplyStyle.captionSize)).fixedSize()
+                    }
+                }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(showsAttention ? Color.orange : WorkbenchTheme.quiet)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(Text(verbatim: "\(tool.name) · \(summary) · \(statusLabel)"))
+                    .help(Text(verbatim: [tool.input?["command"].string ?? ToolPresentation.path(tool), statusLabel].compactMap { $0 }.joined(separator: "\n")))
+            }.disclosureGroupStyle(ProcessDisclosureStyle())
+                .onChange(of: expanded) { _, value in if value { onExpand?() } }
+            if !liveTail.isEmpty {
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(Array(liveTail.enumerated()), id: \.offset) { index, line in
+                        HStack(alignment: .firstTextBaseline, spacing: 5) {
+                            Text(verbatim: index == 0 ? "└" : " ")
+                                .foregroundStyle(WorkbenchTheme.quiet.opacity(0.65))
+                            Text(verbatim: line)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                                .foregroundStyle(WorkbenchTheme.quiet)
+                        }
                         .font(.system(size: ReplyStyle.captionSize, design: .monospaced))
-                        .foregroundStyle(WorkbenchTheme.quiet)
-                        .fixedSize()
+                    }
                 }
-                // A returned error keeps its quiet status label; only uncertainty
-                // or a user decision earns the orange attention treatment.
-                if showsAttention || tool.status == .running || tool.status == .failed {
-                    Image(systemName: symbol(exitReport: exitReport)).font(.system(size: ReplyStyle.captionSize)).accessibilityHidden(true)
-                    Text(statusLabel).font(.system(size: ReplyStyle.captionSize)).fixedSize()
-                }
-            }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(showsAttention ? Color.orange : WorkbenchTheme.quiet)
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(Text(verbatim: "\(tool.name) · \(summary) · \(statusLabel)"))
-                .help(Text(verbatim: [tool.input?["command"].string ?? ToolPresentation.path(tool), statusLabel].compactMap { $0 }.joined(separator: "\n")))
-        }.disclosureGroupStyle(ProcessDisclosureStyle())
-            .onChange(of: expanded) { _, value in if value { onExpand?() } }
+                .padding(.leading, ReplyStyle.Process.nestedIndent)
+                .padding(.bottom, 2)
+            }
+        }
     }
     private var details: some View {
         VStack(alignment: .leading, spacing: 10) {

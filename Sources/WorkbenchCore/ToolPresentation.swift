@@ -18,6 +18,8 @@ public enum ToolPresentation {
         case "read", "read_file", "readfile": return L("读取")
         case "grep", "search": return L("搜索")
         case "glob", "find_files": return L("查找文件")
+        case "edit", "edit_file", "editfile", "apply_patch", "filechange": return L("编辑")
+        case "write", "write_file", "writefile": return L("写入")
         default: return name
         }
     }
@@ -189,6 +191,21 @@ public enum ToolPresentation {
         let mins = rounded / 60
         let rem = rounded % 60
         return rem > 0 ? "\(mins)m \(rem)s" : "\(mins)m"
+    }
+
+    /// Codex CLI (`exec_cell/compact.rs`) & Claude Code CLI style: while a tool is
+    /// actively running, surface the last 1–2 non-empty progress lines so the reader
+    /// sees live build/test steps without manually opening the card.
+    public static func runningOutputTail(_ tool: VisibleTool, maxLines: Int = 2) -> [String] {
+        guard tool.status == .running, let progress = tool.progress else { return [] }
+        let raw = progress.string ?? progress["output"].string ?? progress["text"].string
+            ?? progress["stdout"].string ?? progress["stderr"].string
+        guard let raw, !raw.isEmpty else { return [] }
+        let suffix = raw.suffix(1_024)
+        let lines = suffix.split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return Array(lines.suffix(maxLines))
     }
 }
 

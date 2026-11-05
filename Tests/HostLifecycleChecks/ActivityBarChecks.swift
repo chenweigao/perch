@@ -334,5 +334,76 @@ private struct ActivityBarCheckFixture: View {
     try await Task.sleep(for: .milliseconds(200))
     inlineHost.layoutSubtreeIfNeeded()
     precondition(!glints(inlineHost).isEmpty, "Live inline KimiActivityView header carries ShimmerGlint")
+
+    let sqlNoteText = """
+    规划已完成，开始派发：新计划有约 55.05 万项待算，已完成 189 项。旧结果已通过库存核对复用。
+
+    按这个缺口，普通计算至少要达到约 2.3 万项/小时才能在 24 小时内完成；跨机阶段还需要额外时间。我现在测执行窗口，并核对刚出现的 10 个失败。
+    """
+    let sqlStageMessages = try decode([
+        ["id": "sql-note", "role": "assistant", "created_at": "1",
+         "content": [["type": "text", "text": sqlNoteText]]],
+        ["id": "sql-calls", "role": "assistant", "created_at": "2", "content": (1...8).map { i -> [String: Any] in
+            if i == 8 {
+                return ["type": "tool_use", "tool_call_id": "sql-\(i)", "tool_name": "Edit",
+                        "input": ["path": "/workspace/sql/query.sql", "old_string": "SELECT *", "new_string": "SELECT id,\n  status,\n  created_at,\n  updated_at,\n  batch_key,\n  score,\n  elapsed_ms"]]
+            }
+            return ["type": "tool_use", "tool_call_id": "sql-\(i)", "tool_name": "Read",
+                    "input": ["path": "/workspace/sql/step_\(i).sql"]]
+        }],
+        ["id": "sql-results", "role": "tool", "created_at": "3", "content": (1...8).map { i in
+            ["type": "tool_result", "tool_call_id": "sql-\(i)", "is_error": false, "output": "ok"]
+        }]
+    ])
+    let sqlEntries = ConversationTimelineEntry.make(sqlStageMessages, isRunning: true)
+    let sqlTools = ToolVisibilityProjection().update(sqlStageMessages, sessionID: "sql-live", running: [], online: true).tools
+    let sqlProjection = ActivityNarrativeProjection.make(entries: sqlEntries, tools: sqlTools, isRunning: true)
+    precondition(sqlProjection.stages.allSatisfy { $0.narrative.phase != .blocked },
+                 "Progress note mentioning failures must not mark its stage blocked")
+    let sqlNoteNarrative = sqlProjection.stages.first!.narrative
+    let sqlEditNarrative = ActivityNarrative(
+        turnID: "turn", stageID: "stage:sql", phase: .editing,
+        subject: "SQL 性能优化",
+        headline: "用户要求将任务耗时压缩至 1 天，正在调整 SQL 查询以优化性能。",
+        source: .external, lifecycle: .streaming)
+    let sqlActivityEntry = sqlEntries.last { $0.presentation == .activity }!
+    let streamingBenchTool = VisibleTool(
+        id: "bench-run", name: "Bash",
+        input: .object(["command": .string("python3 scripts/bench_window.py --shards 8")]),
+        progress: .string("[001/189] warming connection pool...\n[140/189] batch_key=shard_04 throughput=24,120/h\n[189/189] verifying 10 retry candidates..."),
+        status: .running)
+    let localNarrative = ActivityNarrative(
+        turnID: "turn", stageID: "stage:local", phase: .validating,
+        subject: "python3", headline: "运行测试", source: .local, lifecycle: .streaming)
+    let todoProgress = TurnStatus.Progress(done: 2, total: 4, currentTitle: "压测 2.3 万项/小时执行窗口与跨机吞吐")
+    let sqlFoldItem = ConversationPresentationModel.Row(
+        entry: sqlActivityEntry, tools: sqlTools,
+        activity: ActivityNarrativeRow(narrative: sqlEditNarrative, isAnchor: true, stageClosed: true))
+    let liveTailHost = NSHostingView(rootView: VStack(alignment: .leading, spacing: 16) {
+        ActivityNarrativeHistoryView(narrative: sqlNoteNarrative, sourceText: sqlNoteText)
+        KimiActivityView(entry: sqlActivityEntry, tools: sqlTools, api: nil, sessionId: "sql-live",
+                         narrative: sqlEditNarrative, isLive: true, reduceMotionOverride: false)
+            .environment(\.conversationActionContext, context)
+        Divider().opacity(0.35)
+        KimiActivityView(entry: activityEntry, tools: ["command": streamingBenchTool], api: nil, sessionId: "sql-bench",
+                         narrative: localNarrative, isLive: true, planProgress: todoProgress, reduceMotionOverride: false)
+            .environment(\.conversationActionContext, context)
+        Divider().opacity(0.35)
+        ProcessFoldRow(rows: [sqlFoldItem], api: nil, sessionId: "sql-live", completedDuration: 83)
+            .environment(\.conversationActionContext, context)
+    }.padding(24).environment(\.locale, Locale(identifier: "zh-Hans")).frame(width: 680, height: 440)
+        .background(WorkbenchTheme.contentBackground))
+    window.contentView = liveTailHost
+    window.setContentSize(NSSize(width: 680, height: 440))
+    for (suffix, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
+        window.appearance = NSAppearance(named: appearance)
+        try await Task.sleep(for: .milliseconds(350))
+        liveTailHost.layoutSubtreeIfNeeded()
+        if let bitmap = liveTailHost.bitmapImageRepForCachingDisplay(in: liveTailHost.bounds) {
+            liveTailHost.cacheDisplay(in: liveTailHost.bounds, to: bitmap)
+            try? bitmap.representation(using: .png, properties: [:])?.write(
+                to: URL(fileURLWithPath: "/private/tmp/perch-live-tail-\(suffix).png"))
+        }
+    }
     print("PASS: the running title sweeps once per progress event; status line clicks reach the line through its title; idle status line takes no space; activity bar keeps one height and the reading viewport across running/pending/offline/stopping/failed/ended, wide/narrow, light/dark; pending review and reconnect actions respond; inline stage header and Recap target verified")
 }
