@@ -138,10 +138,10 @@ private final class PerchBusyView: NSView {
         sun.lineWidth = l.lineWidth * unit
         sun.strokeColor = ink
         sun.contentsScale = window?.backingScaleFactor ?? 2
+        sun.strokeStart = 0
+        sun.strokeEnd = l.stillArc
         if animated {
             let chase = Self.chase
-            sun.strokeStart = chase.start[0]
-            sun.strokeEnd = chase.end[0]
             for (key, values) in [("strokeStart", chase.start), ("strokeEnd", chase.end)] {
                 let run = CAKeyframeAnimation(keyPath: key)
                 run.values = values
@@ -157,9 +157,6 @@ private final class PerchBusyView: NSView {
             turn.repeatCount = .infinity
             turn.timingFunction = CAMediaTimingFunction(name: .linear)
             sun.add(turn, forKey: "turn")
-        } else {
-            sun.strokeStart = 0
-            sun.strokeEnd = l.stillArc
         }
         CATransaction.commit()
         builtSize = bounds.size

@@ -186,6 +186,20 @@ struct KimiMessageView: View {
                         runtimeContext(split.context)
                     } else if part.isRuntimeContext {
                         runtimeContext(part.text ?? "")
+                    } else if isUserMessage, let raw = part.text, raw.contains("@\"") {
+                        let refs = ProjectFileReference.references(in: raw)
+                        if !refs.isEmpty {
+                            UserPromptFileMentionRow(references: refs)
+                            let compactText = Self.compactUserMentionText(raw, references: refs)
+                            if !compactText.isEmpty {
+                                KimiMarkdown(text: compactText, sessionID: sessionId, messageID: message.id)
+                                    .environment(\.isConversationBodyText, true)
+                            }
+                        } else {
+                            KimiMarkdown(text: raw, sessionID: sessionId, messageID: message.id,
+                                         preparation: markdownPreparation)
+                                .environment(\.isConversationBodyText, true)
+                        }
                     } else {
                         KimiMarkdown(text: part.text ?? "", sessionID: sessionId, messageID: message.id,
                                      preparation: markdownPreparation)
@@ -200,6 +214,52 @@ struct KimiMessageView: View {
                 }
             }
         }
+    }
+    private static func compactUserMentionText(_ raw: String, references: [ProjectFileReference]) -> String {
+        let mutable = NSMutableString(string: raw)
+        for ref in references.reversed() {
+            mutable.replaceCharacters(in: ref.range, with: "")
+        }
+        return (mutable as String)
+            .replacingOccurrences(of: #" {2,}"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+private struct UserPromptFileMentionRow: View {
+    let references: [ProjectFileReference]
+    var body: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 6) {
+                ForEach(Array(references.enumerated()), id: \.offset) { _, ref in
+                    let name = (ref.path as NSString).lastPathComponent
+                    Button {
+                        var url = URLComponents(); url.scheme = "perch-file"
+                        url.queryItems = [URLQueryItem(name: "path", value: ref.path)]
+                        if let target = url.url {
+                            NotificationCenter.default.post(name: .init("PerchOpenConversationFile"), object: target)
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "doc.text")
+                                .font(.system(size: ReplyStyle.captionSize - 1, weight: .medium))
+                                .foregroundStyle(WorkbenchTheme.quiet)
+                            Text(verbatim: name)
+                                .font(.system(size: ReplyStyle.captionSize, weight: .medium, design: .monospaced))
+                                .foregroundStyle(Color.primary.opacity(0.84))
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(Color.primary.opacity(0.055),
+                                    in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .help(Text(verbatim: ref.path))
+                }
+            }
+        }
+        .scrollIndicators(.never, axes: .horizontal)
     }
 }
 
@@ -287,11 +347,19 @@ struct ConversationTranscript: View {
         let presented = snapshot.presented(activity: narratives, foldsProcess: foldsProcess, isRunning: isRunning)
         let foldParents = presented.foldParents
         let liveActivityID = isRunning ? ConversationProcessClock.lastActivityOfLatestTurn(presented.rows) : nil
+        let latestFoldID = !isRunning ? ConversationProcessClock.lastFoldOfLatestTurn(presented.rows) : nil
+        let settledDuration: TimeInterval? = {
+            guard !isRunning, let timing, let ended = timing.endedAt else { return nil }
+            let seconds = timing.elapsed(at: ended).rounded()
+            return seconds >= 5 ? seconds : nil
+        }()
         let contents = presented.rows.map { row in
             let isLiveActivity = row.entry.id == liveActivityID
+            let foldDuration = row.entry.id == latestFoldID ? settledDuration : nil
             return ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
                 memoryKey: key + ":" + row.entry.id, activityNarrative: row.activity, foldedRows: row.foldedRows,
-                isLive: isLiveActivity, planProgress: isLiveActivity ? planProgress : nil)
+                isLive: isLiveActivity, planProgress: isLiveActivity ? planProgress : nil,
+                completedDuration: foldDuration)
         }
         let _ = PerfDiagnostics.end("snapshot_projection", projectionProbe,
                                     detail: "messages=\(messages.count) rows=\(contents.count)")
@@ -1740,6 +1808,7 @@ private final class ConversationEntryController: NSViewController {
               message.content.count == 1, let part = message.content.first,
               part.type == "text", !part.isRuntimeContext, part.skillContextSplit == nil else { return nil }
         let source = part.text ?? ""
+        if source.contains("@\""), !ProjectFileReference.references(in: source).isEmpty { return nil }
         let preparation = nativeRowPreparations.user(session: content.sessionId, messageID: message.id, source: source) {
             NativeParagraphContent.prepare(source, lineHeight: UserMessageStyle.lineHeight)
         }
@@ -2144,6 +2213,8 @@ private struct ConversationEntryView: View, Equatable {
     var isLive = false
     /// Active plan progress for the live stage header in a running turn.
     var planProgress: TurnStatus.Progress? = nil
+    /// Static duration of a settled turn for its process fold header (>= 5s).
+    var completedDuration: TimeInterval? = nil
     @RememberedExpansion("commentary") private var commentaryExpanded
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.entry == rhs.entry && lhs.tools == rhs.tools && lhs.api === rhs.api
@@ -2153,6 +2224,7 @@ private struct ConversationEntryView: View, Equatable {
             && lhs.foldedRows == rhs.foldedRows
             && lhs.isLive == rhs.isLive
             && lhs.planProgress == rhs.planProgress
+            && lhs.completedDuration == rhs.completedDuration
     }
     var isProgressNote: Bool {
         guard let activityNarrative else { return false }
@@ -2192,7 +2264,8 @@ private struct ConversationEntryView: View, Equatable {
                         .font(.system(size: ReplyStyle.labelSize)).foregroundStyle(.secondary)
                 case .processFold:
                     if let foldedRows {
-                        ProcessFoldRow(rows: foldedRows, api: api, sessionId: sessionId)
+                        ProcessFoldRow(rows: foldedRows, api: api, sessionId: sessionId,
+                                       completedDuration: completedDuration)
                     }
                 default:
                     if entry.presentation == .record {
@@ -2228,7 +2301,9 @@ struct ProcessFoldRow: View {
     let rows: [ConversationPresentationModel.Row]
     let api: KimiAPI?
     let sessionId: String
+    var completedDuration: TimeInterval? = nil
     @UILocalization private var L
+    @Environment(\.locale) private var locale
     @Environment(\.conversationMemoryKey) private var memoryKey
     @Environment(\.conversationActionContext) private var actionContext
     @RememberedExpansion("process-fold") private var expanded
@@ -2261,70 +2336,93 @@ struct ProcessFoldRow: View {
         rows.lazy.compactMap { $0.activity?.narrative }.last { $0.source == .external && !$0.headline.isEmpty }?.headline
     }
     var body: some View {
-        DisclosureGroup(isExpanded: $expanded) {
-            if expanded {
-                VStack(alignment: .leading, spacing: ReplyStyle.Process.rowSpacing) {
-                    if page.count > 1 {
-                        HStack(spacing: 12) {
-                            Button("上一页") { changePage(-1) }.disabled(page.number == 1)
-                                .accessibilityIdentifier("process-previous-page")
-                            Text(L("第 \(page.number) / \(page.count) 页")).monospacedDigit()
-                            Button("下一页") { changePage(1) }.disabled(page.number == page.count)
-                                .accessibilityIdentifier("process-next-page")
-                        }.buttonStyle(.borderless).font(.system(size: ReplyStyle.Process.labelSize))
+        let countLabel = toolCalls > 0 ? L("\(toolCalls) 次调用") : L("\(rows.count) 条记录")
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .center, spacing: 8) {
+                DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
+                    HStack(spacing: 6) {
+                        Text("思考与工具").fixedSize()
+                        Text(verbatim: "· " + countLabel).fixedSize()
+                        if let completedDuration, completedDuration >= 5 {
+                            let isZh = locale.language.languageCode?.identifier.hasPrefix("zh") ?? true
+                            Text(verbatim: "· " + ConversationTiming.duration(completedDuration, chinese: isZh))
+                                .monospacedDigit().fixedSize()
+                        }
+                        if let editStat, actionContext == nil {
+                            Text(L("· \(editStat.files) 个文件 +\(editStat.additions) −\(editStat.deletions)"))
+                                .monospacedDigit().fixedSize()
+                        }
+                        if attention > 0 {
+                            Text(L("· \(attention) 项需关注")).foregroundStyle(.orange).fixedSize()
+                        }
                     }
-                    ForEach(Array(rows[page.range]), id: \.entry.id) { row in
-                        ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
-                                              memoryKey: memoryKey + "/" + row.entry.id, activityNarrative: row.activity)
-                            .environment(\.conversationMemoryKey, memoryKey + "/" + row.entry.id)
-                            .environment(\.isConversationBodyText, true)
-                            .background(ProcessFindAnchor(id: row.entry.id))
-                    }
-                }.padding(.top, ReplyStyle.Process.rowSpacing).padding(.leading, ReplyStyle.Process.nestedIndent)
-                    .overlay(alignment: .leading) {
-                        Rectangle().fill(.primary.opacity(0.12)).frame(width: 1).padding(.top, ReplyStyle.Process.rowSpacing)
-                    }
-            }
-        } label: {
-            // Secondary ink at regular weight, like the live process rows it replaces.
-            HStack(alignment: .firstTextBaseline, spacing: 7) {
-                Image(systemName: "list.bullet.rectangle").accessibilityHidden(true)
-                if let externalHeadline {
-                    Text(verbatim: externalHeadline)
-                        .lineLimit(2)
-                        .truncationMode(.tail)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .layoutPriority(1)
-                        .help(Text(verbatim: externalHeadline))
-                } else {
-                    Text("思考与工具").fixedSize()
+                    .font(.system(size: externalHeadline != nil ? ReplyStyle.captionSize : ReplyStyle.Process.labelSize))
+                    .foregroundStyle(externalHeadline != nil ? WorkbenchTheme.quiet : Color.secondary)
                 }
-                Text(toolCalls > 0 ? L("\(toolCalls) 次调用") : L("\(rows.count) 条记录")).fixedSize()
-                if let editStat, actionContext == nil {
-                    Text(L("· \(editStat.files) 个文件 +\(editStat.additions) −\(editStat.deletions)"))
-                        .monospacedDigit().fixedSize()
-                }
-                if attention > 0 {
-                    Text(L("· \(attention) 项需关注")).foregroundStyle(.orange).fixedSize()
-                }
-            }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(.secondary)
-        }.disclosureGroupStyle(ProcessDisclosureStyle())
-            .accessibilityValue(Text(expanded ? "已展开" : "已收起"))
-            .overlay(alignment: .topTrailing) {
+                .disclosureGroupStyle(ProcessDisclosureStyle())
+                .accessibilityValue(Text(expanded ? "已展开" : "已收起"))
                 if let editStat, let actionContext {
                     Button { actionContext.post(.showChanges) } label: {
-                        HStack(spacing: 5) {
-                            Text(L("\(editStat.files) 个文件")).foregroundStyle(.secondary)
-                            EditStatText(stat: SessionEditStat(additions: editStat.additions, deletions: editStat.deletions))
-                        }
-                            .font(.system(size: ReplyStyle.captionSize))
-                            .padding(.horizontal, 4).frame(height: 28).contentShape(Rectangle())
+                        editStatBadge(editStat)
                     }.buttonStyle(WorkbenchDisclosureButtonStyle())
+                        .fixedSize()
                         .help(Text("查看改动：本轮改了 \(editStat.files) 个文件"))
                         .accessibilityLabel(Text("查看改动"))
                         .accessibilityValue(Text(verbatim: L("本轮改了 \(editStat.files) 个文件") + " +\(editStat.additions) −\(editStat.deletions)"))
                 }
             }
+            if let externalHeadline {
+                Button { expanded.toggle() } label: {
+                    Text(verbatim: externalHeadline)
+                        .font(.system(size: ReplyStyle.Process.labelSize))
+                        .foregroundStyle(Color.primary.opacity(0.76))
+                        .lineLimit(2)
+                        .truncationMode(.tail)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(Text(verbatim: externalHeadline))
+                .padding(.leading, ReplyStyle.Process.nestedIndent)
+                .padding(.bottom, 2)
+            }
+            WorkbenchDisclosureContent(expanded: expanded) {
+                if expanded {
+                    VStack(alignment: .leading, spacing: ReplyStyle.Process.rowSpacing) {
+                        if page.count > 1 {
+                            HStack(spacing: 12) {
+                                Button("上一页") { changePage(-1) }.disabled(page.number == 1)
+                                    .accessibilityIdentifier("process-previous-page")
+                                Text(L("第 \(page.number) / \(page.count) 页")).monospacedDigit()
+                                Button("下一页") { changePage(1) }.disabled(page.number == page.count)
+                                    .accessibilityIdentifier("process-next-page")
+                            }.buttonStyle(.borderless).font(.system(size: ReplyStyle.Process.labelSize))
+                        }
+                        ForEach(Array(rows[page.range]), id: \.entry.id) { row in
+                            ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
+                                                  memoryKey: memoryKey + "/" + row.entry.id, activityNarrative: row.activity)
+                                .environment(\.conversationMemoryKey, memoryKey + "/" + row.entry.id)
+                                .environment(\.isConversationBodyText, true)
+                                .background(ProcessFindAnchor(id: row.entry.id))
+                        }
+                    }.padding(.top, ReplyStyle.Process.rowSpacing).padding(.leading, ReplyStyle.Process.nestedIndent)
+                        .overlay(alignment: .leading) {
+                            Rectangle().fill(.primary.opacity(0.12)).frame(width: 1).padding(.top, ReplyStyle.Process.rowSpacing)
+                        }
+                }
+            }
+        }
+    }
+    private func editStatBadge(_ editStat: (files: Int, additions: Int, deletions: Int)) -> some View {
+        HStack(spacing: 5) {
+            Text(L("\(editStat.files) 个文件")).foregroundStyle(WorkbenchTheme.quiet)
+            EditStatText(stat: SessionEditStat(additions: editStat.additions, deletions: editStat.deletions))
+        }
+        .font(.system(size: ReplyStyle.captionSize))
+        .padding(.horizontal, 4)
+        .frame(height: 22)
+        .contentShape(Rectangle())
     }
 }
 
@@ -2334,6 +2432,12 @@ struct ProcessFoldRow: View {
         let start = prompt.map { $0 + 1 } ?? 0
         guard start < rows.count else { return nil }
         return rows[start...].last { $0.entry.presentation == .activity }?.entry.id
+    }
+    static func lastFoldOfLatestTurn(_ rows: [ConversationPresentationModel.Row]) -> String? {
+        let prompt = rows.lastIndex { $0.entry.presentation == .message && $0.entry.messages.first?.isUserPrompt == true }
+        let start = prompt.map { $0 + 1 } ?? 0
+        guard start < rows.count else { return nil }
+        return rows[start...].last { $0.entry.presentation == .processFold }?.entry.id
     }
 }
 
@@ -2367,9 +2471,49 @@ private enum ThoughtTextStyle {
          .paragraphStyle: paragraphStyle(lineHeight: lineHeight)]
     }
     static func attributed(_ source: String) -> NSAttributedString {
+        attributed(source, elideCodeBlocks: false)
+    }
+    static func previewAttributed(_ source: String) -> NSAttributedString {
+        attributed(source, elideCodeBlocks: true)
+    }
+    private static func isCommentSentinel(_ trimmed: String) -> Bool {
+        if trimmed.hasPrefix("<!--") && trimmed.hasSuffix("-->") { // l10n-ignore
+            let body = trimmed.dropFirst(4).dropLast(3).trimmingCharacters(in: .whitespaces)
+            return body.isEmpty
+        }
+        return trimmed == "<!--" // l10n-ignore
+    }
+    /// Latest meaningful prose line for collapsed thought headers (ZCode / Oh My Pi style).
+    static func latestSummaryLine(_ source: String) -> String? {
+        guard !source.isEmpty else { return nil }
+        var inCodeBlock = false
+        var latest: String?
+        for rawLine in source.components(separatedBy: "\n") {
+            let trimmed = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.hasPrefix("```") { // l10n-ignore
+                inCodeBlock.toggle()
+                continue
+            }
+            if inCodeBlock || trimmed.isEmpty || isCommentSentinel(trimmed) { continue }
+            var clean = trimmed
+            for prefix in ["#### ", "### ", "## ", "# ", "- ", "* "] where clean.hasPrefix(prefix) { // l10n-ignore
+                clean = String(clean.dropFirst(prefix.count))
+                break
+            }
+            clean = clean.replacingOccurrences(of: "**", with: "")
+                .replacingOccurrences(of: "`", with: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !clean.isEmpty && clean != "..." && clean != "…" {
+                latest = clean
+            }
+        }
+        return latest
+    }
+    static func attributed(_ source: String, elideCodeBlocks: Bool) -> NSAttributedString {
         guard !source.isEmpty else { return NSAttributedString(string: "", attributes: attributes) }
-        if !source.contains("`") && !source.contains("*") && !source.contains("#")
-            && !source.contains("\n\n") && !source.hasPrefix("- ") && !source.contains("\n- ") && !source.contains("\n* ") {
+        if !elideCodeBlocks && !source.contains("`") && !source.contains("*") && !source.contains("#")
+            && !source.contains("<!--") && !source.contains("\n\n")
+            && !source.hasPrefix("- ") && !source.contains("\n- ") && !source.contains("\n* ") {
             return NSAttributedString(string: source, attributes: attributes)
         }
         let size = ReplyStyle.Process.thoughtSize
@@ -2383,20 +2527,46 @@ private enum ThoughtTextStyle {
         let result = NSMutableAttributedString()
         var lastLineRange: NSRange?
         var inCodeBlock = false
+        var elidedCodeLines = 0
+        func flushElidedCodeBlock() {
+            guard elidedCodeLines > 0 else { return }
+            if result.length > 0 {
+                var newlineAttributes = result.attributes(at: result.length - 1, effectiveRange: nil)
+                newlineAttributes.removeValue(forKey: .backgroundColor)
+                result.append(NSAttributedString(string: "\n", attributes: newlineAttributes))
+            }
+            let start = result.length
+            let placeholder = L("⋯ 代码草稿 · \(elidedCodeLines) 行")
+            result.append(NSAttributedString(string: placeholder, attributes: [
+                .font: codeFont, .foregroundColor: ink,
+                .backgroundColor: codeTint, .paragraphStyle: tightParagraph
+            ]))
+            lastLineRange = NSRange(location: start, length: result.length - start)
+            elidedCodeLines = 0
+        }
         for rawLine in source.components(separatedBy: "\n") {
             let trimmed = rawLine.trimmingCharacters(in: .whitespaces)
             if trimmed.hasPrefix("```") { // l10n-ignore
+                if inCodeBlock && elideCodeBlocks { flushElidedCodeBlock() }
                 inCodeBlock.toggle()
                 continue
             }
+            if !inCodeBlock && isCommentSentinel(trimmed) { continue }
             if trimmed.isEmpty {
-                if let range = lastLineRange {
+                if !inCodeBlock, let range = lastLineRange {
                     result.addAttribute(.paragraphStyle, value: separatedParagraph, range: range)
+                } else if inCodeBlock && elideCodeBlocks {
+                    elidedCodeLines += 1
                 }
                 continue
             }
+            if inCodeBlock && elideCodeBlocks {
+                elidedCodeLines += 1
+                continue
+            }
             if result.length > 0 {
-                let newlineAttributes = result.attributes(at: result.length - 1, effectiveRange: nil)
+                var newlineAttributes = result.attributes(at: result.length - 1, effectiveRange: nil)
+                newlineAttributes.removeValue(forKey: .backgroundColor)
                 result.append(NSAttributedString(string: "\n", attributes: newlineAttributes))
             }
             let start = result.length
@@ -2424,6 +2594,7 @@ private enum ThoughtTextStyle {
             }
             lastLineRange = NSRange(location: start, length: result.length - start)
         }
+        if inCodeBlock && elideCodeBlocks { flushElidedCodeBlock() }
         return result.length > 0 ? result : NSAttributedString(string: source, attributes: attributes)
     }
     private static func appendInline(_ line: String, into result: NSMutableAttributedString,
@@ -2473,6 +2644,7 @@ private enum ThoughtTextStyle {
 }
 
 private struct ThoughtRail<Content: View>: View {
+    var fadesTail = false
     @ViewBuilder let content: Content
     var body: some View {
         content
@@ -2480,7 +2652,17 @@ private struct ThoughtRail<Content: View>: View {
             .padding(.leading, ReplyStyle.Process.nestedIndent)
             .overlay(alignment: .leading) {
                 Capsule()
-                    .fill(Color.primary.opacity(0.11))
+                    .fill(
+                        fadesTail
+                            ? AnyShapeStyle(LinearGradient(
+                                stops: [
+                                    .init(color: Color.primary.opacity(0.14), location: 0),
+                                    .init(color: Color.primary.opacity(0.14), location: 0.78),
+                                    .init(color: Color.primary.opacity(0.02), location: 1)
+                                ],
+                                startPoint: .top, endPoint: .bottom))
+                            : AnyShapeStyle(Color.primary.opacity(0.12))
+                    )
                     .frame(width: ReplyStyle.Process.thoughtRailWidth)
                     .padding(.leading, ReplyStyle.Process.thoughtRailLeading)
                     .padding(.vertical, 2)
@@ -2514,10 +2696,24 @@ private struct ThoughtText: View {
 private struct ThoughtToggle: View {
     /// A looked-up `Text`, so callers pass `Text("…")` rather than a raw string.
     let title: Text
+    var summary: String? = nil
     @Binding var expanded: Bool
     var body: some View {
         DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
-            title.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(.secondary)
+            HStack(spacing: 6) {
+                title.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(.secondary).fixedSize()
+                if !expanded, let summary, !summary.isEmpty {
+                    Text(verbatim: "·")
+                        .font(.system(size: ReplyStyle.Process.labelSize))
+                        .foregroundStyle(WorkbenchTheme.quiet)
+                        .fixedSize()
+                    Text(verbatim: summary)
+                        .font(.system(size: ReplyStyle.captionSize))
+                        .foregroundStyle(WorkbenchTheme.quiet)
+                        .lineLimit(1)
+                        .truncationMode(.head)
+                }
+            }
         }.disclosureGroupStyle(ProcessDisclosureStyle())
     }
 }
@@ -2527,7 +2723,9 @@ struct ThoughtDisclosure: View {
     @RememberedExpansion("thought") private var expanded
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
-            ThoughtToggle(title: Text("Thoughts"), expanded: $expanded)
+            ThoughtToggle(title: Text("Thoughts"),
+                          summary: expanded ? nil : ThoughtTextStyle.latestSummaryLine(text),
+                          expanded: $expanded)
             if expanded { ThoughtText(text: text) }
         }
     }
@@ -2535,7 +2733,7 @@ struct ThoughtDisclosure: View {
 
 /// A thought still streaming, open by default at six lines that follow the
 /// stream (with in-place full expansion), or one that ended the turn without a reply.
-private struct ThoughtOutput: View {
+struct ThoughtOutput: View {
     let messages: [KimiMessage]
     let finished: Bool
     private var fullText: String { messages.flatMap(\.content).compactMap(\.thinking).joined(separator: "\n\n") }
@@ -2550,7 +2748,9 @@ private struct ThoughtOutput: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
             HStack {
-                ThoughtToggle(title: finished ? Text("Thoughts · No response") : Text("Thinking"), expanded: $expanded)
+                ThoughtToggle(title: finished ? Text("Thoughts · No response") : Text("Thinking"),
+                              summary: expanded ? nil : ThoughtTextStyle.latestSummaryLine(fullText),
+                              expanded: $expanded)
                 if expanded && !finished && (previewOverflows || showFullText) {
                     Button { showFullText.toggle() } label: {
                         Label(showFullText ? "Collapse full thoughts" : "View full thoughts",
@@ -2561,7 +2761,7 @@ private struct ThoughtOutput: View {
             if expanded && (finished || showFullText) {
                 ThoughtText(text: fullText)
             } else if expanded {
-                ThoughtRail {
+                ThoughtRail(fadesTail: true) {
                     ThinkingTextViewport(text: fullText, overflows: $previewOverflows)
                         .mask { ThoughtTopFade(active: previewOverflows) }
                 }
@@ -2606,7 +2806,7 @@ private struct ThinkingTextViewport: NSViewRepresentable {
         scroll.overflowChanged = { if overflows != $0 { overflows = $0 } }
         guard context.coordinator.previous != text,
               let view = scroll.documentView as? NSTextView, let storage = view.textStorage else { return }
-        storage.setAttributedString(ThoughtTextStyle.attributed(text))
+        storage.setAttributedString(ThoughtTextStyle.previewAttributed(text))
         context.coordinator.previous = text
         scroll.scheduleFollow()
     }

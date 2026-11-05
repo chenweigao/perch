@@ -57,7 +57,9 @@ struct KimiActivityView: View {
 
     var body: some View {
         let items = entry.messages.flatMap(\.content).compactMap { tools[$0.toolCallId ?? ""] }
-        let activeStage = isLive || items.contains { $0.status == .running }
+        let hasRunningTool = items.contains { $0.status == .running }
+        let activeStage = isLive || hasRunningTool
+        let waitingForModel = isLive && !hasRunningTool
         let editStat = SessionEditStats.derive(from: entry.messages)
         #if TRANSCRIPT_CHECKS
         // Occurrences only, and a declaration because ViewBuilder rejects bare
@@ -68,26 +70,22 @@ struct KimiActivityView: View {
         let _ = NavigationRenderMetrics.count("activity_row_tool_scan", by: items.count)
         #endif
         VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 8) {
+            HStack(alignment: .center, spacing: 8) {
                 DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    HStack(spacing: 8) {
                         if let narrative {
-                            Text(verbatim: narrative.headline)
-                                .lineLimit(2)
-                                .truncationMode(.tail)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .layoutPriority(1)
-                                .help(Text(verbatim: narrative.headline))
-                                .overlay(alignment: .topLeading) {
-                                    if activeStage && !reduceMotion {
-                                        ShimmerGlint(text: narrative.headline, size: ReplyStyle.captionSize, pulse: progressPulse(items))
-                                    }
-                                }
-                            if !items.isEmpty {
-                                Text(verbatim: "· " + L("\(items.count) 次调用")).fixedSize()
+                            let eyebrow = items.isEmpty ? narrative.phase.label : L("\(narrative.phase.label) · \(items.count) 次调用")
+                            Text(verbatim: eyebrow).fixedSize()
+                            if !expanded, !hasRunningTool, let last = items.last {
+                                let action = ToolPresentation.action(last.name)
+                                let target = ToolPresentation.compactTarget(last)
+                                let lastDesc = target == last.name ? action : "\(action) \(target)"
+                                Text(verbatim: "· " + L("最近：\(lastDesc)"))
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
                             }
                         } else if entry.isExploration {
-                            let label = L("读取与搜索 · \(items.count) 次调用")
+                            let label = ToolPresentation.explorationBucketSummary(items)
                             Text(verbatim: label).fixedSize()
                                 .overlay {
                                     if activeStage && !reduceMotion {
@@ -124,48 +122,47 @@ struct KimiActivityView: View {
                     }.font(.system(size: ReplyStyle.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
                 }.disclosureGroupStyle(ProcessDisclosureStyle())
                 if planProgress != nil || editStat != nil {
-                    HStack(spacing: 8) {
-                        if let planProgress {
-                            if let actionContext {
-                                Button { actionContext.post(.showTurnDetails) } label: {
-                                    HStack(spacing: 3) {
-                                        Text(verbatim: "\(planProgress.done) / \(planProgress.total)")
-                                        Image(systemName: "chevron.right").font(.system(size: ReplyStyle.captionSize - 2, weight: .semibold))
-                                    }.padding(.horizontal, 4).frame(height: 22).contentShape(Rectangle())
-                                }.buttonStyle(WorkbenchDisclosureButtonStyle())
-                                    .help(Text("在任务面板查看本轮详情"))
-                                    .accessibilityLabel(Text("本轮状态"))
-                                    .accessibilityValue(Text(verbatim: L("\(planProgress.done)/\(planProgress.total) 步")))
-                            } else {
-                                Text(verbatim: "\(planProgress.done) / \(planProgress.total)")
-                            }
-                        }
-                        if let editStat {
-                            if let actionContext {
-                                Button { actionContext.post(.showChanges) } label: {
-                                    EditStatText(stat: editStat.total)
-                                        .padding(.horizontal, 4).frame(height: 22).contentShape(Rectangle())
-                                }.buttonStyle(WorkbenchDisclosureButtonStyle())
-                                    .help(Text("查看改动：本轮改了 \(editStat.perFile.count) 个文件"))
-                                    .accessibilityLabel(Text("查看改动"))
-                                    .accessibilityValue(Text(verbatim: L("本轮改了 \(editStat.perFile.count) 个文件") + " +\(editStat.total.additions) −\(editStat.total.deletions)"))
-                            } else {
-                                EditStatText(stat: editStat.total)
-                            }
-                        }
-                    }.font(.system(size: ReplyStyle.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
-                        .monospacedDigit().fixedSize()
+                    trailingMetadata(planProgress: planProgress, editStat: editStat)
                 }
             }
-            if expanded, let narrative {
-                ActivityNarrativeHistoryView(narrative: narrative).padding(.leading, ReplyStyle.Process.nestedIndent)
+            let tierTwoHeadline: String? = {
+                if let narrative, narrative.source != .local { return narrative.headline }
+                if let todoTitle = planProgress?.currentTitle, !todoTitle.isEmpty { return todoTitle }
+                return narrative?.headline
+            }()
+            if let tierTwoHeadline {
+                Button { expanded.toggle() } label: {
+                    Text(verbatim: tierTwoHeadline)
+                        .font(.system(size: ReplyStyle.Process.labelSize))
+                        .foregroundStyle(Color.primary.opacity(0.76))
+                        .lineLimit(2)
+                        .truncationMode(.tail)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                        .overlay(alignment: .topLeading) {
+                            if activeStage && !reduceMotion {
+                                ShimmerGlint(text: tierTwoHeadline, size: ReplyStyle.Process.labelSize, pulse: progressPulse(items))
+                            }
+                        }
+                }
+                .buttonStyle(.plain)
+                .help(Text(verbatim: tierTwoHeadline))
+                .padding(.leading, ReplyStyle.Process.nestedIndent)
+                .padding(.bottom, 2)
+            }
+            if expanded, let narrative, let detail = narrative.detail, !detail.isEmpty {
+                ActivityNarrativeHistoryView(narrative: narrative, sourceText: detail)
+                    .padding(.leading, ReplyStyle.Process.nestedIndent)
             }
             // Each phase contains one part. Offset identity also handles thoughts
             // and tools originating in the same provider message without collisions.
+            let mergedRanges = expanded ? Self.mergedReadRangesByPath(items) : [:]
             ForEach(Array(entry.messages.enumerated()), id: \.offset) { index, message in
                 if let id = message.content.first?.toolCallId, let tool = tools[id] {
                     if expanded || tool.staysVisible {
-                        KimiToolCard(tool: tool)
+                        let rangeBadge = ToolPresentation.path(tool).flatMap { mergedRanges[$0] }
+                        KimiToolCard(tool: tool, mergedReadRange: rangeBadge)
                             .environment(\.conversationMemoryKey, memoryKey + ":tool:" + tool.id)
                             .padding(.leading, expanded ? ReplyStyle.Process.nestedIndent : 0)
                     }
@@ -175,7 +172,73 @@ struct KimiActivityView: View {
                         .padding(.leading, ReplyStyle.Process.nestedIndent)
                 }
             }
+            if waitingForModel {
+                HStack(spacing: 6) {
+                    PerchBusyIndicator(size: 13)
+                    Text("工具已返回，正在等待模型下一步推理…")
+                        .font(.system(size: ReplyStyle.captionSize))
+                        .foregroundStyle(WorkbenchTheme.quiet)
+                        .lineLimit(1)
+                }
+                .padding(.leading, ReplyStyle.Process.nestedIndent)
+                .padding(.top, 3)
+            }
         }
+    }
+
+    private static func mergedReadRangesByPath(_ tools: [VisibleTool]) -> [String: String] {
+        var rangesByPath: [String: [String]] = [:]
+        var countsByPath: [String: Int] = [:]
+        for tool in tools where ["read", "read_file", "readfile"].contains(tool.name.lowercased()) {
+            guard let path = ToolPresentation.path(tool), !path.isEmpty else { continue }
+            countsByPath[path, default: 0] += 1
+            if let range = ToolPresentation.readRange(tool) {
+                rangesByPath[path, default: []].append(range)
+            }
+        }
+        var result: [String: String] = [:]
+        for (path, ranges) in rangesByPath where (countsByPath[path] ?? 0) > 1 && !ranges.isEmpty {
+            result[path] = ToolPresentation.formatMergedReadRanges(ranges)
+        }
+        return result
+    }
+
+    private func trailingMetadata(planProgress: TurnStatus.Progress?,
+                                  editStat: (perFile: [String: SessionEditStat], total: SessionEditStat)?) -> some View {
+        HStack(spacing: 8) {
+            if let planProgress {
+                if let actionContext {
+                    Button { actionContext.post(.showTurnDetails) } label: {
+                        HStack(spacing: 3) {
+                            Text(verbatim: "\(planProgress.done) / \(planProgress.total)")
+                            Image(systemName: "chevron.right").font(.system(size: ReplyStyle.captionSize - 2, weight: .semibold))
+                        }.padding(.horizontal, 4).frame(height: 22).contentShape(Rectangle())
+                    }.buttonStyle(WorkbenchDisclosureButtonStyle())
+                        .help(Text("在任务面板查看本轮详情"))
+                        .accessibilityLabel(Text("本轮状态"))
+                        .accessibilityValue(Text(verbatim: L("\(planProgress.done)/\(planProgress.total) 步")))
+                } else {
+                    Text(verbatim: "\(planProgress.done) / \(planProgress.total)")
+                }
+            }
+            if let editStat {
+                if let actionContext {
+                    Button { actionContext.post(.showChanges) } label: {
+                        EditStatText(stat: editStat.total)
+                            .padding(.horizontal, 4).frame(height: 22).contentShape(Rectangle())
+                    }.buttonStyle(WorkbenchDisclosureButtonStyle())
+                        .help(Text("查看改动：本轮改了 \(editStat.perFile.count) 个文件"))
+                        .accessibilityLabel(Text("查看改动"))
+                        .accessibilityValue(Text(verbatim: L("本轮改了 \(editStat.perFile.count) 个文件") + " +\(editStat.total.additions) −\(editStat.total.deletions)"))
+                } else {
+                    EditStatText(stat: editStat.total)
+                }
+            }
+        }
+        .font(.system(size: ReplyStyle.captionSize))
+        .foregroundStyle(WorkbenchTheme.quiet)
+        .monospacedDigit()
+        .fixedSize()
     }
 }
 
@@ -191,6 +254,7 @@ extension KimiActivityView {
 
 struct KimiToolCard: View {
     let tool: VisibleTool
+    var mergedReadRange: String? = nil
     var onExpand: (() -> Void)? = nil
     /// Opens the process of the subagent this Agent/Task call started. Left nil,
     /// a transcript row's action context provides it when the session's bridge
@@ -251,46 +315,161 @@ struct KimiToolCard: View {
         // A declaration, not an expression statement: ViewBuilder rejects the latter.
         let _ = NavigationRenderMetrics.count("tool_card_body")
         #endif
-        DisclosureGroup(isExpanded: $expanded) {
-            if expanded {
-                if let openProcess {
-                    VStack(alignment: .leading, spacing: 6) {
-                        details
-                        Button("查看过程", action: openProcess).buttonStyle(.borderless)
-                            .font(.system(size: ReplyStyle.Process.labelSize))
-                            .padding(.leading, ReplyStyle.Process.nestedIndent)
-                            .help("读取这个子 Agent 自己的轮次、思考与工具调用")
-                    }
-                } else { details }
-            }
-        } label: {
-            HStack(spacing: 8) {
-                Text(ToolPresentation.action(tool.name)).font(.system(size: ReplyStyle.Process.labelSize)).lineLimit(1)
-                if summary != tool.name { Text(summary).lineLimit(1).truncationMode(.middle) }
-                Spacer(minLength: 0)
-                // A returned error keeps its quiet status label; only uncertainty
-                // or a user decision earns the orange attention treatment.
-                if showsAttention || tool.status == .running || tool.status == .failed {
-                    Image(systemName: symbol(exitReport: exitReport)).font(.system(size: ReplyStyle.captionSize)).accessibilityHidden(true)
-                    Text(statusLabel).font(.system(size: ReplyStyle.captionSize)).fixedSize()
+        let liveTail = !expanded && tool.status == .running ? ToolPresentation.runningOutputTail(tool) : []
+        VStack(alignment: .leading, spacing: 2) {
+            DisclosureGroup(isExpanded: $expanded) {
+                if expanded {
+                    if let openProcess {
+                        VStack(alignment: .leading, spacing: 6) {
+                            details
+                            Button("查看过程", action: openProcess).buttonStyle(.borderless)
+                                .font(.system(size: ReplyStyle.Process.labelSize))
+                                .padding(.leading, ReplyStyle.Process.nestedIndent)
+                                .help("读取这个子 Agent 自己的轮次、思考与工具调用")
+                        }
+                    } else { details }
                 }
-            }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(showsAttention ? Color.orange : WorkbenchTheme.quiet)
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(Text(verbatim: "\(tool.name) · \(summary) · \(statusLabel)"))
-                .help(Text(verbatim: [tool.input?["command"].string ?? ToolPresentation.path(tool), statusLabel].compactMap { $0 }.joined(separator: "\n")))
-        }.disclosureGroupStyle(ProcessDisclosureStyle())
-            .onChange(of: expanded) { _, value in if value { onExpand?() } }
+            } label: {
+                let rangeSuffix = mergedReadRange ?? ToolPresentation.readRange(tool).map { ":\($0)" }
+                let slowLabel = ToolPresentation.slowDurationLabel(tool)
+                HStack(spacing: 8) {
+                    Text(ToolPresentation.action(tool.name)).font(.system(size: ReplyStyle.Process.labelSize)).lineLimit(1)
+                    if summary != tool.name {
+                        HStack(spacing: 0) {
+                            Text(summary).lineLimit(1).truncationMode(.middle)
+                            if let rangeSuffix {
+                                Text(verbatim: rangeSuffix)
+                                    .font(.system(size: ReplyStyle.captionSize, design: .monospaced))
+                                    .foregroundStyle(WorkbenchTheme.quiet)
+                                    .fixedSize()
+                            }
+                        }
+                    }
+                    Spacer(minLength: 0)
+                    if let slowLabel {
+                        Text(verbatim: slowLabel)
+                            .font(.system(size: ReplyStyle.captionSize, design: .monospaced))
+                            .foregroundStyle(WorkbenchTheme.quiet)
+                            .fixedSize()
+                    }
+                    // A returned error keeps its quiet status label; only uncertainty
+                    // or a user decision earns the orange attention treatment.
+                    if showsAttention || tool.status == .running || tool.status == .failed {
+                        Image(systemName: symbol(exitReport: exitReport)).font(.system(size: ReplyStyle.captionSize)).accessibilityHidden(true)
+                        Text(statusLabel).font(.system(size: ReplyStyle.captionSize)).fixedSize()
+                    }
+                }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(showsAttention ? Color.orange : WorkbenchTheme.quiet)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(Text(verbatim: "\(tool.name) · \(summary) · \(statusLabel)"))
+                    .help(Text(verbatim: [tool.input?["command"].string ?? ToolPresentation.path(tool), statusLabel].compactMap { $0 }.joined(separator: "\n")))
+            }.disclosureGroupStyle(ProcessDisclosureStyle())
+                .onChange(of: expanded) { _, value in if value { onExpand?() } }
+            if !liveTail.isEmpty {
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(Array(liveTail.enumerated()), id: \.offset) { index, line in
+                        HStack(alignment: .firstTextBaseline, spacing: 5) {
+                            Text(verbatim: index == 0 ? "└" : " ")
+                                .foregroundStyle(WorkbenchTheme.quiet.opacity(0.65))
+                            Text(verbatim: line)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                                .foregroundStyle(WorkbenchTheme.quiet)
+                        }
+                        .font(.system(size: ReplyStyle.captionSize, design: .monospaced))
+                    }
+                }
+                .padding(.leading, ReplyStyle.Process.nestedIndent)
+                .padding(.bottom, 2)
+            }
+        }
     }
     private var details: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(tool.name).foregroundStyle(WorkbenchTheme.quiet)
-            if let input = tool.input { Text("Input").foregroundStyle(WorkbenchTheme.quiet); DisclosureReplyText(text: input.display) }
-            if let progress = tool.progress { Text("Progress").foregroundStyle(WorkbenchTheme.quiet); DisclosureReplyText(text: progress.display) }
-            if let output = tool.output { Text("Output").foregroundStyle(WorkbenchTheme.quiet); DisclosureReplyText(text: output.display) }
-            if tool.input == nil && tool.output == nil && tool.progress == nil { Text("No input or output").foregroundStyle(WorkbenchTheme.quiet) }
+            if let inlineDiff = ToolInlineDiff.derive(from: tool) {
+                ToolInlineDiffCard(diff: inlineDiff)
+                if let output = tool.output, tool.status == .failed {
+                    Text("Output").foregroundStyle(WorkbenchTheme.quiet)
+                    DisclosureReplyText(text: output.display)
+                }
+            } else {
+                Text(tool.name).foregroundStyle(WorkbenchTheme.quiet)
+                if let rawCommand = tool.input?["command"].string ?? tool.input?["cmd"].string,
+                   ["bash", "shell", "exec_command", "run_command"].contains(tool.name.lowercased()) {
+                    Text("Command").foregroundStyle(WorkbenchTheme.quiet)
+                    DisclosureReplyText(text: ToolPresentation.cleanShellCommand(rawCommand))
+                } else if let input = tool.input {
+                    Text("Input").foregroundStyle(WorkbenchTheme.quiet)
+                    DisclosureReplyText(text: input.display)
+                }
+                if let progress = tool.progress { Text("Progress").foregroundStyle(WorkbenchTheme.quiet); DisclosureReplyText(text: progress.display) }
+                if let output = tool.output { Text("Output").foregroundStyle(WorkbenchTheme.quiet); DisclosureReplyText(text: output.display) }
+                if tool.input == nil && tool.output == nil && tool.progress == nil { Text("No input or output").foregroundStyle(WorkbenchTheme.quiet) }
+            }
         }.font(.system(size: ReplyStyle.captionSize, design: .monospaced)).frame(maxWidth: .infinity, alignment: .leading)
             .padding(10)
             .background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius, style: .continuous))
             .padding(.leading, ReplyStyle.Process.nestedIndent).padding(.top, 5)
+    }
+}
+
+private struct ToolInlineDiffCard: View {
+    let diff: ToolInlineDiff
+    @UILocalization private var L
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                if !diff.path.isEmpty {
+                    Button {
+                        var url = URLComponents(); url.scheme = "perch-file"
+                        url.queryItems = [URLQueryItem(name: "path", value: diff.path)]
+                        if let target = url.url {
+                            NotificationCenter.default.post(name: .init("PerchOpenConversationFile"), object: target)
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "doc.text").font(.system(size: ReplyStyle.captionSize - 1))
+                            Text(verbatim: (diff.path as NSString).lastPathComponent)
+                                .lineLimit(1).truncationMode(.middle)
+                        }.foregroundStyle(Color.primary.opacity(0.82))
+                    }.buttonStyle(.plain).help(Text(verbatim: diff.path))
+                }
+                Spacer(minLength: 0)
+                if diff.stat.additions > 0 || diff.stat.deletions > 0 {
+                    EditStatText(stat: diff.stat)
+                }
+            }.font(.system(size: ReplyStyle.captionSize))
+            VStack(alignment: .leading, spacing: 1) {
+                ForEach(Array(diff.lines.enumerated()), id: \.offset) { _, line in
+                    Text(verbatim: line.text)
+                        .font(.system(size: ReplyStyle.captionSize, design: .monospaced))
+                        .foregroundStyle(foreground(for: line.kind))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 1.5)
+                        .background(background(for: line.kind))
+                }
+                if diff.truncatedCount > 0 {
+                    Text(verbatim: L("… 其余 \(diff.truncatedCount) 行已折叠"))
+                        .font(.system(size: ReplyStyle.captionSize))
+                        .foregroundStyle(WorkbenchTheme.quiet)
+                        .padding(.top, 4)
+                }
+            }.textSelection(.enabled)
+        }
+    }
+    private func foreground(for kind: ToolInlineDiff.LineKind) -> Color {
+        switch kind {
+        case .added: return Color.green.opacity(0.92)
+        case .removed: return Color.red.opacity(0.92)
+        case .header: return WorkbenchTheme.quiet
+        case .context: return Color.primary.opacity(0.75)
+        }
+    }
+    private func background(for kind: ToolInlineDiff.LineKind) -> Color {
+        switch kind {
+        case .added: return Color.green.opacity(0.09)
+        case .removed: return Color.red.opacity(0.09)
+        case .header, .context: return .clear
+        }
     }
 }

@@ -234,23 +234,176 @@ private struct ActivityBarCheckFixture: View {
         if let payload = note.object as? ConversationActionPayload { receivedActions.append(payload.action) }
     }
     defer { NotificationCenter.default.removeObserver(token) }
-    var returned = 0
     let context = ConversationActionContext(hostID: UUID(), kind: .kimi, sessionID: "inline-check",
                                             recapKey: "inline-check:1", recapMessageID: "final-answer")
     let activityEntry = ConversationTimelineEntry.make(runningMessages, isRunning: true).last { $0.presentation == .activity }!
     let projectedTools = ToolVisibilityProjection().update(runningMessages, sessionID: "inline-running", running: busyIDs, online: true).tools
-    let inlineHost = NSHostingView(rootView: VStack(spacing: 12) {
-        KimiActivityView(entry: activityEntry, tools: projectedTools, api: nil, sessionId: "inline-running",
+    let userMentionMsg = try decode([[
+        "id": "u-mention", "role": "user", "created_at": "1",
+        "content": [["type": "text", "text": "@\"/workspace/Sources/AgentWorkbench/ToolActivityView.swift\" @\"/workspace/Sources/WorkbenchCore/ToolPresentation.swift\" 对齐正文与工具卡的视觉细节"]]
+    ]])[0]
+    let exploreRaw: [[String: Any]] = [
+        ["id": "e1", "role": "assistant", "created_at": "2", "content": [
+            ["type": "tool_use", "tool_call_id": "r1", "tool_name": "Read",
+             "input": ["path": "/workspace/Sources/AgentWorkbench/ToolActivityView.swift", "line_offset": 1, "n_lines": 120]],
+            ["type": "tool_use", "tool_call_id": "r2", "tool_name": "Read",
+             "input": ["path": "/workspace/Sources/AgentWorkbench/ToolActivityView.swift", "line_offset": 240, "n_lines": 95]],
+            ["type": "tool_use", "tool_call_id": "g1", "tool_name": "Grep",
+             "input": ["pattern": "ThoughtDisclosure"]]
+        ]],
+        ["id": "e1-res", "role": "tool", "created_at": "3", "content": [
+            ["type": "tool_result", "tool_call_id": "r1", "is_error": false, "output": "ok"],
+            ["type": "tool_result", "tool_call_id": "r2", "is_error": false, "output": "ok"],
+            ["type": "tool_result", "tool_call_id": "g1", "is_error": false, "output": "ok"]
+        ]]
+    ]
+    let exploreMessages = try decode(exploreRaw)
+    let exploreEntry = ConversationTimelineEntry.make(exploreMessages, isRunning: false).first!
+    let exploreTools = ToolVisibilityProjection().update(exploreMessages, sessionID: "explore-check", running: [], online: true).tools
+    let editTool = VisibleTool(
+        id: "edit-showcase", name: "Edit",
+        input: .object([
+            "path": .string("/workspace/Sources/AgentWorkbench/ToolActivityView.swift"),
+            "old_string": .string("let label = L(\"读取与搜索 · \\(items.count) 次调用\")\nText(verbatim: label).lineLimit(1)"),
+            "new_string": .string("let label = ToolPresentation.explorationBucketSummary(items)\nText(verbatim: label).fixedSize()")
+        ]),
+        output: .string("Replaced 1 occurrence"),
+        status: .succeeded)
+    let slowBashTool = VisibleTool(
+        id: "slow-bash", name: "Bash",
+        input: .object(["command": .string("/bin/zsh -lc \"cd /workspace && swift test --filter WorkbenchChecks\"")]),
+        output: .string("Wall time: 14.2 seconds\nAll tests passed."),
+        status: .succeeded)
+    let longExternal = ActivityNarrative(
+        turnID: "turn", stageID: "stage:external", phase: .exploring,
+        subject: "性能分析",
+        headline: "已确认瓶颈为全量候选冷仿真导致整页阻塞，非 trace 加载问题，建议前端渐进渲染及后端优化搜索模式。",
+        source: .external, lifecycle: .final)
+    let foldRowItem = ConversationPresentationModel.Row(
+        entry: activityEntry, tools: projectedTools,
+        activity: ActivityNarrativeRow(narrative: longExternal, isAnchor: true, stageClosed: true))
+    ConversationReadingMemory.shared.expansions["upgrade-showcase:edit:expanded"] = true
+    ConversationReadingMemory.shared.expansions["upgrade-showcase:collapsed-thought:thought"] = false
+    let collapsedThought = "先检查旧布局的截断原因。\n确认 `!busy` 守卫已生效，继续补充边界校验与内联 Diff 视图。"
+    let streamingThoughtMsg = try decode([[
+        "id": "t-live", "role": "assistant", "created_at": "4",
+        "content": [["type": "thinking", "thinking": """
+        **核对工具卡内联 Diff 与代码块折叠**
+        <!-- -->
+        - 将 `Edit` 工具卡的原始 JSON 替换为红绿双色 `ToolInlineDiffCard`，保留文件跳转与行数统计。
+        ```swift
+        struct ToolInlineDiffCard: View {
+            let diff: ToolInlineDiff
+            var body: some View { EmptyView() }
+        }
+        ```
+        继续验证 10 秒慢命令耗时阈值与收起态单行摘要。
+        """]]
+    ]])
+    let inlineHost = NSHostingView(rootView: VStack(alignment: .leading, spacing: 14) {
+        KimiMessageView(message: userMentionMsg, tools: [:], api: nil, sessionId: "inline-running")
+        KimiActivityView(entry: exploreEntry, tools: exploreTools, api: nil, sessionId: "explore-check",
                          isLive: true, planProgress: progressLive, reduceMotionOverride: false)
             .environment(\.conversationActionContext, context)
-        ReturnToLatestButton(isVisible: true,
-                             waitingRequest: TurnRequest(kind: .approval, text: "rm -rf .build/release"),
-                             pendingCount: 1,
-                             action: { returned += 1 })
-    }.environment(\.locale, Locale(identifier: "zh-Hans")).frame(width: 720, height: 200))
+        KimiToolCard(tool: exploreTools["r1"]!, mergedReadRange: ":1–120, 240–334")
+        KimiToolCard(tool: slowBashTool)
+        ThoughtDisclosure(text: collapsedThought)
+            .environment(\.conversationMemoryKey, "upgrade-showcase:collapsed-thought")
+        ThoughtOutput(messages: streamingThoughtMsg, finished: false)
+            .environment(\.conversationMemoryKey, "upgrade-showcase:live-thought")
+        KimiToolCard(tool: editTool)
+            .environment(\.conversationMemoryKey, "upgrade-showcase:edit")
+        Divider().opacity(0.35)
+        ProcessFoldRow(rows: [foldRowItem], api: nil, sessionId: "inline-running")
+            .environment(\.conversationActionContext, context)
+    }.padding(20).environment(\.locale, Locale(identifier: "zh-Hans")).frame(width: 680, height: 670)
+        .background(WorkbenchTheme.contentBackground))
     window.contentView = inlineHost
-    try await Task.sleep(for: .milliseconds(350))
+    window.setContentSize(NSSize(width: 680, height: 670))
+    for (suffix, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
+        window.appearance = NSAppearance(named: appearance)
+        try await Task.sleep(for: .milliseconds(350))
+        inlineHost.layoutSubtreeIfNeeded()
+        if let bitmap = inlineHost.bitmapImageRepForCachingDisplay(in: inlineHost.bounds) {
+            inlineHost.cacheDisplay(in: inlineHost.bounds, to: bitmap)
+            try? bitmap.representation(using: .png, properties: [:])?.write(
+                to: URL(fileURLWithPath: "/private/tmp/perch-design-upgrade-\(suffix).png"))
+        }
+    }
+    window.appearance = NSAppearance(named: .aqua)
+    try await Task.sleep(for: .milliseconds(200))
     inlineHost.layoutSubtreeIfNeeded()
     precondition(!glints(inlineHost).isEmpty, "Live inline KimiActivityView header carries ShimmerGlint")
+
+    let sqlNoteText = """
+    规划已完成，开始派发：新计划有约 55.05 万项待算，已完成 189 项。旧结果已通过库存核对复用。
+
+    按这个缺口，普通计算至少要达到约 2.3 万项/小时才能在 24 小时内完成；跨机阶段还需要额外时间。我现在测执行窗口，并核对刚出现的 10 个失败。
+    """
+    let sqlStageMessages = try decode([
+        ["id": "sql-note", "role": "assistant", "created_at": "1",
+         "content": [["type": "text", "text": sqlNoteText]]],
+        ["id": "sql-calls", "role": "assistant", "created_at": "2", "content": (1...8).map { i -> [String: Any] in
+            if i == 8 {
+                return ["type": "tool_use", "tool_call_id": "sql-\(i)", "tool_name": "Edit",
+                        "input": ["path": "/workspace/sql/query.sql", "old_string": "SELECT *", "new_string": "SELECT id,\n  status,\n  created_at,\n  updated_at,\n  batch_key,\n  score,\n  elapsed_ms"]]
+            }
+            return ["type": "tool_use", "tool_call_id": "sql-\(i)", "tool_name": "Read",
+                    "input": ["path": "/workspace/sql/step_\(i).sql"]]
+        }],
+        ["id": "sql-results", "role": "tool", "created_at": "3", "content": (1...8).map { i in
+            ["type": "tool_result", "tool_call_id": "sql-\(i)", "is_error": false, "output": "ok"]
+        }]
+    ])
+    let sqlEntries = ConversationTimelineEntry.make(sqlStageMessages, isRunning: true)
+    let sqlTools = ToolVisibilityProjection().update(sqlStageMessages, sessionID: "sql-live", running: [], online: true).tools
+    let sqlProjection = ActivityNarrativeProjection.make(entries: sqlEntries, tools: sqlTools, isRunning: true)
+    precondition(sqlProjection.stages.allSatisfy { $0.narrative.phase != .blocked },
+                 "Progress note mentioning failures must not mark its stage blocked")
+    let sqlNoteNarrative = sqlProjection.stages.first!.narrative
+    let sqlEditNarrative = ActivityNarrative(
+        turnID: "turn", stageID: "stage:sql", phase: .editing,
+        subject: "SQL 性能优化",
+        headline: "用户要求将任务耗时压缩至 1 天，正在调整 SQL 查询以优化性能。",
+        source: .external, lifecycle: .streaming)
+    let sqlActivityEntry = sqlEntries.last { $0.presentation == .activity }!
+    let streamingBenchTool = VisibleTool(
+        id: "bench-run", name: "Bash",
+        input: .object(["command": .string("python3 scripts/bench_window.py --shards 8")]),
+        progress: .string("[001/189] warming connection pool...\n[140/189] batch_key=shard_04 throughput=24,120/h\n[189/189] verifying 10 retry candidates..."),
+        status: .running)
+    let localNarrative = ActivityNarrative(
+        turnID: "turn", stageID: "stage:local", phase: .validating,
+        subject: "python3", headline: "运行测试", source: .local, lifecycle: .streaming)
+    let todoProgress = TurnStatus.Progress(done: 2, total: 4, currentTitle: "压测 2.3 万项/小时执行窗口与跨机吞吐")
+    let sqlFoldItem = ConversationPresentationModel.Row(
+        entry: sqlActivityEntry, tools: sqlTools,
+        activity: ActivityNarrativeRow(narrative: sqlEditNarrative, isAnchor: true, stageClosed: true))
+    let liveTailHost = NSHostingView(rootView: VStack(alignment: .leading, spacing: 16) {
+        ActivityNarrativeHistoryView(narrative: sqlNoteNarrative, sourceText: sqlNoteText)
+        KimiActivityView(entry: sqlActivityEntry, tools: sqlTools, api: nil, sessionId: "sql-live",
+                         narrative: sqlEditNarrative, isLive: true, reduceMotionOverride: false)
+            .environment(\.conversationActionContext, context)
+        Divider().opacity(0.35)
+        KimiActivityView(entry: activityEntry, tools: ["command": streamingBenchTool], api: nil, sessionId: "sql-bench",
+                         narrative: localNarrative, isLive: true, planProgress: todoProgress, reduceMotionOverride: false)
+            .environment(\.conversationActionContext, context)
+        Divider().opacity(0.35)
+        ProcessFoldRow(rows: [sqlFoldItem], api: nil, sessionId: "sql-live", completedDuration: 83)
+            .environment(\.conversationActionContext, context)
+    }.padding(24).environment(\.locale, Locale(identifier: "zh-Hans")).frame(width: 680, height: 440)
+        .background(WorkbenchTheme.contentBackground))
+    window.contentView = liveTailHost
+    window.setContentSize(NSSize(width: 680, height: 440))
+    for (suffix, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
+        window.appearance = NSAppearance(named: appearance)
+        try await Task.sleep(for: .milliseconds(350))
+        liveTailHost.layoutSubtreeIfNeeded()
+        if let bitmap = liveTailHost.bitmapImageRepForCachingDisplay(in: liveTailHost.bounds) {
+            liveTailHost.cacheDisplay(in: liveTailHost.bounds, to: bitmap)
+            try? bitmap.representation(using: .png, properties: [:])?.write(
+                to: URL(fileURLWithPath: "/private/tmp/perch-live-tail-\(suffix).png"))
+        }
+    }
     print("PASS: the running title sweeps once per progress event; status line clicks reach the line through its title; idle status line takes no space; activity bar keeps one height and the reading viewport across running/pending/offline/stopping/failed/ended, wide/narrow, light/dark; pending review and reconnect actions respond; inline stage header and Recap target verified")
 }

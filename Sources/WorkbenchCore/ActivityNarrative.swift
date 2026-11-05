@@ -246,11 +246,11 @@ public enum ActivityNarrativeProjection {
         var entryStageIDs: [String: String] = [:]
 
         // Keywords matched against agent text in either language, not UI labels.
+        // Only unresolved tool states (missingResult / disconnected) mark a stage
+        // `.blocked`; ordinary commentary mentioning "error" or "失败" is prose.
         func phase(from text: String) -> ActivityNarrativePhase {
             NarrativeTextCache.phase(for: text) {
                 let value = text.lowercased()
-                if value.contains("fail") || value.contains("error") || value.contains("block")
-                    || value.contains("失败") || value.contains("错误") || value.contains("受阻") { return .blocked } // l10n-ignore
                 if value.contains("test") || value.contains("build") || value.contains("lint") || value.contains("verify")
                     || value.contains("测试") || value.contains("构建") || value.contains("验证") || value.contains("检查") { return .validating } // l10n-ignore
                 if value.contains("edit") || value.contains("implement") || value.contains("write") || value.contains("fix")
