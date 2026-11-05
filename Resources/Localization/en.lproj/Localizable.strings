@@ -1843,6 +1843,14 @@
 
 "下一个文件标签页" = "Next file tab";
 
+"关闭其他标签页" = "Close other tabs";
+
+"关闭右侧标签页" = "Close tabs to the right";
+
+"关闭全部标签页" = "Close all tabs";
+
+"复制路径" = "Copy path";
+
 "引用到：%@" = "Quote to: %@";
 
 "加入会话草稿，检查后再发送。" = "Add to the session draft and review before sending.";

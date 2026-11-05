@@ -12,7 +12,7 @@ struct FileTabStrip: View {
                 HStack(spacing: 4) {
                     ForEach(browser.documents.tabs) { tab in
                         HStack(spacing: 6) {
-                            Button((tab.path as NSString).lastPathComponent) { browser.open(tab.path) }
+                            Button(Self.title(for: tab, in: browser.documents.tabs)) { browser.open(tab.path) }
                                 .lineLimit(1).help(tab.path)
                             Button { browser.closeFile(tab.path) } label: { Image(systemName: "xmark").font(.system(size: 9)) }
                                 .accessibilityLabel("关闭文件 \((tab.path as NSString).lastPathComponent)")
@@ -20,11 +20,35 @@ struct FileTabStrip: View {
                             .padding(.horizontal, 10).padding(.vertical, 8)
                             .foregroundStyle(tab.path == browser.path ? Color.primary : .secondary)
                             .background(tab.path == browser.path ? Color.primary.opacity(0.06) : .clear, in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row))
+                            .contextMenu {
+                                Button("关闭") { browser.closeFile(tab.path) }
+                                Button("关闭其他标签页") { browser.closeOtherFiles(tab.path) }
+                                    .disabled(browser.documents.tabs.count < 2)
+                                Button("关闭右侧标签页") { browser.closeFilesAfter(tab.path) }
+                                    .disabled(tab.path == browser.documents.tabs.last?.path)
+                                Divider()
+                                Button("关闭全部标签页") { browser.closeAllFiles() }
+                                Divider()
+                                Button("复制路径") {
+                                    NSPasteboard.general.clearContents()
+                                    NSPasteboard.general.setString(tab.path, forType: .string)
+                                }
+                            }
                     }
                 }.padding(.horizontal, 8).padding(.vertical, 3)
             }.scrollIndicators(.hidden).fixedSize(horizontal: false, vertical: true)
                 .onChange(of: browser.documents.selected, initial: true) { _, path in if let path { proxy.scrollTo(path) } }
         }
+    }
+
+    /// Tabs are titled by file name; the parent folder disambiguates duplicates.
+    static func title(for tab: FileReadingTab, in tabs: [FileReadingTab]) -> String {
+        let name = (tab.path as NSString).lastPathComponent
+        guard tabs.contains(where: { $0.path != tab.path && ($0.path as NSString).lastPathComponent == name }) else { return name }
+        let directory = (tab.path as NSString).deletingLastPathComponent
+        let parent = (directory as NSString).lastPathComponent
+        guard directory != "/", !parent.isEmpty else { return name }
+        return "\(parent)/\(name)"
     }
 }
 

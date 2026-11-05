@@ -66,6 +66,22 @@ final class FileWorkspaceState {
         if selected == path { selected = tabs.isEmpty ? nil : tabs[min(index, tabs.count - 1)].path }
         save(); return selected
     }
+    func closeOthers(of path: String) -> String? {
+        guard tabs.contains(where: { $0.path == path }) else { return selected }
+        tabs = tabs.filter { $0.path == path }
+        selected = path
+        save(); return selected
+    }
+    func closeAfter(_ path: String) -> String? {
+        guard let index = tabs.firstIndex(where: { $0.path == path }), index + 1 < tabs.count else { return selected }
+        if let current = selected, tabs[(index + 1)...].contains(where: { $0.path == current }) { selected = path }
+        tabs = Array(tabs.prefix(index + 1))
+        save(); return selected
+    }
+    func closeAll() {
+        tabs = []; selected = nil
+        save()
+    }
     func setReading(_ reading: Bool) {
         guard let index = tabs.firstIndex(where: { $0.path == selected }) else { return }
         tabs[index].reading = reading

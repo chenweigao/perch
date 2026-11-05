@@ -72,7 +72,47 @@ import WorkbenchCore
     precondition(model.fileBrowser.documents.tabs.count == 2, "Closing and reopening must preserve file tabs")
     precondition(abs(model.fileWindow.window!.contentView!.bounds.width - 720) < 1,
                  "The native reader must restore its resized width, got \(model.fileWindow.window!.contentView!.bounds.width)")
-    print("PASS: native file window, 480/720/1100 light/dark widths, chrome <100pt, selection, tabs, close cancellation and restored frame")
+    // Batch close: a surviving current read stays mounted; a closed one moves
+    // the reader to the surviving selection; closing all empties the strip.
+    let mounted = model.fileBrowser.completedFileReadID
+    model.fileBrowser.closeOtherFiles(file.path)
+    precondition(model.fileBrowser.documents.tabs.map(\.path) == [file.path] && model.fileBrowser.path == file.path
+        && model.fileBrowser.completedFileReadID == mounted,
+                 "Closing other tabs keeps the surviving read mounted")
+    model.fileBrowser.open(report.path)
+    try await settle()
+    precondition(model.fileBrowser.documents.tabs.map(\.path) == [file.path, report.path])
+    model.fileBrowser.closeFilesAfter(file.path)
+    try await settle()
+    precondition(model.fileBrowser.documents.tabs.map(\.path) == [file.path] && model.fileBrowser.path == file.path,
+                 "Closing tabs after an earlier tab moves the displaced reader to it")
+    model.fileBrowser.open(report.path)
+    try await settle()
+    model.fileBrowser.closeAllFiles()
+    precondition(model.fileBrowser.documents.tabs.isEmpty && model.fileBrowser.path.isEmpty && model.fileBrowser.fileRequest == nil,
+                 "Closing all tabs empties the strip and cancels the mounted read")
+    let titled = [FileReadingTab(path: "/a/main.swift"), FileReadingTab(path: "/b/main.swift"), FileReadingTab(path: "/a/Other.swift")]
+    precondition(FileTabStrip.title(for: titled[0], in: titled) == "a/main.swift"
+        && FileTabStrip.title(for: titled[1], in: titled) == "b/main.swift"
+        && FileTabStrip.title(for: titled[2], in: titled) == "Other.swift",
+        "Duplicate tab names are disambiguated by parent folder")
+    let isolated = FileWorkspaceState(defaults: .standard)
+    let hostID = UUID()
+    isolated.activate(host: hostID, cwd: "/p")
+    for path in ["/p/one.swift", "/p/two.swift", "/p/three.swift", "/p/four.swift"] { isolated.select(path) }
+    precondition(isolated.closeAfter("/p/two.swift") == "/p/two.swift" && isolated.tabs.map(\.path) == ["/p/one.swift", "/p/two.swift"],
+                 "Closing after a tab moves the selection back to it")
+    precondition(isolated.closeAfter("/p/two.swift") == "/p/two.swift" && isolated.tabs.count == 2,
+                 "Closing after the last tab is a no-op")
+    isolated.select("/p/three.swift"); isolated.select("/p/four.swift")
+    precondition(isolated.closeOthers(of: "/p/one.swift") == "/p/one.swift" && isolated.tabs.map(\.path) == ["/p/one.swift"])
+    let restored = FileWorkspaceState(defaults: .standard)
+    restored.activate(host: hostID, cwd: "/p")
+    precondition(restored.tabs.map(\.path) == ["/p/one.swift"] && restored.selected == "/p/one.swift",
+                 "Batch closes persist like single closes")
+    isolated.closeAll()
+    precondition(isolated.tabs.isEmpty && isolated.selected == nil)
+    print("PASS: native file window, 480/720/1100 light/dark widths, chrome <100pt, selection, tabs, batch close, close cancellation and restored frame")
     fflush(stdout)
     if CommandLine.arguments.contains("preview") {
         model.fileWindow.window?.setContentSize(NSSize(width: 960, height: 640))
