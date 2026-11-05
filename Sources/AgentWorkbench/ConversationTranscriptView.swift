@@ -186,6 +186,20 @@ struct KimiMessageView: View {
                         runtimeContext(split.context)
                     } else if part.isRuntimeContext {
                         runtimeContext(part.text ?? "")
+                    } else if isUserMessage, let raw = part.text, raw.contains("@\"") {
+                        let refs = ProjectFileReference.references(in: raw)
+                        if !refs.isEmpty {
+                            UserPromptFileMentionRow(references: refs)
+                            let compactText = Self.compactUserMentionText(raw, references: refs)
+                            if !compactText.isEmpty {
+                                KimiMarkdown(text: compactText, sessionID: sessionId, messageID: message.id)
+                                    .environment(\.isConversationBodyText, true)
+                            }
+                        } else {
+                            KimiMarkdown(text: raw, sessionID: sessionId, messageID: message.id,
+                                         preparation: markdownPreparation)
+                                .environment(\.isConversationBodyText, true)
+                        }
                     } else {
                         KimiMarkdown(text: part.text ?? "", sessionID: sessionId, messageID: message.id,
                                      preparation: markdownPreparation)
@@ -200,6 +214,52 @@ struct KimiMessageView: View {
                 }
             }
         }
+    }
+    private static func compactUserMentionText(_ raw: String, references: [ProjectFileReference]) -> String {
+        let mutable = NSMutableString(string: raw)
+        for ref in references.reversed() {
+            mutable.replaceCharacters(in: ref.range, with: "")
+        }
+        return (mutable as String)
+            .replacingOccurrences(of: #" {2,}"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+private struct UserPromptFileMentionRow: View {
+    let references: [ProjectFileReference]
+    var body: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 6) {
+                ForEach(Array(references.enumerated()), id: \.offset) { _, ref in
+                    let name = (ref.path as NSString).lastPathComponent
+                    Button {
+                        var url = URLComponents(); url.scheme = "perch-file"
+                        url.queryItems = [URLQueryItem(name: "path", value: ref.path)]
+                        if let target = url.url {
+                            NotificationCenter.default.post(name: .init("PerchOpenConversationFile"), object: target)
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "doc.text")
+                                .font(.system(size: ReplyStyle.captionSize - 1, weight: .medium))
+                                .foregroundStyle(WorkbenchTheme.quiet)
+                            Text(verbatim: name)
+                                .font(.system(size: ReplyStyle.captionSize, weight: .medium, design: .monospaced))
+                                .foregroundStyle(Color.primary.opacity(0.84))
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(Color.primary.opacity(0.055),
+                                    in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .help(Text(verbatim: ref.path))
+                }
+            }
+        }
+        .scrollIndicators(.never, axes: .horizontal)
     }
 }
 
@@ -1740,6 +1800,7 @@ private final class ConversationEntryController: NSViewController {
               message.content.count == 1, let part = message.content.first,
               part.type == "text", !part.isRuntimeContext, part.skillContextSplit == nil else { return nil }
         let source = part.text ?? ""
+        if source.contains("@\""), !ProjectFileReference.references(in: source).isEmpty { return nil }
         let preparation = nativeRowPreparations.user(session: content.sessionId, messageID: message.id, source: source) {
             NativeParagraphContent.prepare(source, lineHeight: UserMessageStyle.lineHeight)
         }
@@ -2385,9 +2446,49 @@ private enum ThoughtTextStyle {
          .paragraphStyle: paragraphStyle(lineHeight: lineHeight)]
     }
     static func attributed(_ source: String) -> NSAttributedString {
+        attributed(source, elideCodeBlocks: false)
+    }
+    static func previewAttributed(_ source: String) -> NSAttributedString {
+        attributed(source, elideCodeBlocks: true)
+    }
+    private static func isCommentSentinel(_ trimmed: String) -> Bool {
+        if trimmed.hasPrefix("<!--") && trimmed.hasSuffix("-->") { // l10n-ignore
+            let body = trimmed.dropFirst(4).dropLast(3).trimmingCharacters(in: .whitespaces)
+            return body.isEmpty
+        }
+        return trimmed == "<!--" // l10n-ignore
+    }
+    /// Latest meaningful prose line for collapsed thought headers (ZCode / Oh My Pi style).
+    static func latestSummaryLine(_ source: String) -> String? {
+        guard !source.isEmpty else { return nil }
+        var inCodeBlock = false
+        var latest: String?
+        for rawLine in source.components(separatedBy: "\n") {
+            let trimmed = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.hasPrefix("```") { // l10n-ignore
+                inCodeBlock.toggle()
+                continue
+            }
+            if inCodeBlock || trimmed.isEmpty || isCommentSentinel(trimmed) { continue }
+            var clean = trimmed
+            for prefix in ["#### ", "### ", "## ", "# ", "- ", "* "] where clean.hasPrefix(prefix) { // l10n-ignore
+                clean = String(clean.dropFirst(prefix.count))
+                break
+            }
+            clean = clean.replacingOccurrences(of: "**", with: "")
+                .replacingOccurrences(of: "`", with: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !clean.isEmpty && clean != "..." && clean != "…" {
+                latest = clean
+            }
+        }
+        return latest
+    }
+    static func attributed(_ source: String, elideCodeBlocks: Bool) -> NSAttributedString {
         guard !source.isEmpty else { return NSAttributedString(string: "", attributes: attributes) }
-        if !source.contains("`") && !source.contains("*") && !source.contains("#")
-            && !source.contains("\n\n") && !source.hasPrefix("- ") && !source.contains("\n- ") && !source.contains("\n* ") {
+        if !elideCodeBlocks && !source.contains("`") && !source.contains("*") && !source.contains("#")
+            && !source.contains("<!--") && !source.contains("\n\n")
+            && !source.hasPrefix("- ") && !source.contains("\n- ") && !source.contains("\n* ") {
             return NSAttributedString(string: source, attributes: attributes)
         }
         let size = ReplyStyle.Process.thoughtSize
@@ -2401,20 +2502,46 @@ private enum ThoughtTextStyle {
         let result = NSMutableAttributedString()
         var lastLineRange: NSRange?
         var inCodeBlock = false
+        var elidedCodeLines = 0
+        func flushElidedCodeBlock() {
+            guard elidedCodeLines > 0 else { return }
+            if result.length > 0 {
+                var newlineAttributes = result.attributes(at: result.length - 1, effectiveRange: nil)
+                newlineAttributes.removeValue(forKey: .backgroundColor)
+                result.append(NSAttributedString(string: "\n", attributes: newlineAttributes))
+            }
+            let start = result.length
+            let placeholder = L("⋯ 代码草稿 · \(elidedCodeLines) 行")
+            result.append(NSAttributedString(string: placeholder, attributes: [
+                .font: codeFont, .foregroundColor: ink,
+                .backgroundColor: codeTint, .paragraphStyle: tightParagraph
+            ]))
+            lastLineRange = NSRange(location: start, length: result.length - start)
+            elidedCodeLines = 0
+        }
         for rawLine in source.components(separatedBy: "\n") {
             let trimmed = rawLine.trimmingCharacters(in: .whitespaces)
             if trimmed.hasPrefix("```") { // l10n-ignore
+                if inCodeBlock && elideCodeBlocks { flushElidedCodeBlock() }
                 inCodeBlock.toggle()
                 continue
             }
+            if !inCodeBlock && isCommentSentinel(trimmed) { continue }
             if trimmed.isEmpty {
-                if let range = lastLineRange {
+                if !inCodeBlock, let range = lastLineRange {
                     result.addAttribute(.paragraphStyle, value: separatedParagraph, range: range)
+                } else if inCodeBlock && elideCodeBlocks {
+                    elidedCodeLines += 1
                 }
                 continue
             }
+            if inCodeBlock && elideCodeBlocks {
+                elidedCodeLines += 1
+                continue
+            }
             if result.length > 0 {
-                let newlineAttributes = result.attributes(at: result.length - 1, effectiveRange: nil)
+                var newlineAttributes = result.attributes(at: result.length - 1, effectiveRange: nil)
+                newlineAttributes.removeValue(forKey: .backgroundColor)
                 result.append(NSAttributedString(string: "\n", attributes: newlineAttributes))
             }
             let start = result.length
@@ -2442,6 +2569,7 @@ private enum ThoughtTextStyle {
             }
             lastLineRange = NSRange(location: start, length: result.length - start)
         }
+        if inCodeBlock && elideCodeBlocks { flushElidedCodeBlock() }
         return result.length > 0 ? result : NSAttributedString(string: source, attributes: attributes)
     }
     private static func appendInline(_ line: String, into result: NSMutableAttributedString,
@@ -2543,10 +2671,24 @@ private struct ThoughtText: View {
 private struct ThoughtToggle: View {
     /// A looked-up `Text`, so callers pass `Text("…")` rather than a raw string.
     let title: Text
+    var summary: String? = nil
     @Binding var expanded: Bool
     var body: some View {
         DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
-            title.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(.secondary)
+            HStack(spacing: 6) {
+                title.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(.secondary).fixedSize()
+                if !expanded, let summary, !summary.isEmpty {
+                    Text(verbatim: "·")
+                        .font(.system(size: ReplyStyle.Process.labelSize))
+                        .foregroundStyle(WorkbenchTheme.quiet)
+                        .fixedSize()
+                    Text(verbatim: summary)
+                        .font(.system(size: ReplyStyle.captionSize))
+                        .foregroundStyle(WorkbenchTheme.quiet)
+                        .lineLimit(1)
+                        .truncationMode(.head)
+                }
+            }
         }.disclosureGroupStyle(ProcessDisclosureStyle())
     }
 }
@@ -2556,7 +2698,9 @@ struct ThoughtDisclosure: View {
     @RememberedExpansion("thought") private var expanded
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
-            ThoughtToggle(title: Text("Thoughts"), expanded: $expanded)
+            ThoughtToggle(title: Text("Thoughts"),
+                          summary: expanded ? nil : ThoughtTextStyle.latestSummaryLine(text),
+                          expanded: $expanded)
             if expanded { ThoughtText(text: text) }
         }
     }
@@ -2564,7 +2708,7 @@ struct ThoughtDisclosure: View {
 
 /// A thought still streaming, open by default at six lines that follow the
 /// stream (with in-place full expansion), or one that ended the turn without a reply.
-private struct ThoughtOutput: View {
+struct ThoughtOutput: View {
     let messages: [KimiMessage]
     let finished: Bool
     private var fullText: String { messages.flatMap(\.content).compactMap(\.thinking).joined(separator: "\n\n") }
@@ -2579,7 +2723,9 @@ private struct ThoughtOutput: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
             HStack {
-                ThoughtToggle(title: finished ? Text("Thoughts · No response") : Text("Thinking"), expanded: $expanded)
+                ThoughtToggle(title: finished ? Text("Thoughts · No response") : Text("Thinking"),
+                              summary: expanded ? nil : ThoughtTextStyle.latestSummaryLine(fullText),
+                              expanded: $expanded)
                 if expanded && !finished && (previewOverflows || showFullText) {
                     Button { showFullText.toggle() } label: {
                         Label(showFullText ? "Collapse full thoughts" : "View full thoughts",
@@ -2635,7 +2781,7 @@ private struct ThinkingTextViewport: NSViewRepresentable {
         scroll.overflowChanged = { if overflows != $0 { overflows = $0 } }
         guard context.coordinator.previous != text,
               let view = scroll.documentView as? NSTextView, let storage = view.textStorage else { return }
-        storage.setAttributedString(ThoughtTextStyle.attributed(text))
+        storage.setAttributedString(ThoughtTextStyle.previewAttributed(text))
         context.coordinator.previous = text
         scroll.scheduleFollow()
     }
