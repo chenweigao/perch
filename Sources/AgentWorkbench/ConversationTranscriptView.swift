@@ -2286,11 +2286,12 @@ struct ProcessFoldRow: View {
                     }
             }
         } label: {
+            let countLabel = toolCalls > 0 ? L("\(toolCalls) 次调用") : L("\(rows.count) 条记录")
             // Secondary ink at regular weight, like the live process rows it replaces.
             HStack(alignment: .firstTextBaseline, spacing: 7) {
                 Image(systemName: "list.bullet.rectangle").accessibilityHidden(true)
                 if let externalHeadline {
-                    Text(verbatim: externalHeadline)
+                    Text(verbatim: "\(externalHeadline) · \(countLabel)")
                         .lineLimit(2)
                         .truncationMode(.tail)
                         .fixedSize(horizontal: false, vertical: true)
@@ -2298,8 +2299,8 @@ struct ProcessFoldRow: View {
                         .help(Text(verbatim: externalHeadline))
                 } else {
                     Text("思考与工具").fixedSize()
+                    Text(countLabel).fixedSize()
                 }
-                Text(toolCalls > 0 ? L("\(toolCalls) 次调用") : L("\(rows.count) 条记录")).fixedSize()
                 if let editStat, actionContext == nil {
                     Text(L("· \(editStat.files) 个文件 +\(editStat.additions) −\(editStat.deletions)"))
                         .monospacedDigit().fixedSize()
@@ -2307,24 +2308,33 @@ struct ProcessFoldRow: View {
                 if attention > 0 {
                     Text(L("· \(attention) 项需关注")).foregroundStyle(.orange).fixedSize()
                 }
+                if let editStat, actionContext != nil {
+                    Spacer(minLength: 4)
+                    editStatBadge(editStat).fixedSize().hidden().accessibilityHidden(true)
+                }
             }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(.secondary)
         }.disclosureGroupStyle(ProcessDisclosureStyle())
             .accessibilityValue(Text(expanded ? "已展开" : "已收起"))
             .overlay(alignment: .topTrailing) {
                 if let editStat, let actionContext {
                     Button { actionContext.post(.showChanges) } label: {
-                        HStack(spacing: 5) {
-                            Text(L("\(editStat.files) 个文件")).foregroundStyle(.secondary)
-                            EditStatText(stat: SessionEditStat(additions: editStat.additions, deletions: editStat.deletions))
-                        }
-                            .font(.system(size: ReplyStyle.captionSize))
-                            .padding(.horizontal, 4).frame(height: 28).contentShape(Rectangle())
+                        editStatBadge(editStat)
                     }.buttonStyle(WorkbenchDisclosureButtonStyle())
                         .help(Text("查看改动：本轮改了 \(editStat.files) 个文件"))
                         .accessibilityLabel(Text("查看改动"))
                         .accessibilityValue(Text(verbatim: L("本轮改了 \(editStat.files) 个文件") + " +\(editStat.additions) −\(editStat.deletions)"))
                 }
             }
+    }
+    private func editStatBadge(_ editStat: (files: Int, additions: Int, deletions: Int)) -> some View {
+        HStack(spacing: 5) {
+            Text(L("\(editStat.files) 个文件")).foregroundStyle(.secondary)
+            EditStatText(stat: SessionEditStat(additions: editStat.additions, deletions: editStat.deletions))
+        }
+        .font(.system(size: ReplyStyle.captionSize))
+        .padding(.horizontal, 4)
+        .frame(height: 28)
+        .contentShape(Rectangle())
     }
 }
 

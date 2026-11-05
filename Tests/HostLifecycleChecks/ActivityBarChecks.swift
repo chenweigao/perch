@@ -239,18 +239,35 @@ private struct ActivityBarCheckFixture: View {
                                             recapKey: "inline-check:1", recapMessageID: "final-answer")
     let activityEntry = ConversationTimelineEntry.make(runningMessages, isRunning: true).last { $0.presentation == .activity }!
     let projectedTools = ToolVisibilityProjection().update(runningMessages, sessionID: "inline-running", running: busyIDs, online: true).tools
-    let inlineHost = NSHostingView(rootView: VStack(spacing: 12) {
+    let longExternal = ActivityNarrative(
+        turnID: "turn", stageID: "stage:external", phase: .exploring,
+        subject: "性能分析",
+        headline: "已确认瓶颈为全量候选冷仿真导致整页阻塞，非 trace 加载问题，建议前端渐进渲染及后端优化搜索模式。",
+        source: .external, lifecycle: .final)
+    let foldRowItem = ConversationPresentationModel.Row(
+        entry: activityEntry, tools: projectedTools,
+        activity: ActivityNarrativeRow(narrative: longExternal, isAnchor: true, stageClosed: true))
+    let inlineHost = NSHostingView(rootView: VStack(alignment: .leading, spacing: 18) {
         KimiActivityView(entry: activityEntry, tools: projectedTools, api: nil, sessionId: "inline-running",
-                         isLive: true, planProgress: progressLive, reduceMotionOverride: false)
+                         narrative: longExternal, isLive: true, planProgress: progressLive, reduceMotionOverride: false)
+            .environment(\.conversationActionContext, context)
+        ProcessFoldRow(rows: [foldRowItem], api: nil, sessionId: "inline-running")
             .environment(\.conversationActionContext, context)
         ReturnToLatestButton(isVisible: true,
                              waitingRequest: TurnRequest(kind: .approval, text: "rm -rf .build/release"),
                              pendingCount: 1,
                              action: { returned += 1 })
-    }.environment(\.locale, Locale(identifier: "zh-Hans")).frame(width: 720, height: 200))
+    }.padding(20).environment(\.locale, Locale(identifier: "zh-Hans")).frame(width: 680, height: 260)
+        .background(Color(nsColor: .windowBackgroundColor)))
+    window.appearance = NSAppearance(named: .aqua)
     window.contentView = inlineHost
+    window.setContentSize(NSSize(width: 680, height: 260))
     try await Task.sleep(for: .milliseconds(350))
     inlineHost.layoutSubtreeIfNeeded()
+    if let bitmap = inlineHost.bitmapImageRepForCachingDisplay(in: inlineHost.bounds) {
+        inlineHost.cacheDisplay(in: inlineHost.bounds, to: bitmap)
+        try? bitmap.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: "/private/tmp/perch-fold-header.png"))
+    }
     precondition(!glints(inlineHost).isEmpty, "Live inline KimiActivityView header carries ShimmerGlint")
     print("PASS: the running title sweeps once per progress event; status line clicks reach the line through its title; idle status line takes no space; activity bar keeps one height and the reading viewport across running/pending/offline/stopping/failed/ended, wide/narrow, light/dark; pending review and reconnect actions respond; inline stage header and Recap target verified")
 }

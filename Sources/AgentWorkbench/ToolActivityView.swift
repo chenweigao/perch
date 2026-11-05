@@ -68,11 +68,12 @@ struct KimiActivityView: View {
         let _ = NavigationRenderMetrics.count("activity_row_tool_scan", by: items.count)
         #endif
         VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
                 DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         if let narrative {
-                            Text(verbatim: narrative.headline)
+                            let label = items.isEmpty ? narrative.headline : L("\(narrative.headline) · \(items.count) 次调用")
+                            Text(verbatim: label)
                                 .lineLimit(2)
                                 .truncationMode(.tail)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -83,9 +84,6 @@ struct KimiActivityView: View {
                                         ShimmerGlint(text: narrative.headline, size: ReplyStyle.captionSize, pulse: progressPulse(items))
                                     }
                                 }
-                            if !items.isEmpty {
-                                Text(verbatim: "· " + L("\(items.count) 次调用")).fixedSize()
-                            }
                         } else if entry.isExploration {
                             let label = L("读取与搜索 · \(items.count) 次调用")
                             Text(verbatim: label).fixedSize()
