@@ -68,22 +68,12 @@ struct KimiActivityView: View {
         let _ = NavigationRenderMetrics.count("activity_row_tool_scan", by: items.count)
         #endif
         VStack(alignment: .leading, spacing: 2) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
+            HStack(alignment: .center, spacing: 8) {
                 DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    HStack(spacing: 8) {
                         if let narrative {
-                            let label = items.isEmpty ? narrative.headline : L("\(narrative.headline) · \(items.count) 次调用")
-                            Text(verbatim: label)
-                                .lineLimit(2)
-                                .truncationMode(.tail)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .layoutPriority(1)
-                                .help(Text(verbatim: narrative.headline))
-                                .overlay(alignment: .topLeading) {
-                                    if activeStage && !reduceMotion {
-                                        ShimmerGlint(text: narrative.headline, size: ReplyStyle.captionSize, pulse: progressPulse(items))
-                                    }
-                                }
+                            let eyebrow = items.isEmpty ? narrative.phase.label : L("\(narrative.phase.label) · \(items.count) 次调用")
+                            Text(verbatim: eyebrow).fixedSize()
                         } else if entry.isExploration {
                             let label = L("读取与搜索 · \(items.count) 次调用")
                             Text(verbatim: label).fixedSize()
@@ -122,41 +112,33 @@ struct KimiActivityView: View {
                     }.font(.system(size: ReplyStyle.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
                 }.disclosureGroupStyle(ProcessDisclosureStyle())
                 if planProgress != nil || editStat != nil {
-                    HStack(spacing: 8) {
-                        if let planProgress {
-                            if let actionContext {
-                                Button { actionContext.post(.showTurnDetails) } label: {
-                                    HStack(spacing: 3) {
-                                        Text(verbatim: "\(planProgress.done) / \(planProgress.total)")
-                                        Image(systemName: "chevron.right").font(.system(size: ReplyStyle.captionSize - 2, weight: .semibold))
-                                    }.padding(.horizontal, 4).frame(height: 22).contentShape(Rectangle())
-                                }.buttonStyle(WorkbenchDisclosureButtonStyle())
-                                    .help(Text("在任务面板查看本轮详情"))
-                                    .accessibilityLabel(Text("本轮状态"))
-                                    .accessibilityValue(Text(verbatim: L("\(planProgress.done)/\(planProgress.total) 步")))
-                            } else {
-                                Text(verbatim: "\(planProgress.done) / \(planProgress.total)")
-                            }
-                        }
-                        if let editStat {
-                            if let actionContext {
-                                Button { actionContext.post(.showChanges) } label: {
-                                    EditStatText(stat: editStat.total)
-                                        .padding(.horizontal, 4).frame(height: 22).contentShape(Rectangle())
-                                }.buttonStyle(WorkbenchDisclosureButtonStyle())
-                                    .help(Text("查看改动：本轮改了 \(editStat.perFile.count) 个文件"))
-                                    .accessibilityLabel(Text("查看改动"))
-                                    .accessibilityValue(Text(verbatim: L("本轮改了 \(editStat.perFile.count) 个文件") + " +\(editStat.total.additions) −\(editStat.total.deletions)"))
-                            } else {
-                                EditStatText(stat: editStat.total)
-                            }
-                        }
-                    }.font(.system(size: ReplyStyle.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
-                        .monospacedDigit().fixedSize()
+                    trailingMetadata(planProgress: planProgress, editStat: editStat)
                 }
             }
-            if expanded, let narrative {
-                ActivityNarrativeHistoryView(narrative: narrative).padding(.leading, ReplyStyle.Process.nestedIndent)
+            if let narrative {
+                Button { expanded.toggle() } label: {
+                    Text(verbatim: narrative.headline)
+                        .font(.system(size: ReplyStyle.Process.labelSize))
+                        .foregroundStyle(Color.primary.opacity(0.76))
+                        .lineLimit(2)
+                        .truncationMode(.tail)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                        .overlay(alignment: .topLeading) {
+                            if activeStage && !reduceMotion {
+                                ShimmerGlint(text: narrative.headline, size: ReplyStyle.Process.labelSize, pulse: progressPulse(items))
+                            }
+                        }
+                }
+                .buttonStyle(.plain)
+                .help(Text(verbatim: narrative.headline))
+                .padding(.leading, ReplyStyle.Process.nestedIndent)
+                .padding(.bottom, 2)
+            }
+            if expanded, let narrative, let detail = narrative.detail, !detail.isEmpty {
+                ActivityNarrativeHistoryView(narrative: narrative, sourceText: detail)
+                    .padding(.leading, ReplyStyle.Process.nestedIndent)
             }
             // Each phase contains one part. Offset identity also handles thoughts
             // and tools originating in the same provider message without collisions.
@@ -174,6 +156,44 @@ struct KimiActivityView: View {
                 }
             }
         }
+    }
+
+    private func trailingMetadata(planProgress: TurnStatus.Progress?,
+                                  editStat: (perFile: [String: SessionEditStat], total: SessionEditStat)?) -> some View {
+        HStack(spacing: 8) {
+            if let planProgress {
+                if let actionContext {
+                    Button { actionContext.post(.showTurnDetails) } label: {
+                        HStack(spacing: 3) {
+                            Text(verbatim: "\(planProgress.done) / \(planProgress.total)")
+                            Image(systemName: "chevron.right").font(.system(size: ReplyStyle.captionSize - 2, weight: .semibold))
+                        }.padding(.horizontal, 4).frame(height: 22).contentShape(Rectangle())
+                    }.buttonStyle(WorkbenchDisclosureButtonStyle())
+                        .help(Text("在任务面板查看本轮详情"))
+                        .accessibilityLabel(Text("本轮状态"))
+                        .accessibilityValue(Text(verbatim: L("\(planProgress.done)/\(planProgress.total) 步")))
+                } else {
+                    Text(verbatim: "\(planProgress.done) / \(planProgress.total)")
+                }
+            }
+            if let editStat {
+                if let actionContext {
+                    Button { actionContext.post(.showChanges) } label: {
+                        EditStatText(stat: editStat.total)
+                            .padding(.horizontal, 4).frame(height: 22).contentShape(Rectangle())
+                    }.buttonStyle(WorkbenchDisclosureButtonStyle())
+                        .help(Text("查看改动：本轮改了 \(editStat.perFile.count) 个文件"))
+                        .accessibilityLabel(Text("查看改动"))
+                        .accessibilityValue(Text(verbatim: L("本轮改了 \(editStat.perFile.count) 个文件") + " +\(editStat.total.additions) −\(editStat.total.deletions)"))
+                } else {
+                    EditStatText(stat: editStat.total)
+                }
+            }
+        }
+        .font(.system(size: ReplyStyle.captionSize))
+        .foregroundStyle(WorkbenchTheme.quiet)
+        .monospacedDigit()
+        .fixedSize()
     }
 }
 

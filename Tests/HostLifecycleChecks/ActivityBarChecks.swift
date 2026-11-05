@@ -239,6 +239,11 @@ private struct ActivityBarCheckFixture: View {
                                             recapKey: "inline-check:1", recapMessageID: "final-answer")
     let activityEntry = ConversationTimelineEntry.make(runningMessages, isRunning: true).last { $0.presentation == .activity }!
     let projectedTools = ToolVisibilityProjection().update(runningMessages, sessionID: "inline-running", running: busyIDs, online: true).tools
+    let liveNarrative = ActivityNarrative(
+        turnID: "turn", stageID: "stage:live", phase: .exploring,
+        subject: "RemoteSetupController",
+        headline: "正在阅读 RemoteSetupController 源码以确认远端连接与错误处理流程。",
+        source: .external, lifecycle: .streaming)
     let longExternal = ActivityNarrative(
         turnID: "turn", stageID: "stage:external", phase: .exploring,
         subject: "性能分析",
@@ -247,27 +252,43 @@ private struct ActivityBarCheckFixture: View {
     let foldRowItem = ConversationPresentationModel.Row(
         entry: activityEntry, tools: projectedTools,
         activity: ActivityNarrativeRow(narrative: longExternal, isAnchor: true, stageClosed: true))
-    let inlineHost = NSHostingView(rootView: VStack(alignment: .leading, spacing: 18) {
+    ConversationReadingMemory.shared.expansions["two-tier-showcase:thought"] = true
+    let sampleThought = """
+    **核对运行状态守卫**
+    - 检查 `RemoteSetupController.swift` 中的 `run` 入口，确认 `!busy` 守卫已生效且按钮在忙碌时自动禁用。
+
+    继续补充边界校验与单测断言。
+    """
+    let inlineHost = NSHostingView(rootView: VStack(alignment: .leading, spacing: 20) {
         KimiActivityView(entry: activityEntry, tools: projectedTools, api: nil, sessionId: "inline-running",
-                         narrative: longExternal, isLive: true, planProgress: progressLive, reduceMotionOverride: false)
+                         narrative: liveNarrative, isLive: true, planProgress: progressLive, reduceMotionOverride: false)
             .environment(\.conversationActionContext, context)
+        ThoughtDisclosure(text: sampleThought)
+            .environment(\.conversationMemoryKey, "two-tier-showcase")
+        Divider().opacity(0.4)
         ProcessFoldRow(rows: [foldRowItem], api: nil, sessionId: "inline-running")
             .environment(\.conversationActionContext, context)
         ReturnToLatestButton(isVisible: true,
                              waitingRequest: TurnRequest(kind: .approval, text: "rm -rf .build/release"),
                              pendingCount: 1,
                              action: { returned += 1 })
-    }.padding(20).environment(\.locale, Locale(identifier: "zh-Hans")).frame(width: 680, height: 260)
-        .background(Color(nsColor: .windowBackgroundColor)))
-    window.appearance = NSAppearance(named: .aqua)
+    }.padding(24).environment(\.locale, Locale(identifier: "zh-Hans")).frame(width: 680, height: 390)
+        .background(WorkbenchTheme.contentBackground))
     window.contentView = inlineHost
-    window.setContentSize(NSSize(width: 680, height: 260))
-    try await Task.sleep(for: .milliseconds(350))
-    inlineHost.layoutSubtreeIfNeeded()
-    if let bitmap = inlineHost.bitmapImageRepForCachingDisplay(in: inlineHost.bounds) {
-        inlineHost.cacheDisplay(in: inlineHost.bounds, to: bitmap)
-        try? bitmap.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: "/private/tmp/perch-fold-header.png"))
+    window.setContentSize(NSSize(width: 680, height: 390))
+    for (suffix, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
+        window.appearance = NSAppearance(named: appearance)
+        try await Task.sleep(for: .milliseconds(350))
+        inlineHost.layoutSubtreeIfNeeded()
+        if let bitmap = inlineHost.bitmapImageRepForCachingDisplay(in: inlineHost.bounds) {
+            inlineHost.cacheDisplay(in: inlineHost.bounds, to: bitmap)
+            try? bitmap.representation(using: .png, properties: [:])?.write(
+                to: URL(fileURLWithPath: "/private/tmp/perch-two-tier-\(suffix).png"))
+        }
     }
+    window.appearance = NSAppearance(named: .aqua)
+    try await Task.sleep(for: .milliseconds(200))
+    inlineHost.layoutSubtreeIfNeeded()
     precondition(!glints(inlineHost).isEmpty, "Live inline KimiActivityView header carries ShimmerGlint")
     print("PASS: the running title sweeps once per progress event; status line clicks reach the line through its title; idle status line takes no space; activity bar keeps one height and the reading viewport across running/pending/offline/stopping/failed/ended, wide/narrow, light/dark; pending review and reconnect actions respond; inline stage header and Recap target verified")
 }
