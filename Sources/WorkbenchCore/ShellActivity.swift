@@ -16,7 +16,33 @@ struct ShellActivity {
     private static let structuralKeywords: Set<String> =
         ["for", "select", "case", "in", "done", "fi", "esac", "}", ")"]
 
+    /// Commands recur across a session's snapshots; the parse is pure, so keep a
+    /// bounded memo rather than re-tokenizing every presentation update.
+    private enum ParsedCommand {
+        case parsed(ShellActivity), empty
+    }
+    private static let parseLock = NSLock()
+    private static var parsed: [String: ParsedCommand] = [:]
+
     static func parse(_ command: String) -> Self? {
+        parseLock.lock()
+        let hit = parsed[command]
+        parseLock.unlock()
+        if let hit {
+            switch hit {
+            case .parsed(let value): return value
+            case .empty: return nil
+            }
+        }
+        let value: Self? = parseUncached(command)
+        parseLock.lock()
+        if parsed.count > 2048 { parsed.removeAll() }
+        parsed[command] = value.map(ParsedCommand.parsed) ?? .empty
+        parseLock.unlock()
+        return value
+    }
+
+    private static func parseUncached(_ command: String) -> Self? {
         for words in segments(command) {
             var words = words
             // Compound-command syntax is not the operation: `do grep …` is grep, and

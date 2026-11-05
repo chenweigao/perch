@@ -32,6 +32,70 @@ public enum ActivityNarrativeLifecycle: String, Codable, Sendable {
     case streaming, final
 }
 
+/// Bounded memo for the projection's pure text derivations. Streaming updates
+/// revisit the same unchanged entries thousands of times; only the live tail
+/// produces new strings. Eviction clears all, which costs one recompute and never
+/// changes results. Entry steps are addressed by entry id, so they live in a
+/// per-conversation instance; the content-addressed text tables are shared.
+public final class NarrativeTextCache: @unchecked Sendable {
+    /// Shared content-addressed text tables.
+    private static let textLock = NSLock()
+    private static var phases: [String: ActivityNarrativePhase] = [:]
+    private static var cleaned: [String: String] = [:]
+    private static var narratives: [String: (headline: String, detail: String?)] = [:]
+
+    public init() {}
+    private let lock = NSLock()
+    private var steps: [String: ([KimiMessage], ConversationTimelineEntry.Presentation, [NarrativeStep])] = [:]
+
+    private static func value<V>(_ table: inout [String: V], _ key: String, _ make: () -> V) -> V {
+        textLock.lock()
+        if let hit = table[key] { textLock.unlock(); return hit }
+        textLock.unlock()
+        let value = make()
+        textLock.lock()
+        if table.count > 8192 { table.removeAll() }
+        table[key] = value
+        textLock.unlock()
+        return value
+    }
+
+    static func phase(for text: String, _ make: () -> ActivityNarrativePhase) -> ActivityNarrativePhase {
+        value(&phases, text, make)
+    }
+    static func clean(_ text: String, limit: Int?, _ make: () -> String) -> String {
+        value(&cleaned, "\(limit ?? -1)\u{1}\(text)", make)
+    }
+    static func narrativeText(_ text: String, _ make: () -> (headline: String, detail: String?)) -> (headline: String, detail: String?) {
+        value(&narratives, text, make)
+    }
+
+    /// An entry's ordered fold steps, reusable while the entry's messages and
+    /// presentation are unchanged. Full values, not an id hash, are the validation:
+    /// a reused id with edited content or a running state change must recompute.
+    func steps(for entry: ConversationTimelineEntry, derive: () -> [NarrativeStep]) -> [NarrativeStep] {
+        lock.lock()
+        if let (messages, presentation, steps) = steps[entry.id],
+           messages == entry.messages, presentation == entry.presentation { lock.unlock(); return steps }
+        lock.unlock()
+        let derived = derive()
+        lock.lock()
+        if steps.count > 65536 { steps.removeAll() }
+        steps[entry.id] = (entry.messages, entry.presentation, derived)
+        lock.unlock()
+        return derived
+    }
+}
+
+/// One entry's ordered contribution to the narrative fold. Text work happens at
+/// derive time; tool steps resolve against the live tool table when applied.
+enum NarrativeStep {
+    case stage(id: String, phase: ActivityNarrativePhase, subject: String, headline: String,
+               detail: String?, source: ActivityNarrativeSource, lifecycle: ActivityNarrativeLifecycle)
+    case thinkingPlaceholder(messageID: String)
+    case tool(KimiPart)
+}
+
 public struct ActivityNarrative: Equatable, Sendable {
     public let turnID: String
     public let stageID: String
@@ -123,43 +187,52 @@ public struct ActivityNarrativeSnapshot: Equatable, Sendable {
     }
 
     fileprivate static func clean(_ value: String, limit: Int? = nil) -> String {
-        var text = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        for marker in ["### ", "## ", "# ", "**"] where text.hasPrefix(marker) {
-            text.removeFirst(marker.count)
-            if marker == "**" { text = text.replacingOccurrences(of: "**", with: "") }
-            break
+        NarrativeTextCache.clean(value, limit: limit) {
+            var text = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            for marker in ["### ", "## ", "# ", "**"] where text.hasPrefix(marker) {
+                text.removeFirst(marker.count)
+                if marker == "**" { text = text.replacingOccurrences(of: "**", with: "") }
+                break
+            }
+            text = text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+            text = text.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines
+                .union(CharacterSet(charactersIn: ":：")))
+            guard let limit, text.count > limit else { return text }
+            return String(text.prefix(limit - 1)) + "…"
         }
-        text = text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
-        text = text.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines
-            .union(CharacterSet(charactersIn: ":：")))
-        guard let limit, text.count > limit else { return text }
-        return String(text.prefix(limit - 1)) + "…"
     }
 
     fileprivate static func narrativeText(_ value: String) -> (headline: String, detail: String?) {
-        let text = clean(value)
-        for separator in ["：", ": "] {
-            guard let range = text.range(of: separator) else { continue }
-            let headline = clean(String(text[..<range.lowerBound]), limit: 80)
-            let detail = clean(String(text[range.upperBound...]))
-            if !headline.isEmpty, headline.count <= 48, !detail.isEmpty {
-                return (headline, detail)
+        NarrativeTextCache.narrativeText(value) {
+            let text = clean(value)
+            for separator in ["：", ": "] {
+                guard let range = text.range(of: separator) else { continue }
+                let headline = clean(String(text[..<range.lowerBound]), limit: 80)
+                let detail = clean(String(text[range.upperBound...]))
+                if !headline.isEmpty, headline.count <= 48, !detail.isEmpty {
+                    return (headline, detail)
+                }
             }
+            return (text, nil)
         }
-        return (text, nil)
     }
 }
+
 
 public enum ActivityNarrativeProjection {
     private struct Builder {
         var narrative: ActivityNarrative
         var entryIDs: [String] = []
+        /// Membership index for entryIDs: attaching thousands of entries to one open
+        /// stage must not scan the array per entry.
+        var entryIDSet: Set<String> = []
         var toolIDs: [String] = []
     }
 
     public static func make(entries: [ConversationTimelineEntry], tools: [String: VisibleTool],
                             isRunning: Bool,
-                            external: [String: ActivitySummaryResult] = [:]) -> ActivityNarrativeSnapshot {
+                            external: [String: ActivitySummaryResult] = [:],
+                            cache: NarrativeTextCache = NarrativeTextCache()) -> ActivityNarrativeSnapshot {
         let boundary = entries.lastIndex { entry in
             entry.presentation == .message && entry.messages.first?.isUserPrompt == true
         }
@@ -176,16 +249,18 @@ public enum ActivityNarrativeProjection {
         // Only unresolved tool states (missingResult / disconnected) mark a stage
         // `.blocked`; ordinary commentary mentioning "error" or "失败" is prose.
         func phase(from text: String) -> ActivityNarrativePhase {
-            let value = text.lowercased()
-            if value.contains("test") || value.contains("build") || value.contains("lint") || value.contains("verify")
-                || value.contains("测试") || value.contains("构建") || value.contains("验证") || value.contains("检查") { return .validating } // l10n-ignore
-            if value.contains("edit") || value.contains("implement") || value.contains("write") || value.contains("fix")
-                || value.contains("修改") || value.contains("实现") || value.contains("修复") || value.contains("编写") { return .editing } // l10n-ignore
-            if value.contains("git") || value.contains("commit") || value.contains("merge") || value.contains("integrat")
-                || value.contains("提交") || value.contains("合并") || value.contains("整合") || value.contains("冲突") { return .integrating } // l10n-ignore
-            if value.contains("read") || value.contains("search") || value.contains("inspect") || value.contains("explor")
-                || value.contains("读取") || value.contains("搜索") || value.contains("查看") || value.contains("分析") { return .exploring } // l10n-ignore
-            return .mixed
+            NarrativeTextCache.phase(for: text) {
+                let value = text.lowercased()
+                if value.contains("test") || value.contains("build") || value.contains("lint") || value.contains("verify")
+                    || value.contains("测试") || value.contains("构建") || value.contains("验证") || value.contains("检查") { return .validating } // l10n-ignore
+                if value.contains("edit") || value.contains("implement") || value.contains("write") || value.contains("fix")
+                    || value.contains("修改") || value.contains("实现") || value.contains("修复") || value.contains("编写") { return .editing } // l10n-ignore
+                if value.contains("git") || value.contains("commit") || value.contains("merge") || value.contains("integrat")
+                    || value.contains("提交") || value.contains("合并") || value.contains("整合") || value.contains("冲突") { return .integrating } // l10n-ignore
+                if value.contains("read") || value.contains("search") || value.contains("inspect") || value.contains("explor")
+                    || value.contains("读取") || value.contains("搜索") || value.contains("查看") || value.contains("分析") { return .exploring } // l10n-ignore
+                return .mixed
+            }
         }
 
         func localHeadline(_ phase: ActivityNarrativePhase, target: String?) -> String {
@@ -226,39 +301,57 @@ public enum ActivityNarrativeProjection {
             // This placeholder reuses the first message for the empty-output UI;
             // it is not a second observation of that message's tools.
             guard entry.presentation != .emptyOutput else { continue }
-            if entry.presentation == .progress {
-                let text = entry.messages.flatMap(\.content).compactMap(\.visibleText)
-                .map({ ActivityNarrativeSnapshot.clean($0) }).filter({ !$0.isEmpty }).joined(separator: " ")
-                if !text.isEmpty {
-                    let narrativeText = ActivityNarrativeSnapshot.narrativeText(text)
-                    appendStage(id: "commentary:\(entry.messages[0].id)", phase: phase(from: text),
-                            subject: narrativeText.headline, headline: narrativeText.headline,
-                            detail: narrativeText.detail, source: .commentary)
-                }
-            }
-
-            for message in entry.messages {
-                for part in message.content {
-                    if part.type == "thinking", part.source?["kind"].string == "activity_summary" {
-                        let parts = part.source?["summaryParts"].array.compactMap(\.string) ?? []
-                        let text = parts.map { ActivityNarrativeSnapshot.clean($0) }
-                            .filter { !$0.isEmpty }.joined(separator: " ")
-                        guard !text.isEmpty else { continue }
+            let steps = cache.steps(for: entry) {
+                var derived: [NarrativeStep] = []
+                if entry.presentation == .progress {
+                    let text = entry.messages.flatMap(\.content).compactMap(\.visibleText)
+                        .map({ ActivityNarrativeSnapshot.clean($0) }).filter({ !$0.isEmpty }).joined(separator: " ")
+                    if !text.isEmpty {
                         let narrativeText = ActivityNarrativeSnapshot.narrativeText(text)
-                        let itemID = part.source?["itemId"].string ?? message.id
-                        let state = part.source?["state"].string == "final"
-                            ? ActivityNarrativeLifecycle.final : .streaming
-                        appendStage(id: "provider:\(itemID)", phase: phase(from: text),
-                                    subject: narrativeText.headline, headline: narrativeText.headline,
-                                    detail: narrativeText.detail, source: .provider, lifecycle: state)
-                        continue
+                        derived.append(.stage(id: "commentary:\(entry.messages[0].id)", phase: phase(from: text),
+                            subject: narrativeText.headline, headline: narrativeText.headline,
+                            detail: narrativeText.detail, source: .commentary, lifecycle: .streaming))
                     }
-                    if part.type == "thinking", stages.isEmpty {
-                        appendStage(id: "stage:\(turnID):thinking:\(message.id)", phase: .exploring,
+                }
+                for message in entry.messages {
+                    for part in message.content {
+                        if part.type == "thinking", part.source?["kind"].string == "activity_summary" {
+                            let parts = part.source?["summaryParts"].array.compactMap(\.string) ?? []
+                            let text = parts.map { ActivityNarrativeSnapshot.clean($0) }
+                                .filter { !$0.isEmpty }.joined(separator: " ")
+                            if text.isEmpty { continue }
+                            let narrativeText = ActivityNarrativeSnapshot.narrativeText(text)
+                            let itemID = part.source?["itemId"].string ?? message.id
+                            let state: ActivityNarrativeLifecycle = part.source?["state"].string == "final"
+                                ? .final : .streaming
+                            derived.append(.stage(id: "provider:\(itemID)", phase: phase(from: text),
+                                subject: narrativeText.headline, headline: narrativeText.headline,
+                                detail: narrativeText.detail, source: .provider, lifecycle: state))
+                            continue
+                        }
+                        if part.type == "thinking" {
+                            // Applied only while no stage exists yet.
+                            derived.append(.thinkingPlaceholder(messageID: message.id))
+                            continue
+                        }
+                        guard part.type == "tool_use" else { continue }
+                        derived.append(.tool(part))
+                    }
+                }
+                return derived
+            }
+            for step in steps {
+                switch step {
+                case .stage(let id, let stepPhase, let subject, let headline, let detail, let source, let lifecycle):
+                    appendStage(id: id, phase: stepPhase, subject: subject, headline: headline,
+                                detail: detail, source: source, lifecycle: lifecycle)
+                case .thinkingPlaceholder(let messageID):
+                    if stages.isEmpty {
+                        appendStage(id: "stage:\(turnID):thinking:\(messageID)", phase: .exploring,
                                     subject: "", headline: L("分析任务"), detail: nil, source: .local)
-                        continue
                     }
-                    guard part.type == "tool_use", let id = part.toolCallId, let tool = tools[id] else { continue }
+                case .tool(let part):
+                    guard let id = part.toolCallId, let tool = tools[id] else { continue }
                     let nextPhase = toolPhase(tool)
                     let target = ToolPresentation.compactTarget(tool)
                     let shellCommand = ShellActivity.command(tool)
@@ -293,7 +386,7 @@ public enum ActivityNarrativeProjection {
             }
             if entry.isProcess || entry.presentation == .progress, !stages.isEmpty {
                 let index = stages.count - 1
-                if !stages[index].entryIDs.contains(entry.id) { stages[index].entryIDs.append(entry.id) }
+                if !stages[index].entryIDSet.contains(entry.id) { stages[index].entryIDs.append(entry.id); stages[index].entryIDSet.insert(entry.id) }
                 entryStageIDs[entry.id] = stages[index].narrative.stageID
             }
         }

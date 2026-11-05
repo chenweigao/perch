@@ -263,6 +263,8 @@ public final class ConversationPresentationModel {
     private var history: History?
     /// Earlier turns by their first message, while their tool chunk is reused.
     private var historyTurns: [String: HistoryTurn] = [:]
+    /// Per-conversation narrative memo; lives and dies with the model.
+    private let narrativeCache = NarrativeTextCache()
     public init(key: String, metricsHandler: ((ConversationPresentationUpdateMetrics) -> Void)? = nil) {
         self.key = key
         self.metricsHandler = metricsHandler
@@ -361,7 +363,7 @@ public final class ConversationPresentationModel {
         history = earlier
         let turnsEnded = timestamp()
         let narrativeStarted = timestamp()
-        let narrative = ActivityNarrativeProjection.make(entries: entries, tools: visibleTools, isRunning: input.isRunning)
+        let narrative = ActivityNarrativeProjection.make(entries: entries, tools: visibleTools, isRunning: input.isRunning, cache: narrativeCache)
         let narrativeEnded = timestamp()
         let rowsStarted = timestamp()
         let projected = narrative.rows
