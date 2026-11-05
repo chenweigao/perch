@@ -40,7 +40,7 @@ struct WorkbenchDisclosureStyle: DisclosureGroupStyle {
     func makeBody(configuration: Configuration) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Button { configuration.isExpanded.toggle() } label: {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                HStack(spacing: 8) {
                     Image(systemName: configuration.isExpanded ? "chevron.down" : "chevron.right")
                         .font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
                         .frame(width: 12).accessibilityHidden(true)

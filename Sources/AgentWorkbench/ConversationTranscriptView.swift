@@ -2261,79 +2261,87 @@ struct ProcessFoldRow: View {
         rows.lazy.compactMap { $0.activity?.narrative }.last { $0.source == .external && !$0.headline.isEmpty }?.headline
     }
     var body: some View {
-        DisclosureGroup(isExpanded: $expanded) {
-            if expanded {
-                VStack(alignment: .leading, spacing: ReplyStyle.Process.rowSpacing) {
-                    if page.count > 1 {
-                        HStack(spacing: 12) {
-                            Button("上一页") { changePage(-1) }.disabled(page.number == 1)
-                                .accessibilityIdentifier("process-previous-page")
-                            Text(L("第 \(page.number) / \(page.count) 页")).monospacedDigit()
-                            Button("下一页") { changePage(1) }.disabled(page.number == page.count)
-                                .accessibilityIdentifier("process-next-page")
-                        }.buttonStyle(.borderless).font(.system(size: ReplyStyle.Process.labelSize))
+        let countLabel = toolCalls > 0 ? L("\(toolCalls) 次调用") : L("\(rows.count) 条记录")
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .center, spacing: 8) {
+                DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
+                    HStack(spacing: 6) {
+                        Text("思考与工具").fixedSize()
+                        Text(verbatim: "· " + countLabel).fixedSize()
+                        if let editStat, actionContext == nil {
+                            Text(L("· \(editStat.files) 个文件 +\(editStat.additions) −\(editStat.deletions)"))
+                                .monospacedDigit().fixedSize()
+                        }
+                        if attention > 0 {
+                            Text(L("· \(attention) 项需关注")).foregroundStyle(.orange).fixedSize()
+                        }
                     }
-                    ForEach(Array(rows[page.range]), id: \.entry.id) { row in
-                        ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
-                                              memoryKey: memoryKey + "/" + row.entry.id, activityNarrative: row.activity)
-                            .environment(\.conversationMemoryKey, memoryKey + "/" + row.entry.id)
-                            .environment(\.isConversationBodyText, true)
-                            .background(ProcessFindAnchor(id: row.entry.id))
-                    }
-                }.padding(.top, ReplyStyle.Process.rowSpacing).padding(.leading, ReplyStyle.Process.nestedIndent)
-                    .overlay(alignment: .leading) {
-                        Rectangle().fill(.primary.opacity(0.12)).frame(width: 1).padding(.top, ReplyStyle.Process.rowSpacing)
-                    }
-            }
-        } label: {
-            let countLabel = toolCalls > 0 ? L("\(toolCalls) 次调用") : L("\(rows.count) 条记录")
-            // Secondary ink at regular weight, like the live process rows it replaces.
-            HStack(alignment: .firstTextBaseline, spacing: 7) {
-                Image(systemName: "list.bullet.rectangle").accessibilityHidden(true)
-                if let externalHeadline {
-                    Text(verbatim: "\(externalHeadline) · \(countLabel)")
-                        .lineLimit(2)
-                        .truncationMode(.tail)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .layoutPriority(1)
-                        .help(Text(verbatim: externalHeadline))
-                } else {
-                    Text("思考与工具").fixedSize()
-                    Text(countLabel).fixedSize()
+                    .font(.system(size: externalHeadline != nil ? ReplyStyle.captionSize : ReplyStyle.Process.labelSize))
+                    .foregroundStyle(externalHeadline != nil ? WorkbenchTheme.quiet : Color.secondary)
                 }
-                if let editStat, actionContext == nil {
-                    Text(L("· \(editStat.files) 个文件 +\(editStat.additions) −\(editStat.deletions)"))
-                        .monospacedDigit().fixedSize()
-                }
-                if attention > 0 {
-                    Text(L("· \(attention) 项需关注")).foregroundStyle(.orange).fixedSize()
-                }
-                if let editStat, actionContext != nil {
-                    Spacer(minLength: 4)
-                    editStatBadge(editStat).fixedSize().hidden().accessibilityHidden(true)
-                }
-            }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(.secondary)
-        }.disclosureGroupStyle(ProcessDisclosureStyle())
-            .accessibilityValue(Text(expanded ? "已展开" : "已收起"))
-            .overlay(alignment: .topTrailing) {
+                .disclosureGroupStyle(ProcessDisclosureStyle())
+                .accessibilityValue(Text(expanded ? "已展开" : "已收起"))
                 if let editStat, let actionContext {
                     Button { actionContext.post(.showChanges) } label: {
                         editStatBadge(editStat)
                     }.buttonStyle(WorkbenchDisclosureButtonStyle())
+                        .fixedSize()
                         .help(Text("查看改动：本轮改了 \(editStat.files) 个文件"))
                         .accessibilityLabel(Text("查看改动"))
                         .accessibilityValue(Text(verbatim: L("本轮改了 \(editStat.files) 个文件") + " +\(editStat.additions) −\(editStat.deletions)"))
                 }
             }
+            if let externalHeadline {
+                Button { expanded.toggle() } label: {
+                    Text(verbatim: externalHeadline)
+                        .font(.system(size: ReplyStyle.Process.labelSize))
+                        .foregroundStyle(Color.primary.opacity(0.76))
+                        .lineLimit(2)
+                        .truncationMode(.tail)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(Text(verbatim: externalHeadline))
+                .padding(.leading, ReplyStyle.Process.nestedIndent)
+                .padding(.bottom, 2)
+            }
+            WorkbenchDisclosureContent(expanded: expanded) {
+                if expanded {
+                    VStack(alignment: .leading, spacing: ReplyStyle.Process.rowSpacing) {
+                        if page.count > 1 {
+                            HStack(spacing: 12) {
+                                Button("上一页") { changePage(-1) }.disabled(page.number == 1)
+                                    .accessibilityIdentifier("process-previous-page")
+                                Text(L("第 \(page.number) / \(page.count) 页")).monospacedDigit()
+                                Button("下一页") { changePage(1) }.disabled(page.number == page.count)
+                                    .accessibilityIdentifier("process-next-page")
+                            }.buttonStyle(.borderless).font(.system(size: ReplyStyle.Process.labelSize))
+                        }
+                        ForEach(Array(rows[page.range]), id: \.entry.id) { row in
+                            ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
+                                                  memoryKey: memoryKey + "/" + row.entry.id, activityNarrative: row.activity)
+                                .environment(\.conversationMemoryKey, memoryKey + "/" + row.entry.id)
+                                .environment(\.isConversationBodyText, true)
+                                .background(ProcessFindAnchor(id: row.entry.id))
+                        }
+                    }.padding(.top, ReplyStyle.Process.rowSpacing).padding(.leading, ReplyStyle.Process.nestedIndent)
+                        .overlay(alignment: .leading) {
+                            Rectangle().fill(.primary.opacity(0.12)).frame(width: 1).padding(.top, ReplyStyle.Process.rowSpacing)
+                        }
+                }
+            }
+        }
     }
     private func editStatBadge(_ editStat: (files: Int, additions: Int, deletions: Int)) -> some View {
         HStack(spacing: 5) {
-            Text(L("\(editStat.files) 个文件")).foregroundStyle(.secondary)
+            Text(L("\(editStat.files) 个文件")).foregroundStyle(WorkbenchTheme.quiet)
             EditStatText(stat: SessionEditStat(additions: editStat.additions, deletions: editStat.deletions))
         }
         .font(.system(size: ReplyStyle.captionSize))
         .padding(.horizontal, 4)
-        .frame(height: 28)
+        .frame(height: 22)
         .contentShape(Rectangle())
     }
 }
@@ -2483,6 +2491,7 @@ private enum ThoughtTextStyle {
 }
 
 private struct ThoughtRail<Content: View>: View {
+    var fadesTail = false
     @ViewBuilder let content: Content
     var body: some View {
         content
@@ -2490,7 +2499,17 @@ private struct ThoughtRail<Content: View>: View {
             .padding(.leading, ReplyStyle.Process.nestedIndent)
             .overlay(alignment: .leading) {
                 Capsule()
-                    .fill(Color.primary.opacity(0.11))
+                    .fill(
+                        fadesTail
+                            ? AnyShapeStyle(LinearGradient(
+                                stops: [
+                                    .init(color: Color.primary.opacity(0.14), location: 0),
+                                    .init(color: Color.primary.opacity(0.14), location: 0.78),
+                                    .init(color: Color.primary.opacity(0.02), location: 1)
+                                ],
+                                startPoint: .top, endPoint: .bottom))
+                            : AnyShapeStyle(Color.primary.opacity(0.12))
+                    )
                     .frame(width: ReplyStyle.Process.thoughtRailWidth)
                     .padding(.leading, ReplyStyle.Process.thoughtRailLeading)
                     .padding(.vertical, 2)
@@ -2571,7 +2590,7 @@ private struct ThoughtOutput: View {
             if expanded && (finished || showFullText) {
                 ThoughtText(text: fullText)
             } else if expanded {
-                ThoughtRail {
+                ThoughtRail(fadesTail: true) {
                     ThinkingTextViewport(text: fullText, overflows: $previewOverflows)
                         .mask { ThoughtTopFade(active: previewOverflows) }
                 }
