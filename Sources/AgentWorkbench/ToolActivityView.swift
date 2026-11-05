@@ -57,7 +57,9 @@ struct KimiActivityView: View {
 
     var body: some View {
         let items = entry.messages.flatMap(\.content).compactMap { tools[$0.toolCallId ?? ""] }
-        let activeStage = isLive || items.contains { $0.status == .running }
+        let hasRunningTool = items.contains { $0.status == .running }
+        let activeStage = isLive || hasRunningTool
+        let waitingForModel = isLive && !hasRunningTool
         let editStat = SessionEditStats.derive(from: entry.messages)
         #if TRANSCRIPT_CHECKS
         // Occurrences only, and a declaration because ViewBuilder rejects bare
@@ -74,6 +76,14 @@ struct KimiActivityView: View {
                         if let narrative {
                             let eyebrow = items.isEmpty ? narrative.phase.label : L("\(narrative.phase.label) · \(items.count) 次调用")
                             Text(verbatim: eyebrow).fixedSize()
+                            if !expanded, let last = items.last {
+                                let action = ToolPresentation.action(last.name)
+                                let target = ToolPresentation.compactTarget(last)
+                                let lastDesc = target == last.name ? action : "\(action) \(target)"
+                                Text(verbatim: "· " + L("最近：\(lastDesc)"))
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                            }
                         } else if entry.isExploration {
                             let label = ToolPresentation.explorationBucketSummary(items)
                             Text(verbatim: label).fixedSize()
@@ -156,6 +166,17 @@ struct KimiActivityView: View {
                         .environment(\.conversationMemoryKey, memoryKey + ":part:\(index)")
                         .padding(.leading, ReplyStyle.Process.nestedIndent)
                 }
+            }
+            if waitingForModel {
+                HStack(spacing: 6) {
+                    PerchBusyIndicator(size: 13)
+                    Text("工具已返回，正在等待模型下一步推理…")
+                        .font(.system(size: ReplyStyle.captionSize))
+                        .foregroundStyle(WorkbenchTheme.quiet)
+                        .lineLimit(1)
+                }
+                .padding(.leading, ReplyStyle.Process.nestedIndent)
+                .padding(.top, 3)
             }
         }
     }

@@ -2026,3 +2026,7 @@
 "搜索 %lld 次" = "%lld searches";
 "查找 %lld 次" = "%lld file lookups";
 "末尾 %lld 行" = "last %lld lines";
+"工具已返回，正在等待模型下一步推理…" = "Tools returned · Waiting for next model step…";
+"最近：%@" = "Latest: %@";
+"编辑" = "Edit";
+"写入" = "Write";

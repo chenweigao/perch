@@ -89,6 +89,15 @@ func checkActivitySummaries() throws {
         entries: probeEntries, tools: ["probe": lostResult], isRunning: true).current
     precondition(lostNarrative?.phase == .blocked,
                  "A result the record cannot account for still blocks the stage")
+    let errorMentionEntries = try timeline([
+        user(),
+        progress("failure-mention", "规划已完成：我现在测执行窗口，并核对刚出现的 10 个失败。"),
+        call("read0")
+    ])
+    let errorMentionNarrative = ActivityNarrativeProjection.make(
+        entries: errorMentionEntries, tools: [read0.id: read0], isRunning: true).current
+    precondition(errorMentionNarrative?.phase != .blocked,
+                 "Commentary mentioning failures or errors must not be marked blocked")
 
     let completeProgress = "Both foreign changes check out. " + String(repeating: "Keep the complete explanation visible. ", count: 12) + "END_OF_PROGRESS"
     let fullEntries = try timeline([user(), progress("long-progress", completeProgress), call("read0")])

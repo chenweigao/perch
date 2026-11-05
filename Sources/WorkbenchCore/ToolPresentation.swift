@@ -18,6 +18,8 @@ public enum ToolPresentation {
         case "read", "read_file", "readfile": return L("读取")
         case "grep", "search": return L("搜索")
         case "glob", "find_files": return L("查找文件")
+        case "edit", "edit_file", "editfile", "apply_patch", "filechange": return L("编辑")
+        case "write", "write_file", "writefile": return L("写入")
         default: return name
         }
     }
