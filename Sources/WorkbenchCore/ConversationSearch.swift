@@ -6,8 +6,11 @@ public struct ConversationSearchHit: Identifiable, Equatable, Sendable {
     public let excerpt: String
     /// Routes a tool hit to its record page inside a long stage.
     public let toolID: String?
-    public init(entryID: String, occurrence: Int, excerpt: String, toolID: String? = nil) {
+    /// Selection counts only this record; preceding pages may not be mounted.
+    public let toolOccurrence: Int?
+    public init(entryID: String, occurrence: Int, excerpt: String, toolID: String? = nil, toolOccurrence: Int? = nil) {
         self.entryID = entryID; self.occurrence = occurrence; self.excerpt = excerpt; self.toolID = toolID
+        self.toolOccurrence = toolOccurrence
     }
     public var id: String { "\(entryID):\(occurrence)" }
 }
@@ -130,12 +133,16 @@ public final class ConversationSearch {
                     range = NSRange(location: NSMaxRange(found), length: text.length - NSMaxRange(found))
                 }
             }
+            var toolOccurrences: [String: Int] = [:]
             for (index, found) in matches.enumerated() {
                 let start = max(0, found.location - 50), end = min(text.length, NSMaxRange(found) + 80)
                 let excerptRange = text.rangeOfComposedCharacterSequences(for: NSRange(location: start, length: end - start))
                 let sourceIndex = cached.sourceEnds.firstIndex { found.location < $0 }
+                let toolID = sourceIndex.flatMap { pieces[$0].toolID }
+                let toolOccurrence = toolID.map { toolOccurrences[$0, default: 0] }
                 hits.append(.init(entryID: entry.id, occurrence: index, excerpt: text.substring(with: excerptRange),
-                                  toolID: sourceIndex.flatMap { pieces[$0].toolID }))
+                                  toolID: toolID, toolOccurrence: toolOccurrence))
+                if let toolID { toolOccurrences[toolID, default: 0] += 1 }
             }
         }
         return hits

@@ -730,15 +730,19 @@ private final class ConversationDocumentView: NSView {
             // A newly mounted host may not have created its native text views yet.
             // Complete that host's layout before looking for the selected range.
             view.layoutSubtreeIfNeeded()
-            var remaining = target.hit.occurrence
+            var remaining = target.hit.toolOccurrence ?? target.hit.occurrence
+            let anchorID = target.hit.toolID.map { "tool:" + $0 } ?? target.hit.entryID
             func anchor(in node: NSView) -> NSView? {
-                if node.identifier?.rawValue == "process-entry:" + target.hit.entryID { return node }
+                if node.identifier?.rawValue == "process-entry:" + anchorID { return node }
                 return node.subviews.lazy.compactMap { anchor(in: $0) }.first
             }
             let targetBounds = anchor(in: view).map { $0.convert($0.bounds, to: view) }
+            let toolRecord = target.hit.toolID != nil && targetBounds != nil
             let root = view
             func select(in view: NSView) -> Bool {
-                if let text = view as? NSTextView, (text as? ReplyTextView)?.isConversationBodyText == true || text.enclosingScrollView?.identifier?.rawValue == "perch-long-output" {
+                if let text = view as? NSTextView, (text as? ReplyTextView)?.isConversationBodyText == true
+                    || (toolRecord && text is ReplyTextView)
+                    || text.enclosingScrollView?.identifier?.rawValue == "perch-long-output" {
                     // A long reader's text document extends beyond its viewport;
                     // use the viewport to avoid selecting another row's hidden text.
                     let region: NSView = text.enclosingScrollView?.identifier?.rawValue == "perch-long-output" ? text.enclosingScrollView! : text
@@ -2324,9 +2328,8 @@ private struct ConversationEntryView: View, Equatable {
     }
 }
 
-/// A completed turn's folded process: one quiet disclosure that mounts the
-/// original rows in place when expanded. Expansion is remembered per fold row.
-private struct ProcessFindAnchor: NSViewRepresentable {
+/// Bounds the native text search to one mounted stage or tool record.
+struct ProcessFindAnchor: NSViewRepresentable {
     let id: String
     func makeNSView(context: Context) -> NSView { NSView() }
     func updateNSView(_ view: NSView, context: Context) {

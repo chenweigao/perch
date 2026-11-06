@@ -168,6 +168,7 @@ struct KimiActivityView: View {
                     WorkbenchDisclosureContent(expanded: expanded || alwaysVisible) {
                         KimiToolCard(tool: tool, mergedReadRange: ToolPresentation.path(tool).flatMap { mergedRanges[$0] })
                             .environment(\.conversationMemoryKey, memoryKey + ":tool:" + tool.id)
+                            .background(ProcessFindAnchor(id: "tool:" + tool.id))
                             .padding(.leading, ReplyStyle.Process.nestedIndent).padding(.top, 4)
                     }
                 } else {

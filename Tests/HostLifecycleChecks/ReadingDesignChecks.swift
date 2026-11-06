@@ -505,7 +505,7 @@ private struct ReadingReviewControls: View {
         for index in 0..<count {
             let id = "page-tool-\(index)"
             rows += [["id": id, "role": "assistant", "created_at": "", "content": [
-                ["type": "tool_use", "tool_call_id": id, "tool_name": "bash", "input": ["command": "git -C /repo show marker-\(index)"]]]],
+                ["type": "tool_use", "tool_call_id": id, "tool_name": "bash", "input": ["command": "git -C /repo show marker-\(index) marker-\(index)"]]]],
                 ["id": id + "-result", "role": "tool", "created_at": "", "content": [
                     ["type": "tool_result", "tool_call_id": id, "output": "ok", "is_error": failedLast && index == count - 1]]]]
         }
@@ -563,6 +563,15 @@ private struct ReadingReviewControls: View {
     precondition(taskPanelControl(window, "tool-call:page-tool-26") != nil && taskPanelControl(window, "tool-call:page-tool-0") == nil,
                  "Find opens the page containing its exact tool record")
     precondition(readingTextViews(host).contains { $0.string.contains("marker-26") })
+    let repeatedHit = ConversationSearch().hits(in: searchRecords, query: "marker-", running: false).hits.first {
+        $0.toolID == "page-tool-26" && $0.toolOccurrence == 1
+    }!
+    NotificationCenter.default.post(name: .init("PerchRevealConversationHit"), object: ConversationFindTarget(
+        session: "stage-page-A", hit: repeatedHit, query: "marker-"))
+    try await settle()
+    precondition(readingTextViews(host).contains { text in
+        text.string.contains("marker-26") && text.selectedRange() == (text.string as NSString).range(of: "marker-", options: .backwards)
+    }, "A repeated query selects its record-local occurrence on a later page, excluding earlier records")
     host.rootView = ReadingDesignFixture(messages: try records(26, failedLast: true), running: true, session: "stage-page-C")
     try await settle()
     precondition(taskPanelControl(window, "tool-call:page-tool-25") != nil,

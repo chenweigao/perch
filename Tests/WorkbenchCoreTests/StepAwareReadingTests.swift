@@ -143,6 +143,9 @@ func checkPhaseReading() throws {
     let hit = ConversationSearch().hits(in: longMessages, query: "stage-marker-48", running: true).hits.first!
     precondition(hit.entryID == longStage[0].id && hit.toolID == "long-48",
                  "Search carries the exact record so the UI can open a later page")
+    let repeated = ConversationSearch().hits(in: longMessages, query: "stage-marker-", running: true).hits
+    precondition(repeated.count == 49 && repeated.last?.occurrence == 48 && repeated.allSatisfy { $0.toolOccurrence == 0 },
+                 "Selecting a later page uses record-local counts, while hit identity stays stage-wide")
     let gitCalls = ["git status", "git -C /repo diff", "git -c color.ui=false log"].enumerated().map { index, command in
         VisibleTool(id: "git-\(index)", name: "Bash", input: .object(["command": .string(command)]), status: .succeeded)
     }
