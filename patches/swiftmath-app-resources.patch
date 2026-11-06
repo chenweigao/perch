@@ -1,0 +1,46 @@
+--- a/Sources/SwiftMath/MathBundle/MathFont.swift
++++ b/Sources/SwiftMath/MathBundle/MathFont.swift
+@@ -13,6 +13,14 @@ import AppKit
+ /// Now available for everyone to use
+ public enum MathFont: String, CaseIterable, Identifiable {
+     
++    static var resourceBundle: Bundle {
++        if let url = Bundle.main.url(forResource: "SwiftMath_SwiftMath", withExtension: "bundle"),
++           let bundle = Bundle(url: url) {
++            return bundle
++        }
++        return Bundle.module
++    }
++
+     public var id: Self { self }  // Makes things simpler for SwiftUI
+ 
+     case latinModernFont = "latinmodern-math"
+@@ -92,7 +100,7 @@ private class BundleManager {
+                                                 attributes: .concurrent)
+ 
+     private func registerCGFont(mathFont: MathFont) throws {
+-        guard let frameworkBundleURL = Bundle.module.url(forResource: "mathFonts", withExtension: "bundle"),
++        guard let frameworkBundleURL = MathFont.resourceBundle.url(forResource: "mathFonts", withExtension: "bundle"),
+               let resourceBundleURL = Bundle(url: frameworkBundleURL)?.path(forResource: mathFont.rawValue, ofType: "otf") else {
+             throw FontError.fontPathNotFound
+         }
+@@ -119,7 +127,7 @@ private class BundleManager {
+     }
+     
+     private func registerMathTable(mathFont: MathFont) throws {
+-        guard let frameworkBundleURL = Bundle.module.url(forResource: "mathFonts", withExtension: "bundle"),
++        guard let frameworkBundleURL = MathFont.resourceBundle.url(forResource: "mathFonts", withExtension: "bundle"),
+               let mathTablePlist = Bundle(url: frameworkBundleURL)?.url(forResource: mathFont.rawValue, withExtension:"plist") else {
+             throw FontError.fontPathNotFound
+         }
+--- a/Sources/SwiftMath/MathRender/MTFont.swift
++++ b/Sources/SwiftMath/MathRender/MTFont.swift
+@@ -41,7 +41,7 @@ public class MTFont: NSObject {
+     
+     static var fontBundle:Bundle {
+         // Uses bundle for class so that this can be access by the unit tests.
+-        Bundle(url: Bundle.module.url(forResource: "mathFonts", withExtension: "bundle")!)!
++        Bundle(url: MathFont.resourceBundle.url(forResource: "mathFonts", withExtension: "bundle")!)!
+     }
+     
+     /** Returns a copy of this font but with a different size. */
