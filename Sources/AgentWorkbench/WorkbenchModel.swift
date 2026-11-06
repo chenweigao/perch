@@ -1035,6 +1035,18 @@ final class WorkbenchModel {
         case .showTurnDetails:
             showTurn(.task, of: SessionReference(hostID: context.hostID, terminalID: id, kind: context.kind))
             return
+        case .showEdit(let tool, let messageID):
+            let reference = SessionReference(hostID: context.hostID, terminalID: id, kind: context.kind)
+            guard selectedReference == reference else { return }
+            let messages: [KimiMessage]
+            if isKimi, let conversation = kimi?.conversation, conversation.snapshot.session.id == id {
+                messages = conversation.displayMessages
+            } else if let snapshot = native?.snapshot, snapshot.id == id {
+                messages = snapshot.messages
+            } else { messages = [] }
+            taskContextWindow.editRecord = (reference, ConversationEditRecord(step: tool, messages: messages, messageID: messageID))
+            showTurn(.edits, of: reference)
+            return
         case .showChanges:
             showTurn(.changes, of: SessionReference(hostID: context.hostID, terminalID: id, kind: context.kind))
             return

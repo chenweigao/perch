@@ -289,9 +289,12 @@ private struct ConversationContentIdentity: Equatable {
     let api: KimiAPI?
     let session: String
     let memoryKey: String
+    var foldsProcess = false
+    var retainedProcessEntries: Set<String> = []
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.snapshot === rhs.snapshot && lhs.narratives == rhs.narratives
             && lhs.api === rhs.api && lhs.session == rhs.session && lhs.memoryKey == rhs.memoryKey
+            && lhs.foldsProcess == rhs.foldsProcess && lhs.retainedProcessEntries == rhs.retainedProcessEntries
     }
 }
 
@@ -313,7 +316,7 @@ struct ConversationTranscript: View {
     var historyEpoch: String?
     var isSuspended = false
     /// Completed turns collapse their process rows behind one disclosure.
-    var foldsProcess = false
+    var foldsProcess = true
     /// The owner restores its initial scroll position before this document is exposed.
     var waitsForInitialPosition = false
     /// The connection's clock for the latest turn; its duration labels that turn's
@@ -340,11 +343,13 @@ struct ConversationTranscript: View {
             running: isRunning, online: online && allowsActivitySummaries && allowsActivitySummaryRequests, following: followsLatest,
             settingsRevision: summarySettings.revision)
         let narratives = narrativeStore.rows(session: key, snapshot: snapshot.narrative, following: followsLatest)
+        let retained = ConversationReadingMemory.shared.retainedEntries(session: key)
         let identity = ConversationContentIdentity(snapshot: snapshot, narratives: narratives,
-            api: api, session: sessionId, memoryKey: key)
+            api: api, session: sessionId, memoryKey: key, foldsProcess: foldsProcess, retainedProcessEntries: retained)
         // Earlier turns are presented once per summary overlay; a streamed token
         // only presents the latest turn.
-        let presented = snapshot.presented(activity: narratives, foldsProcess: foldsProcess, isRunning: isRunning)
+        let presented = snapshot.presented(activity: narratives, foldsProcess: foldsProcess, isRunning: isRunning, preservingEntries: retained)
+            .retainingProcessEntries(retained)
         let foldParents = presented.foldParents
         let liveActivityID = isRunning ? ConversationProcessClock.lastActivityOfLatestTurn(presented.rows) : nil
         let latestFoldID = !isRunning ? ConversationProcessClock.lastFoldOfLatestTurn(presented.rows) : nil
@@ -358,7 +363,9 @@ struct ConversationTranscript: View {
             let foldDuration = row.entry.id == latestFoldID ? settledDuration : nil
             return ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
                 memoryKey: key + ":" + row.entry.id, activityNarrative: row.activity, foldedRows: row.foldedRows,
-                isLive: isLiveActivity, planProgress: isLiveActivity ? planProgress : nil,
+                isLive: isLiveActivity, preservesExpandedProcess: row.entry.presentation != .processFold,
+                liveThinkingSummary: isLiveActivity ? ConversationThinkingSummary.current(snapshot.narrative.current) : nil,
+                planProgress: isLiveActivity ? planProgress : nil,
                 completedDuration: foldDuration)
         }
         let _ = PerfDiagnostics.end("snapshot_projection", projectionProbe,
@@ -763,12 +770,12 @@ private final class ConversationDocumentView: NSView {
             ConversationReadingMemory.shared.expansions[scope + ":process-fold"] = true
             ConversationReadingMemory.shared.processPages[scope] = id
             for name in ["thought", "live-thought", "full-thought", "commentary", "expanded", "full-output"] {
-                ConversationReadingMemory.shared.expansions[scope + "/" + id + ":" + name] = true
+                ConversationReadingMemory.shared.expansions[sessionId + ":" + id + ":" + name] = true
             }
             if let index = indices[fold], let row = contents[index].foldedRows?.first(where: { $0.entry.id == id }) {
                 for tool in row.tools.keys {
-                    ConversationReadingMemory.shared.expansions[scope + "/" + id + ":tool:" + tool + ":expanded"] = true
-                    ConversationReadingMemory.shared.expansions[scope + "/" + id + ":tool:" + tool + ":full-output"] = true
+                    ConversationReadingMemory.shared.expansions[sessionId + ":" + id + ":tool:" + tool + ":expanded"] = true
+                    ConversationReadingMemory.shared.expansions[sessionId + ":" + id + ":tool:" + tool + ":full-output"] = true
                 }
             }
             invalidateRevealedRow(fold)
@@ -935,6 +942,19 @@ private final class ConversationDocumentView: NSView {
         }
         if changedSession || changedAppearance { measuredSizes.removeAll(keepingCapacity: true) }
         if structureChanged {
+            // Completing a turn folds several rows at once. Preserve the reading
+            // anchor before replacing their geometry, just as for disclosure and
+            // width changes. A folded-away row maps to its visible process entry.
+            if !changedSession, restoreTarget == nil,
+               ConversationReadingMemory.shared.following[sessionId] == false {
+                saveReadingPosition()
+                restoreTarget = ConversationReadingMemory.shared.positions[sessionId]
+                if let target = restoreTarget, !next.contains(where: { $0.entry.id == target.entry }),
+                   let parent = foldParents[target.entry],
+                   let index = next.firstIndex(where: { $0.entry.id == parent }) {
+                    restoreTarget = .init(entry: parent, index: index, offset: 0)
+                }
+            }
             let previous = Dictionary(uniqueKeysWithValues: zip(contents.map { $0.entry.id }, heights))
             indices = Dictionary(uniqueKeysWithValues: next.enumerated().map { ($0.element.entry.id, $0.offset) })
             measuredSizes = measuredSizes.filter { indices[$0.key] != nil }
@@ -2211,6 +2231,8 @@ private struct ConversationEntryView: View, Equatable {
     /// Rows collapsed behind this fold; non-nil only for process-fold entries.
     var foldedRows: [ConversationPresentationModel.Row]? = nil
     var isLive = false
+    var preservesExpandedProcess = false
+    var liveThinkingSummary: String? = nil
     /// Active plan progress for the live stage header in a running turn.
     var planProgress: TurnStatus.Progress? = nil
     /// Static duration of a settled turn for its process fold header (>= 5s).
@@ -2223,6 +2245,8 @@ private struct ConversationEntryView: View, Equatable {
             && lhs.markdownPreparation == rhs.markdownPreparation
             && lhs.foldedRows == rhs.foldedRows
             && lhs.isLive == rhs.isLive
+            && lhs.preservesExpandedProcess == rhs.preservesExpandedProcess
+            && lhs.liveThinkingSummary == rhs.liveThinkingSummary
             && lhs.planProgress == rhs.planProgress
             && lhs.completedDuration == rhs.completedDuration
     }
@@ -2243,7 +2267,7 @@ private struct ConversationEntryView: View, Equatable {
                     KimiActivityView(entry: entry, tools: tools, api: api, sessionId: sessionId,
                                      narrative: activityNarrative.flatMap {
                                          $0.isAnchor ? $0.narrative : nil
-                                     }, isLive: isLive, planProgress: planProgress)
+                                     }, isLive: isLive, liveThinkingSummary: liveThinkingSummary, planProgress: planProgress)
                 case .commentary:
                     DisclosureGroup("此前的进度说明 · \(entry.messages.count) 条", isExpanded: $commentaryExpanded) {
                         if commentaryExpanded { VStack(alignment: .leading, spacing: ReplyStyle.entryPartSpacing) {
@@ -2254,18 +2278,16 @@ private struct ConversationEntryView: View, Equatable {
                         }.padding(.top, 10).padding(.leading, ReplyStyle.Process.nestedIndent) }
                     }.disclosureGroupStyle(ProcessDisclosureStyle())
                         .font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(.secondary)
-                case .thinkingDetails:
-                    ThoughtDisclosure(text: entry.messages.flatMap(\.content).compactMap(\.thinking).joined(separator: "\n\n"))
-                case .thinkingPreview, .thinkingRecord:
-                    ThoughtOutput(messages: entry.messages, finished: entry.presentation == .thinkingRecord)
-                        .id(entry.presentation == .thinkingRecord)
+                case .thinkingDetails, .thinkingPreview, .thinkingRecord:
+                    ThoughtOutput(messages: entry.messages, finished: entry.presentation != .thinkingPreview)
                 case .emptyOutput:
                     Text("本轮未返回文字回复，可展开工具记录查看结果。")
                         .font(.system(size: ReplyStyle.labelSize)).foregroundStyle(.secondary)
                 case .processFold:
                     if let foldedRows {
                         ProcessFoldRow(rows: foldedRows, api: api, sessionId: sessionId,
-                                       completedDuration: completedDuration)
+                                       completedDuration: completedDuration,
+                                       sourceMemoryPrefix: String(memoryKey.dropLast(entry.id.count + 1)))
                     }
                 default:
                     if entry.presentation == .record {
@@ -2284,6 +2306,8 @@ private struct ConversationEntryView: View, Equatable {
                 }
             }
         }
+        .environment(\.conversationProcessEntry, memoryKey)
+        .environment(\.conversationPreservesProcess, preservesExpandedProcess && entry.presentation != .processFold)
     }
 }
 
@@ -2302,6 +2326,7 @@ struct ProcessFoldRow: View {
     let api: KimiAPI?
     let sessionId: String
     var completedDuration: TimeInterval? = nil
+    var sourceMemoryPrefix: String? = nil
     @UILocalization private var L
     @Environment(\.locale) private var locale
     @Environment(\.conversationMemoryKey) private var memoryKey
@@ -2341,7 +2366,7 @@ struct ProcessFoldRow: View {
             HStack(alignment: .center, spacing: 8) {
                 DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
                     HStack(spacing: 6) {
-                        Text("思考与工具").fixedSize()
+                        Text("工作过程").fixedSize()
                         Text(verbatim: "· " + countLabel).fixedSize()
                         if let completedDuration, completedDuration >= 5 {
                             let isZh = locale.language.languageCode?.identifier.hasPrefix("zh") ?? true
@@ -2361,6 +2386,7 @@ struct ProcessFoldRow: View {
                 }
                 .disclosureGroupStyle(ProcessDisclosureStyle())
                 .accessibilityValue(Text(expanded ? "已展开" : "已收起"))
+                .accessibilityIdentifier("completed-process:" + rows[0].entry.id)
                 if let editStat, let actionContext {
                     Button { actionContext.post(.showChanges) } label: {
                         editStatBadge(editStat)
@@ -2388,29 +2414,27 @@ struct ProcessFoldRow: View {
                 .padding(.bottom, 2)
             }
             WorkbenchDisclosureContent(expanded: expanded) {
-                if expanded {
-                    VStack(alignment: .leading, spacing: ReplyStyle.Process.rowSpacing) {
-                        if page.count > 1 {
-                            HStack(spacing: 12) {
-                                Button("上一页") { changePage(-1) }.disabled(page.number == 1)
-                                    .accessibilityIdentifier("process-previous-page")
-                                Text(L("第 \(page.number) / \(page.count) 页")).monospacedDigit()
-                                Button("下一页") { changePage(1) }.disabled(page.number == page.count)
-                                    .accessibilityIdentifier("process-next-page")
-                            }.buttonStyle(.borderless).font(.system(size: ReplyStyle.Process.labelSize))
-                        }
-                        ForEach(Array(rows[page.range]), id: \.entry.id) { row in
-                            ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
-                                                  memoryKey: memoryKey + "/" + row.entry.id, activityNarrative: row.activity)
-                                .environment(\.conversationMemoryKey, memoryKey + "/" + row.entry.id)
-                                .environment(\.isConversationBodyText, true)
-                                .background(ProcessFindAnchor(id: row.entry.id))
-                        }
-                    }.padding(.top, ReplyStyle.Process.rowSpacing).padding(.leading, ReplyStyle.Process.nestedIndent)
-                        .overlay(alignment: .leading) {
-                            Rectangle().fill(.primary.opacity(0.12)).frame(width: 1).padding(.top, ReplyStyle.Process.rowSpacing)
-                        }
-                }
+                VStack(alignment: .leading, spacing: ReplyStyle.Process.rowSpacing) {
+                    if page.count > 1 {
+                        HStack(spacing: 12) {
+                            Button("上一页") { changePage(-1) }.disabled(page.number == 1)
+                                .accessibilityIdentifier("process-previous-page")
+                            Text(L("第 \(page.number) / \(page.count) 页")).monospacedDigit()
+                            Button("下一页") { changePage(1) }.disabled(page.number == page.count)
+                                .accessibilityIdentifier("process-next-page")
+                        }.buttonStyle(.borderless).font(.system(size: ReplyStyle.Process.labelSize))
+                    }
+                    ForEach(Array(rows[page.range]), id: \.entry.id) { row in
+                        ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
+                                              memoryKey: (sourceMemoryPrefix ?? sessionId) + ":" + row.entry.id, activityNarrative: row.activity)
+                            .environment(\.conversationMemoryKey, (sourceMemoryPrefix ?? sessionId) + ":" + row.entry.id)
+                            .environment(\.isConversationBodyText, true)
+                            .background(ProcessFindAnchor(id: row.entry.id))
+                    }
+                }.padding(.top, ReplyStyle.Process.rowSpacing).padding(.leading, ReplyStyle.Process.nestedIndent)
+                    .overlay(alignment: .leading) {
+                        Rectangle().fill(.primary.opacity(0.12)).frame(width: 1).padding(.top, ReplyStyle.Process.rowSpacing)
+                    }
             }
         }
     }
@@ -2431,7 +2455,8 @@ struct ProcessFoldRow: View {
         let prompt = rows.lastIndex { $0.entry.presentation == .message && $0.entry.messages.first?.isUserPrompt == true }
         let start = prompt.map { $0 + 1 } ?? 0
         guard start < rows.count else { return nil }
-        return rows[start...].last { $0.entry.presentation == .activity }?.entry.id
+        guard let last = rows.last, last.entry.presentation == .activity else { return nil }
+        return last.entry.id
     }
     static func lastFoldOfLatestTurn(_ rows: [ConversationPresentationModel.Row]) -> String? {
         let prompt = rows.lastIndex { $0.entry.presentation == .message && $0.entry.messages.first?.isUserPrompt == true }
@@ -2726,44 +2751,30 @@ struct ThoughtDisclosure: View {
             ThoughtToggle(title: Text("Thoughts"),
                           summary: expanded ? nil : ThoughtTextStyle.latestSummaryLine(text),
                           expanded: $expanded)
-            if expanded { ThoughtText(text: text) }
+            WorkbenchDisclosureContent(expanded: expanded) { ThoughtText(text: text) }
         }
     }
 }
 
-/// A thought still streaming, open by default at six lines that follow the
-/// stream (with in-place full expansion), or one that ended the turn without a reply.
+/// One stable disclosure through live and settled thought phases.
 struct ThoughtOutput: View {
+    @Environment(\.conversationMemoryKey) private var memoryKey
     let messages: [KimiMessage]
     let finished: Bool
+    var embedded = false
     private var fullText: String { messages.flatMap(\.content).compactMap(\.thinking).joined(separator: "\n\n") }
-    @RememberedExpansion private var expanded: Bool
-    @RememberedExpansion("full-thought") private var showFullText
-    init(messages: [KimiMessage], finished: Bool) {
-        self.messages = messages; self.finished = finished
-        // Open while it streams; a record of a turn without a reply stays folded.
-        _expanded = RememberedExpansion("live-thought", initial: !finished)
-    }
-    @State private var previewOverflows = false
+    @RememberedExpansion("thought") private var expanded
     var body: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            HStack {
-                ThoughtToggle(title: finished ? Text("Thoughts · No response") : Text("Thinking"),
-                              summary: expanded ? nil : ThoughtTextStyle.latestSummaryLine(fullText),
-                              expanded: $expanded)
-                if expanded && !finished && (previewOverflows || showFullText) {
-                    Button { showFullText.toggle() } label: {
-                        Label(showFullText ? "Collapse full thoughts" : "View full thoughts",
-                              systemImage: showFullText ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
-                    }.buttonStyle(.plain).font(.system(size: ReplyStyle.captionSize)).foregroundStyle(.secondary).fixedSize()
-                }
-            }
-            if expanded && (finished || showFullText) {
-                ThoughtText(text: fullText)
-            } else if expanded {
-                ThoughtRail(fadesTail: true) {
-                    ThinkingTextViewport(text: fullText, overflows: $previewOverflows)
-                        .mask { ThoughtTopFade(active: previewOverflows) }
+        if embedded {
+            ThoughtText(text: fullText)
+        } else {
+            VStack(alignment: .leading, spacing: 9) {
+                ThoughtToggle(title: finished ? Text("Thoughts") : Text("Thinking"),
+                              summary: nil, expanded: $expanded)
+                    .accessibilityIdentifier("thought-disclosure:" + memoryKey)
+                WorkbenchDisclosureContent(expanded: expanded) { ThoughtText(text: fullText) }
+                if !expanded, !finished, let summary = ConversationThinkingSummary.latest(in: messages) {
+                    LiveThinkingSummary(text: summary).padding(.leading, ReplyStyle.Process.nestedIndent)
                 }
             }
         }

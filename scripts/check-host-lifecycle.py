@@ -13,6 +13,7 @@ import uuid
 
 PHASES = ["startup", "seed", "restart", "removal", "connection-controls", "connection-restart", "architecture", "interactions", "streaming-rendering", "git-write", "reading-design", "reading-controls", "goal-header", "reading-canvas", "sidebar-scroll", "activity-bar", "reply-selection", "frame-hitch", "workspace-upgrade", "file-reader", "code-reader", "workflow-polish", "document-reading", "task-context", "task-detail", "task-summary", "native-design"]
 parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--preview-reading-design", action="store_true", help="Keep a standalone native reading review app")
 parser.add_argument("--release", action="store_true", help="Compile fixtures with optimization for component timing")
 parser.add_argument("--phase", action="append", choices=PHASES, help="Run only the named phase(s)")
 parser.add_argument("--preview-file-reader", action="store_true", help="Keep the isolated file-reader fixture open for 120 seconds after checks")
@@ -81,6 +82,17 @@ with tempfile.TemporaryDirectory(prefix="perch-host-check-", dir=ROOT / ".build"
         info.write_bytes(plistlib.dumps(metadata))
         subprocess.run(["codesign", "--force", "--sign", "-", str(review)], check=True)
         print(f"Persistent native design preview: {review}", flush=True)
+    if args.preview_reading_design:
+        review = ROOT / "build/Perch Reading Review.app"
+        shutil.copytree(app, review, dirs_exist_ok=True)
+        for locale in (ROOT / "Resources/Localization").glob("*.lproj"):
+            shutil.copytree(locale, review / "Contents/Resources" / locale.name, dirs_exist_ok=True)
+        info = review / "Contents/Info.plist"
+        metadata = plistlib.loads(info.read_bytes())
+        metadata.update(CFBundleIdentifier="dev.agentworkbench.hostqa.reading-review", PerchReadingPreview=True,
+                        CFBundleName="Perch Reading Review", LSUIElement=False)
+        info.write_bytes(plistlib.dumps(metadata))
+        subprocess.run(["codesign", "--force", "--sign", "-", str(review)], check=True)
     print(f"Host lifecycle fixture ready in {time.monotonic() - started:.2f} s", flush=True)
     try:
         for phase in args.phase or PHASES:

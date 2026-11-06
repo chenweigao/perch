@@ -17,6 +17,7 @@ enum ConversationMessageAction {
     /// and a suspected stall for the reminder settings.
     case showTurnDetails
     case showChanges
+    case showEdit(VisibleTool, messageID: String)
     case turnStalled(minutes: Int)
 }
 

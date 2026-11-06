@@ -165,7 +165,7 @@ func checkConversationPresentationHistory() throws {
             for folds in [true, false] {
                 for running in [step.input.isRunning, !step.input.isRunning] {
                     let shown = displayed(rows, activity: activity)
-                    let expected = folds ? ConversationProcessFold.fold(rows: shown, isRunning: running) : shown
+                    let expected = folds ? ConversationProcessFold.fold(rows: shown, isRunning: running, preservesSteps: true) : shown
                     let parents = expected.reduce(into: [String: String]()) { map, row in
                         for folded in row.foldedRows ?? [] { map[folded.entry.id] = row.entry.id }
                     }
@@ -374,7 +374,7 @@ func checkConversationPresentationPaging() throws {
                     if let narrative, narrative.isAnchor, !narrative.stageClosed, row.entry.isNarrativeSource(for: narrative.narrative) { return nil }
                     return Row(entry: row.entry, tools: row.tools, activity: narrative)
                 }
-                let expected = folds ? ConversationProcessFold.fold(rows: shown, isRunning: true) : shown
+                let expected = folds ? ConversationProcessFold.fold(rows: shown, isRunning: true, preservesSteps: true) : shown
                 let parents = expected.reduce(into: [String: String]()) { map, row in
                     for folded in row.foldedRows ?? [] { map[folded.entry.id] = row.entry.id }
                 }

@@ -160,7 +160,8 @@ public final class ConversationPresentationModel {
             guard !activity.isEmpty else { return rows }
             return rows.compactMap { row -> Row? in
                 guard let narrative = activity[row.entry.id] else { return row }
-                if narrative.isAnchor, !narrative.stageClosed, row.entry.isNarrativeSource(for: narrative.narrative) { return nil }
+                if narrative.isAnchor, !narrative.stageClosed, row.entry.isNarrativeSource(for: narrative.narrative),
+                   !(narrative.narrative.source == .provider && narrative.narrative.evidenceIDs.isEmpty) { return nil }
                 return Row(entry: row.entry, tools: row.tools, activity: narrative)
             }
         }
@@ -173,10 +174,34 @@ public final class ConversationPresentationModel {
         public let foldParents: [String: String]
 
         init(displayed: [Row], foldsProcess: Bool, isRunning: Bool) {
-            rows = foldsProcess ? ConversationProcessFold.fold(rows: displayed, isRunning: isRunning) : displayed
+            rows = foldsProcess ? ConversationProcessFold.fold(rows: displayed, isRunning: isRunning, preservesSteps: true) : displayed
             foldParents = Self.parents(of: rows)
         }
         init(rows: [Row], foldParents: [String: String]) { self.rows = rows; self.foldParents = foldParents }
+
+        /// Keep the rows the reader explicitly opened while work was running in
+        /// their original hosts. Other completed process still folds in source order.
+        public func retainingProcessEntries(_ ids: Set<String>) -> Self {
+            guard !ids.isEmpty else { return self }
+            var result: [Row] = []
+            for row in rows {
+                guard let children = row.foldedRows, children.contains(where: { ids.contains($0.entry.id) }) else {
+                    result.append(row); continue
+                }
+                var pending: [Row] = []
+                func flush() {
+                    guard let first = pending.first else { return }
+                    result.append(Row(entry: .processFold(firstEntry: first.entry), tools: [:], activity: nil, foldedRows: pending))
+                    pending = []
+                }
+                for child in children {
+                    if ids.contains(child.entry.id) { flush(); result.append(child) }
+                    else { pending.append(child) }
+                }
+                flush()
+            }
+            return Self(rows: result, foldParents: Self.parents(of: result))
+        }
 
         static func parents(of rows: [Row], into map: [String: String] = [:]) -> [String: String] {
             rows.reduce(into: map) { map, row in
@@ -211,7 +236,20 @@ public final class ConversationPresentationModel {
         /// `displayedRows` followed by the process fold when `foldsProcess` is set.
         /// The earlier turns are presented once per summary overlay; each update
         /// then only presents the latest turn.
-        public func presented(activity: [String: ActivityNarrativeRow], foldsProcess: Bool, isRunning: Bool) -> Presentation {
+        public func presented(activity: [String: ActivityNarrativeRow], foldsProcess: Bool, isRunning: Bool,
+                              preservingEntries: Set<String> = []) -> Presentation {
+            if !preservingEntries.isEmpty {
+                var overlays = activity
+                for row in rows where preservingEntries.contains(row.entry.id) {
+                    guard let narrative = activity[row.entry.id] ?? row.activity,
+                          row.entry.isNarrativeSource(for: narrative.narrative) else { continue }
+                    // A summary normally moves into the live activity preview;
+                    // an explicitly opened source keeps its original disclosure.
+                    overlays[row.entry.id] = ActivityNarrativeRow(narrative: narrative.narrative,
+                        isAnchor: false, stageClosed: narrative.stageClosed)
+                }
+                return presented(activity: overlays, foldsProcess: foldsProcess, isRunning: isRunning)
+            }
             let liveReplyID = Self.liveReplyID(in: tail)
             func whole() -> Presentation {
                 Presentation(displayed: displayedRows { activity[$0] }, foldsProcess: foldsProcess, isRunning: isRunning)
@@ -227,7 +265,7 @@ public final class ConversationPresentationModel {
                !(first.presentation == .message && first.messages.first?.isUserPrompt == true) { return whole() }
             if foldsProcess, latest.isEmpty { return whole() }
             let earlier = history.presented(activity: activity, foldsProcess: foldsProcess)
-            let rows = foldsProcess ? ConversationProcessFold.fold(rows: latest, isRunning: isRunning) : latest
+            let rows = foldsProcess ? ConversationProcessFold.fold(rows: latest, isRunning: isRunning, preservesSteps: true) : latest
             return Presentation(rows: earlier.rows + rows, foldParents: Presentation.parents(of: rows, into: earlier.foldParents))
         }
 
@@ -245,7 +283,8 @@ public final class ConversationPresentationModel {
                 }
                 let narrative = activity(row.entry.id) ?? row.activity
                 if let narrative, narrative.isAnchor, !narrative.stageClosed,
-                   row.entry.isNarrativeSource(for: narrative.narrative) { return nil }
+                   row.entry.isNarrativeSource(for: narrative.narrative),
+                   !(narrative.narrative.source == .provider && narrative.narrative.evidenceIDs.isEmpty) { return nil }
                 return Row(entry: row.entry, tools: row.tools, activity: narrative)
             }
         }

@@ -33,155 +33,108 @@ struct KimiActivityView: View {
     /// locale re-runs them when the language changes.
     @Environment(\.locale) private var locale
     @UILocalization private var L
-    @RememberedExpansion("expanded") private var expanded
+    @RememberedExpansion("expanded") private var toolExpanded
+    @RememberedExpansion("thought") private var thoughtExpanded
+    private var expansion: Binding<Bool> {
+        entry.messages.first?.content.first?.type == "thinking" ? $thoughtExpanded : $toolExpanded
+    }
     let entry: ConversationTimelineEntry
     let tools: [String: VisibleTool]
     let api: KimiAPI?
     let sessionId: String
     var narrative: ActivityNarrative? = nil
     var isLive = false
+    var liveThinkingSummary: String? = nil
     var planProgress: TurnStatus.Progress? = nil
     var reduceMotionOverride: Bool? = nil
     private var reduceMotion: Bool { reduceMotionOverride ?? (systemReduceMotion || conversationReduceMotion) }
 
-    private func progressPulse(_ items: [VisibleTool]) -> Int {
-        var hasher = Hasher()
-        hasher.combine(narrative?.revision ?? 0)
-        for item in items {
-            hasher.combine(item.id)
-            hasher.combine(item.status)
-            if item.status == .running { hasher.combine(item.progress?.display.utf16.count ?? -1) }
-        }
-        return hasher.finalize()
-    }
-
     var body: some View {
         let items = entry.messages.flatMap(\.content).compactMap { tools[$0.toolCallId ?? ""] }
-        let hasRunningTool = items.contains { $0.status == .running }
-        let activeStage = isLive || hasRunningTool
-        let waitingForModel = isLive && !hasRunningTool
-        let editStat = SessionEditStats.derive(from: entry.messages)
+        let expanded = expansion.wrappedValue
         #if TRANSCRIPT_CHECKS
-        // Occurrences only, and a declaration because ViewBuilder rejects bare
-        // expression statements. Records that a collapsed activity row still walks
-        // every message and every tool before laying out its header.
         let _ = NavigationRenderMetrics.count("activity_row_body")
         let _ = NavigationRenderMetrics.count("activity_row_message_scan", by: entry.messages.count)
         let _ = NavigationRenderMetrics.count("activity_row_tool_scan", by: items.count)
         #endif
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(alignment: .center, spacing: 8) {
-                DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
-                    HStack(spacing: 8) {
-                        if let narrative {
-                            let eyebrow = items.isEmpty ? narrative.phase.label : L("\(narrative.phase.label) · \(items.count) 次调用")
-                            Text(verbatim: eyebrow).fixedSize()
-                            if !expanded, !hasRunningTool, let last = items.last {
-                                let action = ToolPresentation.action(last.name)
-                                let target = ToolPresentation.compactTarget(last)
-                                let lastDesc = target == last.name ? action : "\(action) \(target)"
-                                Text(verbatim: "· " + L("最近：\(lastDesc)"))
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
+        let edit = items.count == 1 && ToolPresentation.isEdit(items[0].name) ? items[0] : nil
+        let thinking = entry.messages.last?.content.last?.type == "thinking"
+        let hasRunningTool = items.contains { $0.status == .running }
+        let hasAttention = items.contains { [.awaitingApproval, .missingResult, .disconnected, .failed].contains($0.status) }
+        // An unresolved call already states what is needed. Do not imply that
+        // simply waiting will resolve it; resume the live indicator on new work.
+        let showsLiveStatus = isLive && (thinking || hasRunningTool || !hasAttention)
+        VStack(alignment: .leading, spacing: 0) {
+            if let edit {
+                EditStepRow(tool: edit, messageID: entry.messages[0].id, expanded: expansion)
+            } else {
+                HStack(spacing: 8) {
+                    DisclosureGroup(isExpanded: expansion) { EmptyView() } label: {
+                        HStack(spacing: 8) {
+                            Text(verbatim: entry.processPhase.map { ToolPresentation.phaseSummary($0, count: items.count) }
+                                 ?? items.first.map { ToolPresentation.action($0.name) } ?? L("运行上下文"))
+                                .lineLimit(1).truncationMode(.middle)
+                            if entry.processPhase == nil {
+                                Text(ToolPresentation.recentTargets(items)).lineLimit(1).truncationMode(.middle)
                             }
-                        } else if entry.isExploration {
-                            let label = ToolPresentation.explorationBucketSummary(items)
-                            Text(verbatim: label).fixedSize()
-                                .overlay {
-                                    if activeStage && !reduceMotion {
-                                        ShimmerGlint(text: label, size: ReplyStyle.captionSize, pulse: progressPulse(items))
-                                    }
-                                }
-                        } else if !items.isEmpty {
-                            let label = L("思考与工具 · \(items.count) 次调用")
-                            Text(verbatim: label).fixedSize()
-                                .overlay {
-                                    if activeStage && !reduceMotion {
-                                        ShimmerGlint(text: label, size: ReplyStyle.captionSize, pulse: progressPulse(items))
-                                    }
-                                }
-                        } else {
-                            Text("运行上下文").fixedSize()
-                        }
-                        if !expanded && narrative == nil {
-                            let targets = ToolPresentation.recentTargets(items)
-                            // Command names read as code; a sentence-like description stays prose.
-                            Text(targets).font(.system(size: ReplyStyle.captionSize,
-                                                       design: Self.readsAsCommands(targets) ? .monospaced : .default))
-                                .lineLimit(1).truncationMode(.middle).foregroundStyle(WorkbenchTheme.quiet)
-                        }
-                        Spacer(minLength: 0)
-                        let attention = items.filter { $0.staysVisible && $0.status != .running }
-                        // One item is named so the collapsed row says what to look at.
-                        if attention.count == 1, let only = attention.first {
-                            Text("\(ToolPresentation.compactTarget(only)) 需关注").lineLimit(1).truncationMode(.middle)
-                                .foregroundStyle(.orange)
-                        } else if attention.count > 1 {
-                            Text("\(attention.count) 项需关注").foregroundStyle(.orange).fixedSize()
-                        }
-                    }.font(.system(size: ReplyStyle.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
-                }.disclosureGroupStyle(ProcessDisclosureStyle())
-                if planProgress != nil || editStat != nil {
-                    trailingMetadata(planProgress: planProgress, editStat: editStat)
+                            Spacer(minLength: 0)
+                        }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(WorkbenchTheme.quiet)
+                    }.disclosureGroupStyle(ProcessDisclosureStyle())
+                        .accessibilityIdentifier("activity-phase:" + entry.id)
+                    if let planProgress { trailingMetadata(planProgress: planProgress) }
                 }
             }
-            let tierTwoHeadline: String? = {
-                if let narrative, narrative.source != .local { return narrative.headline }
-                if let todoTitle = planProgress?.currentTitle, !todoTitle.isEmpty { return todoTitle }
-                return narrative?.headline
-            }()
-            if let tierTwoHeadline {
-                Button { expanded.toggle() } label: {
-                    Text(verbatim: tierTwoHeadline)
-                        .font(.system(size: ReplyStyle.Process.labelSize))
-                        .foregroundStyle(Color.primary.opacity(0.76))
-                        .lineLimit(2)
-                        .truncationMode(.tail)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                        .overlay(alignment: .topLeading) {
-                            if activeStage && !reduceMotion {
-                                ShimmerGlint(text: tierTwoHeadline, size: ReplyStyle.Process.labelSize, pulse: progressPulse(items))
-                            }
-                        }
-                }
-                .buttonStyle(.plain)
-                .help(Text(verbatim: tierTwoHeadline))
-                .padding(.leading, ReplyStyle.Process.nestedIndent)
-                .padding(.bottom, 2)
-            }
-            if expanded, let narrative, let detail = narrative.detail, !detail.isEmpty {
-                ActivityNarrativeHistoryView(narrative: narrative, sourceText: detail)
+            if isLive, !expanded, let liveThinkingSummary {
+                LiveThinkingSummary(text: liveThinkingSummary)
                     .padding(.leading, ReplyStyle.Process.nestedIndent)
             }
-            // Each phase contains one part. Offset identity also handles thoughts
-            // and tools originating in the same provider message without collisions.
-            let mergedRanges = expanded ? Self.mergedReadRangesByPath(items) : [:]
-            ForEach(Array(entry.messages.enumerated()), id: \.offset) { index, message in
-                if let id = message.content.first?.toolCallId, let tool = tools[id] {
-                    if expanded || tool.staysVisible {
-                        let rangeBadge = ToolPresentation.path(tool).flatMap { mergedRanges[$0] }
-                        KimiToolCard(tool: tool, mergedReadRange: rangeBadge)
-                            .environment(\.conversationMemoryKey, memoryKey + ":tool:" + tool.id)
-                            .padding(.leading, expanded ? ReplyStyle.Process.nestedIndent : 0)
-                    }
-                } else if expanded {
-                    KimiMessageView(message: message, tools: tools, api: api, sessionId: sessionId)
-                        .environment(\.conversationMemoryKey, memoryKey + ":part:\(index)")
+            if showsLiveStatus {
+                HStack(spacing: 6) {
+                    PerchBusyIndicator(size: 13)
+                    Text(verbatim: thinking ? L("思考中")
+                         : items.last(where: { $0.status == .running }).map { ToolPresentation.compactTarget($0) } ?? L("等待响应…"))
+                        .font(.system(size: ReplyStyle.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
+                        .lineLimit(1).truncationMode(.tail)
+                }.padding(.leading, ReplyStyle.Process.nestedIndent).padding(.top, 4)
+                    .accessibilityIdentifier("activity-live-status:" + entry.id)
+            }
+            if isLive && !expanded, let running = items.last(where: { $0.status == .running }) {
+                let tail = ToolPresentation.runningOutputTail(running)
+                ForEach(Array(tail.enumerated()), id: \.offset) { _, line in
+                    Text(verbatim: line).font(.system(size: ReplyStyle.captionSize, design: .monospaced))
+                        .foregroundStyle(WorkbenchTheme.quiet).lineLimit(1).truncationMode(.tail)
                         .padding(.leading, ReplyStyle.Process.nestedIndent)
                 }
             }
-            if waitingForModel {
-                HStack(spacing: 6) {
-                    PerchBusyIndicator(size: 13)
-                    Text("工具已返回，正在等待模型下一步推理…")
-                        .font(.system(size: ReplyStyle.captionSize))
-                        .foregroundStyle(WorkbenchTheme.quiet)
-                        .lineLimit(1)
+            if let narrative {
+                WorkbenchDisclosureContent(expanded: expanded) {
+                    ActivityNarrativeHistoryView(narrative: narrative)
+                        .padding(.leading, ReplyStyle.Process.nestedIndent).padding(.top, 4)
                 }
-                .padding(.leading, ReplyStyle.Process.nestedIndent)
-                .padding(.top, 3)
+            }
+            let mergedRanges = Self.mergedReadRangesByPath(items)
+            ForEach(Array(entry.messages.enumerated()), id: \.offset) { index, message in
+                if let id = message.content.first?.toolCallId, let tool = tools[id] {
+                    // An edit receipt already carries its status. Keep a single
+                    // visible receipt and reveal its raw call from that arrow.
+                    let alwaysVisible = edit == nil && (tool.staysVisible && tool.status != .running || tool.status == .failed)
+                    WorkbenchDisclosureContent(expanded: expanded || alwaysVisible) {
+                        KimiToolCard(tool: tool, mergedReadRange: ToolPresentation.path(tool).flatMap { mergedRanges[$0] })
+                            .environment(\.conversationMemoryKey, memoryKey + ":tool:" + tool.id)
+                            .padding(.leading, ReplyStyle.Process.nestedIndent).padding(.top, 4)
+                    }
+                } else {
+                    WorkbenchDisclosureContent(expanded: expanded) {
+                        Group {
+                            if message.content.first?.type == "thinking" {
+                                ThoughtOutput(messages: [message], finished: !isLive, embedded: true)
+                            } else {
+                                KimiMessageView(message: message, tools: tools, api: api, sessionId: sessionId)
+                                    .environment(\.conversationMemoryKey, memoryKey + ":part:\(index)")
+                            }
+                        }.padding(.leading, ReplyStyle.Process.nestedIndent).padding(.top, 4)
+                    }
+                }
             }
         }
     }
@@ -203,10 +156,9 @@ struct KimiActivityView: View {
         return result
     }
 
-    private func trailingMetadata(planProgress: TurnStatus.Progress?,
-                                  editStat: (perFile: [String: SessionEditStat], total: SessionEditStat)?) -> some View {
+    private func trailingMetadata(planProgress: TurnStatus.Progress) -> some View {
         HStack(spacing: 8) {
-            if let planProgress {
+            Group {
                 if let actionContext {
                     Button { actionContext.post(.showTurnDetails) } label: {
                         HStack(spacing: 3) {
@@ -219,19 +171,6 @@ struct KimiActivityView: View {
                         .accessibilityValue(Text(verbatim: L("\(planProgress.done)/\(planProgress.total) 步")))
                 } else {
                     Text(verbatim: "\(planProgress.done) / \(planProgress.total)")
-                }
-            }
-            if let editStat {
-                if let actionContext {
-                    Button { actionContext.post(.showChanges) } label: {
-                        EditStatText(stat: editStat.total)
-                            .padding(.horizontal, 4).frame(height: 22).contentShape(Rectangle())
-                    }.buttonStyle(WorkbenchDisclosureButtonStyle())
-                        .help(Text("查看改动：本轮改了 \(editStat.perFile.count) 个文件"))
-                        .accessibilityLabel(Text("查看改动"))
-                        .accessibilityValue(Text(verbatim: L("本轮改了 \(editStat.perFile.count) 个文件") + " +\(editStat.total.additions) −\(editStat.total.deletions)"))
-                } else {
-                    EditStatText(stat: editStat.total)
                 }
             }
         }
@@ -363,6 +302,7 @@ struct KimiToolCard: View {
                     .accessibilityLabel(Text(verbatim: "\(tool.name) · \(summary) · \(statusLabel)"))
                     .help(Text(verbatim: [tool.input?["command"].string ?? ToolPresentation.path(tool), statusLabel].compactMap { $0 }.joined(separator: "\n")))
             }.disclosureGroupStyle(ProcessDisclosureStyle())
+                .accessibilityIdentifier("tool-call:" + tool.id)
                 .onChange(of: expanded) { _, value in if value { onExpand?() } }
             if !liveTail.isEmpty {
                 VStack(alignment: .leading, spacing: 2) {
@@ -386,7 +326,7 @@ struct KimiToolCard: View {
     private var details: some View {
         VStack(alignment: .leading, spacing: 10) {
             if let inlineDiff = ToolInlineDiff.derive(from: tool) {
-                ToolInlineDiffCard(diff: inlineDiff)
+                ToolInlineDiffCard(diff: inlineDiff, applied: tool.status == .succeeded)
                 if let output = tool.output, tool.status == .failed {
                     Text("Output").foregroundStyle(WorkbenchTheme.quiet)
                     DisclosureReplyText(text: output.display)
@@ -412,8 +352,9 @@ struct KimiToolCard: View {
     }
 }
 
-private struct ToolInlineDiffCard: View {
+struct ToolInlineDiffCard: View {
     let diff: ToolInlineDiff
+    var applied = true
     @UILocalization private var L
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -435,7 +376,8 @@ private struct ToolInlineDiffCard: View {
                 }
                 Spacer(minLength: 0)
                 if diff.stat.additions > 0 || diff.stat.deletions > 0 {
-                    EditStatText(stat: diff.stat)
+                    if applied { EditStatText(stat: diff.stat) }
+                    else { Text(verbatim: "+\(diff.stat.additions) −\(diff.stat.deletions)").foregroundStyle(WorkbenchTheme.quiet) }
                 }
             }.font(.system(size: ReplyStyle.captionSize))
             VStack(alignment: .leading, spacing: 1) {
@@ -471,5 +413,17 @@ private struct ToolInlineDiffCard: View {
         case .removed: return Color.red.opacity(0.09)
         case .header, .context: return .clear
         }
+    }
+}
+
+/// The provider's public preview occupies a stable, bounded place in the reader.
+struct LiveThinkingSummary: View {
+    let text: String
+    var body: some View {
+        Text(verbatim: text)
+            .font(.system(size: ReplyStyle.bodySize))
+            .foregroundStyle(WorkbenchTheme.quiet)
+            .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+            .accessibilityIdentifier("live-thinking-summary")
     }
 }

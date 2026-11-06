@@ -16,6 +16,8 @@ struct WorkspaceInspector: View {
                     close: { controller.embeddedVisible = false })
             case .changes:
                 ChangesInspectorView(model: model, close: { controller.embeddedVisible = false })
+            case .edits:
+                EditRecordInspectorView(model: model)
             case .files:
                 FilesInspectorView(model: model, close: { controller.embeddedVisible = false })
             }
@@ -181,7 +183,7 @@ struct ChangesInspectorView: View {
     private var header: some View {
         HStack(spacing: 4) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text("改动").font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold)).foregroundStyle(WorkbenchTheme.ink)
+                Text("当前工作区净差异").font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold)).foregroundStyle(WorkbenchTheme.ink)
                 Text(summary).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet)
             }
             Spacer(minLength: 4)

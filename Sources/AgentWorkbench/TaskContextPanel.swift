@@ -3,7 +3,7 @@ import Observation
 import SwiftUI
 import WorkbenchCore
 
-enum WorkspaceInspectorPage: String, Hashable { case task, changes, files }
+enum WorkspaceInspectorPage: String, Hashable { case task, changes, files, edits }
 
 @MainActor @Observable final class TaskContextWindowController: NSObject, NSWindowDelegate {
     var locked: SessionReference?
@@ -13,6 +13,7 @@ enum WorkspaceInspectorPage: String, Hashable { case task, changes, files }
     /// The task the task page shows in place of its list. It survives docking,
     /// detaching and page switches, and closes when the panel follows another
     /// session. Not persisted.
+    var editRecord: (source: SessionReference, record: ConversationEditRecord)?
     var detail: TaskContextRoute?
     private(set) var visible = false
     func isShowing(_ page: WorkspaceInspectorPage) -> Bool { embeddedVisible && self.page == page }

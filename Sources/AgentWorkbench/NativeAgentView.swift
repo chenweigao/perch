@@ -325,7 +325,7 @@ private struct NativeComposerView: View {
     /// Says what Return does; it shows only while the draft is empty.
     private var placeholder: String {
         switch defaultMode(s) {
-        case .steer: return L("回车引导当前轮，⌘回车排到下一轮…")
+        case .steer: return L("补充要求或调整方向…")
         case .nextTurn: return L("回车排到下一轮发送…")
         case .now: return (s.commands ?? []).isEmpty ? L("继续此任务…") : L("Continue this task, or type / for commands…")
         }
