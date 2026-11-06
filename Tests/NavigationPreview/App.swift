@@ -1594,7 +1594,10 @@ extension NavigationRunner {
             if withContext {
                 messages.insert(["id": "disclosure-prefix", "role": "user", "created_at": "",
                     "content": [["type": "text", "text": Array(repeating: "Earlier conversation remains above the clicked row.", count: 45).joined(separator: "\n")]]], at: 0)
-                messages.append(["id": "disclosure-tail", "role": "user", "created_at": "",
+                // Long user prompts collapse by default. Use reply prose here
+                // so the tested header really stays away from the document's
+                // bottom boundary when its process content collapses.
+                messages.append(["id": "disclosure-tail", "role": "assistant", "created_at": "",
                     "content": [["type": "text", "text": Array(repeating: "Later conversation keeps the viewport away from the document boundary.", count: 45).joined(separator: "\n")]]])
             }
             let snapshot: [String: Any] = ["as_of_seq": 1, "epoch": "fixture",
@@ -1633,6 +1636,11 @@ extension NavigationRunner {
                         $0.hasPrefix("disclosure-Bash:activity:") && $0.contains(":tool:bash:tool:")
                     }
                 }) != nil else { throw NavigationError("Bash tool card did not mount inside the expanded stage") }
+                // The failed card is already mounted outside the collapsed
+                // stage. Wait for the enclosing stage's 250 ms transition
+                // before measuring the baseline for a separate tool toggle.
+                try await Task.sleep(for: .milliseconds(350))
+                host.layoutSubtreeIfNeeded()
             }
             var fullSource: String?
             if full {
