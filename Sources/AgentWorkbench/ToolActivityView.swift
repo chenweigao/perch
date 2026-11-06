@@ -60,10 +60,13 @@ struct KimiActivityView: View {
         let edit = items.count == 1 && ToolPresentation.isEdit(items[0].name) ? items[0] : nil
         let thinking = entry.messages.last?.content.last?.type == "thinking"
         let hasRunningTool = items.contains { $0.status == .running }
-        let hasAttention = items.contains { [.awaitingApproval, .missingResult, .disconnected, .failed].contains($0.status) }
-        // An unresolved call already states what is needed. Do not imply that
-        // simply waiting will resolve it; resume the live indicator on new work.
+        let failures = items.filter { $0.status == .failed }.count
+        let hasAttention = items.contains { [.awaitingApproval, .missingResult, .disconnected].contains($0.status) }
+        // A returned command error does not end the agent turn. Its actual busy
+        // state must remain visible even while waiting for the next output.
         let showsLiveStatus = isLive && (thinking || hasRunningTool || !hasAttention)
+        let title = entry.processPhase.map { ToolPresentation.phaseTitle($0, tools: items) }
+            ?? items.first.map { ToolPresentation.action($0.name) } ?? L("运行上下文")
         VStack(alignment: .leading, spacing: 0) {
             if let edit {
                 EditStepRow(tool: edit, messageID: entry.messages[0].id, expanded: expansion)
@@ -71,13 +74,23 @@ struct KimiActivityView: View {
                 HStack(spacing: 8) {
                     DisclosureGroup(isExpanded: expansion) { EmptyView() } label: {
                         HStack(spacing: 8) {
-                            Text(verbatim: entry.processPhase.map { ToolPresentation.phaseSummary($0, count: items.count) }
-                                 ?? items.first.map { ToolPresentation.action($0.name) } ?? L("运行上下文"))
+                            Text(verbatim: title)
                                 .lineLimit(1).truncationMode(.middle)
+                                .help(Text(verbatim: title))
                             if entry.processPhase == nil {
                                 Text(ToolPresentation.recentTargets(items)).lineLimit(1).truncationMode(.middle)
                             }
                             Spacer(minLength: 0)
+                            if entry.processPhase != nil {
+                                Text(verbatim: L("\(items.count) 次调用"))
+                                    .font(.system(size: ReplyStyle.captionSize)).fixedSize()
+                            }
+                            if failures > 0 {
+                                Text(verbatim: L("\(failures) 次失败"))
+                                    .font(.system(size: ReplyStyle.captionSize)).fixedSize()
+                                    .help(Text("展开查看失败记录"))
+                                    .accessibilityIdentifier("activity-failures:" + entry.id)
+                            }
                         }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(WorkbenchTheme.quiet)
                     }.disclosureGroupStyle(ProcessDisclosureStyle())
                         .accessibilityIdentifier("activity-phase:" + entry.id)
@@ -92,7 +105,7 @@ struct KimiActivityView: View {
                 HStack(spacing: 6) {
                     PerchBusyIndicator(size: 13)
                     Text(verbatim: thinking ? L("思考中")
-                         : items.last(where: { $0.status == .running }).map { ToolPresentation.compactTarget($0) } ?? L("等待响应…"))
+                         : items.last(where: { $0.status == .running }).map { ToolPresentation.compactTarget($0) } ?? L("等待 Agent 新输出…"))
                         .font(.system(size: ReplyStyle.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
                         .lineLimit(1).truncationMode(.tail)
                 }.padding(.leading, ReplyStyle.Process.nestedIndent).padding(.top, 4)
@@ -117,7 +130,8 @@ struct KimiActivityView: View {
                 if let id = message.content.first?.toolCallId, let tool = tools[id] {
                     // An edit receipt already carries its status. Keep a single
                     // visible receipt and reveal its raw call from that arrow.
-                    let alwaysVisible = edit == nil && (tool.staysVisible && tool.status != .running || tool.status == .failed)
+                    let alwaysVisible = edit == nil && ToolPresentation.showsResultOutsideStage(
+                        tool, isLive: isLive, lastPartToolID: entry.messages.last?.content.last?.toolCallId)
                     WorkbenchDisclosureContent(expanded: expanded || alwaysVisible) {
                         KimiToolCard(tool: tool, mergedReadRange: ToolPresentation.path(tool).flatMap { mergedRanges[$0] })
                             .environment(\.conversationMemoryKey, memoryKey + ":tool:" + tool.id)

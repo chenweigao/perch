@@ -226,3 +226,9 @@ import WorkbenchCore
           !frame.isEmpty else { return nil }
     return window.convertFromScreen(frame)
 }
+
+@MainActor func taskPanelLabel(_ window: NSWindow, _ identifier: String) -> String? {
+    guard let node = taskPanelElements(window).first(where: { $0.identifier == identifier })?.node,
+          node.responds(to: NSSelectorFromString("accessibilityLabel")) else { return nil }
+    return node.perform(NSSelectorFromString("accessibilityLabel"))?.takeUnretainedValue() as? String
+}
