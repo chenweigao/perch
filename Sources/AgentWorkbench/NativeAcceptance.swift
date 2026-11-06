@@ -211,6 +211,19 @@ struct NativeDirectoryProbe: NSViewRepresentable {
         return data
     }
     init() throws {
+        // Local-only real-content review. The snapshot stays outside the repository;
+        // transport below rejects writes and never connects to the source agent.
+        if let path = ProcessInfo.processInfo.environment["PERCH_READING_SNAPSHOT"] {
+            let data = try Data(contentsOf: URL(fileURLWithPath: path))
+            let snapshot = try NativeAgentWire.decode(NativeAgentSnapshot.self, from: data)
+            sessions = [WorkspaceSession(
+                reference: SessionReference(hostID: Self.host.id, terminalID: snapshot.id, kind: snapshot.provider),
+                title: snapshot.title, directory: snapshot.cwd, hostName: "本地只读回放", detail: "真实会话快照", // l10n-ignore
+                online: true, section: .other, canMarkReviewed: false, archived: false, updatedAt: 1)]
+            snapshots = [snapshot.id: data]
+            subagentRoster = []; subagentTranscripts = [:]
+            return
+        }
         sessions = (0..<500).map { index -> WorkspaceSession in
             let reference = SessionReference(hostID: Self.host.id, terminalID: "session-\(index)", kind: .omp)
             let title = String(format: "验收会话 %04d · 中文 English", index)
@@ -387,6 +400,17 @@ struct NativeDirectoryProbe: NSViewRepresentable {
     }
     func request(_ path: String, body: JSONValue?) throws -> Data {
         requests.append(path)
+        if let replayPath = ProcessInfo.processInfo.environment["PERCH_READING_SNAPSHOT"] {
+            guard body == nil else { throw WorkbenchError("Read-only replay") }
+            let data = try Data(contentsOf: URL(fileURLWithPath: replayPath))
+            var value = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+            if path == "/sessions" {
+                value["pending"] = (value["interactions"] as? [Any])?.count ?? 0
+                value["updated"] = Date().timeIntervalSince1970
+                return try JSONSerialization.data(withJSONObject: ["sessions": [value]])
+            }
+            if path.hasPrefix("/sessions/" + (value["id"] as! String)) { return data }
+        }
         if let data = try subagentResponse(path, body: body) { return data }
         if ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_MODE"] == "workspace" {
             if path == "/sessions" {
@@ -480,16 +504,35 @@ struct NativeDirectoryProbe: NSViewRepresentable {
         let window = NSWindow(contentRect: NSRect(x: 60, y: 80, width: 1280, height: 820),
                               styleMask: [.titled, .closable, .miniaturizable, .resizable],
                               backing: .buffered, defer: false)
-        window.title = "Perch · 隔离性能验收"
+        let isReplay = ProcessInfo.processInfo.environment["PERCH_READING_SNAPSHOT"] != nil
+        window.title = isReplay ? "Perch · 真实会话只读回放" : "Perch · 隔离性能验收" // l10n-ignore
         window.isReleasedWhenClosed = false
         window.contentViewController = NSHostingController(rootView:
-            WorkbenchView(model: model).preferredColorScheme(.light)
+            WorkbenchView(model: model).preferredColorScheme(ProcessInfo.processInfo.environment["PERCH_READING_DARK"] == "1" ? .dark : .light)
                 .environment(\.locale, Locale(identifier: "zh-Hans")))
         window.setContentSize(NSSize(width: 1280, height: 820))
         window.makeKeyAndOrderFront(nil)
         self.window = window
         Task {
+            if isReplay {
+                try? await model.native.refresh()
+                // Exercise the same edit-record routing as the production app.
+                NotificationCenter.default.addObserver(forName: .conversationAction, object: nil, queue: .main) { [weak model] notice in
+                    guard let payload = notice.object as? ConversationActionPayload,
+                          case .showEdit = payload.action else { return }
+                    MainActor.assumeIsolated { model?.handleConversationAction(payload) }
+                }
+            }
             model.open(fixture.sessions[0])
+            if isReplay {
+                // Refresh the local file so append/finish transitions can be replayed
+                // without sending anything to the original agent.
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(1))
+                    try? await model.native.acceptanceRefreshSelected()
+                }
+                return
+            }
             // Design-review hook: float the command-line island over the fixture
             // session, backed by a real local shell in the home directory.
             if ProcessInfo.processInfo.environment["PERCH_ACCEPTANCE_COMMAND_LINE_ISLAND"] == "1" {

@@ -102,6 +102,28 @@ func checkPhaseReading() throws {
     let failed = message("failed", [["type": "tool_result", "tool_call_id": "shell0", "is_error": true, "output": "failed"]], role: "tool")
     let snapshot = ConversationPresentationModel(key: "phase-reading").update(.init(messages: try decode(source + [failed]), language: "zh-Hans"))
     let visible = snapshot.presented(activity: [:], foldsProcess: false, isRunning: false)
-    precondition(visible.rows.first { $0.entry.isExploration }?.tools["shell0"]?.status == .failed, "A folded stage retains failed tool status for the always-visible exception card")
-    print("PASS: phase reading groups Bash and thoughts, preserves edit receipts and boundaries, and labels shell conditions and wrappers")
+    precondition(visible.rows.first { $0.entry.isExploration }?.tools["shell0"]?.status == .failed, "A folded stage retains failed tool status for the visible failure summary")
+    let error = VisibleTool(id: "error", name: "shell", input: nil, status: .failed)
+    precondition(!ToolPresentation.showsResultOutsideStage(error, isLive: false, lastPartToolID: "error"), "Historical failures remain in the stage summary, not permanent extra rows")
+    precondition(!ToolPresentation.showsResultOutsideStage(error, isLive: true, lastPartToolID: "next"), "A subsequent call makes a returned failure historical without changing its status")
+    precondition(ToolPresentation.showsResultOutsideStage(error, isLive: true, lastPartToolID: "error"), "The current failed call remains directly readable")
+    for state in [VisibleTool.Status.awaitingApproval, .missingResult, .disconnected] {
+        let unresolved = VisibleTool(id: "pending", name: "shell", input: nil, status: state)
+        precondition(ToolPresentation.showsResultOutsideStage(unresolved, isLive: false, lastPartToolID: "later"), "Later work cannot hide authorization or missing evidence")
+    }
+    let described = VisibleTool(id: "description", name: "shell", input: .object(["command": .string("custom"), "description": .string("核对失败参数")]), status: .failed)
+    precondition(ToolPresentation.phaseTitle(.mixed, tools: [described]) == "核对失败参数", "Use supplied work descriptions without inventing success")
+    let script = VisibleTool(id: "script", name: "shell", input: .object(["command": .string("/bin/bash -lc 'PYTHONPATH=src .venv/bin/python /tmp/profile_scalar.py --limit 60'")]), status: .failed)
+    precondition(ToolPresentation.phaseTitle(.mixed, tools: [script]).contains("profile_scalar.py"), "The actual script identifies the stage despite shell and environment wrappers")
+    let incidental = VisibleTool(id: "incidental", name: "shell", input: .object(["command": .string("readlink -f .venv")]), status: .succeeded)
+    let read = VisibleTool(id: "read", name: "read", input: nil, status: .succeeded)
+    let stageTitle = ToolPresentation.phaseTitle(.mixed, tools: [incidental, read, script])
+    precondition(stageTitle.contains("profile_scalar.py") && !stageTitle.contains("readlink"), "Incidental commands must not displace the phase's identifiable work")
+    for command in ["sed -i '' s/a/b/ file", "find . -delete"] {
+        let mutation = VisibleTool(id: "mutation", name: "shell", input: .object(["command": .string(command)]), status: .succeeded)
+        precondition(!ToolPresentation.phaseTitle(.mixed, tools: [mutation]).contains(L("查看文件与代码")), "Read-like executables can write; do not label them as reading")
+    }
+    let unknown = VisibleTool(id: "unknown", name: "shell", input: .object(["command": .string("$(choose_command) --run")]), status: .succeeded)
+    precondition(ToolPresentation.phaseTitle(.mixed, tools: [unknown]) == L("执行命令"), "Unparsed commands retain a neutral summary")
+    print("PASS: phase reading groups Bash and thoughts, preserves edit receipts, separates historical failures from pending work and uses grounded command labels")
 }

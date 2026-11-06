@@ -306,8 +306,10 @@ struct ReadingDesignFixture: View {
     failedSource[resultIndex] = record("phase-shell-0-result", [["type": "tool_result", "tool_call_id": "phase-shell-0", "output": "Permission denied", "is_error": true]], role: "tool")
     host.rootView = ReadingDesignFixture(messages: try decode(failedSource))
     try await Task.sleep(for: .milliseconds(300))
-    precondition(taskPanelControl(window, "tool-call:phase-shell-0") != nil,
-                 "A failure remains accessible outside the collapsed stage")
+    precondition(taskPanelControl(window, "tool-call:phase-shell-0") == nil,
+                 "Historical failures do not consume individual rows")
+    precondition(taskPanelLabel(window, "activity-phase:thinking:phase-thought:0")?.contains(L("\(1) 次失败")) == true,
+                 "The collapsed stage explicitly discloses historical failures")
     precondition(taskPanelControl(window, "tool-call:phase-shell-1") == nil,
                  "Successful calls stay inside the collapsed stage")
     try snapshot("phases-failure")
@@ -330,8 +332,10 @@ struct ReadingDesignFixture: View {
     window.setContentSize(NSSize(width: 1000, height: 800))
     host.rootView = ReadingDesignFixture(messages: failureOnly, running: true)
     try await Task.sleep(for: .milliseconds(400))
-    precondition(taskPanelControl(window, "activity-live-status:thinking:phase-thought:0") == nil,
-                 "An unresolved failed call must not also invite passive waiting")
+    precondition(taskPanelControl(window, "activity-live-status:thinking:phase-thought:0") != nil,
+                 "A returned command failure must not hide a still-running agent")
+    precondition(taskPanelControl(window, "tool-call:phase-shell-0") != nil,
+                 "The latest failed call remains directly accessible while the agent waits for new output")
     try snapshot("review-live-failure")
     if Bundle.main.object(forInfoDictionaryKey: "PerchReadingPreview") as? Bool == true {
         window.styleMask.insert(.resizable)
@@ -455,21 +459,28 @@ private struct ReadingReviewControls: View {
     precondition(taskPanelControl(window, "tool-call:lifecycle-read") != nil, "Completion cannot close a process the reader opened")
     precondition(taskPanelControl(window, "live-thinking-summary") == nil)
     precondition(taskPanelControl(window, "edit-step:lifecycle-edit") != nil)
-    precondition(taskPanelControl(window, "tool-call:lifecycle-check") != nil)
+    precondition(taskPanelControl(window, "tool-call:lifecycle-check") == nil)
+    precondition(taskPanelLabel(window, "activity-phase:activity:tool:lifecycle-check")?.contains(L("\(1) 次失败")) == true)
     try snapshot("lifecycle-retained")
-    // A fresh reader sees only the result, edit receipt, unresolved issue and
+    // A fresh reader sees only the result, edit receipt, failure summary and
     // compact process entry. Session A's explicit choice cannot leak to B.
     host.rootView = ReadingDesignFixture(messages: done, session: "lifecycle-B", folds: true)
     for (name, width, appearance) in [("lifecycle-completed", 1000.0, NSAppearance.Name.aqua), ("lifecycle-narrow", 540.0, .aqua), ("lifecycle-dark", 1000.0, .darkAqua)] {
         window.setContentSize(NSSize(width: width, height: 760)); window.appearance = NSAppearance(named: appearance)
         try await settle()
         precondition(taskPanelControl(window, "tool-call:lifecycle-read") == nil)
-        precondition(taskPanelControl(window, "edit-step:lifecycle-edit") != nil && taskPanelControl(window, "tool-call:lifecycle-check") != nil)
+        precondition(taskPanelControl(window, "edit-step:lifecycle-edit") != nil && taskPanelControl(window, "tool-call:lifecycle-check") == nil)
+        precondition(taskPanelLabel(window, "activity-phase:activity:tool:lifecycle-check")?.contains(L("\(1) 次失败")) == true)
         precondition(!readingTextViews(host).contains { $0.string.contains("我先检查窗口状态") })
         precondition(readingTextViews(host).contains { $0.string.contains("已修复首次打开文件") })
         try snapshot(name)
     }
     window.appearance = NSAppearance(named: .aqua)
+    click("activity-phase:activity:tool:lifecycle-check")
+    try await settle()
+    precondition(taskPanelControl(window, "tool-call:lifecycle-check") != nil, "The failed call remains reachable from its explicit summary")
+    click("activity-phase:activity:tool:lifecycle-check")
+    try await settle()
     click("completed-process:text:lifecycle-progress:0")
     try await settle()
     precondition(readingTextViews(host).contains { $0.string.contains("我先检查窗口状态") }, "Completed process remains reachable")
