@@ -315,7 +315,7 @@ private struct KimiComposerView: View {
     }
     /// Says what Return does. It shows only over an empty draft, never a command.
     private var placeholder: String {
-        isRunning ? L("回车引导当前轮，⌘回车排到下一轮…") : L("Continue this task, or type / for commands…")
+        isRunning ? L("补充要求或调整方向…") : L("Continue this task, or type / for commands…")
     }
     private var canSend: Bool {
         let id = connection.selectedId ?? ""

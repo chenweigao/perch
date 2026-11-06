@@ -485,6 +485,31 @@ import WorkbenchCore
                  connection.drafts["b"] == "其他任务草稿",
                  "Inspector changes must preserve transcript identity, selection, and draft")
     model.taskContextWindow.locked = nil
+    // The actual transcript action opens a session-scoped immutable edit record.
+    let stepTool = VisibleTool(id: "historical-edit", name: "Edit", input: .object([
+        "file_path": .string("Report.md"), "old_string": .string("old report"), "new_string": .string("STEP_PATCH_MARKER")]), status: .succeeded)
+    let context = ConversationActionContext(hostID: b.hostID, kind: b.kind, sessionID: b.terminalID)
+    model.handleConversationAction(.init(context: context, action: .showEdit(stepTool, messageID: "not-loaded")))
+    try await Task.sleep(for: .milliseconds(300))
+    precondition(model.taskContextWindow.page == .edits && inspectorFloating(true, "edit record") && contentMounts == 1)
+    precondition(model.taskContextWindow.editRecord?.record.step == stepTool)
+    precondition(!model.taskContextWindow.editRecord!.record.hasTurn, "Missing history is explicitly partial")
+    let capture = URL(fileURLWithPath: "/private/tmp/perch-step-inspector.png")
+    if let view = page.contentView, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
+        view.cacheDisplay(in: view.bounds, to: bitmap)
+        try bitmap.representation(using: .png, properties: [:])?.write(to: capture)
+    }
+    model.taskContextWindow.embeddedVisible = false
+    try await Task.sleep(for: .milliseconds(150))
+    model.taskContextWindow.showPage(.edits, model: model)
+    try await Task.sleep(for: .milliseconds(150))
+    precondition(inspectorFloating(true, "edit reopen") && contentMounts == 1)
+    // A queued action from another session cannot replace the current selection.
+    let stale = ConversationActionContext(hostID: a.hostID, kind: a.kind, sessionID: a.terminalID)
+    model.handleConversationAction(.init(context: stale, action: .showEdit(stepTool, messageID: "a")))
+    precondition(model.taskContextWindow.editRecord?.source == b)
+    model.taskContextWindow.embeddedVisible = false
+    print("PASS: edit record action routing, missing-history label, native inspector first open/reopen and stale-session rejection")
     print("PASS: behind-window frame, rounded conversation card, floating sidebar margins, wide avoidance, narrow overlay, leading reading rail, persisted resize and visibility, floating inspector margins, overlay and persistence, destination suspension and restore, detached panel round trip, stable transcript, source isolation, stop targeting, cancellation, draft and file route")
 }
 
@@ -566,11 +591,7 @@ private struct TaskContextInspectorFixture: View {
             sidebar: { Color.clear },
             header: { Text("准备调研报告") },
             actions: { TaskContextButton(model: model) },
-            inspector: {
-                TaskContextView(model: model,
-                    detach: { model.taskContextWindow.show(model: model) },
-                    close: { model.taskContextWindow.embeddedVisible = false })
-            },
+            inspector: { WorkspaceInspector(model: model) },
             content: {
                 NativeAgentView(connection: connection, onResultDisplayed: { _ in })
                     .background(TaskContextContentProbe(mounted: contentMounted))

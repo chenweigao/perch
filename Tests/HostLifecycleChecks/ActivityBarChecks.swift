@@ -216,7 +216,7 @@ private struct ActivityBarCheckFixture: View {
     host.layoutSubtreeIfNeeded()
     precondition(state.barFrame.height < 0.5, "An idle status line must take no space: \(state.barFrame.height)pt")
 
-    // Inline turn status: open stage narrative + shimmer, pure-text plan/changes
+    // Inline turn status: compact disclosure + busy indicator, pure-text plan/changes
     // links, Recap target resolution, and ReturnToLatest waiting capsule.
     let progressLive = TurnStatus.Progress.live(in: runningMessages, isRunning: true)
     precondition(progressLive == TurnStatus.Progress(done: 1, total: 3), "Running turn resolves active plan progress: \(String(describing: progressLive))")
@@ -333,7 +333,13 @@ private struct ActivityBarCheckFixture: View {
     window.appearance = NSAppearance(named: .aqua)
     try await Task.sleep(for: .milliseconds(200))
     inlineHost.layoutSubtreeIfNeeded()
-    precondition(!glints(inlineHost).isEmpty, "Live inline KimiActivityView header carries ShimmerGlint")
+    func busyIndicators(_ view: NSView) -> [NSView] {
+        if String(describing: type(of: view)) == "PerchBusyView" { return [view] }
+        return view.subviews.flatMap(busyIndicators)
+    }
+    precondition(glints(inlineHost).isEmpty, "The compact process header stays still while its status indicates progress")
+    precondition(busyIndicators(inlineHost).contains { $0.bounds.width == 13 && $0.bounds.height == 13 },
+                 "A running inline stage keeps its visible compact busy indicator")
 
     let sqlNoteText = """
     规划已完成，开始派发：新计划有约 55.05 万项待算，已完成 189 项。旧结果已通过库存核对复用。

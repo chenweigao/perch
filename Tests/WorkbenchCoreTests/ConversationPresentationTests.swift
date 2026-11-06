@@ -38,7 +38,7 @@ func checkConversationPresentation() throws {
 
     // Successive reasoning/progress phases remain chronological and independently readable.
     let mixed = ConversationTimelineEntry.make(progress + thoughts, isRunning: true)
-    precondition(mixed.last?.messages.contains { $0.id == "t" } == true, "Completed thoughts join the surrounding activity stage")
+    precondition(mixed.last?.messages.contains { $0.id == "t" } == true, "Intervening thoughts remain inside their work phase")
     precondition(mixed.filter { $0.presentation == .progress }.flatMap(\.messages).map(\.id) == ["a", "b"])
     precondition(mixed.flatMap(\.messages).flatMap(\.content) == (progress + thoughts).flatMap(\.content), "Grouping preserves every part in source order")
     precondition(Set(mixed.map(\.id)).count == mixed.count, "Channels from one message need distinct SwiftUI identities")

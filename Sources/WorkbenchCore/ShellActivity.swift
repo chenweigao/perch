@@ -43,6 +43,9 @@ struct ShellActivity {
     }
 
     private static func parseUncached(_ command: String) -> Self? {
+        // The lightweight lexer does not parse substitutions. In `SDK=$(find
+        // /path ...)` a path or option inside the substitution is not the command.
+        guard !command.contains("$("), !command.contains("`") else { return nil }
         for words in segments(command) {
             var words = words
             // Compound-command syntax is not the operation: `do grep …` is grep, and
@@ -52,10 +55,19 @@ struct ShellActivity {
             while let first = words.first, first.contains("="), !first.hasPrefix("-") { words.removeFirst() }
             while let first = words.first, ["env", "command", "exec"].contains(first) {
                 words.removeFirst()
-                while let value = words.first, value.contains("=") { words.removeFirst() }
+                while let value = words.first {
+                    if value == "--" { words.removeFirst(); break }
+                    if ["-u", "--unset", "-C", "--chdir"].contains(value), words.count > 1 {
+                        words.removeFirst(2)
+                    } else if value.contains("=") || ["-i", "--ignore-environment", "-p"].contains(value) {
+                        words.removeFirst()
+                    } else { break }
+                }
             }
             guard let first = words.first else { continue }
             let executable = (first as NSString).lastPathComponent.lowercased()
+            // Incomplete wrappers/conditions must never turn a flag into a name.
+            guard !executable.isEmpty, !executable.hasPrefix("-") else { return nil }
             if ["cd", "export", "source", ".", "set"].contains(executable) { continue }
             if ["bash", "sh", "zsh"].contains(executable), words.count >= 3,
                ["-c", "-lc"].contains(words[1]) { return parse(words[2]) }
@@ -104,8 +116,55 @@ struct ShellActivity {
     }
 
     var compactTarget: String {
-        ["git", "swift", "cargo", "go", "npm", "pnpm", "yarn", "bun"].contains(executable)
-            ? ([executable] + arguments.prefix(1)).joined(separator: " ") : executable
+        if ["[", "[[", "test"].contains(executable) { return L("检查条件") }
+        if executable == "git" {
+            var rest = arguments
+            while let first = rest.first, first.hasPrefix("-") {
+                if ["-C", "-c", "--git-dir", "--work-tree"].contains(first), rest.count > 1 { rest.removeFirst(2) }
+                else { rest.removeFirst() }
+            }
+            return ([executable] + rest.prefix(1)).joined(separator: " ")
+        }
+        if ["swift", "cargo", "go", "npm", "pnpm", "yarn", "bun"].contains(executable),
+           let action = arguments.first, !action.hasPrefix("-") {
+            return ([executable] + arguments.prefix(action == "run" ? 2 : 1)).joined(separator: " ")
+        }
+        return executable
+    }
+
+    /// Classify the entire command conservatively. A read followed by an unknown
+    /// operation is execution, not exploration. Shell syntax stays available in
+    /// full; this small display parser does not attempt to prove shell semantics.
+    static func groupingPhase(_ command: String) -> ActivityNarrativePhase {
+        guard !command.contains(">"), !command.contains("$("), !command.contains("`"),
+              !command.contains("\n"), !command.contains("<(") else { return .mixed }
+        let commands = segments(command)
+        var phases: [ActivityNarrativePhase] = []
+        for words in commands {
+            guard let first = words.first else { continue }
+            let name = (first as NSString).lastPathComponent.lowercased()
+            if name == "cd" { continue }
+            if ["bash", "sh", "zsh"].contains(name), words.count == 3, ["-c", "-lc"].contains(words[1]) {
+                phases.append(groupingPhase(words[2])); continue
+            }
+            // Control flow, environment wrappers and assignments are deliberately
+            // neutral here even when the compact label can identify their target.
+            if leadingKeywords.contains(first) || structuralKeywords.contains(first) || first.contains("=") {
+                return .mixed
+            }
+            let activity = Self(executable: name, arguments: Array(words.dropFirst()))
+            let phase: ActivityNarrativePhase
+            if ["[", "[[", "test"].contains(name) { phase = .exploring }
+            else if name == "git" {
+                phase = ["git status", "git diff", "git log", "git show", "git ls-files"].contains(activity.compactTarget) ? .exploring : .mixed
+            } else if activity.category == "read" {
+                if name == "sed" || words.contains(where: { ["-exec", "-execdir", "-delete", "-fprint", "--pre"].contains($0) || $0.hasPrefix("--pre=") }) { return .mixed }
+                phase = .exploring
+            } else { phase = activity.phase == .validating ? .validating : .mixed }
+            phases.append(phase)
+        }
+        guard let first = phases.first, phases.allSatisfy({ $0 == first }) else { return .mixed }
+        return first
     }
 
     static func segments(_ command: String) -> [[String]] {

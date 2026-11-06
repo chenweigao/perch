@@ -2,8 +2,25 @@ import Foundation
 
 /// Labels describe observed tool calls, never their inferred outcome.
 public enum ToolPresentation {
+    /// Reading metadata only, never a permission or command-safety decision.
+    public static func processPhase(_ part: KimiPart) -> ActivityNarrativePhase? {
+        guard part.type == "tool_use" else { return nil }
+        let name = part.toolName ?? ""
+        if isExploration(name) { return .exploring }
+        guard ["bash", "shell", "exec_command", "run_command"].contains(name.lowercased()) else { return nil }
+        return ShellActivity.groupingPhase(part.input?["command"].string ?? part.input?["cmd"].string ?? "")
+    }
+
+    public static func phaseSummary(_ phase: ActivityNarrativePhase, count: Int) -> String {
+        let title = phase == .exploring ? L("探索") : phase == .validating ? L("验证") : L("执行命令")
+        return title + " · " + L("\(count) 次调用")
+    }
     public static func isExploration(_ name: String) -> Bool {
         ["read", "read_file", "readfile", "grep", "search", "glob", "find_files"].contains(name.lowercased())
+    }
+
+    public static func isEdit(_ name: String) -> Bool {
+        ["edit", "edit_file", "editfile", "write", "write_file", "writefile", "apply_patch", "filechange"].contains(name.lowercased())
     }
 
     /// Calls that start a subagent: Claude's Agent tool (named Task in older
@@ -56,7 +73,7 @@ public enum ToolPresentation {
             if let description = tool.input?["description"].string, !description.isEmpty {
                 return description
             }
-            return ShellActivity.parse(command)?.compactTarget ?? L("准备命令环境")
+            return ShellActivity.parse(command)?.compactTarget ?? L("执行命令")
         }
         return target(tool)
     }
@@ -101,7 +118,7 @@ public enum ToolPresentation {
         var parts: [String] = []
         let files = max(readFiles.count, readCount > 0 ? 1 : 0)
         if files > 0 {
-            parts.append(L("读了 \(files) 个文件"))
+            parts.append(L("读取 \(files) 个文件"))
         }
         if searchCount > 0 {
             parts.append(L("搜索 \(searchCount) 次"))

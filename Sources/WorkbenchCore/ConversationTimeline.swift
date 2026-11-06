@@ -8,9 +8,12 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
     public var activity: Bool { presentation == .activity }
     public var isProcess: Bool { [.activity, .thinkingPreview, .thinkingDetails, .thinkingRecord].contains(presentation) }
     public var isExploration: Bool {
-        activity && messages.allSatisfy { message in
-            message.content.allSatisfy { $0.type == "tool_use" && ToolPresentation.isExploration($0.toolName ?? "") }
-        }
+        activity && processPhase == .exploring
+    }
+    public var processPhase: ActivityNarrativePhase? {
+        let phases = messages.flatMap(\.content).compactMap { ToolPresentation.processPhase($0) }
+        guard let first = phases.first else { return nil }
+        return phases.allSatisfy { $0 == first } ? first : .mixed
     }
     private let partOffset: Int
     public var id: String {
@@ -44,9 +47,6 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
                 || ["image", "file", "video"].contains(part.type)
         }
         func thinking(_ part: KimiPart) -> Bool { part.type == "thinking" && !(part.thinking ?? "").isEmpty }
-        func narrativeSource(_ part: KimiPart) -> Bool {
-            part.type == "thinking" && part.source?["kind"].string == "activity_summary"
-        }
         func flush(running: Bool) {
             guard !turn.isEmpty else { return }
             let answer = turn.lastIndex { $0.role == "assistant" && $0.content.contains(where: visible) && !$0.content.contains { $0.type == "tool_use" } }
@@ -60,7 +60,8 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
             }
             let hasText = phases.contains { visible($0.message.content[0]) }
             let lastText = phases.lastIndex { visible($0.message.content[0]) }
-            let process: [Presentation] = [.activity, .thinkingDetails, .thinkingRecord]
+            var groupPhase: ActivityNarrativePhase?
+            var canGroup = false
             for (index, phase) in phases.enumerated() {
                 let presentation: Presentation
                 let part = phase.message.content[0]
@@ -74,19 +75,27 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
                 } else {
                     presentation = !running && final == nil && index == lastText ? .record : .progress
                 }
-                // Process records share one bounded host between visible messages.
-                // Keep provider narrative sources on their own row so presentation
-                // can hand that stable anchor between the live bar and history.
-                if process.contains(presentation), let previous = entries.last,
-                   process.contains(previous.presentation), previous.messages.count < 24,
-                   !narrativeSource(part),
-                   !previous.messages.contains(where: { $0.content.contains(where: narrativeSource) }),
-                   index > 0 {
+                let nextPhase = ToolPresentation.processPhase(part)
+                let process = (thinking(part) && part.source?["kind"].string != "activity_summary") || nextPhase != nil
+                // A phase follows the work, not the model's think/tool alternation.
+                // Prose, edits and validation are boundaries. Unknown shell work
+                // can share exploration's stage, but gives the whole stage a
+                // neutral execution label rather than fragmenting it by syntax.
+                if process, canGroup, index > 0, entries.last!.messages.count < 24,
+                   nextPhase == nil || groupPhase == nil || nextPhase == groupPhase
+                    || (nextPhase != .validating && groupPhase != .validating) {
                     entries[entries.count - 1].messages.append(phase.message)
-                    if presentation == .activity { entries[entries.count - 1].presentation = .activity }
+                    if nextPhase != nil || groupPhase != nil {
+                        entries[entries.count - 1].presentation = .activity
+                    } else {
+                        entries[entries.count - 1].presentation = presentation
+                    }
+                    if let nextPhase { groupPhase = groupPhase == nil || groupPhase == nextPhase ? nextPhase : .mixed }
                 } else {
                     entries.append(Self(messages: [phase.message], presentation: presentation, partOffset: phase.offset))
+                    groupPhase = nextPhase
                 }
+                canGroup = process
             }
             if !hasText && !phases.contains(where: { thinking($0.message.content[0]) }) && !running && turn.contains(where: { $0.role == "assistant" }) {
                 entries.append(Self(messages: [turn[0]], presentation: .emptyOutput, partOffset: 0))
@@ -155,7 +164,8 @@ public enum ConversationProcessFold {
         row.entry.presentation == .message && !isUserPrompt(row)
     }
 
-    public static func fold(rows: [ConversationPresentationModel.Row], isRunning: Bool) -> [ConversationPresentationModel.Row] {
+    public static func fold(rows: [ConversationPresentationModel.Row], isRunning: Bool,
+                            preservesSteps: Bool = false) -> [ConversationPresentationModel.Row] {
         let lastPrompt = rows.lastIndex(where: isUserPrompt)
         // For each index, whether its turn (back to the preceding prompt) ended
         // with a final answer. Computed backwards: an answer covers the rows
@@ -181,7 +191,11 @@ public enum ConversationProcessFold {
             let live = isRunning && lastPrompt != nil && index > lastPrompt!
             // Completed turns fold every process row; in an interrupted turn a
             // failed or unresolved tool row remains visible on its own.
-            let foldable = foldable(row) && (turnCompleted[index] || unresolvedCount(row) == 0)
+            let receipt = row.entry.messages.flatMap(\.content).contains { $0.type == "tool_use" && ToolPresentation.isEdit($0.toolName ?? "") }
+            let attention = row.tools.values.contains { ![.succeeded, .returned].contains($0.status) }
+            let foldable = foldable(row) && (preservesSteps
+                ? turnCompleted[index] && !receipt && !attention
+                : turnCompleted[index] || unresolvedCount(row) == 0)
             if foldable, !live {
                 pending.append(row)
             } else {

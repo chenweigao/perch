@@ -17,6 +17,12 @@ final class ConversationReadingMemory {
     var expansions: [String: Bool] = [:]
     var processPages: [String: String] = [:]
     var seenRevision: [String: String] = [:]
+    var retainedProcessEntries: Set<String> = []
+
+    func retainedEntries(session: String) -> Set<String> {
+        let prefix = session + ":"
+        return Set(retainedProcessEntries.filter { $0.hasPrefix(prefix) }.map { String($0.dropFirst(prefix.count)) })
+    }
 
     func visit(_ session: String) {
         if sessionOrder.last != session {
@@ -50,12 +56,23 @@ final class ConversationReadingMemory {
         seenRevision.removeValue(forKey: session)
         expansions = expansions.filter { !$0.key.hasPrefix(session + ":") }
         processPages = processPages.filter { !$0.key.hasPrefix(session + ":") }
+        retainedProcessEntries = retainedProcessEntries.filter { !$0.hasPrefix(session + ":") }
     }
 }
 private struct ConversationReduceMotionKey: EnvironmentKey { static let defaultValue = false }
 private struct ConversationDisclosureAction: EnvironmentKey { static let defaultValue: () -> Void = {} }
 private struct ConversationMemoryKey: EnvironmentKey { static let defaultValue = "" }
+private struct ConversationProcessEntryKey: EnvironmentKey { static let defaultValue = "" }
+private struct ConversationPreservesProcessKey: EnvironmentKey { static let defaultValue = false }
 extension EnvironmentValues {
+    var conversationProcessEntry: String {
+        get { self[ConversationProcessEntryKey.self] }
+        set { self[ConversationProcessEntryKey.self] = newValue }
+    }
+    var conversationPreservesProcess: Bool {
+        get { self[ConversationPreservesProcessKey.self] }
+        set { self[ConversationPreservesProcessKey.self] = newValue }
+    }
     var conversationReduceMotion: Bool {
         get { self[ConversationReduceMotionKey.self] }
         set { self[ConversationReduceMotionKey.self] = newValue }
@@ -72,6 +89,8 @@ extension EnvironmentValues {
 @propertyWrapper struct RememberedExpansion: DynamicProperty {
     @Environment(\.conversationMemoryKey) private var scope
     @Environment(\.conversationDisclosureWillChange) private var disclosureWillChange
+    @Environment(\.conversationProcessEntry) private var processEntry
+    @Environment(\.conversationPreservesProcess) private var preservesProcess
     @State private var revision = 0
     let name: String
     let initial: Bool
@@ -87,6 +106,13 @@ extension EnvironmentValues {
             transaction.disablesAnimations = true
             withTransaction(transaction) {
                 ConversationReadingMemory.shared.expansions[scope + ":" + name] = newValue
+                if !processEntry.isEmpty {
+                    if newValue && preservesProcess {
+                        ConversationReadingMemory.shared.retainedProcessEntries.insert(processEntry)
+                    } else if !newValue && scope == processEntry {
+                        ConversationReadingMemory.shared.retainedProcessEntries.remove(processEntry)
+                    }
+                }
                 revision += 1
             }
         }

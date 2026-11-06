@@ -27,6 +27,9 @@ struct ProtocolTests {
         default:
             break
         }
+        try checkStepAwareReading()
+        try checkPhaseReading()
+        try checkReadingLifecycle()
         try checkConversationPresentation()
         try checkConversationProcessFold()
         try checkConversationPresentationModel()

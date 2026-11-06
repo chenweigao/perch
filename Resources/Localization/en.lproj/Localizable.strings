@@ -2030,3 +2030,26 @@
 "最近：%@" = "Latest: %@";
 "编辑" = "Edit";
 "写入" = "Write";
+
+/* Step-aware transcript */
+"从当前会话选择一个编辑步骤。" = "Select an edit step in the current conversation.";
+"写入内容；调用未提供旧文件，无法计算净删除行数。" = "Written content; the call did not include the old file, so net deletions are unavailable.";
+"已成功调用的累计增删" = "Cumulative successful edits";
+"当前只载入了部分轮次记录。" = "Only part of this turn is loaded.";
+"当前工作区净差异" = "Current workspace diff";
+"按调用累加，不等于 Git 净差异。" = "Cumulative changes per call, not the net Git diff.";
+"本步编辑记录" = "This step";
+"本轮编辑记录" = "This turn";
+"来自该次工具调用的历史记录。" = "Historical record from this tool call.";
+"查看当前工作区净差异" = "View current workspace diff";
+"查看本步编辑记录" = "View this edit step";
+"正在执行…" = "Running…";
+"等待响应…" = "Waiting for response…";
+"编辑记录" = "Edit history";
+"补充要求或调整方向…" = "Add requirements or adjust direction…";
+"记录范围" = "History scope";
+"该步骤没有可还原的补丁，以下是原始调用记录。" = "No patch can be reconstructed for this step. Original call details follow.";
+"读取 %lld 个文件" = "Read %lld files";
+"检查条件" = "Check condition";
+"思考中" = "Thinking";
+"工作过程" = "Work process";
