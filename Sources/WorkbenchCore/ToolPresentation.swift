@@ -15,6 +15,51 @@ public enum ToolPresentation {
         let title = phase == .exploring ? L("探索") : phase == .validating ? L("验证") : L("执行命令")
         return title + " · " + L("\(count) 次调用")
     }
+
+    /// Describe observed operations, without inventing the task's goal or result.
+    /// Unknown shell syntax keeps a neutral label; explicit tool descriptions win.
+    public static func phaseTitle(_ phase: ActivityNarrativePhase, tools: [VisibleTool]) -> String {
+        var labels: [String] = []
+        var fallbackLabels: [String] = []
+        for tool in tools {
+            let label: String
+            var descriptive = true
+            if let description = tool.input?["description"].string?.trimmingCharacters(in: .whitespacesAndNewlines), !description.isEmpty {
+                label = description
+            } else if let command = ShellActivity.command(tool) {
+                if let shell = ShellActivity.parse(command) {
+                    if ["[", "[[", "test"].contains(shell.executable) { label = L("检查条件") }
+                    else if shell.category == "read", ShellActivity.groupingPhase(command) != .exploring {
+                        // sed/find can also write. An identifiable executable
+                        // alone is not evidence that the whole command is a read.
+                        label = L("运行 \(shell.executable)"); descriptive = false
+                    } else if shell.category != nil { label = shell.headline }
+                    else if ["python", "python3"].contains(shell.executable) {
+                        if let script = shell.arguments.first, script.hasSuffix(".py"), !script.hasPrefix("-") {
+                            label = L("运行 \((script as NSString).lastPathComponent)")
+                        } else { label = L("运行 Python") }
+                    } else { label = L("运行 \(shell.executable)"); descriptive = false }
+                } else { label = L("执行命令"); descriptive = false }
+            } else if isExploration(tool.name) { label = L("查看文件与代码") }
+            else { label = action(tool.name) }
+            if descriptive {
+                if !labels.contains(label) { labels.append(label) }
+            } else if !fallbackLabels.contains(label) { fallbackLabels.append(label) }
+        }
+        // Incidental commands such as date/readlink should not displace a known
+        // operation or script. Keep them in the original records and overflow.
+        labels += fallbackLabels.filter { !labels.contains($0) }
+        guard !labels.isEmpty else { return phase == .validating ? L("验证") : L("执行命令") }
+        let title = labels.prefix(2).joined(separator: " · ")
+        return labels.count > 2 ? L("\(title) 等") : title
+    }
+
+    /// Returned failures remain discoverable in the stage count. Only the latest
+    /// failed call of a live stage needs its own row; uncertainty stays explicit.
+    public static func showsResultOutsideStage(_ tool: VisibleTool, isLive: Bool, lastPartToolID: String?) -> Bool {
+        (tool.staysVisible && tool.status != .running)
+            || (tool.status == .failed && isLive && lastPartToolID == tool.id)
+    }
     public static func isExploration(_ name: String) -> Bool {
         ["read", "read_file", "readfile", "grep", "search", "glob", "find_files"].contains(name.lowercased())
     }

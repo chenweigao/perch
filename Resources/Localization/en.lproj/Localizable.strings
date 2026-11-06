@@ -2061,3 +2061,15 @@
 "检查条件" = "Check condition";
 "思考中" = "Thinking";
 "工作过程" = "Work process";
+
+"运行 %@" = "Run %@";
+
+"运行 Python" = "Run Python";
+
+"%@ 等" = "%@ and more";
+
+"%lld 次失败" = "%lld failed";
+
+"展开查看失败记录" = "Expand to view failed calls";
+
+"等待 Agent 新输出…" = "Waiting for new agent output…";
