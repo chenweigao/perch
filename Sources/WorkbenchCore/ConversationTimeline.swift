@@ -83,11 +83,19 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
                 }
                 let nextPhase = ToolPresentation.processPhase(part)
                 let process = (thinking(part) && part.source?["kind"].string != "activity_summary") || nextPhase != nil
+                // Consecutive runtime-context records (skill loads, reminders)
+                // share one quiet entry instead of stacking one row per record.
+                // They never join a tool stage: a stage entry fails the all-context
+                // test and opens a fresh entry below.
+                if part.isRuntimeContext, index > 0,
+                   entries.last?.presentation == .activity,
+                   entries.last?.messages.allSatisfy({ $0.content.first?.isRuntimeContext == true }) == true {
+                    entries[entries.count - 1].messages.append(phase.message)
                 // A phase follows the work, not the model's think/tool alternation.
                 // Prose, edits and validation are boundaries. Unknown shell work
                 // can share exploration's stage, but gives the whole stage a
                 // neutral execution label rather than fragmenting it by syntax.
-                if process, canGroup, index > 0,
+                } else if process, canGroup, index > 0,
                    nextPhase == nil || groupPhase == nil || nextPhase == groupPhase
                     || (nextPhase != .validating && groupPhase != .validating) {
                     entries[entries.count - 1].messages.append(phase.message)

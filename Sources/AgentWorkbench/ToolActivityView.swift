@@ -76,6 +76,10 @@ struct KimiActivityView: View {
         #endif
         let edit = items.count == 1 && ToolPresentation.isEdit(items[0].name) ? items[0] : nil
         let thinking = entry.messages.last?.content.last?.type == "thinking"
+        // Injected context (skill loads, reminders) reads as one quiet line,
+        // not a stage row; only pure-context entries take this path.
+        let isRuntimeContextOnly = items.isEmpty
+            && entry.messages.allSatisfy { $0.content.first?.isRuntimeContext == true }
         let hasRunningTool = items.contains { $0.status == .running }
         let failures = items.filter { $0.status == .failed }.count
         // Body status describes actual activity. Generic turn liveness belongs
@@ -86,6 +90,9 @@ struct KimiActivityView: View {
         VStack(alignment: .leading, spacing: 0) {
             if let edit {
                 EditStepRow(tool: edit, messageID: entry.messages[0].id, expanded: expansion)
+            } else if isRuntimeContextOnly {
+                RuntimeContextRow(id: entry.id, texts: entry.messages.flatMap(\.content).compactMap(\.text),
+                                  count: entry.messages.count, expanded: expansion)
             } else {
                 HStack(spacing: 8) {
                     DisclosureGroup(isExpanded: expansion) { EmptyView() } label: {
@@ -118,13 +125,17 @@ struct KimiActivityView: View {
                     .padding(.leading, ReplyStyle.Process.nestedIndent)
             }
             if showsLiveStatus {
-                HStack(spacing: 6) {
-                    PerchBusyIndicator(size: 13)
+                // A sibling row on the process grid, not a child of the stage:
+                // the spinner takes the 12pt chevron column, the label starts on
+                // the label column it shares with every other row.
+                HStack(spacing: 8) {
+                    PerchBusyIndicator(size: 11)
+                        .frame(width: 12, alignment: .center)
                     Text(verbatim: thinking ? L("思考中")
                          : items.last(where: { $0.status == .running }).map { ToolPresentation.compactTarget($0) } ?? "")
                         .font(.system(size: ReplyStyle.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
                         .lineLimit(1).truncationMode(.tail)
-                }.padding(.leading, ReplyStyle.Process.nestedIndent).padding(.top, 4)
+                }.padding(.top, 4)
                     .accessibilityIdentifier("activity-live-status:" + entry.id)
             }
             if isLive && !expanded, let running = items.last(where: { $0.status == .running }) {
@@ -176,6 +187,11 @@ struct KimiActivityView: View {
                         Group {
                             if message.content.first?.type == "thinking" {
                                 ThoughtOutput(messages: [message], finished: !isLive, embedded: true)
+                            } else if message.content.first?.isRuntimeContext == true {
+                                // The quiet row already named this context; its
+                                // records open directly, without a second disclosure.
+                                KimiMarkdown(text: message.content.first?.text ?? "")
+                                    .environment(\.replyTone, .quiet)
                             } else {
                                 KimiMessageView(message: message, tools: tools, api: api, sessionId: sessionId)
                                     .environment(\.conversationMemoryKey, memoryKey + ":part:\(index)")
@@ -226,6 +242,50 @@ struct KimiActivityView: View {
         .foregroundStyle(WorkbenchTheme.quiet)
         .monospacedDigit()
         .fixedSize()
+    }
+}
+
+/// Injected runtime context (skill loads, reminders, system notes) reads as one
+/// quiet line on the process grid — summary in the label column, a disclosure
+/// chevron in the glyph column — instead of a stage-styled row per record.
+/// Tapping opens the records in place via the entry's usual disclosure content.
+struct RuntimeContextRow: View {
+    let id: String
+    let texts: [String]
+    let count: Int
+    let expanded: Binding<Bool>
+    @UILocalization private var L
+    @Environment(\.conversationDisclosureWillChange) private var disclosureWillChange
+    private var title: String {
+        ToolPresentation.runtimeContextSummary(texts).map { L("运行上下文") + " · " + $0 }
+            ?? (count > 1 ? L("运行上下文 · \(count) 项") : L("运行上下文"))
+    }
+    var body: some View {
+        Button {
+            disclosureWillChange()
+            expanded.wrappedValue.toggle()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: expanded.wrappedValue ? "chevron.down" : "chevron.right")
+                    .font(.system(size: 10, weight: .medium))
+                    .frame(width: 12)
+                    .accessibilityHidden(true)
+                Text(verbatim: title)
+                    .lineLimit(1).truncationMode(.tail)
+                    .help(Text(verbatim: title))
+                Spacer(minLength: 0)
+            }
+            .font(.system(size: ReplyStyle.captionSize))
+            .foregroundStyle(WorkbenchTheme.quiet)
+            .padding(.vertical, 2)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(WorkbenchDisclosureButtonStyle())
+        .help(Text("展开查看运行上下文"))
+        .accessibilityLabel(Text(verbatim: title))
+        .accessibilityValue(Text(expanded.wrappedValue ? "已展开" : "已收起"))
+        .accessibilityIdentifier("activity-context:" + id)
     }
 }
 

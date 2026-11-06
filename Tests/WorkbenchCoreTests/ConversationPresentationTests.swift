@@ -73,6 +73,24 @@ func checkConversationPresentation() throws {
     [{"id":"context","role":"user","created_at":"2","content":[{"type":"text","text":"<skill-loaded name='config'>runtime reference</skill-loaded>"}]}]
     """)
     precondition(context[0].content[0].isRuntimeContext)
+    // Consecutive runtime-context records share one quiet entry; a context
+    // record after a tool stage stays on its own.
+    let contexts = try messages("""
+    [{"id":"ctx1","role":"assistant","created_at":"1","content":[{"type":"text","text":"<skill-loaded name='a'>one</skill-loaded>"}]},
+     {"id":"ctx2","role":"assistant","created_at":"2","content":[{"type":"text","text":"<system-reminder>two</system-reminder>"}]},
+     {"id":"tool","role":"assistant","created_at":"3","content":[{"type":"tool_use","tool_call_id":"t1","tool_name":"read","input":{"file_path":"/tmp/x"}}]},
+     {"id":"ctx3","role":"assistant","created_at":"4","content":[{"type":"text","text":"<system-reminder>three</system-reminder>"}]}]
+    """)
+    let contextEntries = ConversationTimelineEntry.make(contexts, isRunning: true)
+    precondition(contextEntries.count == 3, "context pair merges, the stage and the later context stay separate")
+    precondition(contextEntries[0].presentation == .activity
+                 && contextEntries[0].messages.map(\.id) == ["ctx1", "ctx2"], "Adjacent contexts merge in source order")
+    precondition(contextEntries[1].messages.map(\.id) == ["tool"], "A stage never absorbs context records")
+    precondition(contextEntries[2].messages.map(\.id) == ["ctx3"])
+    precondition(ToolPresentation.runtimeContextSummary(["<skill-loaded name='a'>one</skill-loaded>",
+                                                         "<system-reminder>two</system-reminder>"]) == "a · system-reminder")
+    precondition(ToolPresentation.runtimeContextSummary(["plain first line\nrest"]) == "plain first line")
+    precondition(ToolPresentation.runtimeContextSummary(["no markup here"]) == "no markup here")
     let navigationProjection = ConversationProjection()
     let summaries = navigationProjection.update(progress + context + final, isRunning: false).navigation
     precondition(summaries.count == 1 && summaries[0].id == done[0].id)
