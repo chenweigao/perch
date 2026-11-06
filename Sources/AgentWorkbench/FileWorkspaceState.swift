@@ -16,14 +16,16 @@ final class FileWorkspaceState {
         historyIndex = index; return history[index]
     }
     @ObservationIgnored private var key = ""
-    @ObservationIgnored private let defaults: UserDefaults
-    init(defaults: UserDefaults = .standard) { self.defaults = defaults }
+    @ObservationIgnored private let defaults: UserDefaults?
+    init(defaults: UserDefaults? = .standard) { self.defaults = defaults }
     var current: FileReadingTab? { tabs.first { $0.path == selected } }
     func activate(host: UUID?, cwd: String) {
+        let nextKey = "files.tabs.\(host?.uuidString ?? "none"):\(cwd)"
+        guard key != nextKey else { return }
         history = []; historyIndex = -1
-        key = "files.tabs.\(host?.uuidString ?? "none"):\(cwd)"
-        tabs = defaults.data(forKey: key).flatMap { try? JSONDecoder().decode([FileReadingTab].self, from: $0) } ?? []
-        selected = defaults.string(forKey: key + ".selected").flatMap { path in tabs.contains { $0.path == path } ? path : nil } ?? tabs.last?.path
+        key = nextKey
+        tabs = defaults?.data(forKey: key).flatMap { try? JSONDecoder().decode([FileReadingTab].self, from: $0) } ?? []
+        selected = defaults?.string(forKey: key + ".selected").flatMap { path in tabs.contains { $0.path == path } ? path : nil } ?? tabs.last?.path
     }
     func select(_ path: String, source: SessionReference? = nil) {
         if !tabs.contains(where: { $0.path == path }) {
@@ -98,6 +100,7 @@ final class FileWorkspaceState {
         }
     }
     private func save() {
+        guard let defaults else { return }
         defaults.set(try? JSONEncoder().encode(tabs), forKey: key)
         defaults.set(selected, forKey: key + ".selected")
     }

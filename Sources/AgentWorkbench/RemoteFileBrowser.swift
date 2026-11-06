@@ -70,7 +70,7 @@ final class RemoteFileBrowser {
     /// first. Both conversation file resolution and the Git tab start from these.
     private var directoryHints: [String] = []
 
-    let documents = FileWorkspaceState()
+    let documents: FileWorkspaceState
     let reading = DocumentReadingState()
     private(set) var fileRequest: FileReadRequest? { get { reads.fileRequest } set { reads.fileRequest = newValue } }
     /// Reports what a completed read proved about the path (missing vs present).
@@ -99,8 +99,9 @@ final class RemoteFileBrowser {
     /// base or branch metadata.
     let workingTreeOnly: Bool
 
-    init(workingTreeOnly: Bool = false) {
+    init(workingTreeOnly: Bool = false, documents: FileWorkspaceState? = nil) {
         self.workingTreeOnly = workingTreeOnly
+        self.documents = documents ?? FileWorkspaceState()
         let reads = RemotePanelReadState()
         self.reads = reads
         git = RemoteGitBrowser(reads: reads, workingTreeOnly: workingTreeOnly)

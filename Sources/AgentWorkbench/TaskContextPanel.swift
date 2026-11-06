@@ -19,6 +19,13 @@ enum WorkspaceInspectorPage: String, Hashable { case task, changes, files, edits
     /// Manual choices survive refresh, completion, page changes and docking.
     /// An untouched session follows its plan's completion state.
     var planExpansion: [SessionReference: Bool] = [:]
+    @ObservationIgnored private var readingStates: [SessionReference: TaskContextReadingState] = [:]
+    func readingState(for source: SessionReference) -> TaskContextReadingState {
+        if let state = readingStates[source] { return state }
+        let state = TaskContextReadingState()
+        readingStates[source] = state
+        return state
+    }
     private(set) var visible = false
     func isShowing(_ page: WorkspaceInspectorPage) -> Bool { embeddedVisible && self.page == page }
     /// Only one task-panel presentation reads at a time, so showing the task page
@@ -92,8 +99,6 @@ struct TaskContextView: View {
     var detach: (() -> Void)?
     var close: (() -> Void)?
     @State private var state = TaskContextState()
-    @State private var allFiles = false
-    @State private var completedTasks = false
     @State private var draftSource: WorkspaceSession?
     @State private var scrolled = false
     @AppStorage(AppLanguage.defaultsKey) private var language: AppLanguage = .system
@@ -142,13 +147,19 @@ struct TaskContextView: View {
                                       online: item.online && state.error == nil, active: active,
                                       back: { model.taskContextWindow.detail = nil })
                     .id(detail)
+            } else if let current, let item {
+                TaskContextScrollView(reading: model.taskContextWindow.readingState(for: item.reference),
+                                      onScrolled: { scrolled = $0 }) {
+                    VStack(alignment: .leading, spacing: 22) {
+                        if let error = state.error { syncError(error) }
+                        sections(current, item: item)
+                    }.frame(maxWidth: .infinity, alignment: .leading).padding(16)
+                }.id(item.reference)
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 22) {
                         if let error = state.error { syncError(error) }
-                        if let current, let item {
-                            sections(current, item: item)
-                        } else if state.loading {
+                        if state.loading {
                             ProgressView("正在读取任务…").frame(maxWidth: .infinity)
                         } else if reference == nil {
                             emptyState("sidebar.right", "选择一个会话，查看它的文件、活动和待处理事项。")
@@ -199,9 +210,6 @@ struct TaskContextView: View {
             }
             .workbenchHostedTask(id: key) {
                 let input = key
-                if state.reference != input.reference {
-                    allFiles = false; completedTasks = false
-                }
                 await state.follow(input.reference, online: input.online) {
                     guard let source = input.reference else { throw CancellationError() }
                     return try await model.readTaskContext(source)
@@ -259,6 +267,7 @@ struct TaskContextView: View {
     }
 
     @ViewBuilder private func sections(_ value: TaskContextSnapshot, item: WorkspaceSession) -> some View {
+        @Bindable var reading = model.taskContextWindow.readingState(for: item.reference)
         let online = item.online && state.error == nil
         if !value.requests.isEmpty || value.failure != nil {
             VStack(alignment: .leading, spacing: 8) {
@@ -296,7 +305,7 @@ struct TaskContextView: View {
         if !value.files.isEmpty {
             VStack(alignment: .leading, spacing: 4) {
                 sectionTitle("文档与产物", icon: "doc.text", count: value.files.count)
-                ForEach(allFiles ? value.files : Array(value.files.prefix(4))) { file in
+                ForEach(reading.allFiles ? value.files : Array(value.files.prefix(4))) { file in
                     let missing = model.isWorkspaceFileMissing(hostID: item.reference.hostID, path: file.path) ||
                         model.isWorkspaceFileMissing(hostID: item.reference.hostID, path: file.reference)
                     Button {
@@ -323,12 +332,12 @@ struct TaskContextView: View {
                         .accessibilityIdentifier("task-context-file-" + file.name)
                 }
                 if value.files.count > 4 {
-                    Button { withAnimation(.snappy(duration: 0.18)) { allFiles.toggle() } } label: {
+                    Button { withAnimation(.snappy(duration: 0.18)) { reading.allFiles.toggle() } } label: {
                         HStack(spacing: 10) {
-                            Text(allFiles ? "收起" : "查看全部文件").foregroundStyle(WorkbenchTheme.quiet)
+                            Text(reading.allFiles ? "收起" : "查看全部文件").foregroundStyle(WorkbenchTheme.quiet)
                             Spacer(minLength: 4)
                             Image(systemName: "chevron.right").font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
-                                .foregroundStyle(WorkbenchTheme.quiet).rotationEffect(.degrees(allFiles ? 90 : 0))
+                                .foregroundStyle(WorkbenchTheme.quiet).rotationEffect(.degrees(reading.allFiles ? 90 : 0))
                                 .accessibilityHidden(true)
                         }.frame(minHeight: 30).contentShape(Rectangle())
                     }.buttonStyle(TaskContextRowStyle())
@@ -345,7 +354,7 @@ struct TaskContextView: View {
                     taskRow(task, item: item)
                 }
                 if !tasks.finished.isEmpty {
-                    TaskContextDisclosure(title: "已结束的任务 · \(tasks.finished.count)", expanded: $completedTasks) {
+                    TaskContextDisclosure(title: "已结束的任务 · \(tasks.finished.count)", expanded: $reading.completedTasks) {
                         ForEach(tasks.finished) { task in taskRow(task, item: item) }
                     }
                 }

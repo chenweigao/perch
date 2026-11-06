@@ -12,10 +12,14 @@ import WorkbenchCore
     AppLanguage.applyToSystem(.zhHans)
     NSApp.setActivationPolicy(.accessory); NSApp.activate(ignoringOtherApps: true)
     try await checkTaskPlanDisclosure()
+    try await checkTaskContextReadingPositions()
     let root = FileManager.default.temporaryDirectory.appendingPathComponent("perch-task-panel-\(UUID())")
     try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: root) }
-    try "# 方案\n\n用于任务面板的文档。".write(to: root.appendingPathComponent("Report.md"), atomically: true, encoding: .utf8)
+    let report = "# 方案\n\n用于任务面板的文档。\n\n" + (0..<80).map {
+        "## 第 \($0) 节\n\n用于验证阅读位置的长文档，保留中文与 English 混排。\n\n"
+    }.joined()
+    try report.write(to: root.appendingPathComponent("Report.md"), atomically: true, encoding: .utf8)
     let host = SSHHost(id: ExecutionEnvironment.localHostID, name: "Task panel fixture", destination: "")
     let a = SessionReference(hostID: host.id, terminalID: "a", kind: .claude)
     let b = SessionReference(hostID: host.id, terminalID: "b", kind: .claude)
@@ -155,8 +159,28 @@ import WorkbenchCore
     }
     for _ in 0..<100 where !containsReport(window.contentView!) { try await Task.sleep(for: .milliseconds(30)) }
     precondition(containsReport(window.contentView!), "The inline reader must load the source task's file")
+    func reportScroll(_ view: NSView) -> NSScrollView? {
+        if let text = view as? NSTextView, text.string.contains("用于任务面板的文档") { return text.enclosingScrollView }
+        return view.subviews.lazy.compactMap(reportScroll).first
+    }
+    let fileScroll = reportScroll(window.contentView!)!
+    try await Task.sleep(for: .milliseconds(250))
+    fileScroll.contentView.scroll(to: NSPoint(x: 0, y: 600))
+    fileScroll.reflectScrolledClipView(fileScroll.contentView)
+    try await Task.sleep(for: .milliseconds(200))
+    precondition(fileScroll.contentView.bounds.origin.y > 500,
+                 "File did not scroll: \(fileScroll.contentView.bounds), document \(String(describing: fileScroll.documentView?.frame))")
     try await pressFileControl("task-context-file-back")
     precondition(model.taskContextWindow.fileDetail == nil && model.selectedReference == b)
+    precondition((model.taskContextWindow.readingState(for: a).files.current?.offset ?? 0) > 500,
+                 "File offset was not retained: \(String(describing: model.taskContextWindow.readingState(for: a).files.current))")
+    try await pressFileControl("task-context-file-Report.md")
+    for _ in 0..<100 where (reportScroll(window.contentView!)?.contentView.bounds.origin.y ?? 0) < 500 {
+        try await Task.sleep(for: .milliseconds(30))
+    }
+    precondition((reportScroll(window.contentView!)?.contentView.bounds.origin.y ?? 0) > 500,
+                 "Reopening the inline artifact must restore the file's actual native scroll position")
+    try await pressFileControl("task-context-file-back")
     print("PASS: native task artifact row, locked source file reading and inline return")
     click(window.contentView!.bounds.width - 26, 26)
     try await Task.sleep(for: .milliseconds(150))

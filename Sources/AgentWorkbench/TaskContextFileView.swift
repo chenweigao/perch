@@ -13,7 +13,17 @@ struct TaskContextFileView: View {
     let model: WorkbenchModel
     let item: WorkspaceSession
     let route: TaskContextFileRoute
-    @State private var browser = RemoteFileBrowser()
+    @State private var browser: RemoteFileBrowser
+
+    init(model: WorkbenchModel, item: WorkspaceSession, route: TaskContextFileRoute) {
+        self.model = model
+        self.item = item
+        self.route = route
+        // The parent keys this view by route; requests remain page-owned while
+        // reading choices belong to the captured source session.
+        _browser = State(initialValue: RemoteFileBrowser(
+            documents: model.taskContextWindow.readingState(for: route.source).files))
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
