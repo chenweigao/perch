@@ -46,3 +46,17 @@ inline-file back/reopen with an actual native scroll view. Existing file and cod
 reader checks also passed. The real-session observations above are separate from
 these fixtures. Hosted CI and merge status are recorded by the pull request, not
 inferred from local results.
+
+## CI fixture activation correction
+
+The first hosted run passed the new task-context checks, but the existing
+`task-detail` phase failed at its first row click. A local repeat reproduced it.
+A temporary diagnostic recorded a non-key fixture window, unchanged row bounds,
+and a first click leaving the route unset; a later click at the same coordinates
+opened the expected route. The fixture now activates the application and waits
+for its window to become key before sending its first mouse event. It still sends
+one click and retains the original route and source-isolation assertions.
+
+Three consecutive `task-detail` phases passed after this fixture-only correction
+(12.72 s, 11.92 s, 11.92 s). Product source remains identical to the installed
+application tested above.

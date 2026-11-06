@@ -66,6 +66,11 @@ import WorkbenchCore
     window.contentView = NSHostingView(rootView: TaskContextView(model: model)
         .background(Color(nsColor: .windowBackgroundColor)))
     window.makeKeyAndOrderFront(nil)
+    // Exercise the first row click in an active window. Otherwise AppKit can
+    // consume that event to activate the fixture instead of opening the task.
+    NSApp.activate(ignoringOtherApps: true)
+    for _ in 0..<100 where !window.isKeyWindow { try await Task.sleep(for: .milliseconds(20)) }
+    precondition(window.isKeyWindow, "Task detail fixture must be key before its first click")
 
     @discardableResult func control(_ identifier: String, present: Bool = true, seconds: Double = 3) async throws -> NSRect? {
         let deadline = Date().addingTimeInterval(seconds)
