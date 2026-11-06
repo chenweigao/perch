@@ -11,6 +11,7 @@ import WorkbenchCore
     ], forKey: legacySplitFramesKey)
     AppLanguage.applyToSystem(.zhHans)
     NSApp.setActivationPolicy(.accessory); NSApp.activate(ignoringOtherApps: true)
+    try await checkTaskPlanDisclosure()
     let root = FileManager.default.temporaryDirectory.appendingPathComponent("perch-task-panel-\(UUID())")
     try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: root) }
@@ -133,6 +134,30 @@ import WorkbenchCore
                 context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!)
         }
     }
+    // The artifact row opens in place and reads A even while the conversation is B.
+    func pressFileControl(_ identifier: String) async throws {
+        guard let frame = taskPanelControl(window, identifier) else {
+            preconditionFailure("Missing file control: \(identifier)")
+        }
+        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+            window.sendEvent(NSEvent.mouseEvent(with: type, location: NSPoint(x: frame.midX, y: frame.midY),
+                modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!)
+        }
+        try await Task.sleep(for: .milliseconds(200))
+    }
+    try await pressFileControl("task-context-file-Report.md")
+    precondition(model.taskContextWindow.fileDetail?.source == a && model.selectedReference == b &&
+                 model.fileWindow.window == nil, "Artifacts stay in the locked task panel")
+    func containsReport(_ view: NSView) -> Bool {
+        if let text = view as? NSTextView, text.string.contains("用于任务面板的文档") { return true }
+        return view.subviews.contains(where: containsReport)
+    }
+    for _ in 0..<100 where !containsReport(window.contentView!) { try await Task.sleep(for: .milliseconds(30)) }
+    precondition(containsReport(window.contentView!), "The inline reader must load the source task's file")
+    try await pressFileControl("task-context-file-back")
+    precondition(model.taskContextWindow.fileDetail == nil && model.selectedReference == b)
+    print("PASS: native task artifact row, locked source file reading and inline return")
     click(window.contentView!.bounds.width - 26, 26)
     try await Task.sleep(for: .milliseconds(150))
     precondition(model.taskContextWindow.locked == nil, "The native pin control resumes following")

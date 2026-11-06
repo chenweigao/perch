@@ -15,6 +15,10 @@ enum WorkspaceInspectorPage: String, Hashable { case task, changes, files, edits
     /// session. Not persisted.
     var editRecord: (source: SessionReference, record: ConversationEditRecord)?
     var detail: TaskContextRoute?
+    var fileDetail: TaskContextFileRoute?
+    /// Manual choices survive refresh, completion, page changes and docking.
+    /// An untouched session follows its plan's completion state.
+    var planExpansion: [SessionReference: Bool] = [:]
     private(set) var visible = false
     func isShowing(_ page: WorkspaceInspectorPage) -> Bool { embeddedVisible && self.page == page }
     /// Only one task-panel presentation reads at a time, so showing the task page
@@ -108,6 +112,10 @@ struct TaskContextView: View {
         guard let route = model.taskContextWindow.detail, route.source == reference else { return nil }
         return route
     }
+    private var fileDetail: TaskContextFileRoute? {
+        guard let route = model.taskContextWindow.fileDetail, route.source == reference else { return nil }
+        return route
+    }
     private struct LoadKey: Equatable {
         let reference: SessionReference?
         let online: Bool
@@ -122,7 +130,10 @@ struct TaskContextView: View {
         VStack(alignment: .leading, spacing: 0) {
             header.fixedSize(horizontal: false, vertical: true).padding(.bottom, 6)
                 .overlay(alignment: .bottom) { Divider().opacity(scrolled && detail == nil ? 1 : 0) }
-            if let detail, let item {
+            if let fileDetail, let item {
+                TaskContextFileView(model: model, item: item, route: fileDetail)
+                    .id(fileDetail)
+            } else if let detail, let item {
                 if let error = state.error {
                     syncError(error).padding(.horizontal, 16).padding(.top, 12)
                         .fixedSize(horizontal: false, vertical: true)
@@ -182,6 +193,9 @@ struct TaskContextView: View {
                 if let next, let route = model.taskContextWindow.detail, route.source != next {
                     model.taskContextWindow.detail = nil
                 }
+                if let route = model.taskContextWindow.fileDetail, route.source != next {
+                    model.taskContextWindow.fileDetail = nil
+                }
             }
             .workbenchHostedTask(id: key) {
                 let input = key
@@ -210,6 +224,10 @@ struct TaskContextView: View {
                 } else {
                     Text("任务面板").font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold))
                         .foregroundStyle(.primary)
+                    if model.taskContextWindow.locked != nil, let item {
+                        Text(item.title).foregroundStyle(WorkbenchTheme.quiet)
+                            .lineLimit(2).help(item.title)
+                    }
                 }
             }
             Spacer(minLength: 4)
@@ -274,7 +292,7 @@ struct TaskContextView: View {
                 ForEach(uncertain) { tool in toolRow(tool) }
             }
         }
-        TaskTurnSection(model: model, item: item, snapshot: value)
+        TaskPlanSection(controller: model.taskContextWindow, source: item.reference, todos: value.todos)
         if !value.files.isEmpty {
             VStack(alignment: .leading, spacing: 4) {
                 sectionTitle("文档与产物", icon: "doc.text", count: value.files.count)
@@ -282,11 +300,13 @@ struct TaskContextView: View {
                     let missing = model.isWorkspaceFileMissing(hostID: item.reference.hostID, path: file.path) ||
                         model.isWorkspaceFileMissing(hostID: item.reference.hostID, path: file.reference)
                     Button {
-                        model.openWorkspaceFile(GroupOutcome(title: file.name, link: file.reference, source: item.reference))
+                        model.taskContextWindow.fileDetail = TaskContextFileRoute(
+                            source: item.reference, path: file.reference, name: file.name)
                     } label: {
                         HStack(spacing: 10) {
                             Image(systemName: TaskContextFileIcon.name(file.name)).foregroundStyle(WorkbenchTheme.quiet).frame(width: 16)
-                            Text(file.name).lineLimit(1).truncationMode(.middle)
+                            Text(file.name).lineLimit(2).multilineTextAlignment(.leading)
+                                .fixedSize(horizontal: false, vertical: true)
                                 .foregroundStyle(missing ? WorkbenchTheme.quiet : .primary)
                             Spacer(minLength: 4)
                             if missing {
@@ -296,10 +316,11 @@ struct TaskContextView: View {
                                     .foregroundStyle(WorkbenchTheme.quiet).padding(.horizontal, 6).frame(minHeight: 18)
                                     .background(WorkbenchTheme.Fill.surface, in: Capsule())
                             }
-                        }.frame(minHeight: 36).contentShape(Rectangle())
+                        }.frame(minHeight: 44).contentShape(Rectangle())
                     }.buttonStyle(TaskContextRowStyle())
                         .help(missing ? "\(file.path)（文件已不在会话主机上）" : file.path)
                         .disabled(!item.online || missing)
+                        .accessibilityIdentifier("task-context-file-" + file.name)
                 }
                 if value.files.count > 4 {
                     Button { withAnimation(.snappy(duration: 0.18)) { allFiles.toggle() } } label: {
@@ -314,6 +335,7 @@ struct TaskContextView: View {
                 }
             }
         }
+        TaskTurnSection(model: model, item: item, snapshot: value)
         if !value.tasks.isEmpty || value.taskError != nil {
             VStack(alignment: .leading, spacing: 8) {
                 sectionTitle("后台任务与子 Agent", icon: "square.stack.3d.up", count: value.tasks.count)
@@ -351,7 +373,7 @@ struct TaskContextView: View {
         HStack(spacing: 8) {
             Image(systemName: icon).font(.system(size: 12, weight: .medium))
                 .foregroundStyle(WorkbenchTheme.quiet).frame(width: 16).accessibilityHidden(true)
-            Text(title).font(.system(size: 13, weight: .semibold))
+            Text(title).font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold))
             Text(count.formatted()).font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
                 .monospacedDigit().foregroundStyle(WorkbenchTheme.quiet)
                 .padding(.horizontal, 6).frame(minWidth: 20, minHeight: 18)

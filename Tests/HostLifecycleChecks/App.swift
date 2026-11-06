@@ -20,7 +20,8 @@ import WorkbenchCore
         let readingControls = CommandLine.arguments.contains("reading-controls")
         let readingDesign = readingPreview || CommandLine.arguments.contains("reading-design")
         let taskDetail = CommandLine.arguments.contains("task-detail")
-        if CommandLine.arguments.contains("preview") || nativeDesign || readingControls || readingDesign || taskDetail || taskSummary {
+        let taskContext = CommandLine.arguments.contains("task-context")
+        if CommandLine.arguments.contains("preview") || nativeDesign || readingControls || readingDesign || taskDetail || taskSummary || taskContext {
             // Interactive fixtures need AppKit's event loop for native window events
             // and accessibility, unlike the command-line layout checks below.
             NSApp.setActivationPolicy(designPreview || readingPreview ? .regular : .accessory)
@@ -34,6 +35,7 @@ import WorkbenchCore
                         try await checkProgressReading()
                     }
                     else if taskDetail { try await checkTaskDetailUI() }
+                    else if taskContext { try await checkTaskContextPanel() }
                     else if CommandLine.arguments.contains("document-reading") { try await checkDocumentReadingUI() }
                     else { try await checkFileReaderWindow() }
                     NSApp.terminate(nil)

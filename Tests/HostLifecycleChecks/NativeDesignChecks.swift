@@ -86,6 +86,17 @@ import WorkbenchCore
             ["id": "answer", "role": "assistant", "created_at": "", "content": [["type": "text", "text": "已检查会话加载与草稿恢复逻辑。\n\n### 初步发现\n\n- 加载状态应随会话独立保存。\n- 草稿与滚动位置需要分别恢复。\n\n接下来会核对快速切换时的请求取消与状态恢复。"]]]
         ]
         data["interactions"] = []
+        if index == 0 {
+            data["messages"] = (data["messages"] as! [[String: Any]]) + [
+                ["id": "plan", "role": "assistant", "created_at": "", "content": [
+                    ["type": "tool_use", "tool_call_id": "plan", "tool_name": "TodoList", "input": ["todos": [
+                        ["title": "定位会话加载与恢复逻辑", "status": "done"],
+                        ["title": "分离草稿和滚动位置", "status": "done"],
+                        ["title": "验证快速切换会话与返回后的状态", "status": "in_progress"]]]]]],
+                ["id": "plan-result", "role": "tool", "created_at": "", "content": [
+                    ["type": "tool_result", "tool_call_id": "plan", "is_error": false, "output": "Updated"]]]
+            ]
+        }
         return try JSONSerialization.data(withJSONObject: data)
     }
     UserDefaults.standard.set(try JSONEncoder().encode([host]), forKey: "hosts")
