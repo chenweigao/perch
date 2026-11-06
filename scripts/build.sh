@@ -9,6 +9,12 @@ if ! git -C "$checkout" apply --reverse --check "$patch_file" 2>/dev/null; then
     git -C "$checkout" apply --check "$patch_file"
     git -C "$checkout" apply "$patch_file"
 fi
+math_patch="$PWD/patches/swiftmath-app-resources.patch"
+math_checkout="$PWD/.build/checkouts/SwiftMath"
+if ! git -C "$math_checkout" apply --reverse --check "$math_patch" 2>/dev/null; then
+    git -C "$math_checkout" apply --check "$math_patch"
+    git -C "$math_checkout" apply "$math_patch"
+fi
 # Swift 6.4's SwiftBuild backend stamps the deployment target as the linked SDK,
 # which disables the native floating sidebar. Native preserves the actual SDK.
 swift build --build-system native --configuration "$configuration"
