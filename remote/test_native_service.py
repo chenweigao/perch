@@ -1116,6 +1116,59 @@ class CodexHandlerContractTests(unittest.TestCase):
         with patch.object(broker,'codex_catalog',return_value=catalog):
             self.assertEqual(self.request('/sessions',{'provider':'codex','cwd':folder.name,'model':'gpt-codex','permissionMode':'ask'})[0],400)
 
+    def compact_frames(self, turn='compact-turn', fail=None):
+        self.s.codex_adapter.frame(self.fake,{'method':'turn/started','params':{'turn':{'id':turn,'status':'inProgress'}}})
+        if fail is None:
+            self.s.codex_adapter.frame(self.fake,{'method':'item/completed','params':{'item':{'type':'contextCompaction','id':'compact-item'},'turnId':turn}})
+            self.s.codex_adapter.frame(self.fake,{'method':'turn/completed','params':{'turn':{'id':turn,'status':'completed'}}})
+        else:
+            self.s.codex_adapter.frame(self.fake,{'method':'turn/completed','params':{'turn':{'id':turn,'status':'failed','error':{'message':fail}}}})
+    def test_codex_session_advertises_compact(self):
+        self.assertEqual([c['name'] for c in self.s.snapshot()['commands']],['compact'])
+    def test_codex_compact_reports_async_result(self):
+        self.assertEqual(self.request('/sessions/native-thread/command',{'name':'compact','arguments':'soft'})[0],400)
+        self.assertEqual(self.request('/sessions/native-thread/command',{'name':'compact'})[0],200)
+        self.assertIn(('thread/compact/start',{'threadId':'native-thread'}),self.fake.calls)
+        self.assertEqual(self.s.snapshot()['commandResult']['status'],'running')
+        # A second command is refused while the compaction turn is pending.
+        self.assertEqual(self.request('/sessions/native-thread/command',{'name':'compact'})[0],400)
+        self.compact_frames()
+        result=self.s.snapshot()['commandResult']
+        self.assertEqual(result['status'],'completed'); self.assertIsNone(result['error'])
+        self.assertIsNone(self.s.state['error'])
+        # The compaction turn is bookkeeping: it must not queue a review entry.
+        self.assertEqual(self.s.summary()['completed'],0)
+    def test_codex_compact_settles_via_deprecated_notification(self):
+        self.assertEqual(self.request('/sessions/native-thread/command',{'name':'compact'})[0],200)
+        self.s.codex_adapter.frame(self.fake,{'method':'thread/compacted','params':{'threadId':'native-thread','turnId':'compact-turn'}})
+        self.assertEqual(self.s.snapshot()['commandResult']['status'],'completed')
+        self.s.codex_adapter.frame(self.fake,{'method':'turn/completed','params':{'turn':{'id':'compact-turn','status':'completed'}}})
+        self.assertEqual(self.s.summary()['completed'],0)
+    def test_codex_compact_refusal_and_turn_failure_keep_session_usable(self):
+        def fail(method,params,timeout=60): raise ValueError('Codex 拒绝 thread/compact/start：nothing to compact')
+        self.fake.request=fail
+        self.assertEqual(self.request('/sessions/native-thread/command',{'name':'compact'})[0],400)
+        result=self.s.snapshot()['commandResult']
+        self.assertEqual(result['status'],'failed'); self.assertIn('nothing to compact',result['error'])
+        self.assertIsNone(self.s.state['error'])
+        broker.SESSIONS.clear(); self.s,self.fake=CodexProtocolTests().session()
+        self.assertEqual(self.request('/sessions/native-thread/command',{'name':'compact'})[0],200)
+        self.compact_frames(fail='compaction failed')
+        result=self.s.snapshot()['commandResult']
+        self.assertEqual(result['status'],'failed'); self.assertEqual(result['error'],'compaction failed')
+        self.assertEqual(self.s.summary()['completed'],0)
+        self.assertEqual(self.request('/sessions/native-thread/command',{'name':'compact'})[0],200)
+    def test_codex_compact_waits_for_idle(self):
+        self.s.state['busy']=True
+        self.assertEqual(self.request('/sessions/native-thread/command',{'name':'compact'})[0],400)
+        self.assertNotIn(('thread/compact/start',{'threadId':'native-thread'}),self.fake.calls)
+    def test_context_window_failure_names_compact_as_the_way_out(self):
+        self.s.codex_adapter.frame(self.fake,{'method':'turn/completed','params':{'turn':{'id':'turn-full','status':'failed',
+            'error':{'message':"Codex ran out of room in the model's context window. Start a new thread or clear earlier history before retrying."}}}})
+        error=self.s.state['error']
+        self.assertIn('out of room',error); self.assertIn('/compact',error)
+        self.assertEqual(self.s.summary()['turnState'],'failed')
+
     def test_only_qoder_permission_changes_are_persisted_for_the_next_turn(self):
         qoder=broker.Session(dict(id='qoder-permission',provider='qoder',cwd=folder.name,title='Qoder',model='',
             busy=True,archived=False,updated=0,revision=0,completed=0,messages=[],interactions=[{'id':'pending'}],error=None))
