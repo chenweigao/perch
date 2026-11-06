@@ -283,10 +283,19 @@ struct ReadingDesignFixture: View {
     precondition(readingTextViews(host).contains { $0.string.contains("先核对运行时能力") }, "An opened thought stays readable when Bash grows it into a stage")
     try snapshot("phases-expanded")
     guard let expandedControl = taskPanelControl(window, "activity-phase:" + phaseID) else { fatalError("Missing phase disclosure") }
+    let closingStarted = ContinuousClock.now
     click(expandedControl)
     try await Task.sleep(for: .milliseconds(40))
-    precondition(readingTextViews(host).contains { $0.string.contains("先核对运行时能力") }, "Closing a phase retains content during its height transition")
-    try await Task.sleep(for: .milliseconds(360))
+    // Sleep is a minimum delay: a busy CI main actor can resume after the
+    // entire 250 ms transition. Only inspect an actual intermediate frame;
+    // reduced motion intentionally unmounts the content immediately.
+    let sampledAfter = closingStarted.duration(to: .now)
+    if !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion, sampledAfter < .milliseconds(200) {
+        precondition(readingTextViews(host).contains { $0.string.contains("先核对运行时能力") }, "Closing a phase retains content during its height transition")
+    } else {
+        print("INFO: intermediate collapse frame unavailable (elapsed \(sampledAfter)); checking settled state")
+    }
+    try await Task.sleep(for: .milliseconds(400))
     precondition(!readingTextViews(host).contains { $0.string.contains("先核对运行时能力") })
     try snapshot("phases-live")
     host.rootView = ReadingDesignFixture(messages: messages)
