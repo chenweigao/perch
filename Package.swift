@@ -16,7 +16,7 @@ let package = Package(
         .executableTarget(name: "AgentWorkbench", dependencies: [
             "WorkbenchCore", .product(name: "GhosttyTerminal", package: "libghostty-spm"),
             .product(name: "SwiftMath", package: "SwiftMath")
-        ]),
+        ], resources: [.copy("Resources/Perch-mark.png")]),
         .executableTarget(name: "WorkbenchChecks", dependencies: ["WorkbenchCore", .product(name: "SwiftMath", package: "SwiftMath")], path: "Tests/WorkbenchCoreTests"),
         .executableTarget(name: "ConnectionChecks", dependencies: ["WorkbenchCore"], path: "Tests/ConnectionChecks")
     ],

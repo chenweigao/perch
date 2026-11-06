@@ -1,19 +1,16 @@
 {
   "fill" : {
-    "solid" : "srgb:0.89020,0.42745,0.33333,1.00000"
+    "solid" : "srgb:0.98039,0.96471,0.93725,1.00000"
   },
   "groups" : [
     {
       "layers" : [
         {
           "blend-mode" : "normal",
-          "fill" : {
-            "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
-          },
           "glass" : false,
           "hidden" : false,
-          "image-name" : "bird.svg",
-          "name" : "bird",
+          "image-name" : "terrain.png",
+          "name" : "woodcut terrain",
           "position" : {
             "scale" : 1,
             "translation-in-points" : [
@@ -32,7 +29,7 @@
       },
       "shadow" : {
         "kind" : "neutral",
-        "opacity" : 0.20000000000000001
+        "opacity" : 0
       }
     }
   ],

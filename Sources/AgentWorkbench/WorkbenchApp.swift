@@ -93,12 +93,14 @@ struct WorkbenchApp: App {
                     .keyboardShortcut("0", modifiers: .command)
             }
         }
-        MenuBarExtra("Perch", systemImage: "bird") {
+        MenuBarExtra {
             Button(L("任务浮窗 · ⌃⌥P")) { CompanionWindowController.shared.show() }
             Button(L("打开工作台")) { model.showHome(); CompanionWindowController.shared.showMain() }
             Button(L("长任务托管")) { model.showFollowUps = true; CompanionWindowController.shared.showMain() }
             Divider()
             Button(L("退出 Perch")) { NSApp.terminate(nil) }
+        } label: {
+            PerchMark().frame(width: 18, height: 18)
         }
         Settings { WorkbenchSettings(model: model).environment(\.locale, appLanguage.resolvedLocale) }
     }

@@ -2,20 +2,21 @@
 
 **A home for your agents.**
 
-Approved identity (2026-11-02): the D1 perched bird, in deep coral `#E36D55`
-and white. A centered branch supports a near-symmetric body; the short right
-beak and single wing supply the asymmetry. In-app brand moments use one ink,
-following the appearance. Execution phase indicators retain their sun motions.
+Approved identity (2026-11-06): the woodcut terrain stamp (concept 10), with
+angular mountains, a winding negative-space path and an irregular partial frame.
+Preserve the selected raster's silhouette and distressed grain. The app icon
+uses warm charcoal on ivory `#FAF6EF`; in-app marks use the current ink color.
+Execution phase indicators retain their sun motions.
 
-- `Perch.svg`: app icon with a transparent outer margin.
-- `Perch-mark.svg`: monochrome bird on transparency.
-- `Perch-1024.png`, `Perch.icns`: flattened macOS fallbacks.
-- `Perch.icon`: unmasked Icon Composer bird layer; system backplate and lighting.
-- `Sources/AgentWorkbench/PerchBirdGeometry.swift`: the actual CoreGraphics paths,
-  used by the app and raster generator. On a 100-unit grid the outer stroke is
-  5.4, wing 5.2, and belly-to-branch clear gap 9.6. At 16/24pt the strokes are
-  adjusted and the foreground enlarged by 8%/4%; 32pt and above use the master.
-- `scripts/brand-export.swift`: matching editable SVGs and Icon Composer package.
+- `Perch-mark.png`: unchanged approved transparent master (1254 × 1254), created
+  with OpenAI image_gen and selected by the project owner.
+- `Perch-1024.png`, `Perch.icns`: macOS fallbacks with a transparent outer margin.
+- `Perch.icon`: unmasked raster layer for Icon Composer; the system supplies the
+  backplate. The layer retains the master colors, without glass or a cast shadow.
+- `Sources/AgentWorkbench/Resources/Perch-mark.png`: generated alpha-bounds crop,
+  bundled by SwiftPM for the dashboard and menu-bar template.
+- `scripts/brand-export.swift`: deterministic packaging of the approved master;
+  no tracing, generated redesign or external image libraries.
 
 Regenerate on macOS from the repository root:
 
@@ -25,11 +26,10 @@ iconutil -c icns build/Perch.iconset -o Resources/Brand/Perch.icns
 ./scripts/build.sh
 ```
 
-The generator compiles the app's bird geometry and exporter into a temporary
-executable, then removes it. It does not require a full Swift package build.
-`build.sh` compiles the Icon Composer document to `Assets.car`. Check default
-and dark native renderings when changing the icon. System appearances can
-change the background and foreground colors while retaining the bird.
+The generator compiles the exporter into a temporary executable and removes it.
+It does not require a full Swift package build. `build.sh` compiles the Icon
+Composer document to `Assets.car`. Check default and dark native renderings
+when changing the icon. Keep the transparent master unchanged when regenerating.
 
 The public app name is Perch. Internal executable, bundle identifier, workspace
 paths and remote service names retain their identities, preserving sessions

@@ -13,7 +13,7 @@ done
 swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-library -I "$bin_dir/Modules" \
     -I "$build_root"/.build/checkouts/swift-markdown/Sources/CAtomic/include \
     -I "$build_root"/.build/checkouts/swift-cmark/src/include -I "$build_root"/.build/checkouts/swift-cmark/extensions/include \
-    Sources/AgentWorkbench/UILocalization.swift Sources/AgentWorkbench/PerchBirdGeometry.swift Sources/AgentWorkbench/PerchMark.swift Sources/AgentWorkbench/AgentMark.swift Sources/AgentWorkbench/AgentMarkArtwork.swift Sources/AgentWorkbench/WorkbenchDashboard.swift \
+    Sources/AgentWorkbench/UILocalization.swift Sources/AgentWorkbench/PerchMark.swift Sources/AgentWorkbench/AgentMark.swift Sources/AgentWorkbench/AgentMarkArtwork.swift Sources/AgentWorkbench/WorkbenchDashboard.swift \
     Sources/AgentWorkbench/WorkbenchTheme.swift \
     Sources/AgentWorkbench/SessionStatusIndicator.swift Sources/AgentWorkbench/ConversationActivityBar.swift Sources/AgentWorkbench/PerchBusyIndicator.swift \
     Sources/AgentWorkbench/ActivitySummaryController.swift Sources/AgentWorkbench/ActivitySummarySettings.swift \
@@ -33,6 +33,7 @@ cat > "$app_dir/Contents/Info.plist" <<'PLIST'
 <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
 PLIST
+cp Sources/AgentWorkbench/Resources/Perch-mark.png "$app_dir/Contents/Resources/"
 cp -R Resources/Localization/*.lproj "$app_dir/Contents/Resources/"
 codesign --force --sign - "$app_dir"
 printf '%s\n' "$app_dir"

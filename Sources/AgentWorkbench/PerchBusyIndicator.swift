@@ -3,7 +3,7 @@ import QuartzCore
 import SwiftUI
 
 /// The running sun of list rows and the Goal header on the 24-unit glyph grid:
-/// a ring that chases. The brand bird lives in `PerchBirdGeometry`; the status
+/// a ring that chases. The woodcut brand lives in `PerchMark`; the status
 /// line has no mark and shows a running turn with its shimmering title instead.
 enum PerchLineMark {
     static let lineWidth: CGFloat = 1.75
