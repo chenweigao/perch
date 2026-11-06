@@ -1065,6 +1065,7 @@ final class WorkbenchModel {
     private func showTurn(_ page: WorkspaceInspectorPage, of reference: SessionReference) {
         if let locked = taskContextWindow.locked, locked != reference { taskContextWindow.locked = nil }
         if page == .task, taskContextWindow.detail?.source == reference { taskContextWindow.detail = nil }
+        if page == .task, taskContextWindow.fileDetail?.source == reference { taskContextWindow.fileDetail = nil }
         taskContextWindow.showPage(page, model: self)
     }
     private func appendToDraft(kimi: KimiConnection?, native: NativeAgentConnection?, isKimi: Bool, id: String, text: String) {

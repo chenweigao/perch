@@ -58,7 +58,7 @@ extension WorkbenchModel {
     }
 }
 
-/// The task page's turn inventory: plan steps and per-file edits, without
+/// The task page's per-file edits and summary failures, without
 /// repeating the transcript's stage narrative or elapsed clock.
 struct TaskTurnSection: View {
     let model: WorkbenchModel
@@ -67,14 +67,12 @@ struct TaskTurnSection: View {
     @ObservedObject private var narratives = ActivityNarrativeStore.shared
     @ObservedObject private var summarySettings = ActivitySummarySettings.shared
     @State private var allEdits = false
-    @UILocalization private var L
 
     var body: some View {
         let context = model.turnContext(item.reference, busy: snapshot.busy)
         let failure = context.flatMap { narratives.failure(session: $0.narrativeKey)?.message }
-        if failure != nil || !snapshot.todos.isEmpty || snapshot.edits != nil {
+        if failure != nil || snapshot.edits != nil {
             VStack(alignment: .leading, spacing: 22) {
-                if !snapshot.todos.isEmpty { plan }
                 if let edits = snapshot.edits { self.edits(edits) }
                 if let failure, let context { externalFailure(failure, key: context.narrativeKey) }
             }.font(.system(size: WorkbenchTheme.Typography.body))
@@ -106,37 +104,6 @@ struct TaskTurnSection: View {
                         in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row, style: .continuous))
     }
 
-    private var plan: some View {
-        let done = snapshot.todos.filter { $0.status == .done }.count
-        return VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("计划").fontWeight(.medium)
-                Spacer()
-                Text(verbatim: "\(done) / \(snapshot.todos.count)").monospacedDigit().foregroundStyle(WorkbenchTheme.quiet)
-            }.padding(.bottom, 2)
-            ForEach(snapshot.todos) { todo in
-                HStack(alignment: .top, spacing: 9) {
-                    Image(systemName: todo.status == .done ? "checkmark.circle.fill"
-                          : todo.status == .inProgress ? "circle.lefthalf.filled" : "circle")
-                        .foregroundStyle(todo.status == .inProgress ? WorkbenchTheme.accent : WorkbenchTheme.quiet)
-                        .accessibilityHidden(true)
-                    Text(todo.title).fontWeight(todo.status == .inProgress ? .medium : .regular)
-                        .foregroundStyle(todo.status == .done ? WorkbenchTheme.quiet : Color.primary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }.padding(.vertical, 2)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel(Text(verbatim: "\(state(todo.status)): \(todo.title)"))
-            }
-        }
-    }
-    private func state(_ status: ConversationTodo.Status) -> String {
-        switch status {
-        case .done: return L("Completed")
-        case .inProgress: return L("In progress")
-        case .pending: return L("Pending")
-        }
-    }
-
     private func edits(_ edits: (perFile: [String: SessionEditStat], total: SessionEditStat)) -> some View {
         let paths = edits.perFile.keys.sorted()
         let shown = allEdits ? paths : Array(paths.prefix(6))
@@ -154,7 +121,7 @@ struct TaskTurnSection: View {
                 let stat = edits.perFile[path]!
                 let name = (path as NSString).lastPathComponent
                 Button {
-                    model.openWorkspaceFile(GroupOutcome(title: name, link: path, source: item.reference))
+                    model.taskContextWindow.fileDetail = TaskContextFileRoute(source: item.reference, path: path, name: name)
                 } label: {
                     HStack(spacing: 10) {
                         Image(systemName: TaskContextFileIcon.name(name))
@@ -162,15 +129,16 @@ struct TaskTurnSection: View {
                             .frame(width: 16)
                             .accessibilityHidden(true)
                         Text(name)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
                             .foregroundStyle(.primary)
                         Spacer(minLength: 6)
                         if stat.additions > 0 || stat.deletions > 0 {
                             EditStatText(stat: stat)
                                 .font(.system(size: WorkbenchTheme.Typography.caption))
                         }
-                    }.frame(minHeight: 32).contentShape(Rectangle())
+                    }.frame(minHeight: 44).contentShape(Rectangle())
                 }.buttonStyle(TaskContextRowStyle())
                     .disabled(!item.online)
                     .help(path)

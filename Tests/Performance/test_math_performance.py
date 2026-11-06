@@ -40,6 +40,9 @@ def fixtures():
                 "scheduled_tick_gap": {"p95_ms": 16 + factor},
                 "rss_before_bytes": 1_000_000, "rss_after_bytes": 1_000_000 + int(1_000_000 * factor),
             }} for _ in range(3)]
+        for records in runs[variant].values():
+            for record in records:
+                record["source_input_sha256"] = ("a" if variant == "baseline" else "b") * 64
     return runs
 
 
@@ -51,6 +54,9 @@ class MathPerformanceTests(unittest.TestCase):
             scripts.mkdir()
             build = ROOT / "scripts/build-math-performance-preview.sh"
             shutil.copy2(build, scripts)
+            fixture = root / "Tests/MathPerformancePreview"
+            fixture.mkdir(parents=True)
+            shutil.copy2(ROOT / "Tests/MathPerformancePreview/App.swift", fixture)
             core = root / "Sources/WorkbenchCore"
             core.mkdir(parents=True)
             (core / "ReplyMath.swift").write_text("import Foundation\n")
@@ -82,7 +88,12 @@ class MathPerformanceTests(unittest.TestCase):
             environment = {**os.environ, "PATH": str(stubs) + os.pathsep + os.environ["PATH"],
                            "MATH_TEST_BIN": str(binary), "MATH_TEST_ARGUMENTS": str(arguments)}
             pins = {pin["identity"]: pin for pin in json.loads((root / "Package.resolved").read_text())["pins"]}
+            fingerprints = []
             for variant in ["baseline", "candidate"]:
+                if variant == "candidate":
+                    (root / "README.md").write_text("Unrelated change\n")
+                    subprocess.run(["git", "add", "README.md"], cwd=root, check=True, capture_output=True)
+                    subprocess.run(["git", "commit", "-qm", "Unrelated change"], cwd=root, check=True, capture_output=True)
                 result = subprocess.run(["bash", "scripts/build-math-performance-preview.sh", variant],
                                         cwd=root, env=environment, capture_output=True, text=True)
                 self.assertEqual(result.returncode, 97, result.stdout + result.stderr)
@@ -90,10 +101,62 @@ class MathPerformanceTests(unittest.TestCase):
                 self.assertIn("-D", flags)
                 self.assertIn("MATH_PERFORMANCE_BASELINE" if variant == "baseline" else "MATH_PERFORMANCE_CHECKS", flags)
                 snapshot = root / ".local/math-performance-sources" / variant
+                metadata = json.loads((root / f"build/Math Performance {variant}.app/Contents/Resources/build.json").read_text())
+                fingerprints.append(metadata["source_input_sha256"])
                 package = (snapshot / "Package.swift").read_text()
                 for name in ["swift-markdown", "swift-cmark", "swiftmath"]:
                     pin = pins[name]
                     self.assertIn('.package(url: ' + json.dumps(pin["location"]) + ', exact: ' + json.dumps(pin["state"]["version"]) + ')', package)
+            self.assertEqual(fingerprints[0], fingerprints[1])
+            # A source edit outside ReplyMathView must still invalidate identity.
+            (core / "NewInput.swift").write_text("struct NewInput {}\n")
+            subprocess.run(["git", "add", "Sources"], cwd=root, check=True, capture_output=True)
+            subprocess.run(["git", "commit", "-qm", "Change compiled inputs"], cwd=root, check=True, capture_output=True)
+            shutil.rmtree(root / ".local/math-performance-sources/candidate")
+            shutil.rmtree(root / "build/Math Performance candidate.app")
+            result = subprocess.run(["bash", "scripts/build-math-performance-preview.sh", "candidate"],
+                                    cwd=root, env=environment, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 97, result.stdout + result.stderr)
+            metadata = json.loads((root / "build/Math Performance candidate.app/Contents/Resources/build.json").read_text())
+            self.assertNotEqual(metadata["source_input_sha256"], fingerprints[0])
+
+    def test_identical_inputs_report_measurements_without_claiming_a_regression(self):
+        runs = fixtures()
+        runs["baseline"] = copy.deepcopy(runs["candidate"])
+        for record in runs["candidate"]["typeset-128"]:
+            record["measurements"]["cold_attachment"]["total_ms"] *= 2
+        result = MODULE.compare(runs)
+        self.assertGreater(result["comparison"]["typeset-128"]["ratio"], 1.1)
+        self.assertEqual(result["input_comparison"]["relative_performance_gates"],
+                         "not_applicable_identical_inputs")
+        # The same timings with an actual input change must fail the old gate.
+        for records in runs["candidate"].values():
+            for record in records:
+                record["source_input_sha256"] = "c" * 64
+        # Keep this negative control focused on typesetting.
+        for record in runs["baseline"]["parse-30"]:
+            record["suffix_search"] = False
+        with self.assertRaisesRegex(ValueError, "regression exceeds"):
+            MODULE.compare(runs)
+
+    def test_identical_inputs_still_check_semantics_and_growth(self):
+        for failure in ["semantic mismatch", "grew too quickly"]:
+            runs = fixtures()
+            runs["baseline"] = copy.deepcopy(runs["candidate"])
+            for record in runs["candidate"]["parse-30"]:
+                if failure == "semantic mismatch":
+                    record["measurements"]["reply"]["semantic_sha256"] = "changed"
+                else:
+                    record["measurements"]["unclosed_4096"]["duration"]["median_ms"] = 10
+            with self.assertRaisesRegex(ValueError, failure):
+                MODULE.compare(runs)
+
+    def test_missing_or_mixed_identity_cannot_disable_gates(self):
+        for fingerprint in [None, "", "invalid", "c" * 64]:
+            runs = fixtures()
+            runs["candidate"]["typeset-32"][0]["source_input_sha256"] = fingerprint
+            with self.assertRaisesRegex(ValueError, "input identity"):
+                MODULE.compare(runs)
 
     def test_valid_results(self):
         result = MODULE.compare(fixtures())
@@ -103,6 +166,8 @@ class MathPerformanceTests(unittest.TestCase):
     def test_later_changes_do_not_require_repeated_parser_gains(self):
         runs = fixtures()
         runs["baseline"]["parse-30"] = copy.deepcopy(runs["candidate"]["parse-30"])
+        for record in runs["baseline"]["parse-30"]:
+            record["source_input_sha256"] = "a" * 64
         self.assertTrue(MODULE.compare(runs)["checks"])
 
     def test_semantic_mismatch_fails(self):
@@ -114,6 +179,8 @@ class MathPerformanceTests(unittest.TestCase):
     def test_no_parser_improvement_fails(self):
         runs = fixtures()
         runs["candidate"]["parse-30"] = copy.deepcopy(runs["baseline"]["parse-30"])
+        for record in runs["candidate"]["parse-30"]:
+            record["source_input_sha256"] = "b" * 64
         with self.assertRaisesRegex(ValueError, "did not improve"):
             MODULE.compare(runs)
 

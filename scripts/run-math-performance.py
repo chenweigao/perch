@@ -27,6 +27,20 @@ def median(values):
 def compare(runs):
     comparisons = {}
     checks = []
+    fingerprints = {}
+    for variant in ["baseline", "candidate"]:
+        values = {record.get("source_input_sha256")
+                  for records in runs[variant].values() for record in records}
+        if len(values) != 1:
+            raise ValueError("Inconsistent math input identity: " + variant)
+        value = next(iter(values))
+        if not isinstance(value, str) or len(value) != 64 or any(c not in "0123456789abcdef" for c in value):
+            raise ValueError("Missing or invalid math input identity: " + variant)
+        fingerprints[variant] = value
+    changed_inputs = fingerprints["baseline"] != fingerprints["candidate"]
+    # Shared-runner A/A timing differences cannot establish a source regression.
+    # Keep collecting every measurement and checking functional contracts, but
+    # apply relative performance gates only when the compiled inputs differ.
     parse_a = runs["baseline"]["parse-30"]
     parse_b = runs["candidate"]["parse-30"]
     for name in parse_a[0]["measurements"]:
@@ -43,7 +57,7 @@ def compare(runs):
     unclosed = comparisons["parse_unclosed_4096"]
     legacy = bool(parse_a[0].get("suffix_search"))
     limit = 0.75 if legacy else 1.25
-    if unclosed["ratio"] is None or unclosed["ratio"] > limit:
+    if changed_inputs and (unclosed["ratio"] is None or unclosed["ratio"] > limit):
         raise ValueError("Unclosed delimiter suffix-scan optimization did not improve" if legacy else "Unclosed delimiter performance regressed")
     small = comparisons["parse_unclosed_1024"]["candidate_median_ms"]
     large = unclosed["candidate_median_ms"]
@@ -63,9 +77,10 @@ def compare(runs):
                             "candidate_rss_growth_bytes": statistics.median(record["measurements"]["rss_after_bytes"] - record["measurements"]["rss_before_bytes"] for record in b),
                             "baseline_warm_median_ms": median([record["measurements"]["warm_attachment"]["median_ms"] for record in a]),
                             "candidate_warm_median_ms": median([record["measurements"]["warm_attachment"]["median_ms"] for record in b])}
-        if count <= 128 and (old <= 0 or new > old * 1.10):
+        if changed_inputs and count <= 128 and (old <= 0 or new > old * 1.10):
             raise ValueError("Typeset/draw regression exceeds 10% at " + str(count))
-    checks.append("32/128-formula combined typeset/draw has no material regression")
+    if changed_inputs:
+        checks.append("32/128-formula combined typeset/draw has no material regression")
     for count in [30, 128]:
         key = "window-" + str(count)
         a, b = runs["baseline"][key], runs["candidate"][key]
@@ -85,17 +100,20 @@ def compare(runs):
         old = median([record["measurements"]["rss_after_bytes"] - record["measurements"]["rss_before_bytes"] for record in a])
         new = median([record["measurements"]["rss_after_bytes"] - record["measurements"]["rss_before_bytes"] for record in b])
         comparisons[key]["rss_growth_bytes"] = {"baseline": old, "candidate": new}
-        if old > 0 and new > old * 1.15:
+        if changed_inputs and old > 0 and new > old * 1.15:
             raise ValueError("Window retained memory regressed at " + str(count))
         first = comparisons[key]["initial_layout_display_ms"]
         # Best-case display time still carries WindowServer scheduling: measured
         # on the shared CI runner 2026-11-02, one variant spread 374–903ms across
         # three rounds, so a 1.25 gate fires on luck. Only a catastrophic
         # best-case blowout is worth a failure.
-        if first["baseline"] > 0 and first["candidate"] > first["baseline"] * 3:
+        if changed_inputs and first["baseline"] > 0 and first["candidate"] > first["baseline"] * 3:
             raise ValueError("Window initial layout regressed at " + str(count))
-    checks.append("bounded mounted-window memory; initial layout gated only on catastrophic best-case regression")
+    if changed_inputs:
+        checks.append("bounded mounted-window memory; initial layout gated only on catastrophic best-case regression")
     return {"checks": checks, "comparison": comparisons,
+            "input_comparison": {**fingerprints, "relative_performance_gates":
+                                 "applied" if changed_inputs else "not_applicable_identical_inputs"},
             "scope": "same-runner sequential synthetic A/B; window timings are not hardware input latency or FPS"}
 
 

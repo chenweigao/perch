@@ -17,6 +17,7 @@ for name in WorkbenchTheme CodeHighlighting ReplyMarkdownView NativeAssistantBlo
     git show "$revision:Sources/AgentWorkbench/${name}.swift" > "$snapshot/Sources/AgentWorkbench/${name}.swift"
 done
 python3 - "$snapshot" "$app_dir" "$variant" "$revision" <<'PY'
+import hashlib
 import json
 from pathlib import Path
 import subprocess
@@ -38,6 +39,19 @@ metadata = {'variant': variant, 'revision': subprocess.check_output(['git', 'rev
             'dependencies': {pin['identity']: pin['state'] for pin in selected},
             'suffix_search': 'private static func closingDelimiter' in (Path(snapshot) / 'Sources/WorkbenchCore/ReplyMath.swift').read_text(),
             'toolchain': subprocess.check_output(['swift', '--version'], text=True).strip()}
+# Fingerprint the exported inputs, not the commit or output paths. Unrelated
+# changes must not turn an A/A measurement into a source-regression claim.
+# Both variants use this harness; candidate-only contract counters are intentional.
+digest = hashlib.sha256()
+inputs = [(str(path.relative_to(snapshot)), path.read_bytes())
+          for path in sorted(Path(snapshot).rglob('*.swift'))]
+inputs += [(name, Path(name).read_bytes()) for name in
+           ['Tests/MathPerformancePreview/App.swift', 'scripts/build-math-performance-preview.sh']]
+inputs += [('dependencies', json.dumps(selected, sort_keys=True).encode()),
+           ('toolchain', metadata['toolchain'].encode())]
+for name, data in inputs:
+    digest.update(name.encode() + b'\0' + data + b'\0')
+metadata['source_input_sha256'] = digest.hexdigest()
 (Path(app) / 'Contents/Resources/build.json').write_text(json.dumps(metadata, indent=2) + '\n')
 PY
 swift build --package-path "$snapshot" --build-system native -c release --target SwiftMath
