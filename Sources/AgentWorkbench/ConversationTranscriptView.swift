@@ -708,6 +708,17 @@ private final class ConversationDocumentView: NSView {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     private func reveal(_ target: ConversationFindTarget) {
         guard !suspended else { return }
+        if let toolID = target.hit.toolID {
+            let id = target.hit.entryID, scope = sessionId + ":" + id
+            ConversationReadingMemory.shared.processPages[scope + ":stage"] = "tool:" + toolID
+            for name in ["expanded", "thought"] {
+                ConversationReadingMemory.shared.expansions[scope + ":" + name] = true
+            }
+            for name in ["expanded", "full-output"] {
+                ConversationReadingMemory.shared.expansions[scope + ":tool:" + toolID + ":" + name] = true
+            }
+            invalidateRevealedRow(indices[id] == nil ? foldParents[id] ?? id : id)
+        }
         revealEntry(target.hit.entryID)
         // Regular-expression hits reveal their row; only literal queries can
         // place the caret on the exact occurrence.
@@ -719,15 +730,19 @@ private final class ConversationDocumentView: NSView {
             // A newly mounted host may not have created its native text views yet.
             // Complete that host's layout before looking for the selected range.
             view.layoutSubtreeIfNeeded()
-            var remaining = target.hit.occurrence
+            var remaining = target.hit.toolOccurrence ?? target.hit.occurrence
+            let anchorID = target.hit.toolID.map { "tool:" + $0 } ?? target.hit.entryID
             func anchor(in node: NSView) -> NSView? {
-                if node.identifier?.rawValue == "process-entry:" + target.hit.entryID { return node }
+                if node.identifier?.rawValue == "process-entry:" + anchorID { return node }
                 return node.subviews.lazy.compactMap { anchor(in: $0) }.first
             }
             let targetBounds = anchor(in: view).map { $0.convert($0.bounds, to: view) }
+            let toolRecord = target.hit.toolID != nil && targetBounds != nil
             let root = view
             func select(in view: NSView) -> Bool {
-                if let text = view as? NSTextView, (text as? ReplyTextView)?.isConversationBodyText == true || text.enclosingScrollView?.identifier?.rawValue == "perch-long-output" {
+                if let text = view as? NSTextView, (text as? ReplyTextView)?.isConversationBodyText == true
+                    || (toolRecord && text is ReplyTextView)
+                    || text.enclosingScrollView?.identifier?.rawValue == "perch-long-output" {
                     // A long reader's text document extends beyond its viewport;
                     // use the viewport to avoid selecting another row's hidden text.
                     let region: NSView = text.enclosingScrollView?.identifier?.rawValue == "perch-long-output" ? text.enclosingScrollView! : text
@@ -938,7 +953,7 @@ private final class ConversationDocumentView: NSView {
         }
         let structureChanged = changedSession || contents.count != next.count || !zip(contents, next).allSatisfy {
             $0.entry.id == $1.entry.id && $0.entry.isProcess == $1.entry.isProcess
-                && $0.isProgressNote == $1.isProgressNote
+                && $0.isStageNote == $1.isStageNote
         }
         if changedSession || changedAppearance { measuredSizes.removeAll(keepingCapacity: true) }
         if structureChanged {
@@ -1060,8 +1075,8 @@ private final class ConversationDocumentView: NSView {
     private func spacing(after index: Int) -> CGFloat {
         guard index + 1 < contents.count else { return ReplyStyle.entrySpacing }
         let current = contents[index], next = contents[index + 1]
-        if next.isProgressNote { return ReplyStyle.progressStageSpacing }
-        if current.isProgressNote && next.entry.isProcess { return ReplyStyle.progressToolSpacing }
+        if next.isStageNote && current.entry.isProcess { return ReplyStyle.progressStageSpacing }
+        if current.isStageNote && next.entry.isProcess { return ReplyStyle.progressToolSpacing }
         return current.entry.isProcess && next.entry.isProcess ? ReplyStyle.processEntrySpacing : ReplyStyle.entrySpacing
     }
     private var viewportRect: CGRect {
@@ -2250,6 +2265,8 @@ private struct ConversationEntryView: View, Equatable {
             && lhs.planProgress == rhs.planProgress
             && lhs.completedDuration == rhs.completedDuration
     }
+    /// Ordinary provider progress prose needs the same rhythm as narrative anchors.
+    var isStageNote: Bool { isProgressNote || entry.presentation == .progress }
     var isProgressNote: Bool {
         guard let activityNarrative else { return false }
         return activityNarrative.isAnchor && activityNarrative.stageClosed
@@ -2311,9 +2328,8 @@ private struct ConversationEntryView: View, Equatable {
     }
 }
 
-/// A completed turn's folded process: one quiet disclosure that mounts the
-/// original rows in place when expanded. Expansion is remembered per fold row.
-private struct ProcessFindAnchor: NSViewRepresentable {
+/// Bounds the native text search to one mounted stage or tool record.
+struct ProcessFindAnchor: NSViewRepresentable {
     let id: String
     func makeNSView(context: Context) -> NSView { NSView() }
     func updateNSView(_ view: NSView, context: Context) {

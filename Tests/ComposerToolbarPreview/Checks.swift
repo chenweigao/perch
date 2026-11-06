@@ -6,6 +6,7 @@ enum ToolbarProbe {
     static var controls: [String: NSView] = [:]
     static var selection = ""
     static var payload = ""
+    static var stops = 0
 }
 
 struct ToolbarButtonProbe: NSViewRepresentable {
@@ -184,6 +185,34 @@ func runToolbarChecks() async {
             try await press("send")
             try expect(ToolbarProbe.payload.hasPrefix("model=fixture/reasoner thinking="), "Send must use the selected configuration")
             print("PASS: visible entry in offline/running/empty states and selected configuration at send")
+            // Exercise the native control after send clears the draft: the 36pt
+            // stop target must survive running, attention and stopping.
+            func animatedArcs(_ layer: CALayer?) -> Int {
+                guard let layer else { return 0 }
+                return (layer.animation(forKey: "strokeStart") == nil ? 0 : 1)
+                    + (layer.sublayers ?? []).reduce(0) { $0 + animatedArcs($1) }
+            }
+            func arcs() -> Int {
+                views(main.contentView!).reduce(0) { $0 + animatedArcs($1.layer) }
+            }
+            let actionSize = ToolbarProbe.controls["send"]!.bounds.size
+            try expect(actionSize == CGSize(width: 36, height: 36), "Running action must keep its 36pt target")
+            try expect(arcs() > 0, "Running stop control must show the activity arc")
+            for control in ["waiting", "offline"] {
+                try await press(control)
+                try expect(arcs() == 0, "No chase while " + control)
+                try expect(ToolbarProbe.controls["send"]!.bounds.size == actionSize, "State changes must not resize the action")
+                try await press(control)
+                try expect(arcs() > 0, "Activity must resume after " + control)
+            }
+            try await press("send")
+            try expect(ToolbarProbe.stops == 1 && arcs() == 0, "Stop must fire once and end the activity chase")
+            try await press("send")
+            try expect(ToolbarProbe.stops == 1, "Stopping control must reject repeated requests")
+            try await press("confirm-stop")
+            try expect(arcs() == 0 && ToolbarProbe.controls["send"]!.bounds.size == actionSize,
+                       "Completion must restore idle without moving the control")
+            print("PASS: activity arc, attention/offline, stop confirmation, stable action size")
         }
         result["status"] = "passed"
     } catch {

@@ -9,12 +9,15 @@ struct ComposerActionButton: View {
     let isStopping: Bool
     let canSend: Bool
     let canStop: Bool
+    /// False while disconnected or waiting for the user, even if the turn is open.
+    var showsActivity = true
     /// A localization key ("Queue", "Steer", "Run command").
     var queuedSendTitle = "Queue"
     let onSend: () -> Void
     let onStop: () -> Void
     var onQueue: (() -> Void)? = nil
 
+    private var active: Bool { isRunning && canStop && showsActivity && !isStopping }
     private var enabled: Bool { !isStopping && (isRunning ? canStop : canSend) }
     private var title: String { isStopping ? L("Stopping…") : isRunning ? L("Stop task") : L("Send") }
     /// The hint does what Return does; its tooltip names that key and ⌘Return.
@@ -52,12 +55,18 @@ struct ComposerActionButton: View {
                     if isStopping {
                         ProgressView().controlSize(.mini).tint(WorkbenchTheme.actionGlyph)
                     } else {
+                        if active {
+                            PerchBusyIndicator(size: 36, ink: WorkbenchTheme.actionGlyphNS)
+                                .allowsHitTesting(false)
+                        }
                         Image(systemName: isRunning ? "stop.fill" : "arrow.up")
-                            .font(.system(size: isRunning ? 12 : 15, weight: .semibold)).foregroundStyle(WorkbenchTheme.actionGlyph)
+                            .font(.system(size: isRunning ? (active ? 8 : 12) : 15, weight: .semibold)).foregroundStyle(WorkbenchTheme.actionGlyph)
                     }
                 }.frame(width: 36, height: 36)
             }.buttonStyle(.plain).disabled(!enabled).accessibilityLabel(title)
-                .help(isRunning || isStopping ? title : L("Return to send · Shift Return for a new line"))
+                .accessibilityValue(active ? L("Working…") : "")
+                .accessibilityIdentifier("composer-primary-action")
+                .help(active ? L("Working…") + " · " + title : isRunning || isStopping ? title : L("Return to send · Shift Return for a new line"))
         }
     }
 }

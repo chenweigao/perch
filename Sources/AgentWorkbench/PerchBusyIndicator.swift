@@ -3,8 +3,7 @@ import QuartzCore
 import SwiftUI
 
 /// The running sun of list rows and the Goal header on the 24-unit glyph grid:
-/// a ring that chases. The woodcut brand lives in `PerchMark`; the status
-/// line has no mark and shows a running turn with its shimmering title instead.
+/// a ring that chases. The composer uses the same mark around its stop glyph.
 enum PerchLineMark {
     static let lineWidth: CGFloat = 1.75
     static let soloCenter = CGPoint(x: 12, y: 12)
@@ -53,12 +52,13 @@ enum PerchLineMark {
 /// Motion holds a still open arc.
 struct PerchBusyIndicator: View {
     var size: CGFloat = 16
+    var ink: NSColor = WorkbenchTheme.quietNS
     /// Spoken when the indicator stands alone; nil when the row already says it.
     var label: String? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        PerchBusyRepresentable(animated: !reduceMotion)
+        PerchBusyRepresentable(animated: !reduceMotion, ink: ink)
             .frame(width: size, height: size)
             .accessibilityElement()
             .accessibilityLabel(Text(verbatim: label ?? ""))
@@ -68,20 +68,26 @@ struct PerchBusyIndicator: View {
 
 private struct PerchBusyRepresentable: NSViewRepresentable {
     let animated: Bool
-    func makeNSView(context: Context) -> PerchBusyView { PerchBusyView(animated: animated) }
-    func updateNSView(_ view: PerchBusyView, context: Context) { view.animated = animated }
+    let ink: NSColor
+    func makeNSView(context: Context) -> PerchBusyView { PerchBusyView(animated: animated, color: ink) }
+    func updateNSView(_ view: PerchBusyView, context: Context) {
+        view.color = ink
+        view.animated = animated
+    }
 }
 
 private final class PerchBusyView: NSView {
     private let sun = CAShapeLayer()
     private var builtSize: CGSize = .zero
     private static let chase = PerchLineMark.chaseKeyframes()
+    var color: NSColor { didSet { if color != oldValue { rebuild() } } }
     var animated: Bool { didSet { if animated != oldValue { rebuild() } } }
 
     override var isFlipped: Bool { true }
 
-    init(animated: Bool) {
+    init(animated: Bool, color: NSColor) {
         self.animated = animated
+        self.color = color
         super.init(frame: .zero)
         wantsLayer = true
         setAccessibilityElement(false)
@@ -113,7 +119,6 @@ private final class PerchBusyView: NSView {
     }
 
     private var ink: CGColor {
-        let color = WorkbenchTheme.quietNS
         var resolved = color.cgColor
         effectiveAppearance.performAsCurrentDrawingAppearance { resolved = color.cgColor }
         return resolved

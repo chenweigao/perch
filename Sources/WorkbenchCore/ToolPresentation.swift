@@ -46,6 +46,11 @@ public enum ToolPresentation {
                 if !labels.contains(label) { labels.append(label) }
             } else if !fallbackLabels.contains(label) { fallbackLabels.append(label) }
         }
+        // The broader Git label already covers reads when the stage also has
+        // other Git operations. Do not spend both title slots on that overlap.
+        if labels.contains(L("执行 Git 操作")) {
+            labels.removeAll { $0 == L("查看 Git 状态与改动") }
+        }
         // Incidental commands such as date/readlink should not displace a known
         // operation or script. Keep them in the original records and overflow.
         labels += fallbackLabels.filter { !labels.contains($0) }

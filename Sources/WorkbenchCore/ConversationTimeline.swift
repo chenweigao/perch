@@ -15,6 +15,12 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
         guard let first = phases.first else { return nil }
         return phases.allSatisfy { $0 == first } ? first : .mixed
     }
+    /// Stable within a stage as new records append; tool IDs also route find hits.
+    public var processPartIDs: [String] {
+        messages.enumerated().map { index, message in
+            message.content.first?.toolCallId.map { "tool:" + $0 } ?? "part:\(message.id):\(index)"
+        }
+    }
     private let partOffset: Int
     public var id: String {
         // A tool can start in live state, arrive as an orphan result, then gain its
@@ -81,7 +87,7 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
                 // Prose, edits and validation are boundaries. Unknown shell work
                 // can share exploration's stage, but gives the whole stage a
                 // neutral execution label rather than fragmenting it by syntax.
-                if process, canGroup, index > 0, entries.last!.messages.count < 24,
+                if process, canGroup, index > 0,
                    nextPhase == nil || groupPhase == nil || nextPhase == groupPhase
                     || (nextPhase != .validating && groupPhase != .validating) {
                     entries[entries.count - 1].messages.append(phase.message)

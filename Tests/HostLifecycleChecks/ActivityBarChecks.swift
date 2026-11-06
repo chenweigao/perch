@@ -305,6 +305,8 @@ private struct ActivityBarCheckFixture: View {
         KimiActivityView(entry: exploreEntry, tools: exploreTools, api: nil, sessionId: "explore-check",
                          isLive: true, planProgress: progressLive, reduceMotionOverride: false)
             .environment(\.conversationActionContext, context)
+        ComposerActionButton(isRunning: true, isStopping: false, canSend: false, canStop: true,
+                             onSend: {}, onStop: {})
         KimiToolCard(tool: exploreTools["r1"]!, mergedReadRange: ":1–120, 240–334")
         KimiToolCard(tool: slowBashTool)
         ThoughtDisclosure(text: collapsedThought)
@@ -338,8 +340,10 @@ private struct ActivityBarCheckFixture: View {
         return view.subviews.flatMap(busyIndicators)
     }
     precondition(glints(inlineHost).isEmpty, "The compact process header stays still while its status indicates progress")
-    precondition(busyIndicators(inlineHost).contains { $0.bounds.width == 13 && $0.bounds.height == 13 },
-                 "A running inline stage keeps its visible compact busy indicator")
+    precondition(!busyIndicators(inlineHost).contains { $0.bounds.width == 13 && $0.bounds.height == 13 },
+                 "A completed stage must not retain a generic waiting indicator")
+    precondition(busyIndicators(inlineHost).contains { $0.bounds.size == CGSize(width: 36, height: 36) },
+                 "The running turn remains visible in the composer stop control")
 
     let sqlNoteText = """
     规划已完成，开始派发：新计划有约 55.05 万项待算，已完成 189 项。旧结果已通过库存核对复用。
@@ -411,5 +415,7 @@ private struct ActivityBarCheckFixture: View {
                 to: URL(fileURLWithPath: "/private/tmp/perch-live-tail-\(suffix).png"))
         }
     }
-    print("PASS: the running title sweeps once per progress event; status line clicks reach the line through its title; idle status line takes no space; activity bar keeps one height and the reading viewport across running/pending/offline/stopping/failed/ended, wide/narrow, light/dark; pending review and reconnect actions respond; inline stage header and Recap target verified")
+    precondition(busyIndicators(liveTailHost).contains { $0.bounds.size == CGSize(width: 13, height: 13) },
+                 "An actually executing tool keeps its factual inline activity indicator")
+    print("PASS: activity bar state transitions, pending/reconnect actions, composer turn feedback, factual tool activity and Recap target")
 }

@@ -132,7 +132,7 @@ func checkActivitySummaries() throws {
     let longRaw = [user()] + (0..<50).map { call("read\($0)") }
     let longEntries = try timeline(longRaw)
     let activityRows = longEntries.filter(\.activity)
-    precondition(activityRows.map { $0.messages.count } == [24, 24, 2], "Process rows must remain bounded")
+    precondition(activityRows.map { $0.messages.count } == [50], "Rendering pages cannot split the visible work stage")
     let longTools = Dictionary(uniqueKeysWithValues: (0..<50).map {
         let value = tool("read\($0)")
         return (value.id, value)
@@ -140,7 +140,7 @@ func checkActivitySummaries() throws {
     let longProjection = ActivityNarrativeProjection.make(entries: longEntries, tools: longTools, isRunning: true)
     precondition(longProjection.stages.count == 1)
     precondition(Set(activityRows.compactMap { longProjection.entryStageIDs[$0.id] }).count == 1,
-                 "The 24-row presentation split must not split the semantic stage")
+                 "The visible entry and narrative share one semantic stage")
     precondition(longProjection.current?.stageID == firstToolNarrative?.stageID,
                  "Stage identity must derive from the turn and first evidence, not the UI row")
 

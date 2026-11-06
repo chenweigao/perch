@@ -269,6 +269,7 @@ private struct NativeComposerView: View {
                         }
                     ComposerActionButton(isRunning: s.busy, isStopping: connection.isStopping,
                                          canSend: canSend(s), canStop: connection.canStop,
+                                         showsActivity: connection.online && s.interactions.isEmpty,
                                          queuedSendTitle: defaultMode(s) == .steer ? "Steer" : "Queue",
                                          onSend: { send(defaultMode(s)) },
                                          onStop: { if isCurrent { connection.stop() } },

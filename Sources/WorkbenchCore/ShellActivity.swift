@@ -97,7 +97,7 @@ struct ShellActivity {
     var phase: ActivityNarrativePhase {
         switch category {
         case "test", "check", "lint", "build": return .validating
-        case "git": return ["status", "diff", "log", "show", "ls-files"].contains(arguments.first ?? "") ? .exploring : .integrating
+        case "git": return ["git status", "git diff", "git log", "git show", "git ls-files"].contains(compactTarget) ? .exploring : .integrating
         case "read": return .exploring
         default: return .mixed
         }

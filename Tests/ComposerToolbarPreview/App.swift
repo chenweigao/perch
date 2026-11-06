@@ -21,6 +21,7 @@ private struct ToolbarPreview: View {
     @State private var running = false
     @State private var stopping = false
     @State private var offline = false
+    @State private var waiting = false
     @State private var emptyModels = false
     @State private var english = false
     @State private var stopCount = 0
@@ -84,7 +85,9 @@ private struct ToolbarPreview: View {
                     .background(ToolbarButtonProbe(id: "running"))
                 Toggle("Offline", isOn: $offline).accessibilityIdentifier("preview-offline")
                     .background(ToolbarButtonProbe(id: "offline"))
+                Toggle("Waiting", isOn: $waiting).background(ToolbarButtonProbe(id: "waiting"))
                 Button("Confirm stopped") { stopping = false; running = false }.disabled(!stopping)
+                    .background(ToolbarButtonProbe(id: "confirm-stop"))
                 Text("Sends: \(sendCount) · Stops: \(stopCount)").font(.caption).monospacedDigit()
             }
             VStack(alignment: .leading, spacing: 8) {
@@ -115,9 +118,10 @@ private struct ToolbarPreview: View {
                         .background(ToolbarButtonProbe(id: "templates"))
                     ContextMeter(budget: ContextBudget(used: low ? 95 : 29, limit: 100), isStale: offline)
                     ComposerActionButton(isRunning: running, isStopping: stopping, canSend: canSend,
-                                         canStop: running && !offline && !stopping, onSend: send) {
+                                         canStop: running && !offline && !stopping, showsActivity: !offline && !waiting, onSend: send) {
                         stopCount += 1; stopping = true
                     }.background(ToolbarButtonProbe(id: "send"))
+                        .onChange(of: stopCount, initial: true) { _, value in ToolbarProbe.stops = value }
                 }
             }.padding(12).workbenchControlSurface().frame(width: narrow ? 540 : 840)
                 .accessibilityIdentifier("preview-composer").background(ToolbarButtonProbe(id: "composer"))

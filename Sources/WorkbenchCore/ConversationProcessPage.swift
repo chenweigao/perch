@@ -1,17 +1,17 @@
 import Foundation
 
 /// Page whole process rows so their tool/thought identity and source stay intact.
-/// Timeline rows already cap their source parts at 24; a page mounts at most 8 rows.
+/// Completed process pages mount 8 stages; each expanded stage pages its own records.
 public struct ConversationProcessPage {
     public static let size = 8
     public let range: Range<Int>
     public let number: Int
     public let count: Int
-    public init(ids: [String], anchor: String?) {
+    public init(ids: [String], anchor: String?, pageSize: Int = Self.size) {
         let index = anchor.flatMap { ids.firstIndex(of: $0) } ?? 0
-        let start = index / Self.size * Self.size
-        range = start..<min(ids.count, start + Self.size)
-        number = ids.isEmpty ? 0 : start / Self.size + 1
-        count = (ids.count + Self.size - 1) / Self.size
+        let start = index / pageSize * pageSize
+        range = start..<min(ids.count, start + pageSize)
+        number = ids.isEmpty ? 0 : start / pageSize + 1
+        count = (ids.count + pageSize - 1) / pageSize
     }
 }

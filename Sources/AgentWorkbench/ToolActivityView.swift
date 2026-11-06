@@ -35,6 +35,21 @@ struct KimiActivityView: View {
     @UILocalization private var L
     @RememberedExpansion("expanded") private var toolExpanded
     @RememberedExpansion("thought") private var thoughtExpanded
+    @Environment(\.conversationDisclosureWillChange) private var disclosureWillChange
+    @State private var pageRevision = 0
+    private static let pageSize = 24
+    private var page: ConversationProcessPage {
+        _ = pageRevision
+        return ConversationProcessPage(ids: entry.processPartIDs,
+            anchor: ConversationReadingMemory.shared.processPages[memoryKey + ":stage"], pageSize: Self.pageSize)
+    }
+    private func changePage(_ offset: Int) {
+        let start = page.range.lowerBound + offset * Self.pageSize
+        guard entry.messages.indices.contains(start) else { return }
+        disclosureWillChange()
+        ConversationReadingMemory.shared.processPages[memoryKey + ":stage"] = entry.processPartIDs[start]
+        pageRevision += 1
+    }
     private var expansion: Binding<Bool> {
         entry.messages.first?.content.first?.type == "thinking" ? $thoughtExpanded : $toolExpanded
     }
@@ -52,6 +67,8 @@ struct KimiActivityView: View {
     var body: some View {
         let items = entry.messages.flatMap(\.content).compactMap { tools[$0.toolCallId ?? ""] }
         let expanded = expansion.wrappedValue
+        let page = page
+        let partIDs = entry.processPartIDs
         #if TRANSCRIPT_CHECKS
         let _ = NavigationRenderMetrics.count("activity_row_body")
         let _ = NavigationRenderMetrics.count("activity_row_message_scan", by: entry.messages.count)
@@ -61,10 +78,9 @@ struct KimiActivityView: View {
         let thinking = entry.messages.last?.content.last?.type == "thinking"
         let hasRunningTool = items.contains { $0.status == .running }
         let failures = items.filter { $0.status == .failed }.count
-        let hasAttention = items.contains { [.awaitingApproval, .missingResult, .disconnected].contains($0.status) }
-        // A returned command error does not end the agent turn. Its actual busy
-        // state must remain visible even while waiting for the next output.
-        let showsLiveStatus = isLive && (thinking || hasRunningTool || !hasAttention)
+        // Body status describes actual activity. Generic turn liveness belongs
+        // to the composer stop control, not to the last completed stage.
+        let showsLiveStatus = isLive && (thinking || hasRunningTool)
         let title = entry.processPhase.map { ToolPresentation.phaseTitle($0, tools: items) }
             ?? items.first.map { ToolPresentation.action($0.name) } ?? L("运行上下文")
         VStack(alignment: .leading, spacing: 0) {
@@ -105,7 +121,7 @@ struct KimiActivityView: View {
                 HStack(spacing: 6) {
                     PerchBusyIndicator(size: 13)
                     Text(verbatim: thinking ? L("思考中")
-                         : items.last(where: { $0.status == .running }).map { ToolPresentation.compactTarget($0) } ?? L("等待 Agent 新输出…"))
+                         : items.last(where: { $0.status == .running }).map { ToolPresentation.compactTarget($0) } ?? "")
                         .font(.system(size: ReplyStyle.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
                         .lineLimit(1).truncationMode(.tail)
                 }.padding(.leading, ReplyStyle.Process.nestedIndent).padding(.top, 4)
@@ -125,8 +141,25 @@ struct KimiActivityView: View {
                         .padding(.leading, ReplyStyle.Process.nestedIndent).padding(.top, 4)
                 }
             }
+            WorkbenchDisclosureContent(expanded: expanded && page.count > 1) {
+                HStack(spacing: 12) {
+                    Button("上一页") { changePage(-1) }.disabled(page.number == 1)
+                        .accessibilityIdentifier("stage-previous-page:" + entry.id)
+                    Text(verbatim: L("第 \(page.number) / \(page.count) 页")).monospacedDigit()
+                    Button("下一页") { changePage(1) }.disabled(page.number == page.count)
+                        .accessibilityIdentifier("stage-next-page:" + entry.id)
+                }.buttonStyle(.borderless).font(.system(size: ReplyStyle.captionSize))
+                    .padding(.leading, ReplyStyle.Process.nestedIndent).padding(.top, 4)
+            }
             let mergedRanges = Self.mergedReadRangesByPath(items)
-            ForEach(Array(entry.messages.enumerated()), id: \.offset) { index, message in
+            ForEach(entry.messages.indices.filter { index in
+                if page.range.contains(index) { return true }
+                guard edit == nil, let id = entry.messages[index].content.first?.toolCallId, let tool = tools[id] else { return false }
+                return ToolPresentation.showsResultOutsideStage(tool, isLive: isLive,
+                    lastPartToolID: entry.messages.last?.content.last?.toolCallId)
+            }.map { (id: partIDs[$0], index: $0) }, id: \.id) { part in
+                let index = part.index
+                let message = entry.messages[index]
                 if let id = message.content.first?.toolCallId, let tool = tools[id] {
                     // An edit receipt already carries its status. Keep a single
                     // visible receipt and reveal its raw call from that arrow.
@@ -135,6 +168,7 @@ struct KimiActivityView: View {
                     WorkbenchDisclosureContent(expanded: expanded || alwaysVisible) {
                         KimiToolCard(tool: tool, mergedReadRange: ToolPresentation.path(tool).flatMap { mergedRanges[$0] })
                             .environment(\.conversationMemoryKey, memoryKey + ":tool:" + tool.id)
+                            .background(ProcessFindAnchor(id: "tool:" + tool.id))
                             .padding(.leading, ReplyStyle.Process.nestedIndent).padding(.top, 4)
                     }
                 } else {

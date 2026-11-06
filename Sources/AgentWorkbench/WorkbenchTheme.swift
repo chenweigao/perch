@@ -51,7 +51,8 @@ enum WorkbenchTheme {
 
     /// Glyph color atop the accent-colored primary action circle; dark echoes the
     /// canvas hue so the circle reads as a single molded piece.
-    static let actionGlyph = color(light: (1, 1, 1), dark: (0.106, 0.114, 0.141))
+    static let actionGlyphNS = nsColor(light: (1, 1, 1), dark: (0.106, 0.114, 0.141))
+    static let actionGlyph = Color(nsColor: actionGlyphNS)
 
     /// Links in reply text; NSTextView resolves dynamic colors while drawing. The
     /// dark value trades a little saturation for luminance so underlined links do

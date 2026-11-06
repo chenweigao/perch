@@ -203,7 +203,7 @@ configuration revision and has no automatic retry.
 
 ## Validation
 
-- `swift run WorkbenchChecks` covers stage identity across 24-row rendering splits,
+- `swift run WorkbenchChecks` covers stage identity across 24-record rendering pages,
   phase transitions, source priority, Codex source decoding, event triggers,
   complete request/progress context, output opt-in, request shape, strict phase parsing,
   evidence filtering, plain-text compatibility, and Recap input bounds, privacy,
