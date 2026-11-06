@@ -71,6 +71,8 @@ def main():
         commands = [
             ("version", [python, "scripts/check-version.py"], 60),
             ("bridge", [python, "-m", "unittest", "discover", "-s", "remote", "-p", "test_*.py"], 180),
+            # Skips cleanly on hosts without a codex CLI.
+            ("codex-schema", [python, "scripts/check-codex-schema.py"], 150),
             ("installer", [python, "-m", "unittest", "discover", "-s", "Tests/RemoteSetup"], 60),
             ("model-metadata", [python, "-m", "unittest", "discover", "-s", "Tests/ModelMetadata"], 60),
             ("localization", [python, "scripts/check-localization.py"], 60),
