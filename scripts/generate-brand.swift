@@ -7,7 +7,7 @@ defer { try? FileManager.default.removeItem(at: temp) }
 let binary = temp.appendingPathComponent("generate-brand")
 let compiler = Process()
 compiler.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
-compiler.arguments = ["swiftc", "Sources/AgentWorkbench/PerchBirdGeometry.swift", "scripts/brand-export.swift", "-o", binary.path]
+compiler.arguments = ["swiftc", "-parse-as-library", "scripts/brand-export.swift", "-o", binary.path]
 try compiler.run()
 compiler.waitUntilExit()
 if compiler.terminationStatus != 0 { exit(compiler.terminationStatus) }

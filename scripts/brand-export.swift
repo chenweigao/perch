@@ -7,45 +7,44 @@ struct BrandExport {
         let output = root.appendingPathComponent("Resources/Brand")
         let iconset = root.appendingPathComponent("build/Perch.iconset")
         let assets = output.appendingPathComponent("Perch.icon/Assets")
-        try FileManager.default.createDirectory(at: iconset, withIntermediateDirectories: true)
-        try FileManager.default.createDirectory(at: assets, withIntermediateDirectories: true)
-        let color = "#E36D55"
-        let svgBody = "M66 36C62 27 56 24 47 24C35 24 27 33 27 44C27 56 35 64 47 64C58 64 65 57 67 49L75 44L67 40C67 38 66.5 37 66 36Z"
-        let svgBranch = "M23 79H77M47 64V79"
-        let svgWing = "M37 43C39 52 47 54 54 46"
-        func mark(_ ink: String) -> String {
-            """
-            <g fill="none" stroke="\(ink)" stroke-linecap="round" stroke-linejoin="round">
-              <path d="\(svgBody)" stroke-width="5.4"/>
-              <path d="\(svgBranch)" stroke-width="5.4"/>
-              <path d="\(svgWing)" stroke-width="5.2"/>
-            </g>
-            """
+        let appResources = root.appendingPathComponent("Sources/AgentWorkbench/Resources")
+        for directory in [iconset, assets, appResources] {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         }
-        func svg(_ body: String) -> String {
-            """
-            <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 100 100" role="img" aria-label="Perch">
-              \(body)
-            </svg>
-            """
-        }
-        try svg("<rect x=\"9.765625\" y=\"9.765625\" width=\"80.46875\" height=\"80.46875\" rx=\"16.6015625\" fill=\"\(color)\"/><g transform=\"translate(9.765625 9.765625) scale(.8046875)\">\(mark("#FFFFFF"))</g>")
-            .write(to: output.appendingPathComponent("Perch.svg"), atomically: true, encoding: .utf8)
-        try svg(mark("#252B36")).write(to: output.appendingPathComponent("Perch-mark.svg"), atomically: true, encoding: .utf8)
-        try svg(mark("#FFFFFF")).write(to: assets.appendingPathComponent("bird.svg"), atomically: true, encoding: .utf8)
+        // Keep the approved raster master unchanged: tracing would lose the woodcut grain.
+        let master = try Data(contentsOf: output.appendingPathComponent("Perch-mark.png"))
+        let image = NSImage(data: master)!
+        try master.write(to: assets.appendingPathComponent("terrain.png"))
         let json: [String: Any] = [
-            "fill": ["solid": "srgb:0.89020,0.42745,0.33333,1.00000"],
+            "fill": ["solid": "srgb:0.98039,0.96471,0.93725,1.00000"],
             "groups": [[
-                "layers": [["blend-mode": "normal", "fill": ["solid": "srgb:1.00000,1.00000,1.00000,1.00000"],
-                            "glass": false, "hidden": false, "image-name": "bird.svg", "name": "bird",
+                "layers": [["blend-mode": "normal", "glass": false, "hidden": false,
+                            "image-name": "terrain.png", "name": "woodcut terrain",
                             "position": ["scale": 1, "translation-in-points": [0, 0]]]],
                 "position": ["scale": 1, "translation-in-points": [0, 0]],
-                "shadow": ["kind": "neutral", "opacity": 0.2]
+                "shadow": ["kind": "neutral", "opacity": 0]
             ]],
             "supported-platforms": ["squares": ["macOS"]]
         ]
         try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys])
             .write(to: output.appendingPathComponent("Perch.icon/icon.json"))
+
+        // In-app marks use a tightly cropped alpha template in the current ink color.
+        let source = NSBitmapImageRep(data: master)!
+        precondition(source.bitsPerSample == 8 && source.samplesPerPixel == 4 && source.hasAlpha)
+        let bytes = source.bitmapData!
+        var minX = source.pixelsWide, minY = source.pixelsHigh, maxX = 0, maxY = 0
+        for y in 0..<source.pixelsHigh {
+            for x in 0..<source.pixelsWide where bytes[y * source.bytesPerRow + x * 4 + 3] > 0 {
+                minX = min(minX, x); maxX = max(maxX, x)
+                minY = min(minY, y); maxY = max(maxY, y)
+            }
+        }
+        let bounds = CGRect(x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1)
+        let cropped = NSBitmapImageRep(cgImage: source.cgImage!.cropping(to: bounds)!)
+        try cropped.representation(using: .png, properties: [:])!
+            .write(to: appResources.appendingPathComponent("Perch-mark.png"))
+
         func png(points: Int, scale: Int) -> Data {
             let pixels = points * scale
             let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: pixels, pixelsHigh: pixels,
@@ -54,19 +53,13 @@ struct BrandExport {
             let context = NSGraphicsContext(bitmapImageRep: bitmap)!
             NSGraphicsContext.saveGraphicsState()
             NSGraphicsContext.current = context
-            let cg = context.cgContext
-            cg.clear(CGRect(x: 0, y: 0, width: pixels, height: pixels))
-            cg.scaleBy(x: CGFloat(pixels) / 100, y: CGFloat(pixels) / 100)
-            cg.translateBy(x: 0, y: 100)
-            cg.scaleBy(x: 1, y: -1)
-            let inset: CGFloat = 9.765625, side: CGFloat = 80.46875
-            cg.setFillColor(NSColor(srgbRed: 227.0 / 255, green: 109.0 / 255, blue: 85.0 / 255, alpha: 1).cgColor)
-            cg.addPath(CGPath(roundedRect: CGRect(x: inset, y: inset, width: side, height: side),
-                cornerWidth: 16.6015625, cornerHeight: 16.6015625, transform: nil))
-            cg.fillPath()
-            cg.translateBy(x: inset, y: inset)
-            cg.scaleBy(x: side / 100, y: side / 100)
-            PerchBirdGeometry.draw(in: cg, ink: NSColor.white.cgColor, pixels: CGFloat(points))
+            context.imageInterpolation = .high
+            let side = CGFloat(pixels)
+            let tile = CGRect(x: side * 0.09765625, y: side * 0.09765625,
+                              width: side * 0.8046875, height: side * 0.8046875)
+            NSColor(srgbRed: 250.0 / 255, green: 246.0 / 255, blue: 239.0 / 255, alpha: 1).setFill()
+            NSBezierPath(roundedRect: tile, xRadius: side * 0.166015625, yRadius: side * 0.166015625).fill()
+            image.draw(in: tile, from: .zero, operation: .sourceOver, fraction: 1)
             context.flushGraphics()
             NSGraphicsContext.restoreGraphicsState()
             return bitmap.representation(using: .png, properties: [:])!
@@ -78,6 +71,6 @@ struct BrandExport {
             }
         }
         try png(points: 1024, scale: 1).write(to: output.appendingPathComponent("Perch-1024.png"))
-        print("Generated Perch bird SVG, PNG, Perch.icon and build/Perch.iconset")
+        print("Generated woodcut terrain PNG, app template, Perch.icon and build/Perch.iconset")
     }
 }
