@@ -125,5 +125,32 @@ func checkPhaseReading() throws {
     }
     let unknown = VisibleTool(id: "unknown", name: "shell", input: .object(["command": .string("$(choose_command) --run")]), status: .succeeded)
     precondition(ToolPresentation.phaseTitle(.mixed, tools: [unknown]) == L("执行命令"), "Unparsed commands retain a neutral summary")
+    let longSource = (0..<49).map { call("long-\($0)", "git -C /repo show stage-marker-\($0)") }
+    let longMessages = try decode(longSource)
+    let longStage = ConversationTimelineEntry.make(longMessages, isRunning: true)
+    precondition(longStage.count == 1 && longStage[0].messages.count == 49,
+                 "A rendering page boundary cannot manufacture a new work stage")
+    for count in [23, 24, 25, 48] {
+        let prefix = ConversationTimelineEntry.make(Array(longMessages.prefix(count)), isRunning: true)
+        precondition(prefix.count == 1 && prefix[0].id == longStage[0].id)
+    }
+    let ids = longStage[0].processPartIDs
+    precondition(Set(ids).count == 49)
+    let page = ConversationProcessPage(ids: ids, anchor: ids[24], pageSize: 24)
+    precondition(page.range == 24..<48 && page.number == 2 && page.count == 3)
+    let appendedPage = ConversationProcessPage(ids: ids + ["tool:later"], anchor: ids[24], pageSize: 24)
+    precondition(appendedPage.range == page.range, "Appending records cannot move the selected page")
+    let hit = ConversationSearch().hits(in: longMessages, query: "stage-marker-48", running: true).hits.first!
+    precondition(hit.entryID == longStage[0].id && hit.toolID == "long-48",
+                 "Search carries the exact record so the UI can open a later page")
+    let gitCalls = ["git status", "git -C /repo diff", "git -c color.ui=false log"].enumerated().map { index, command in
+        VisibleTool(id: "git-\(index)", name: "Bash", input: .object(["command": .string(command)]), status: .succeeded)
+    }
+    precondition(ToolPresentation.phaseTitle(.exploring, tools: gitCalls) == L("查看 Git 状态与改动"),
+                 "Git global options cannot add a redundant generic operation label")
+    let gitWrite = VisibleTool(id: "git-worktree", name: "Bash", input: .object(["command": .string("git worktree add ../task")]), status: .succeeded)
+    let gitMixed = ToolPresentation.phaseTitle(.mixed, tools: gitCalls + [gitWrite, script])
+    precondition(gitMixed.contains(L("执行 Git 操作")) && gitMixed.contains("profile_scalar.py")
+                 && !gitMixed.contains(L("查看 Git 状态与改动")), "Overlapping Git labels leave room for the next distinct operation")
     print("PASS: phase reading groups Bash and thoughts, preserves edit receipts, separates historical failures from pending work and uses grounded command labels")
 }

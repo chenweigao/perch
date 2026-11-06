@@ -708,6 +708,17 @@ private final class ConversationDocumentView: NSView {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     private func reveal(_ target: ConversationFindTarget) {
         guard !suspended else { return }
+        if let toolID = target.hit.toolID {
+            let id = target.hit.entryID, scope = sessionId + ":" + id
+            ConversationReadingMemory.shared.processPages[scope + ":stage"] = "tool:" + toolID
+            for name in ["expanded", "thought"] {
+                ConversationReadingMemory.shared.expansions[scope + ":" + name] = true
+            }
+            for name in ["expanded", "full-output"] {
+                ConversationReadingMemory.shared.expansions[scope + ":tool:" + toolID + ":" + name] = true
+            }
+            invalidateRevealedRow(indices[id] == nil ? foldParents[id] ?? id : id)
+        }
         revealEntry(target.hit.entryID)
         // Regular-expression hits reveal their row; only literal queries can
         // place the caret on the exact occurrence.
@@ -938,7 +949,7 @@ private final class ConversationDocumentView: NSView {
         }
         let structureChanged = changedSession || contents.count != next.count || !zip(contents, next).allSatisfy {
             $0.entry.id == $1.entry.id && $0.entry.isProcess == $1.entry.isProcess
-                && $0.isProgressNote == $1.isProgressNote
+                && $0.isStageNote == $1.isStageNote
         }
         if changedSession || changedAppearance { measuredSizes.removeAll(keepingCapacity: true) }
         if structureChanged {
@@ -1060,8 +1071,8 @@ private final class ConversationDocumentView: NSView {
     private func spacing(after index: Int) -> CGFloat {
         guard index + 1 < contents.count else { return ReplyStyle.entrySpacing }
         let current = contents[index], next = contents[index + 1]
-        if next.isProgressNote { return ReplyStyle.progressStageSpacing }
-        if current.isProgressNote && next.entry.isProcess { return ReplyStyle.progressToolSpacing }
+        if next.isStageNote && current.entry.isProcess { return ReplyStyle.progressStageSpacing }
+        if current.isStageNote && next.entry.isProcess { return ReplyStyle.progressToolSpacing }
         return current.entry.isProcess && next.entry.isProcess ? ReplyStyle.processEntrySpacing : ReplyStyle.entrySpacing
     }
     private var viewportRect: CGRect {
@@ -2250,6 +2261,8 @@ private struct ConversationEntryView: View, Equatable {
             && lhs.planProgress == rhs.planProgress
             && lhs.completedDuration == rhs.completedDuration
     }
+    /// Ordinary provider progress prose needs the same rhythm as narrative anchors.
+    var isStageNote: Bool { isProgressNote || entry.presentation == .progress }
     var isProgressNote: Bool {
         guard let activityNarrative else { return false }
         return activityNarrative.isAnchor && activityNarrative.stageClosed

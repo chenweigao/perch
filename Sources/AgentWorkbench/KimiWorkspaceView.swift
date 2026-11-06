@@ -221,6 +221,9 @@ private struct KimiComposerView: View {
                         }
                     ComposerActionButton(isRunning: isRunning,
                                          isStopping: connection.isStopping, canSend: canSend, canStop: connection.canStop,
+                                         showsActivity: connection.online && connection.snapshotReady
+                                             && connection.conversation?.snapshot.pendingApprovals.isEmpty == true
+                                             && connection.conversation?.snapshot.pendingQuestions.isEmpty == true,
                                          queuedSendTitle: isCommandDraft ? "Run command" : "Steer",
                                          onSend: { connection.sendPrompt() }, onStop: { connection.abort() },
                                          onQueue: nextTurnSend)

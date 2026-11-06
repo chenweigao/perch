@@ -4,8 +4,10 @@ public struct ConversationSearchHit: Identifiable, Equatable, Sendable {
     public let entryID: String
     public let occurrence: Int
     public let excerpt: String
-    public init(entryID: String, occurrence: Int, excerpt: String) {
-        self.entryID = entryID; self.occurrence = occurrence; self.excerpt = excerpt
+    /// Routes a tool hit to its record page inside a long stage.
+    public let toolID: String?
+    public init(entryID: String, occurrence: Int, excerpt: String, toolID: String? = nil) {
+        self.entryID = entryID; self.occurrence = occurrence; self.excerpt = excerpt; self.toolID = toolID
     }
     public var id: String { "\(entryID):\(occurrence)" }
 }
@@ -46,6 +48,7 @@ public final class ConversationSearch {
     private struct Entry {
         let sources: [String]
         let text: NSString
+        let sourceEnds: [Int]
         let role: ConversationFindOptions.Role
     }
     private struct Earlier {
@@ -101,14 +104,17 @@ public final class ConversationSearch {
         for entry in timeline {
             let role = Self.role(of: entry)
             guard options.role == .all || role == options.role else { continue }
-            let sources = Self.sources(of: entry, role: role)
+            let pieces = Self.sources(of: entry, role: role)
+            let sources = pieces.map(\.text)
             let cached: Entry
             if let previous = lookup(entry.id), previous.sources == sources {
                 cached = previous
             } else {
-                cached = Entry(sources: sources,
-                               text: sources.map { Self.renderedText(ReplyDocument.parse($0)) }.joined(separator: "\n") as NSString,
-                               role: role)
+                let rendered = sources.map { Self.renderedText(ReplyDocument.parse($0)) }
+                var end = 0
+                let ends = rendered.map { text in end += (text as NSString).length + 1; return end }
+                cached = Entry(sources: sources, text: rendered.joined(separator: "\n") as NSString,
+                               sourceEnds: ends, role: role)
             }
             next[entry.id] = cached
             let text = cached.text
@@ -127,7 +133,9 @@ public final class ConversationSearch {
             for (index, found) in matches.enumerated() {
                 let start = max(0, found.location - 50), end = min(text.length, NSMaxRange(found) + 80)
                 let excerptRange = text.rangeOfComposedCharacterSequences(for: NSRange(location: start, length: end - start))
-                hits.append(.init(entryID: entry.id, occurrence: index, excerpt: text.substring(with: excerptRange)))
+                let sourceIndex = cached.sourceEnds.firstIndex { found.location < $0 }
+                hits.append(.init(entryID: entry.id, occurrence: index, excerpt: text.substring(with: excerptRange),
+                                  toolID: sourceIndex.flatMap { pieces[$0].toolID }))
             }
         }
         return hits
@@ -144,13 +152,15 @@ public final class ConversationSearch {
             && parts.contains { $0.type == "tool_use" || $0.type == "tool_result" }
         return hasToolActivity ? .tool : .assistant
     }
-    private static func sources(of entry: ConversationTimelineEntry, role: ConversationFindOptions.Role) -> [String] {
+    private static func sources(of entry: ConversationTimelineEntry, role: ConversationFindOptions.Role) -> [(text: String, toolID: String?)] {
         let parts = entry.messages.flatMap(\.content)
-        var sources = parts.filter { $0.type == "text" }.compactMap(\.visibleText)
+        var sources: [(text: String, toolID: String?)] = parts.filter { $0.type == "text" }.compactMap(\.visibleText).map { ($0, nil) }
         guard role == .tool else { return sources }
         sources += parts.filter { $0.type == "tool_use" || $0.type == "tool_result" }
-            .flatMap { [$0.toolName, $0.name, $0.text, $0.input?.display, $0.output?.display] }
-            .compactMap { $0?.isEmpty == false ? $0 : nil }
+            .flatMap { part in
+                [part.toolName, part.name, part.text, part.input?.display, part.output?.display]
+                    .compactMap { value in value.flatMap { $0.isEmpty ? nil : ($0, part.toolCallId) } }
+            }
         return sources
     }
 
