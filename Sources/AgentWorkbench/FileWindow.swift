@@ -118,6 +118,10 @@ final class FileReaderWindow: NSWindow {
         if modifiers == .command && key == "w" {
             closeTab(); return true
         }
+        if modifiers == [.command, .option] && key == "w" {
+            if browser.mode == .file, browser.documents.tabs.count > 1 { browser.closeOtherFiles(browser.path) }
+            return true
+        }
         if modifiers == [.command, .shift], key == "[" || key == "{" || key == "]" || key == "}" {
             browser.selectAdjacentFile(key == "[" || key == "{" ? -1 : 1); return true
         }

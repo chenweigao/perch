@@ -193,6 +193,20 @@ final class RemoteFileBrowser {
         let wasSelected = self.path == path
         let next = documents.close(path)
         guard wasSelected else { return }
+        settleClosedTabs(next)
+    }
+
+    func closeOtherFiles(_ path: String) { settleClosedTabs(documents.closeOthers(of: path)) }
+    func closeFilesAfter(_ path: String) { settleClosedTabs(documents.closeAfter(path)) }
+    func closeAllFiles() {
+        documents.closeAll()
+        settleClosedTabs(nil)
+    }
+
+    /// A close that keeps the current read mounted leaves it alone; otherwise
+    /// the reader follows the surviving selection or empties with the strip.
+    private func settleClosedTabs(_ next: String?) {
+        guard next != path else { return }
         if let next { open(next) }
         else { cancel(); content = nil; previewData = nil; self.path = ""; input = "" }
     }

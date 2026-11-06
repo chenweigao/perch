@@ -267,6 +267,13 @@ struct RemoteFilePanel: View {
                     .keyboardShortcut("l", modifiers: [.command, .shift]).disabled(!hasContext)
                 Button("上一个文件标签页") { browser.selectAdjacentFile(-1) }.keyboardShortcut("[", modifiers: [.command, .shift]).disabled(browser.documents.tabs.count < 2)
                 Button("下一个文件标签页") { browser.selectAdjacentFile(1) }.keyboardShortcut("]", modifiers: [.command, .shift]).disabled(browser.documents.tabs.count < 2)
+                Button("关闭其他标签页") { browser.closeOtherFiles(browser.path) }
+                    .keyboardShortcut("w", modifiers: [.command, .option])
+                    .disabled(currentTabIndex == nil || browser.documents.tabs.count < 2)
+                Button("关闭右侧标签页") { browser.closeFilesAfter(browser.path) }
+                    .disabled(currentTabIndex == nil || currentTabIndex == browser.documents.tabs.count - 1)
+                Button("关闭全部标签页") { browser.closeAllFiles() }
+                    .disabled(browser.documents.tabs.isEmpty)
                 Toggle("行号", isOn: $browser.showLineNumbers)
                 if case .text(_, let truncated, _) = browser.content {
                     if truncated && !browser.readingTail && browser.readLimit < 4 * 1_048_576 {
@@ -397,6 +404,9 @@ struct RemoteFilePanel: View {
     private var hasContext: Bool {
         if browser.mode == .git { if case .text = browser.gitDiff { return true }; return false }
         if case .text = browser.content { return true }; return false
+    }
+    private var currentTabIndex: Int? {
+        browser.documents.tabs.firstIndex { $0.path == browser.path }
     }
     private var contextPath: String? {
         if browser.mode == .git {
