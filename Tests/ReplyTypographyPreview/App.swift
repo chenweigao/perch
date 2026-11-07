@@ -7,7 +7,7 @@ import SwiftUI
             VStack(spacing: 0) {
                 Picker("阅读宽度", selection: $columnWidth) {
                     Text("窄栏 420").tag(CGFloat(420))
-                    Text("正文 700").tag(ReplyStyle.readingWidth)
+                    Text("正文 748").tag(ReplyStyle.readingWidth)
                     Text("原宽 760").tag(CGFloat(760))
                 }.pickerStyle(.segmented).frame(width: 320).padding(16)
                 Divider()
@@ -74,7 +74,7 @@ import SwiftUI
 
     - 分支：`feat/example`，提交 `abc1234`（基于 `origin/main`）。
     - Mac 上运行 `git fetch origin && git checkout feat/example`，然后执行 `./scripts/build.sh`。
-      1. 参数 `--example-option` 位于嵌套列表中，行内代码应保持等宽，周围没有高出文字的灰色矩形。
+      1. 参数 `--example-option` 位于嵌套列表中，行内代码应保持等宽，带克制的底色 chip，不高出文字。
       2. 联系地址 `reader@example.com` 与中文、English 混排时，底色保持一致。
 
     ## 列表与段落的阅读节奏
