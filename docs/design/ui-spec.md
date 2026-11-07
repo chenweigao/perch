@@ -45,6 +45,10 @@
 - **两种渲染共用节奏**：块间距统一走 `ReplyStyle.blockSpacing`，代码卡片、引用、列表分别用
   `ReplyStyle.Code` / `Quote` / `ListLayout`；SwiftUI 行与原生缓存行必须从同一组常量取值，
   流式结束切换渲染时不得跳动。
+- **表格的就近操作**（`ReplyTable`，`Sources/AgentWorkbench/ReplyMarkdownView.swift`）：表格右上角一组 24pt 安静操作——
+  复制 Markdown、导出 CSV、放大。复制与导出共用同一份 `TableData`，经 `TableSerialization`
+  （`Sources/WorkbenchCore/TableSerialization.swift`）序列化；CSV 导出文件带 BOM 以保住 Excel 里的中文。
+  放大打开独立预览（Esc 或关闭返回，预览内保留复制与导出），正文列宽不为宽表让路。
 
 ## 思考与过程
 
