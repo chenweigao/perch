@@ -2738,11 +2738,23 @@ private struct ThoughtToggle: View {
     /// A looked-up `Text`, so callers pass `Text("…")` rather than a raw string.
     let title: Text
     var summary: String? = nil
+    /// Non-nil while the thought streams: the toggle carries an elapsed clock.
+    var runningSince: Date? = nil
     @Binding var expanded: Bool
+    @Environment(\.locale) private var locale
     var body: some View {
         DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
             HStack(spacing: 6) {
                 title.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(.secondary).fixedSize()
+                if let runningSince {
+                    TimelineView(TurnClockSchedule(start: runningSince)) { context in
+                        Text(verbatim: "· " + TurnStatus.clock(context.date.timeIntervalSince(runningSince),
+                                                             chinese: locale.language.languageCode?.identifier == "zh"))
+                            .font(.system(size: ReplyStyle.captionSize))
+                            .foregroundStyle(WorkbenchTheme.quiet)
+                            .monospacedDigit().fixedSize()
+                    }
+                }
                 if !expanded, let summary, !summary.isEmpty {
                     Text(verbatim: "·")
                         .font(.system(size: ReplyStyle.Process.labelSize))
@@ -2780,13 +2792,17 @@ struct ThoughtOutput: View {
     var embedded = false
     private var fullText: String { messages.flatMap(\.content).compactMap(\.thinking).joined(separator: "\n\n") }
     @RememberedExpansion("thought") private var expanded
+    /// Client-observed start of the streaming preview; the toggle's clock
+    /// restarts only when a new thought entry mounts, not on each token.
+    @State private var previewStartedAt = Date()
     var body: some View {
         if embedded {
             ThoughtText(text: fullText)
         } else {
             VStack(alignment: .leading, spacing: 9) {
                 ThoughtToggle(title: finished ? Text("Thoughts") : Text("Thinking"),
-                              summary: nil, expanded: $expanded)
+                              summary: nil, runningSince: finished ? nil : previewStartedAt,
+                              expanded: $expanded)
                     .accessibilityIdentifier("thought-disclosure:" + memoryKey)
                 WorkbenchDisclosureContent(expanded: expanded) { ThoughtText(text: fullText) }
                 if !expanded, !finished, let summary = ConversationThinkingSummary.latest(in: messages) {
