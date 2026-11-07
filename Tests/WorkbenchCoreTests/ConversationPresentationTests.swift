@@ -38,7 +38,9 @@ func checkConversationPresentation() throws {
 
     // Successive reasoning/progress phases remain chronological and independently readable.
     let mixed = ConversationTimelineEntry.make(progress + thoughts, isRunning: true)
-    precondition(mixed.last?.messages.contains { $0.id == "t" } == true, "Intervening thoughts remain inside their work phase")
+    precondition(mixed.first { $0.messages.contains { $0.id == "t" } }?.messages.contains { $0.id == "b" } == true,
+                 "A thought after an action rides that row instead of standing alone")
+    precondition(mixed.last?.messages.map(\.id) == ["x"], "A tool after a riding thought starts a fresh stage")
     precondition(mixed.filter { $0.presentation == .progress }.flatMap(\.messages).map(\.id) == ["a", "b"])
     precondition(mixed.flatMap(\.messages).flatMap(\.content) == (progress + thoughts).flatMap(\.content), "Grouping preserves every part in source order")
     precondition(Set(mixed.map(\.id)).count == mixed.count, "Channels from one message need distinct SwiftUI identities")
@@ -73,6 +75,47 @@ func checkConversationPresentation() throws {
     [{"id":"context","role":"user","created_at":"2","content":[{"type":"text","text":"<skill-loaded name='config'>runtime reference</skill-loaded>"}]}]
     """)
     precondition(context[0].content[0].isRuntimeContext)
+    // Consecutive runtime-context records share one quiet entry; a context
+    // record after a tool stage stays on its own.
+    let contexts = try messages("""
+    [{"id":"ctx1","role":"assistant","created_at":"1","content":[{"type":"text","text":"<skill-loaded name='a'>one</skill-loaded>"}]},
+     {"id":"ctx2","role":"assistant","created_at":"2","content":[{"type":"text","text":"<system-reminder>two</system-reminder>"}]},
+     {"id":"tool","role":"assistant","created_at":"3","content":[{"type":"tool_use","tool_call_id":"t1","tool_name":"read","input":{"file_path":"/tmp/x"}}]},
+     {"id":"ctx3","role":"assistant","created_at":"4","content":[{"type":"text","text":"<system-reminder>three</system-reminder>"}]}]
+    """)
+    let contextEntries = ConversationTimelineEntry.make(contexts, isRunning: true)
+    precondition(contextEntries.count == 3, "context pair merges, the stage and the later context stay separate")
+    precondition(contextEntries[0].presentation == .activity
+                 && contextEntries[0].messages.map(\.id) == ["ctx1", "ctx2"], "Adjacent contexts merge in source order")
+    precondition(contextEntries[1].messages.map(\.id) == ["tool"], "A stage never absorbs context records")
+    precondition(contextEntries[2].messages.map(\.id) == ["ctx3"])
+    precondition(ToolPresentation.runtimeContextSummary(["<skill-loaded name='a'>one</skill-loaded>",
+                                                         "<system-reminder>two</system-reminder>"]) == "a · system-reminder")
+    precondition(ToolPresentation.runtimeContextSummary(["plain first line\nrest"]) == "plain first line")
+    precondition(ToolPresentation.runtimeContextSummary(["no markup here"]) == "no markup here")
+    // A thought after an action rides that row; a thought after plain text
+    // keeps its own row (no action to ride).
+    let editThenThought = try messages("""
+    [{"id":"e","role":"assistant","created_at":"1","content":[{"type":"tool_use","tool_call_id":"e1","tool_name":"Edit","input":{"file_path":"/tmp/a"}}]},
+     {"id":"th","role":"assistant","created_at":"2","content":[{"type":"thinking","thinking":"检查一下"}]}]
+    """)
+    let ride = ConversationTimelineEntry.make(editThenThought, isRunning: true)
+    precondition(ride.count == 1 && ride[0].presentation == .activity && ride[0].messages.map(\.id) == ["e", "th"])
+    // A riding thought seals its entry: a later tool starts a fresh stage, so an
+    // edit receipt never stretches into a mixed stage.
+    let editThoughtRead = try messages("""
+    [{"id":"e","role":"assistant","created_at":"1","content":[{"type":"tool_use","tool_call_id":"e1","tool_name":"Edit","input":{"file_path":"/tmp/a"}}]},
+     {"id":"th","role":"assistant","created_at":"2","content":[{"type":"thinking","thinking":"检查一下"}]},
+     {"id":"r","role":"assistant","created_at":"3","content":[{"type":"tool_use","tool_call_id":"r1","tool_name":"read","input":{"file_path":"/tmp/b"}}]}]
+    """)
+    let sealedStage = ConversationTimelineEntry.make(editThoughtRead, isRunning: true)
+    precondition(sealedStage.count == 2 && sealedStage[1].messages.map(\.id) == ["r"])
+    let textThenThought = try messages("""
+    [{"id":"p","role":"assistant","created_at":"1","content":[{"type":"text","text":"说明"}]},
+     {"id":"th","role":"assistant","created_at":"2","content":[{"type":"thinking","thinking":"想想"}]}]
+    """)
+    let standaloneThought = ConversationTimelineEntry.make(textThenThought, isRunning: true)
+    precondition(standaloneThought.count == 2 && standaloneThought[1].presentation == .thinkingPreview)
     let navigationProjection = ConversationProjection()
     let summaries = navigationProjection.update(progress + context + final, isRunning: false).navigation
     precondition(summaries.count == 1 && summaries[0].id == done[0].id)

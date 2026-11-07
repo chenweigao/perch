@@ -547,7 +547,9 @@ struct RecapActionButton: View {
     }
 }
 
-private struct TurnClockSchedule: TimelineSchedule {
+/// Ticks for a running-activity clock: every second under a minute, then whole
+/// minutes, so a long turn does not tick at the edge of the reader's eye.
+struct TurnClockSchedule: TimelineSchedule {
     let start: Date
     func entries(from startDate: Date, mode: TimelineScheduleMode) -> AnyIterator<Date> {
         var next = startDate

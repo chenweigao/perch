@@ -25,8 +25,8 @@ extension ReplyStyle {
         /// would slant only the Latin glyphs, because PingFang has no italic.
         static var thoughtSize: CGFloat { ReplyStyle.secondarySize }
         static var thoughtLineHeight: CGFloat { ReplyStyle.scale.secondaryLine }
-        /// The streaming preview shows at most six thought lines before offering in-place expansion.
-        static var thoughtPreviewHeight: CGFloat { thoughtLineHeight * 6 }
+        /// The streaming preview shows at most four thought lines before offering in-place expansion.
+        static var thoughtPreviewHeight: CGFloat { thoughtLineHeight * 4 }
         /// Leading rail under a thought disclosure's chevron.
         static let thoughtRailWidth: CGFloat = 2
         static let thoughtRailLeading: CGFloat = 5

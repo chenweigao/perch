@@ -37,6 +37,7 @@ struct KimiActivityView: View {
     @RememberedExpansion("thought") private var thoughtExpanded
     @Environment(\.conversationDisclosureWillChange) private var disclosureWillChange
     @State private var pageRevision = 0
+    @State private var liveThoughtOverflows = false
     private static let pageSize = 24
     private var page: ConversationProcessPage {
         _ = pageRevision
@@ -76,16 +77,40 @@ struct KimiActivityView: View {
         #endif
         let edit = items.count == 1 && ToolPresentation.isEdit(items[0].name) ? items[0] : nil
         let thinking = entry.messages.last?.content.last?.type == "thinking"
+        // Injected context (skill loads, reminders) reads as one quiet line,
+        // not a stage row; only pure-context entries take this path.
+        let isRuntimeContextOnly = items.isEmpty
+            && entry.messages.allSatisfy { $0.content.first?.isRuntimeContext == true }
         let hasRunningTool = items.contains { $0.status == .running }
         let failures = items.filter { $0.status == .failed }.count
         // Body status describes actual activity. Generic turn liveness belongs
         // to the composer stop control, not to the last completed stage.
         let showsLiveStatus = isLive && (thinking || hasRunningTool)
+        /// Cheap progress evidence for the live line's quiet clock: a longer
+        /// thought, a running tool's growing output, or a status flip all count.
+        let liveProgressSignature: Int = !isLive ? 0 : {
+            var hasher = Hasher()
+            hasher.combine(entry.messages.count)
+            for message in entry.messages {
+                for part in message.content where part.type == "thinking" {
+                    hasher.combine(part.thinking?.utf16.count ?? 0)
+                }
+            }
+            hasher.combine(liveThinkingSummary?.utf16.count ?? 0)
+            for tool in items {
+                hasher.combine(tool.status)
+                if tool.status == .running { hasher.combine(tool.progress?.display.utf16.count ?? -1) }
+            }
+            return hasher.finalize()
+        }()
         let title = entry.processPhase.map { ToolPresentation.phaseTitle($0, tools: items) }
             ?? items.first.map { ToolPresentation.action($0.name) } ?? L("运行上下文")
         VStack(alignment: .leading, spacing: 0) {
             if let edit {
                 EditStepRow(tool: edit, messageID: entry.messages[0].id, expanded: expansion)
+            } else if isRuntimeContextOnly {
+                RuntimeContextRow(id: entry.id, texts: entry.messages.flatMap(\.content).compactMap(\.text),
+                                  count: entry.messages.count, expanded: expansion)
             } else {
                 HStack(spacing: 8) {
                     DisclosureGroup(isExpanded: expansion) { EmptyView() } label: {
@@ -118,14 +143,24 @@ struct KimiActivityView: View {
                     .padding(.leading, ReplyStyle.Process.nestedIndent)
             }
             if showsLiveStatus {
-                HStack(spacing: 6) {
-                    PerchBusyIndicator(size: 13)
-                    Text(verbatim: thinking ? L("思考中")
-                         : items.last(where: { $0.status == .running }).map { ToolPresentation.compactTarget($0) } ?? "")
-                        .font(.system(size: ReplyStyle.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
-                        .lineLimit(1).truncationMode(.tail)
-                }.padding(.leading, ReplyStyle.Process.nestedIndent).padding(.top, 4)
-                    .accessibilityIdentifier("activity-live-status:" + entry.id)
+                LiveActivityStatusLine(
+                    label: thinking ? L("思考中")
+                        : items.last(where: { $0.status == .running }).map { ToolPresentation.compactTarget($0) } ?? "",
+                    identity: thinking ? "thinking"
+                        : items.last(where: { $0.status == .running })?.id ?? "thinking",
+                    progressSignature: liveProgressSignature,
+                    toolRunning: hasRunningTool,
+                    accessibilityID: "activity-live-status:" + entry.id)
+            }
+            // A thought streaming inside an action row (edit receipt, stage)
+            // still previews its latest lines in place; a provider's public
+            // summary outranks the raw preview, as in ThoughtOutput.
+            let liveThoughtText = (isLive && thinking)
+                ? entry.messages.flatMap(\.content).compactMap(\.thinking).joined(separator: "\n\n") : ""
+            WorkbenchDisclosureContent(expanded: !liveThoughtText.isEmpty && !expanded && liveThinkingSummary == nil) {
+                ThinkingTextViewport(text: liveThoughtText, overflows: $liveThoughtOverflows)
+                    .padding(.leading, ReplyStyle.Process.nestedIndent)
+                    .padding(.top, 2)
             }
             if isLive && !expanded, let running = items.last(where: { $0.status == .running }) {
                 let tail = ToolPresentation.runningOutputTail(running)
@@ -176,6 +211,11 @@ struct KimiActivityView: View {
                         Group {
                             if message.content.first?.type == "thinking" {
                                 ThoughtOutput(messages: [message], finished: !isLive, embedded: true)
+                            } else if message.content.first?.isRuntimeContext == true {
+                                // The quiet row already named this context; its
+                                // records open directly, without a second disclosure.
+                                KimiMarkdown(text: message.content.first?.text ?? "")
+                                    .environment(\.replyTone, .quiet)
                             } else {
                                 KimiMessageView(message: message, tools: tools, api: api, sessionId: sessionId)
                                     .environment(\.conversationMemoryKey, memoryKey + ":part:\(index)")
@@ -226,6 +266,126 @@ struct KimiActivityView: View {
         .foregroundStyle(WorkbenchTheme.quiet)
         .monospacedDigit()
         .fixedSize()
+    }
+}
+
+/// Injected runtime context (skill loads, reminders, system notes) reads as one
+/// quiet line on the process grid — summary in the label column, a disclosure
+/// chevron in the glyph column — instead of a stage-styled row per record.
+/// Tapping opens the records in place via the entry's usual disclosure content.
+struct RuntimeContextRow: View {
+    let id: String
+    let texts: [String]
+    let count: Int
+    let expanded: Binding<Bool>
+    @UILocalization private var L
+    @Environment(\.conversationDisclosureWillChange) private var disclosureWillChange
+    private var title: String {
+        ToolPresentation.runtimeContextSummary(texts).map { L("运行上下文") + " · " + $0 }
+            ?? (count > 1 ? L("运行上下文 · \(count) 项") : L("运行上下文"))
+    }
+    var body: some View {
+        Button {
+            disclosureWillChange()
+            expanded.wrappedValue.toggle()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: expanded.wrappedValue ? "chevron.down" : "chevron.right")
+                    .font(.system(size: 10, weight: .medium))
+                    .frame(width: 12)
+                    .accessibilityHidden(true)
+                Text(verbatim: title)
+                    .lineLimit(1).truncationMode(.tail)
+                    .help(Text(verbatim: title))
+                Spacer(minLength: 0)
+            }
+            .font(.system(size: ReplyStyle.captionSize))
+            .foregroundStyle(WorkbenchTheme.quiet)
+            .padding(.vertical, 2)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(WorkbenchDisclosureButtonStyle())
+        .help(Text("展开查看运行上下文"))
+        .accessibilityLabel(Text(verbatim: title))
+        .accessibilityValue(Text(expanded.wrappedValue ? "已展开" : "已收起"))
+        .accessibilityIdentifier("activity-context:" + id)
+    }
+}
+
+/// The running turn's live line: the spinner takes the glyph column and the
+/// activity label shares the label column with every other process row. A clock
+/// proves liveness; past a minute without progress the suffix names the silence
+/// honestly, and past the stall threshold it turns orange. Escalation wording
+/// and thresholds reuse `TurnStatus`; notifications stay with `TurnStallMonitor`.
+struct LiveActivityStatusLine: View {
+    /// What the turn is doing: 思考中 or the running tool's target.
+    let label: String
+    /// Activity identity: the elapsed clock restarts when thinking becomes a
+    /// tool call or the running tool changes.
+    let identity: String
+    /// Any change is progress and resets the quiet clock: message count,
+    /// thinking length, running tool output length, tool statuses.
+    let progressSignature: Int
+    /// A running tool (build, test suite) may legitimately stay quiet longer.
+    let toolRunning: Bool
+    var accessibilityID: String? = nil
+    @UILocalization private var L
+    @Environment(\.locale) private var locale
+    @State private var startedAt = Date()
+    @State private var progressClock = TurnProgressClock()
+    @State private var quiet: TurnStatus.Quiet?
+    private var progressKey: TurnProgressClock.Key {
+        TurnProgressClock.Key(signature: progressSignature, tool: toolRunning ? identity : nil)
+    }
+    private var chinese: Bool { locale.language.languageCode?.identifier == "zh" }
+
+    private func stalled(_ quiet: TurnStatus.Quiet?) -> Int? {
+        quiet.flatMap { TurnStatus.stalledMinutes(quietFor: $0.seconds, toolRunning: toolRunning) }
+    }
+    private func text(at now: Date, quiet: TurnStatus.Quiet?) -> String {
+        if let minutes = stalled(quiet) {
+            return "\(label) · \(L("\(minutes) 分钟没有新进展"))"
+        }
+        if let quiet {
+            // Waiting on a command is normal: say which one and for how long.
+            if let toolSeconds = quiet.toolSeconds {
+                return "\(label) · \(L("已运行 \(TurnStatus.clock(toolSeconds, chinese: chinese))"))"
+            }
+            return "\(label) · \(L("\(Int(quiet.seconds / 60)) 分钟没有新输出"))"
+        }
+        return "\(label) · \(TurnStatus.clock(now.timeIntervalSince(startedAt), chinese: chinese))"
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            PerchBusyIndicator(size: 11)
+                .frame(width: 12, alignment: .center)
+            TimelineView(TurnClockSchedule(start: startedAt)) { context in
+                Text(verbatim: text(at: context.date, quiet: quiet))
+                    .font(.system(size: ReplyStyle.captionSize))
+                    .foregroundStyle(stalled(quiet) != nil ? Color.orange : WorkbenchTheme.quiet)
+                    .lineLimit(1).truncationMode(.tail)
+                    .monospacedDigit()
+            }
+        }
+        .padding(.top, 4)
+        .onChange(of: identity, initial: true) { _, _ in startedAt = Date() }
+        .onChange(of: progressKey, initial: true) { _, key in
+            progressClock.mark(key)
+            if quiet != nil { quiet = nil }
+        }
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(15))
+                guard !Task.isCancelled else { return }
+                let next = progressClock.quiet(now: Date())
+                if next != quiet { quiet = next }
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: text(at: Date(), quiet: quiet)))
+        .accessibilityIdentifier(accessibilityID ?? "live-activity-status")
     }
 }
 
