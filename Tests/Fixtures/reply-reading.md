@@ -57,6 +57,48 @@ printf '%s\n' '这是一行很长的代码，用来确认横向滚动不会撑�
 
 参阅 [Swift Markdown 项目](https://github.com/swiftlang/swift-markdown)。链接使用克制的颜色，粗体只表达必要强调。
 
+#### 更深的层级
+
+H4 与正文同号，靠字重和留白分段；`inline_code()` 在标题里保持等宽。
+
+## 数学与图示
+
+行内公式 $E=mc^2$ 与正文同排不错位，价格 $5 和 $10 不触发渲染。
+
+$$\frac{1}{2}\sum_{i=1}^{n} x_i^2 + \sqrt{\alpha^2 + \beta^2}$$
+
+```mermaid
+flowchart LR
+    A[用户提问] --> B(思考)
+    B --> C{需要工具?}
+    C -->|是| D[工具调用]
+    D --> B
+    C -->|否| E[正文回复]
+```
+
+## 宽表：六列对比
+
+六列及以上的宽表在自己的区域内横向滚动，正文列宽保持不变。
+
+| 项目 | Alpha | Beta | Gamma | Delta | Epsilon |
+| :--- | ---: | ---: | ---: | ---: | ---: |
+| 吞吐量 tokens/s | 1,024 | 2,048 | 512 | 768 | 1,536 |
+| 延迟 p99 ms | 120 | 240 | 90 | 180 | 300 |
+| 一段较长的中文说明，用来检查单元格在自己的列宽内自然折行 | 3 | 1 | 4 | 1 | 5 |
+
+## 长代码阅读
+
+```python
+def render_reply(document, width, theme):
+    """一段足够长的 Python 代码，用来确认行号、缩进和横向滚动都保持可用。"""
+    blocks = parse(document)
+    for block in blocks:
+        if block.kind == "table" and block.columns >= 4:
+            yield table_scroll_region(block, width=width, theme=theme, note="宽表独立横滚，不撑宽正文")
+        else:
+            yield paragraph_region(block, width=width, theme=theme)
+```
+
 ---
 
 一段回复结束后，可以复制完整的 Markdown 原文，代码块也可以单独复制。

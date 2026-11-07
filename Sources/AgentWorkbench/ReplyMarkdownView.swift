@@ -116,7 +116,7 @@ enum ReplyStyle {
     /// Banner follows DSH: a fixed 11 pt label (not content-scaled), 14 pt side
     /// padding, 6 pt vertical padding (36 pt header), 16 pt text inset.
     enum Code {
-        static let cornerRadius: CGFloat = 8
+        static let cornerRadius: CGFloat = 16
         static let labelSize: CGFloat = 11
         static let copyButtonSize: CGFloat = 24
         static let headerHorizontalPadding: CGFloat = 14
