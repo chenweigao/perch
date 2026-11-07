@@ -2822,8 +2822,8 @@ struct ThoughtOutput: View {
 }
 
 /// TextKit keeps wrapped layout for existing text while a reasoning stream appends.
-/// Reuse TextKit layout to fit short thoughts and cap a growing preview at six lines.
-private struct ThinkingTextViewport: NSViewRepresentable {
+/// Reuse TextKit layout to fit short thoughts and cap a growing preview at four lines.
+struct ThinkingTextViewport: NSViewRepresentable {
     let text: String
     @Binding var overflows: Bool
     final class Coordinator {

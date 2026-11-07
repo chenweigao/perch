@@ -62,6 +62,7 @@
 - **运行上下文收成一条安静说明行**：连续的注入记录（skill 加载、系统提醒）在 `ConversationTimelineEntry.make` 合并为一个条目；`KimiActivityView` 对纯上下文条目渲染 `RuntimeContextRow`（`Sources/AgentWorkbench/ToolActivityView.swift`）——字形列的小箭头加标签列的辅助字号摘要，摘要取自记录自身（skill 名、标签或首行，`ToolPresentation.runtimeContextSummary`），点击原位展开完整记录，不再每条记录各占一个阶段式折叠行。
 - **活体状态是同网格的平级行**：`KimiActivityView` 的运行指示占 12pt 字形列（chevron 位），状态文字从标签列开始，不作为阶段行下方缩进的子行。
 - **活体行要带计时、沉默要命名**（`LiveActivityStatusLine`，`Sources/AgentWorkbench/ToolActivityView.swift`）：标签后随当前活动的经过时钟（`TurnClockSchedule`，首分钟按秒、之后按分）；`TurnProgressClock` 超过 60 秒无进展时，后缀改为「N 分钟没有新输出」，有工具运行则写「已运行 X」（等待构建/测试是常态）；超过 `TurnStatus.stallThreshold`（无工具 3 分钟、有工具 10 分钟）变橙色「N 分钟没有新进展」。疑似卡住的通知仍由 `TurnStallMonitor` 承载，正文不重复发送。流式思考的折叠头同样带经过时钟（`ThoughtToggle.runningSince`）。
+- **穿插思考不单独占行**：跟在动作（编辑回执、阶段）之后出现的思考并入该条目，展开可读原文；并入后条目封口，后续工具另起新阶段，回执不会被拉成混合阶段。只有轮次开端、尚无动作的思考独立成行，承载流式预览与计时；动作条目里正在流的思考也在活体行下方显示四行预览（公开摘要优先）。
 - **展开有连续过渡**：阶段、思考和已完成过程使用 `WorkbenchDisclosureContent` 保留收起期间的内容；内部不再用 `if expanded` 提前卸载。原生列表在完成折叠等结构变化前保存阅读锚点；原行收入工作过程时映射到所属入口。保留会话展开记忆、250ms 高度过渡及 Reduce Motion 行为。
 - **思考排版**：展开后保留轻量 Markdown 与左侧细导轨；不显示思考秒数或工具秒表。
 

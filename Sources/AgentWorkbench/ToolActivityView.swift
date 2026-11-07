@@ -37,6 +37,7 @@ struct KimiActivityView: View {
     @RememberedExpansion("thought") private var thoughtExpanded
     @Environment(\.conversationDisclosureWillChange) private var disclosureWillChange
     @State private var pageRevision = 0
+    @State private var liveThoughtOverflows = false
     private static let pageSize = 24
     private var page: ConversationProcessPage {
         _ = pageRevision
@@ -150,6 +151,16 @@ struct KimiActivityView: View {
                     progressSignature: liveProgressSignature,
                     toolRunning: hasRunningTool,
                     accessibilityID: "activity-live-status:" + entry.id)
+            }
+            // A thought streaming inside an action row (edit receipt, stage)
+            // still previews its latest lines in place; a provider's public
+            // summary outranks the raw preview, as in ThoughtOutput.
+            let liveThoughtText = (isLive && thinking)
+                ? entry.messages.flatMap(\.content).compactMap(\.thinking).joined(separator: "\n\n") : ""
+            WorkbenchDisclosureContent(expanded: !liveThoughtText.isEmpty && !expanded && liveThinkingSummary == nil) {
+                ThinkingTextViewport(text: liveThoughtText, overflows: $liveThoughtOverflows)
+                    .padding(.leading, ReplyStyle.Process.nestedIndent)
+                    .padding(.top, 2)
             }
             if isLive && !expanded, let running = items.last(where: { $0.status == .running }) {
                 let tail = ToolPresentation.runningOutputTail(running)
