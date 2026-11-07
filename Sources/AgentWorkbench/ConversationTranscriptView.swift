@@ -2795,6 +2795,7 @@ struct ThoughtOutput: View {
     /// Client-observed start of the streaming preview; the toggle's clock
     /// restarts only when a new thought entry mounts, not on each token.
     @State private var previewStartedAt = Date()
+    @State private var previewOverflows = false
     var body: some View {
         if embedded {
             ThoughtText(text: fullText)
@@ -2805,9 +2806,16 @@ struct ThoughtOutput: View {
                               expanded: $expanded)
                     .accessibilityIdentifier("thought-disclosure:" + memoryKey)
                 WorkbenchDisclosureContent(expanded: expanded) { ThoughtText(text: fullText) }
-                if !expanded, !finished, let summary = ConversationThinkingSummary.latest(in: messages) {
-                    LiveThinkingSummary(text: summary).padding(.leading, ReplyStyle.Process.nestedIndent)
-                }
+                // While the thought streams and stays folded, its latest lines
+                // follow in place; a provider's public summary outranks the raw
+                // preview. Finishing or expanding folds the preview away.
+                WorkbenchDisclosureContent(expanded: !finished && !expanded) {
+                    if let summary = ConversationThinkingSummary.latest(in: messages) {
+                        LiveThinkingSummary(text: summary)
+                    } else {
+                        ThinkingTextViewport(text: fullText, overflows: $previewOverflows)
+                    }
+                }.padding(.leading, ReplyStyle.Process.nestedIndent)
             }
         }
     }
