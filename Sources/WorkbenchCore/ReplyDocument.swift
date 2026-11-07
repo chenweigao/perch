@@ -49,8 +49,6 @@ public struct ReplyListItem: Equatable, Sendable {
     public let blocks: [ReplyBlock]
 }
 
-public enum ReplyAlignment: Equatable, Sendable { case leading, center, trailing }
-
 public struct ReplyInline: Equatable, Hashable, Sendable {
     public var text: String
     public var strong = false
