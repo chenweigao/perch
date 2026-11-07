@@ -335,7 +335,7 @@ private enum UserBubbleFixture {
                     require(text.isSelectable && !text.isEditable, "Native selection must remain available")
                     require(frame.height >= text.measure(width: frame.width).height - 1, "\(message.id) text must not be clipped: frame \(frame), measured \(text.measure(width: frame.width))")
                     if text.enclosingScrollView == nil {
-                        require(frame.minX >= width * 0.15 + 14 - 1 && frame.maxX <= width - 14 + 1, "\(message.id) text must stay inside the 85% bubble and padding: \(frame)")
+                        require(frame.minX >= width * 0.15 + 14 - 1 && frame.maxX <= width - 14 + 1, "\(message.id) text must stay inside the 72% bubble and padding: \(frame)")
                     }
                 }
                 if index == 0 {
@@ -371,7 +371,7 @@ private enum UserBubbleFixture {
                         && abs(color.blueComponent - paper.blueComponent) < 0.003
                 }
                 let bubbleWidth = CGFloat(paperPixels.last! - paperPixels.first! + 1) / scale
-                require(bubbleWidth <= width * 0.85 + 1, "Rendered bubble must not exceed 85%: \(bubbleWidth)")
+                require(bubbleWidth <= width * 0.72 + 1, "Rendered bubble must not exceed 72%: \(bubbleWidth)")
                 require(abs(CGFloat(paperPixels.last! + 1) / scale - width) <= 1, "Rendered bubble must be right aligned")
                 if index == 0 {
                     require(abs(bubbleWidth - textViews[0].measure(width: nil).width - 28) <= 1, "Short bubble must hug its text and padding")
@@ -398,7 +398,10 @@ private enum UserBubbleFixture {
             let rows = descendants(root)
             let user = rows.first { $0.identifier?.rawValue == entries[0].id }!
             let process = rows.first { $0.identifier?.rawValue == entries[1].id }!
-            require(abs(rect(process, in: root).minY - rect(user, in: root).maxY - 18) <= 1, "Process records must be 18 pt below the user bubble")
+            // User row (message) to the following process record: entry spacing
+            // plus the record row's own 2 pt top inset, read from live tokens.
+            let expectedGap = ReplyStyle.entrySpacing + 2
+            require(abs(rect(process, in: root).minY - rect(user, in: root).maxY - expectedGap) <= 1, "Process records must be \(Int(expectedGap)) pt below the user bubble")
             let answer = rows.compactMap { $0 as? ReplyTextView }.first { $0.string == "我会继续调研更轻量的方案。" }!
             require(abs(rect(answer, in: root).minX) <= 1, "Assistant replies must keep their existing left alignment")
             _ = snapshot(root, name: "bubble-transcript-\(Int(width))-\(scheme)")
