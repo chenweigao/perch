@@ -7,7 +7,8 @@ import WorkbenchCore
 /// attachments and nested content outside this set keep the SwiftUI renderer.
 enum NativeAssistantBlock: Equatable {
     case paragraphs(NSAttributedString)
-    case heading(NSAttributedString)
+    /// Attributed text plus the Markdown level, which sets the spacing above it.
+    case heading(level: Int, NSAttributedString)
     case code(language: String, source: String, text: NSAttributedString)
     case rule
     case quote([NSAttributedString])
@@ -67,9 +68,9 @@ enum NativeAssistantContent {
             case .heading(let level, let runs):
                 guard allowsRichBlocks else { return nil }
                 flush()
-                result.append(.heading(ReplyTextAttributes.paragraphs([runs],
+                result.append(.heading(level: level, ReplyTextAttributes.paragraphs([runs],
                     size: ReplyStyle.headingSize(level),
-                    weight: .semibold, lineHeight: ReplyStyle.headingLineHeight(level))))
+                    weight: ReplyStyle.headingWeight(level), lineHeight: ReplyStyle.headingLineHeight(level))))
             case .code(let language, let code):
                 // Mermaid renders asynchronously as a rasterized image; the
                 // message keeps the SwiftUI renderer, as tables and math do.
@@ -142,7 +143,10 @@ enum NativeAssistantContent {
 
     /// The SwiftUI renderer's rhythm (`ReplyStyle.blockSpacing`), applied above each block.
     static func spacing(before block: NativeAssistantBlock, after previous: NativeAssistantBlock?, compact: Bool) -> CGFloat {
-        ReplyStyle.blockSpacing(before: ReplyStyle.BlockKind(block),
+        if case .heading(let level, _) = block, previous != nil {
+            return ReplyStyle.headingTopSpacing(level, compact: compact)
+        }
+        return ReplyStyle.blockSpacing(before: ReplyStyle.BlockKind(block),
                                 after: previous.map { ReplyStyle.BlockKind($0) }, compact: compact)
     }
 }
@@ -195,7 +199,7 @@ private final class NativeTextBlockView: NativeAssistantBlockView {
     override func update(_ block: NativeAssistantBlock) {
         let value: NSAttributedString
         switch block { case .paragraphs(let attributed): value = attributed
-        case .heading(let attributed): value = attributed
+        case .heading(_, let attributed): value = attributed
         default: return }
         let text = self.text ?? {
             let view = SelectableReplyText.acquire(delegate: links)
@@ -223,9 +227,9 @@ private final class NativeTextBlockView: NativeAssistantBlockView {
 }
 
 private final class NativeRuleBlockView: NativeAssistantBlockView {
-    override func contentHeight(width: CGFloat) -> CGFloat { 1 }
+    override func contentHeight(width: CGFloat) -> CGFloat { ReplyStyle.Rule.height }
     override func draw(_ dirtyRect: NSRect) {
-        NSColor.labelColor.withAlphaComponent(0.09).setFill()
+        NSColor.labelColor.withAlphaComponent(ReplyStyle.Rule.opacity).setFill()
         dirtyRect.intersection(bounds).fill()
     }
 }
@@ -435,7 +439,7 @@ private final class NativeQuoteBlockView: NativeAssistantBlockView {
     }
     override func textViews() -> [ReplyTextView] { texts }
     override func draw(_ dirtyRect: NSRect) {
-        NSColor.labelColor.withAlphaComponent(0.16).setFill()
+        NSColor.labelColor.withAlphaComponent(ReplyStyle.Quote.barOpacity).setFill()
         NSBezierPath(roundedRect: CGRect(x: 0, y: 0, width: ReplyStyle.Quote.barWidth, height: bounds.height),
                      xRadius: 1, yRadius: 1).fill()
     }
@@ -486,7 +490,7 @@ private final class NativeListBlockView: NativeAssistantBlockView {
         let rows = rows(width: width)
         var height: CGFloat = 0
         for (index, row) in rows.enumerated() {
-            if index > 0 { height += ReplyStyle.ListLayout.rowGap(between: rows[index - 1], and: row) }
+            if index > 0 { height += ReplyStyle.ListLayout.itemSpacing }
             height += row
         }
         return height
@@ -497,7 +501,7 @@ private final class NativeListBlockView: NativeAssistantBlockView {
         let rows = rows(width: width)
         var y: CGFloat = 0
         for (index, item) in items.enumerated() {
-            if index > 0 { y += ReplyStyle.ListLayout.rowGap(between: rows[index - 1], and: rows[index]) }
+            if index > 0 { y += ReplyStyle.ListLayout.itemSpacing }
             let metrics = nativeMarkerMetrics()
             let markerOffset = metrics.firstBaseline - ceil(metrics.font.ascender)
             let markerSize = item.marker.fittingSize

@@ -88,6 +88,10 @@ enum WorkbenchTheme {
         }
     }
 
+    /// Inline-code chip fill in prose (DSH: `--dsw-alias-markdown-inline-code`).
+    /// TextKit backgrounds are rectangular, so the chip is a quiet square wash.
+    static let inlineCodeTintNS = washNS(light: 0.055, dark: 0.10)
+
     /// A primary-ink wash with independent light/dark alphas. labelColor resolves
     /// inside the requested appearance; applying alpha outside it can freeze the
     /// system appearance in cached AppKit text and layers.
@@ -291,19 +295,34 @@ enum AppAppearance: String, CaseIterable, Identifiable {    case system
     }
 }
 
-/// Reading roles share one primary size (14 pt / 22 pt by default). Thoughts,
-/// code, labels and prose use color, weight and spacing to establish hierarchy.
-/// Captions alone step down to 12 pt; document headings may step up.
+/// Reading roles follow the DSH markdown ladder (deepseek-harness 0.2.2, MIT;
+/// see docs/2026-11-08-perch-dsh-prose/SOURCE-NOTES.md): the body size carries a
+/// constant 10 pt leading (14/24 by default), headings step up through a real
+/// ramp, and a secondary tier one step below the body carries thoughts, process
+/// rows and tables. Line heights are size + constant leading, not a fixed ratio.
 struct ReadingScale: Equatable {
     let body: CGFloat
     var unit: CGFloat { body / ReadingBodySize.standard }
-    var bodyLine: CGFloat { (body * (22.0 / 14.0)).rounded() }
-    var heading1: CGFloat { body + 4 }
-    var heading2: CGFloat { body + 2 }
-    var secondary: CGFloat { body }
-    var secondaryLine: CGFloat { bodyLine }
-    var label: CGFloat { body }
+    /// Body line height: 24 pt at the default size, growing one-for-one with it.
+    var bodyLine: CGFloat { body + 10 }
+    var heading1: CGFloat { body + 7 }
+    var heading2: CGFloat { body + 5 }
+    var heading3: CGFloat { body + 4 }
+    /// Heading line heights keep DSH's constant leading per level.
+    var heading1Line: CGFloat { body + 16 }
+    var heading2Line: CGFloat { body + 14 }
+    var heading3Line: CGFloat { body + 12 }
+    /// Secondary tier: −1 through the default size, then −2 (14→13, 18→16).
+    var secondary: CGFloat { min(body - 1, max(13, body - 2)) }
+    /// Secondary text on a 20 pt line at the default size (13/20).
+    var secondaryLine: CGFloat { secondary + 7 }
+    var label: CGFloat { secondary }
     var caption: CGFloat { max(WorkbenchTheme.Typography.caption, body - 2) }
+    /// Code blocks sit one tier below the body (11 pt by default, DSH's code
+    /// setting default); inline code uses 0.875 em at its surrounding size.
+    var code: CGFloat { max(11, body - 3) }
+    /// Code line pitch: 19 pt at the default size.
+    var codeLine: CGFloat { code + 8 }
     /// Preserve the default vertical rhythm; enlarge it with reading zoom.
     func spacing(_ points: CGFloat) -> CGFloat { (points * unit).rounded() }
 }

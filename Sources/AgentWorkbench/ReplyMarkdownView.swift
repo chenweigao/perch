@@ -9,11 +9,11 @@ import WorkbenchCore
 /// unsupported shapes keep the SwiftUI renderer with the same geometry.
 ///
 /// Type sizes and vertical rhythm follow the reader's body size through
-/// `ReadingScale` (14 pt on a 22 pt line by default; H1 and H2 step up, the other
-/// headings rely on weight and space). Horizontal geometry — the 680 pt column,
-/// insets — stays fixed at every size.
+/// `ReadingScale`'s DSH-aligned ladder (14 pt on a 24 pt line by default; H1–H3
+/// step up through a real ramp, H4+ separate by weight). Horizontal geometry —
+/// the 748 pt column, insets — stays fixed at every size.
 enum ReplyStyle {
-    static let readingWidth: CGFloat = 680
+    static let readingWidth: CGFloat = 748
     static let horizontalPadding = WorkbenchTheme.Reading.inset
     static let composerInset: CGFloat = 12
     /// The editor text and transcript share the same centered reading column.
@@ -23,32 +23,53 @@ enum ReplyStyle {
     static var bodySize: CGFloat { scale.body }
     static var lineHeight: CGFloat { scale.bodyLine }
     static var lineHeightRatio: CGFloat { lineHeight / bodySize }
-    static var paragraphSpacing: CGFloat { scale.spacing(12) }
+    static var paragraphSpacing: CGFloat { scale.spacing(16) }
     /// Between paragraphs inside list items, quotes and alerts.
-    static var compactParagraphSpacing: CGFloat { scale.spacing(6) }
-    /// Secondary prose shares the body size: thoughts, quiet notes, code and tables.
+    static var compactParagraphSpacing: CGFloat { scale.spacing(8) }
+    /// Secondary prose one tier below the body: thoughts, quiet notes and tables.
     static var secondarySize: CGFloat { scale.secondary }
     /// Process and tool rows, fold headers, the activity bar and notices.
     static var labelSize: CGFloat { scale.label }
     /// Counts, chips, code labels, row actions and small hints.
     static var captionSize: CGFloat { scale.caption }
-    static var codeSize: CGFloat { scale.secondary }
-    static let codeLineSpacing: CGFloat = 4
+    static var codeSize: CGFloat { scale.code }
+    /// Code line pitch: the scale's code line height minus the font's natural
+    /// height at the default size (6 ≈ 19 − 13).
+    static let codeLineSpacing: CGFloat = 6
     /// Between the parts of one transcript entry, and above a reply's actions.
     static let entryPartSpacing: CGFloat = 10
     /// Between transcript entries; consecutive process rows sit closer.
-    static let entrySpacing: CGFloat = 16
-    static let processEntrySpacing: CGFloat = 6
+    static let entrySpacing: CGFloat = 12
+    static let processEntrySpacing: CGFloat = 4
     static let progressToolSpacing: CGFloat = 4
     static let progressStageSpacing: CGFloat = 28
     static let ink = Color.primary.opacity(0.9)
-    /// H1 and H2 step up; H3 and below keep the body size, set apart by weight
-    /// and spacing.
+    /// DSH ladder: H1–H3 step up through a real ramp, H4 and below keep the body
+    /// size; weight and spacing separate the levels.
     static func headingSize(_ level: Int) -> CGFloat {
-        level == 1 ? scale.heading1 : level == 2 ? scale.heading2 : bodySize
+        switch level {
+        case 1: return scale.heading1
+        case 2: return scale.heading2
+        case 3: return scale.heading3
+        default: return bodySize
+        }
     }
+    /// Constant leading per level (H1 30/21, H2 28/19, H3 26/18, H4+ body line).
     static func headingLineHeight(_ level: Int) -> CGFloat {
-        max(lineHeight, (headingSize(level) * 1.4).rounded())
+        switch level {
+        case 1: return scale.heading1Line
+        case 2: return scale.heading2Line
+        case 3: return scale.heading3Line
+        default: return lineHeight
+        }
+    }
+    /// H1–H3 bold, H4–H6 semibold (DSH's 700/600 split).
+    static func headingWeight(_ level: Int) -> NSFont.Weight {
+        level <= 3 ? .bold : .semibold
+    }
+    /// Space above a heading: 32 pt for H1–H3, 16 pt for H4–H6 (DSH margins).
+    static func headingTopSpacing(_ level: Int, compact: Bool) -> CGFloat {
+        scale.spacing(compact ? (level <= 3 ? 16 : 8) : (level <= 3 ? 32 : 16))
     }
     static let paper = Color.primary.opacity(0.035)
     // Preserve a dynamic color in cached attributed text. Applying alpha to
@@ -74,53 +95,62 @@ enum ReplyStyle {
 
     /// Block categories that set vertical rhythm. Display math spaces like code.
     enum BlockKind { case paragraph, heading, code, rule, other }
-    /// Space above a block, shared by both renderers. Compact applies inside list
-    /// items, quotes and alerts.
+    /// Space above a block, shared by both renderers (DSH margins: 16 pt block
+    /// gap, 32 pt around rules, 16 pt under headings). Heading top spacing is
+    /// level-aware and applied by the callers, which know the level. Compact
+    /// applies inside list items, quotes and alerts.
     static func blockSpacing(before block: BlockKind, after previous: BlockKind?, compact: Bool) -> CGFloat {
         guard let previous else { return 0 }
-        if previous == .rule { return scale.spacing(20) }
-        if previous == .heading { return scale.spacing(6) }
+        if previous == .rule { return scale.spacing(32) }
+        if previous == .heading { return scale.spacing(compact ? 8 : 16) }
         if previous == .paragraph && block == .paragraph { return compact ? compactParagraphSpacing : paragraphSpacing }
         switch block {
-        case .heading: return scale.spacing(compact ? 12 : 20)
-        case .rule: return scale.spacing(20)
-        case .code: return scale.spacing(compact ? 8 : 14)
+        case .heading: return scale.spacing(compact ? 16 : 32)
+        case .rule: return scale.spacing(32)
+        case .code: return scale.spacing(compact ? 8 : 16)
         case .paragraph, .other: return compact ? scale.spacing(4) : paragraphSpacing
         }
     }
 
     /// Code card chrome; the native card and the SwiftUI card place text identically.
+    /// Banner follows DSH: a fixed 11 pt label (not content-scaled), 14 pt side
+    /// padding, 6 pt vertical padding (36 pt header), 16 pt text inset.
     enum Code {
         static let cornerRadius: CGFloat = 8
-        static var labelSize: CGFloat { ReplyStyle.captionSize }
+        static let labelSize: CGFloat = 11
         static let copyButtonSize: CGFloat = 24
-        static let headerHorizontalPadding: CGFloat = 12
-        static let headerVerticalPadding: CGFloat = 3
+        static let headerHorizontalPadding: CGFloat = 14
+        static let headerVerticalPadding: CGFloat = 6
         static var headerHeight: CGFloat { headerVerticalPadding * 2 + copyButtonSize }
         /// Around the code text, and on its leading side when there is no gutter.
-        static let inset: CGFloat = 12
+        static let inset: CGFloat = 16
         static let gutterLeading: CGFloat = 10
         static let gutterTrailing: CGFloat = 8
     }
     enum ListLayout {
         static let markerGap: CGFloat = 8
         static let minimumMarkerWidth: CGFloat = 16
-        /// Rows taller than one and a half lines are separated a little more.
-        static let multilineRowGap: CGFloat = 4
-        static let singleLineRowGap: CGFloat = 2
-        static func rowGap(between previous: CGFloat, and next: CGFloat) -> CGFloat {
-            max(previous, next) > ReplyStyle.lineHeight * 1.5 ? multilineRowGap : singleLineRowGap
-        }
+        /// DSH lists sit items 6 pt apart, uniformly.
+        static let itemSpacing: CGFloat = 6
     }
-    /// Quotes and alerts: a 2 pt rule with the text inset after it.
+    /// Quotes and alerts: a 2 pt rule with the text inset after it (text starts
+    /// 16 pt from the bar, matching DSH's 2 px bar + 14 px padding).
     enum Quote {
         static let leadingInset: CGFloat = 16
         static let verticalInset: CGFloat = 4
         static let barWidth: CGFloat = 2
+        static let barOpacity: Double = 0.28
+    }
+    /// Section rules: a hairline with 32 pt margins (block spacing), DSH-style.
+    enum Rule {
+        static let height: CGFloat = 0.5
+        static let opacity: Double = 0.12
     }
     /// Table cells and rules; horizontal cell padding lives in `tableGeometry`.
     enum Table {
-        static let cellVerticalPadding: CGFloat = 8
+        static let cellVerticalPadding: CGFloat = 10
+        /// Cell text on the table line (22 pt at the default secondary size).
+        static var cellLineHeight: CGFloat { ReplyStyle.scale.secondary + 9 }
         /// The rule under the header reads stronger than the rules between rows.
         static let headerRuleOpacity: Double = 0.12
         static let rowRuleOpacity: Double = 0.06
@@ -188,7 +218,8 @@ enum UserMessageStyle {
     static var topPadding: CGFloat { verticalPadding - textLift }
     static var bottomPadding: CGFloat { verticalPadding + textLift }
     static let cornerRadius: CGFloat = 18
-    static let maxWidthRatio: CGFloat = 0.85
+    /// DSH caps the bubble at 0.702 of the column (525/748).
+    static let maxWidthRatio: CGFloat = 0.72
     static let topSpacing: CGFloat = 8
     static var paragraphSpacing: CGFloat { ReplyStyle.paragraphSpacing }
     /// The fold toggle under a long prompt, as `LongUserPrompt` sets it: label-size
@@ -331,6 +362,10 @@ struct ReplyBlocks: View {
             return DocumentTypography.blockSpacing(before: ReplyStyle.BlockKind(block),
                 after: previous.map { ReplyStyle.BlockKind($0) }, compact: compact) * DocumentTypography.unit * documentFontScale
         }
+        // A heading's top spacing is level-aware (32 pt H1–H3, 16 pt H4–H6).
+        if case .heading(let level, _) = block, previous != nil {
+            return ReplyStyle.headingTopSpacing(level, compact: compact)
+        }
         return ReplyStyle.blockSpacing(before: ReplyStyle.BlockKind(block),
                                        after: previous.map { ReplyStyle.BlockKind($0) }, compact: compact)
     }
@@ -350,7 +385,7 @@ private struct ReplyBlockContent: View, Equatable {
         case .paragraph(let runs): ReplyText(runs: runs)
         case .heading(let level, let runs):
             ReplyText(runs: runs, size: documentReadingStyle ? DocumentTypography.headingSize(level) : ReplyStyle.headingSize(level),
-                      weight: documentReadingStyle ? .medium : .semibold,
+                      weight: documentReadingStyle ? .medium : ReplyStyle.headingWeight(level),
                       lineHeight: documentReadingStyle ? DocumentTypography.headingLineHeight(level) : ReplyStyle.headingLineHeight(level))
         case .code(let language, let source):
             if MermaidSupport.isMermaid(language) {
@@ -376,13 +411,13 @@ private struct ReplyBlockContent: View, Equatable {
                 .environment(\.documentMutedText, documentReadingStyle)
                 .padding(.leading, ReplyStyle.Quote.leadingInset).padding(.vertical, ReplyStyle.Quote.verticalInset)
                 .overlay(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 1).fill(.primary.opacity(0.16)).frame(width: ReplyStyle.Quote.barWidth)
+                    RoundedRectangle(cornerRadius: 1).fill(.primary.opacity(ReplyStyle.Quote.barOpacity)).frame(width: ReplyStyle.Quote.barWidth)
                 }
         case .alert(let kind, let blocks):
             ReplyAlertBlock(kind: kind, blocks: blocks, coalescesParagraphs: coalescesParagraphs)
         case .table(let headers, let rows, let alignments):
             ReplyTable(headers: headers, rows: rows, alignments: alignments)
-        case .rule: Rectangle().fill(.primary.opacity(0.09)).frame(height: 1)
+        case .rule: Rectangle().fill(.primary.opacity(ReplyStyle.Rule.opacity)).frame(height: ReplyStyle.Rule.height)
         }
     }
 }
@@ -508,7 +543,7 @@ private struct ReplyListLayout: Layout {
         var height: CGFloat = 0
         for index in rows.indices {
             if index > 0 {
-                height += ReplyStyle.ListLayout.rowGap(between: rows[index - 1].height, and: rows[index].height)
+                height += ReplyStyle.ListLayout.itemSpacing
             }
             offsets.append(height)
             height += rows[index].height
@@ -613,12 +648,15 @@ enum ReplyTextAttributes {
                 }
                 // Strong text is at least medium; it never lightens a semibold heading.
                 let runWeight: NSFont.Weight = run.strong && weight.rawValue < NSFont.Weight.medium.rawValue ? .medium : weight
-                var font = run.code ? NSFont.monospacedSystemFont(ofSize: size - 1, weight: runWeight)
+                // Inline code at 0.875 em with a quiet chip fill (DSH inline code);
+                // heading code keeps the heading's ramp share via the same ratio.
+                var font = run.code ? NSFont.monospacedSystemFont(ofSize: (size * 0.875).rounded(), weight: runWeight)
                                     : NSFont.systemFont(ofSize: size, weight: runWeight)
                 if run.emphasis { font = NSFontManager.shared.convert(font, toHaveTrait: .italicFontMask) }
                 var attributes: [NSAttributedString.Key: Any] = [
                     .font: font, .foregroundColor: ink, .paragraphStyle: paragraph
                 ]
+                if run.code { attributes[.backgroundColor] = WorkbenchTheme.inlineCodeTintNS }
                 if run.strikethrough { attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue }
                 if let link = run.link {
                     // Render layer: only allowlisted schemes become clickable;
@@ -1298,15 +1336,24 @@ final class ReplyTextView: NSTextView {
         ReplySelection.shared.refreshHighlight()
         return resigned
     }
-    /// Background-color is not part of reply styling, so clearing it here
-    /// cannot disturb content. Works in text attributes, never layout.
+    /// The find bar's highlight color, kept as one instance so clearing it can
+    /// match by identity: inline-code chips and mention tints also use the
+    /// background attribute and must survive a find-highlight refresh.
+    private static let findHighlightColor = NSColor.systemYellow.withAlphaComponent(0.35)
+    /// Background-color also carries inline-code chips and mention tints, so
+    /// clearing removes only ranges painted with the find-highlight instance.
     func applyFindHighlight() {
         guard let storage = textStorage, findHighlight != nil || hasFindHighlight else { return }
         let full = NSRange(location: 0, length: storage.length)
         storage.beginEditing()
-        storage.removeAttribute(.backgroundColor, range: full)
+        var stale: [NSRange] = []
+        storage.enumerateAttribute(.backgroundColor, in: full, options: []) { value, range, _ in
+            guard let color = value as? NSColor, color === Self.findHighlightColor else { return }
+            stale.append(range)
+        }
+        for range in stale { storage.removeAttribute(.backgroundColor, range: range) }
         if let highlight = findHighlight, !highlight.query.isEmpty, storage.length > 0 {
-            let color = NSColor.systemYellow.withAlphaComponent(0.35)
+            let color = Self.findHighlightColor
             if highlight.regex, let expression = try? NSRegularExpression(
                 pattern: highlight.query, options: highlight.caseSensitive ? [] : [.caseInsensitive]) {
                 for match in expression.matches(in: storage.string, range: full) {
@@ -1742,11 +1789,14 @@ private struct ReplyTable: View {
     }
 
     private func cell(_ runs: [ReplyInline], column: Int, header: Bool) -> some View {
+        // DSH table cells: 10 pt vertical, 16 pt side padding, with the first
+        // column flush to the column edge and the last flush to the right.
         ReplyText(runs: runs, size: cellSize, weight: header ? .medium : .regular,
                   alignment: alignments[column] == .trailing ? .trailing : alignments[column] == .center ? .center : .leading,
-                  lineHeight: documentReadingStyle ? cellSize * 1.65 : nil)
+                  lineHeight: documentReadingStyle ? cellSize * 1.65 : ReplyStyle.Table.cellLineHeight)
             .environment(\.documentMutedText, documentReadingStyle && header)
-            .padding(.horizontal, geometry.cellPadding)
+            .padding(.leading, column == 0 ? 0 : geometry.cellPadding)
+            .padding(.trailing, column == headers.count - 1 ? 0 : geometry.cellPadding)
             .padding(.vertical, documentReadingStyle ? 11 : ReplyStyle.Table.cellVerticalPadding)
     }
 }

@@ -19,8 +19,8 @@ public struct ReplyTableGeometry {
     /// than the whole table still stretches columns past this.
     public var maximumContentWidth: CGFloat
 
-    public init(fontSize: CGFloat = 13, cellPadding: CGFloat = 12, narrowColumnWidth: CGFloat = 44,
-                standardColumnWidth: CGFloat = 124, maximumContentWidth: CGFloat = 420) {
+    public init(fontSize: CGFloat = 13, cellPadding: CGFloat = 16, narrowColumnWidth: CGFloat = 44,
+                standardColumnWidth: CGFloat = 124, maximumContentWidth: CGFloat = 320) {
         self.fontSize = fontSize
         self.cellPadding = cellPadding
         self.narrowColumnWidth = narrowColumnWidth

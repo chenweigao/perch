@@ -465,11 +465,12 @@ struct ToolInlineDiffCard: View {
 }
 
 /// The provider's public preview occupies a stable, bounded place in the reader.
+/// Secondary tier (13/20 by default), like DSH's thinking summaries.
 struct LiveThinkingSummary: View {
     let text: String
     var body: some View {
         Text(verbatim: text)
-            .font(.system(size: ReplyStyle.bodySize))
+            .font(.system(size: ReplyStyle.secondarySize))
             .foregroundStyle(WorkbenchTheme.quiet)
             .lineLimit(2).fixedSize(horizontal: false, vertical: true)
             .accessibilityIdentifier("live-thinking-summary")
