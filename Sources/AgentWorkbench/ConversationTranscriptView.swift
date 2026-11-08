@@ -2364,8 +2364,15 @@ struct ProcessFoldRow: View {
     private var toolCalls: Int {
         rows.reduce(0) { $0 + $1.entry.messages.flatMap(\.content).filter { $0.type == "tool_use" }.count }
     }
-    /// Uncertain or user-pending tools the fold conceals; the header keeps the signal.
-    private var attention: Int { ConversationProcessFold.unresolvedCount(rows) }
+    /// First line of the folded thinking, DSH's completed-reasoning summary.
+    private var thinkingSummary: String? {
+        for row in rows {
+            for part in row.entry.messages.flatMap(\.content) {
+                if let thinking = part.thinking, let line = ThoughtTextStyle.firstSummaryLine(thinking) { return line }
+            }
+        }
+        return nil
+    }
     /// Line churn from the folded rows' own edit-class tool calls (session-sourced,
     /// not git): nil when nothing resolved a file, so the header stays quiet.
     private var editStat: (files: Int, additions: Int, deletions: Int)? {
@@ -2393,8 +2400,13 @@ struct ProcessFoldRow: View {
                             Text(L("· \(editStat.files) 个文件 +\(editStat.additions) −\(editStat.deletions)"))
                                 .monospacedDigit().fixedSize()
                         }
-                        if attention > 0 {
-                            Text(L("· \(attention) 项需关注")).foregroundStyle(.orange).fixedSize()
+                        // DSH's completed reasoning row: the first thinking line
+                        // rides the collapsed header, truncated to one line.
+                        if !expanded, externalHeadline == nil, let summary = thinkingSummary {
+                            Text(verbatim: "· " + summary)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                                .layoutPriority(-1)
                         }
                     }
                     .font(.system(size: externalHeadline != nil ? ReplyStyle.captionSize : ReplyStyle.Process.labelSize))
@@ -2518,31 +2530,43 @@ private enum ThoughtTextStyle {
         }
         return trimmed == "<!--" // l10n-ignore
     }
+    /// One cleaned prose line from thinking text: skips blanks, code fences and
+    /// comment sentinels, strips heading/list markers and emphasis/backticks.
+    private static func cleanedLine(_ rawLine: String, inCodeBlock: inout Bool) -> String? {
+        let trimmed = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.hasPrefix("```") { // l10n-ignore
+            inCodeBlock.toggle()
+            return nil
+        }
+        if inCodeBlock || trimmed.isEmpty || isCommentSentinel(trimmed) { return nil }
+        var clean = trimmed
+        for prefix in ["#### ", "### ", "## ", "# ", "- ", "* "] where clean.hasPrefix(prefix) { // l10n-ignore
+            clean = String(clean.dropFirst(prefix.count))
+            break
+        }
+        clean = clean.replacingOccurrences(of: "**", with: "")
+            .replacingOccurrences(of: "`", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return clean.isEmpty || clean == "..." || clean == "…" ? nil : clean
+    }
     /// Latest meaningful prose line for collapsed thought headers (ZCode / Oh My Pi style).
     static func latestSummaryLine(_ source: String) -> String? {
         guard !source.isEmpty else { return nil }
         var inCodeBlock = false
         var latest: String?
         for rawLine in source.components(separatedBy: "\n") {
-            let trimmed = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
-            if trimmed.hasPrefix("```") { // l10n-ignore
-                inCodeBlock.toggle()
-                continue
-            }
-            if inCodeBlock || trimmed.isEmpty || isCommentSentinel(trimmed) { continue }
-            var clean = trimmed
-            for prefix in ["#### ", "### ", "## ", "# ", "- ", "* "] where clean.hasPrefix(prefix) { // l10n-ignore
-                clean = String(clean.dropFirst(prefix.count))
-                break
-            }
-            clean = clean.replacingOccurrences(of: "**", with: "")
-                .replacingOccurrences(of: "`", with: "")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            if !clean.isEmpty && clean != "..." && clean != "…" {
-                latest = clean
-            }
+            if let clean = cleanedLine(rawLine, inCodeBlock: &inCodeBlock) { latest = clean }
         }
         return latest
+    }
+    /// First meaningful prose line — the completed fold header's summary, DSH-style.
+    static func firstSummaryLine(_ source: String) -> String? {
+        guard !source.isEmpty else { return nil }
+        var inCodeBlock = false
+        for rawLine in source.components(separatedBy: "\n") {
+            if let clean = cleanedLine(rawLine, inCodeBlock: &inCodeBlock) { return clean }
+        }
+        return nil
     }
     static func attributed(_ source: String) -> NSAttributedString {
         guard !source.isEmpty else { return NSAttributedString(string: "", attributes: attributes) }

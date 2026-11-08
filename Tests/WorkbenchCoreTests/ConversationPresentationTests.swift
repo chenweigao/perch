@@ -286,12 +286,12 @@ func checkConversationProcessFold() throws {
     precondition(foldRow.foldedRows?.flatMap(\.entry.messages).flatMap(\.content).count
                  == entries.dropFirst().dropLast().flatMap(\.messages).flatMap(\.content).count,
                  "The fold preserves every source part")
-    // Foldability is presentation-only; tool outcomes are weighed per turn by fold().
+    // Foldability is presentation-only; tool outcomes never weigh in.
     for status in [VisibleTool.Status.failed, .awaitingApproval, .missingResult, .disconnected, .running,
                    .succeeded, .returned] {
         let tool = VisibleTool(id: "t1", name: "read", input: nil, status: status)
         let row = ConversationPresentationModel.Row(entry: entries[1], tools: [tool.id: tool], activity: nil)
-        precondition(ConversationProcessFold.foldable(row), "Process rows fold; the turn's completion decides")
+        precondition(ConversationProcessFold.foldable(row), "Process rows fold whatever the tool outcome")
     }
     // A completed turn folds failed tools too — a returned error is an observed
     // outcome the agent read and continued from, so the fold header stays quiet.
@@ -305,18 +305,16 @@ func checkConversationProcessFold() throws {
     let settledFold = ConversationProcessFold.fold(rows: settled, isRunning: false)
     precondition(settledFold.map(\.entry.presentation) == [.message, .processFold, .message],
                  "A completed turn conceals failed tools: \(settledFold.map(\.entry.presentation))")
-    precondition(ConversationProcessFold.unresolvedCount(settledFold[1].foldedRows ?? []) == 0,
-                 "A returned error no longer counts as unresolved")
     let settledUncertain: [ConversationPresentationModel.Row] = settled.map { row in
         guard let tool = row.tools["t1"] else { return row }
         let uncertain = VisibleTool(id: tool.id, name: tool.name, input: tool.input, status: .missingResult)
         return ConversationPresentationModel.Row(entry: row.entry, tools: [uncertain.id: uncertain], activity: row.activity)
     }
     let uncertainFold = ConversationProcessFold.fold(rows: settledUncertain, isRunning: false)
-    precondition(ConversationProcessFold.unresolvedCount(uncertainFold[1].foldedRows ?? []) == 1,
-                 "The fold reports its concealed uncertainties")
-    // An interrupted turn (no final answer) conceals a returned error like any
-    // settled call; only uncertain tools keep their rows visible.
+    precondition(uncertainFold.map(\.entry.presentation) == [.message, .processFold, .message],
+                 "A completed turn conceals uncertain tools too: \(uncertainFold.map(\.entry.presentation))")
+    // An interrupted turn folds the same way: the transcript keeps no
+    // diagnosis surface for process failures.
     let interrupted = try messages("""
     [{"id":"i1","role":"user","created_at":"1","content":[{"type":"text","text":"跑到一半"}]},
      {"id":"i2","role":"assistant","created_at":"2","content":[{"type":"tool_use","tool_call_id":"t9","tool_name":"read"}]},
@@ -332,19 +330,11 @@ func checkConversationProcessFold() throws {
             return ConversationPresentationModel.Row(entry: entry, tools: [tool.id: tool], activity: nil)
         }
     }
-    let interruptedFold = ConversationProcessFold.fold(rows: interruptedRows(.missingResult), isRunning: false)
-    precondition(interruptedFold.contains { $0.entry.presentation == .activity },
-                 "An interrupted turn never conceals an uncertain tool")
-    precondition(!ConversationProcessFold.fold(rows: interruptedRows(.failed), isRunning: false)
-                    .contains { $0.entry.presentation == .activity },
-                 "A returned error folds even without a final answer")
-    // The same unfinished turn folds rows whose tools all succeeded.
-    let cleanInterrupted = interruptedRows(.succeeded).map { row in
-        ConversationPresentationModel.Row(entry: row.entry, tools: [:], activity: row.activity)
+    for status in [VisibleTool.Status.missingResult, .failed, .succeeded] {
+        precondition(!ConversationProcessFold.fold(rows: interruptedRows(status), isRunning: false)
+                        .contains { $0.entry.presentation == .activity },
+                     "An unfinished turn folds its process like any other: \(status)")
     }
-    let cleanFold = ConversationProcessFold.fold(rows: cleanInterrupted, isRunning: false)
-    precondition(!cleanFold.contains { $0.entry.presentation == .activity },
-                 "Successful process folds even without a final answer")
     // Folding is idempotent; fold rows never re-fold.
     precondition(ConversationProcessFold.fold(rows: folded, isRunning: false) == folded)
     // A single process row folds as well: uniform collapsed history.

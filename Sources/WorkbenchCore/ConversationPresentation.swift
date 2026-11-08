@@ -174,7 +174,7 @@ public final class ConversationPresentationModel {
         public let foldParents: [String: String]
 
         init(displayed: [Row], foldsProcess: Bool, isRunning: Bool) {
-            rows = foldsProcess ? ConversationProcessFold.fold(rows: displayed, isRunning: isRunning, preservesSteps: true) : displayed
+            rows = foldsProcess ? ConversationProcessFold.fold(rows: displayed, isRunning: isRunning) : displayed
             foldParents = Self.parents(of: rows)
         }
         init(rows: [Row], foldParents: [String: String]) { self.rows = rows; self.foldParents = foldParents }
@@ -265,7 +265,7 @@ public final class ConversationPresentationModel {
                !(first.presentation == .message && first.messages.first?.isUserPrompt == true) { return whole() }
             if foldsProcess, latest.isEmpty { return whole() }
             let earlier = history.presented(activity: activity, foldsProcess: foldsProcess)
-            let rows = foldsProcess ? ConversationProcessFold.fold(rows: latest, isRunning: isRunning, preservesSteps: true) : latest
+            let rows = foldsProcess ? ConversationProcessFold.fold(rows: latest, isRunning: isRunning) : latest
             return Presentation(rows: earlier.rows + rows, foldParents: Presentation.parents(of: rows, into: earlier.foldParents))
         }
 

@@ -35,8 +35,8 @@ func checkReadingLifecycle() throws {
     let finished = model.update(.init(messages: messages, language: "en"))
     let done = finished.presented(activity: [:], foldsProcess: true, isRunning: false)
     precondition(done.rows.contains { $0.entry.presentation == .processFold })
-    precondition(done.rows.contains { $0.entry.id == "activity:tool:e" }, "Edit receipts remain independently visible")
-    precondition(done.rows.contains { $0.tools["check"]?.status == .failed }, "A final answer cannot resolve a failed operation by implication")
+    precondition(!done.rows.contains { $0.entry.id == "activity:tool:e" }, "Edit receipts fold with the rest of the process")
+    precondition(!done.rows.contains { $0.tools["check"]?.status == .failed }, "A failed tool folds with the rest of the process")
     precondition(!done.rows.contains { $0.entry.presentation == .progress })
     let retained = done.retainingProcessEntries(["activity:tool:r"])
     precondition(retained.rows.contains { $0.entry.id == "activity:tool:r" })
@@ -50,9 +50,10 @@ func checkReadingLifecycle() throws {
             guard let tool = row.tools["r"] else { return row }
             return ConversationPresentationModel.Row(entry: row.entry, tools: ["r": .init(id: "r", name: tool.name, input: tool.input, status: status)], activity: row.activity)
         }
-        precondition(ConversationProcessFold.fold(rows: rows, isRunning: false, preservesSteps: true).contains { $0.tools["r"]?.status == status })
+        precondition(!ConversationProcessFold.fold(rows: rows, isRunning: false).contains { $0.tools["r"]?.status == status },
+                     "Every tool outcome folds: \(status)")
     }
     let interrupted = model.update(.init(messages: Array(messages.dropLast()), language: "en"))
-    precondition(!interrupted.presented(activity: [:], foldsProcess: true, isRunning: false).rows.contains { $0.entry.presentation == .processFold }, "No final answer is not a completed turn")
-    print("PASS: live public summaries, completed process folding, preserved edits/issues/manual expansion, interrupted-turn evidence")
+    precondition(interrupted.presented(activity: [:], foldsProcess: true, isRunning: false).rows.contains { $0.entry.presentation == .processFold }, "An unfinished turn folds its process like any other")
+    print("PASS: live public summaries, completed process folding, manual expansion, uniform folding of edits and failures")
 }
