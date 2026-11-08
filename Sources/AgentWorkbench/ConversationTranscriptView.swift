@@ -2458,7 +2458,8 @@ struct ProcessFoldRow: View {
                     }
                     ForEach(Array(rows[page.range]), id: \.entry.id) { row in
                         ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
-                                              memoryKey: (sourceMemoryPrefix ?? sessionId) + ":" + row.entry.id, activityNarrative: row.activity)
+                                              memoryKey: (sourceMemoryPrefix ?? sessionId) + ":" + row.entry.id, activityNarrative: row.activity,
+                                              preservesExpandedProcess: true)
                             .environment(\.conversationMemoryKey, (sourceMemoryPrefix ?? sessionId) + ":" + row.entry.id)
                             .environment(\.isConversationBodyText, true)
                             .background(ProcessFindAnchor(id: row.entry.id))
