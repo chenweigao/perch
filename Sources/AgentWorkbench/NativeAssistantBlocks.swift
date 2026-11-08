@@ -387,8 +387,18 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
     override func textViews() -> [ReplyTextView] { codeText.map { [$0] } ?? [] }
     override func draw(_ dirtyRect: NSRect) {
         let radius = ReplyStyle.Code.cornerRadius
+        let card = NSBezierPath(roundedRect: bounds, xRadius: radius, yRadius: radius)
         WorkbenchTheme.replySurfaceNS.setFill()
-        NSBezierPath(roundedRect: bounds, xRadius: radius, yRadius: radius).fill()
+        card.fill()
+        if !compact {
+            // DSH banner strip: the card's own surface in light, a lighter
+            // strip in dark; clipped to the card's rounded corners.
+            NSGraphicsContext.saveGraphicsState()
+            card.setClip()
+            WorkbenchTheme.replyBannerNS.setFill()
+            NSBezierPath.fill(CGRect(x: 0, y: 0, width: bounds.width, height: ReplyStyle.Code.headerHeight))
+            NSGraphicsContext.restoreGraphicsState()
+        }
     }
 }
 

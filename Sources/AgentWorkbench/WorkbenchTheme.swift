@@ -97,6 +97,11 @@ enum WorkbenchTheme {
     static let replySurfaceNS = nsColor(light: NSColor(calibratedRed: 249/255, green: 250/255, blue: 251/255, alpha: 1),
                                         dark: NSColor(calibratedRed: 27/255, green: 27/255, blue: 28/255, alpha: 1))
 
+    /// Code card banner strip (DSH `--dsw-alias-markdown-code-block-banner`):
+    /// identical to the surface in light, a lighter strip in dark.
+    static let replyBannerNS = nsColor(light: NSColor(calibratedRed: 249/255, green: 250/255, blue: 251/255, alpha: 1),
+                                       dark: NSColor(calibratedRed: 44/255, green: 44/255, blue: 46/255, alpha: 1))
+
     /// User message bubble (DSH `--dsw-specific-bubble`: deepseek-50 light,
     /// neutral-bluish-850 dark) — a blue tint, not a neutral wash.
     static let userBubbleNS = nsColor(light: NSColor(calibratedRed: 237/255, green: 243/255, blue: 254/255, alpha: 1),

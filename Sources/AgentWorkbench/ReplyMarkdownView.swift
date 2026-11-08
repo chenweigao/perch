@@ -1699,6 +1699,9 @@ struct ReplyCode: View {
                     Spacer()
                     ReplyCopyButton(text: source, label: "复制代码")
                 }.padding(.horizontal, ReplyStyle.Code.headerHorizontalPadding).padding(.vertical, ReplyStyle.Code.headerVerticalPadding)
+                    // DSH banner strip: the card's surface in light, lighter in dark.
+                    .background(Color(nsColor: WorkbenchTheme.replyBannerNS),
+                                in: UnevenRoundedRectangle(topLeadingRadius: ReplyStyle.Code.cornerRadius, topTrailingRadius: ReplyStyle.Code.cornerRadius))
                 ReplyCodeBody(source: source, language: language)
                     .overlay(alignment: .bottomTrailing) {
                         if hovered && lineCount > 8 {
