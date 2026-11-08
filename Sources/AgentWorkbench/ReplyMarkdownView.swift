@@ -1322,7 +1322,14 @@ final class ReplyTextView: NSTextView {
             manager.enumerateLineFragments(forGlyphRange: glyphs) { _, _, _, lineGlyphs, _ in
                 let segment = NSIntersectionRange(glyphs, lineGlyphs)
                 guard segment.length > 0 else { return }
-                var rect = manager.boundingRect(forGlyphRange: segment, in: container)
+                // Vertical: anchor to the run's own baseline. boundingRect's y
+                // tracks the line fragment, whose leading sits above the glyphs.
+                let horizontal = manager.boundingRect(forGlyphRange: segment, in: container)
+                let charIndex = manager.characterIndexForGlyph(at: segment.location)
+                guard let runFont = storage.attribute(.font, at: charIndex, effectiveRange: nil) as? NSFont else { return }
+                let glyphOrigin = manager.location(ofGlyphAt: segment.location)
+                var rect = CGRect(x: horizontal.minX, y: glyphOrigin.y - runFont.ascender,
+                                  width: horizontal.width, height: runFont.ascender - runFont.descender)
                 rect.origin.x += self.textContainerInset.width
                 rect.origin.y += self.textContainerInset.height
                 rect = rect.insetBy(dx: -4, dy: -2.5)
