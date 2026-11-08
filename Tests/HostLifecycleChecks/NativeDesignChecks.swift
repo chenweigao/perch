@@ -111,7 +111,7 @@ import WorkbenchCore
     if !model.workspace.starred.contains(pin.reference) { model.toggleStar(pin.reference) }
     model.open(first)
     try await Task.sleep(for: .milliseconds(150))
-    let window = NativeDesignWindow(contentRect: NSRect(x: 30, y: 40, width: 1440, height: 900),
+    let window = NativeDesignWindow(contentRect: NSRect(x: 30, y: 40, width: 1536, height: 900),
                           styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
     window.title = "Perch · 原生设计对照"
     window.isReleasedWhenClosed = false
@@ -120,12 +120,14 @@ import WorkbenchCore
     let hosting = NSHostingController(rootView: WorkbenchView(model: model).environment(\.locale, Locale(identifier: "zh-Hans")))
     hosting.sizingOptions = []
     window.contentViewController = hosting
-    window.setContentSize(NSSize(width: 1440, height: 900))
+    // The window must fit the 748 pt reading column beside the default inspector:
+    // 1536 leaves the space to center it; smaller windows let it clamp narrower.
+    window.setContentSize(NSSize(width: 1536, height: 900))
     window.makeKeyAndOrderFront(nil)
-    // The 1440 × 900 design geometry must not depend on the display: CI screens
+    // The 1536 × 900 design geometry must not depend on the display: CI screens
     // are smaller, and AppKit would otherwise shrink the window to fit them.
     window.setFrame(NSRect(origin: window.frame.origin, size: window.frameRect(forContentRect:
-        NSRect(origin: .zero, size: NSSize(width: 1440, height: 900))).size), display: true)
+        NSRect(origin: .zero, size: NSSize(width: 1536, height: 900))).size), display: true)
     let keepAlive = Task { @MainActor in
         while !Task.isCancelled {
             try await connection.poll()
