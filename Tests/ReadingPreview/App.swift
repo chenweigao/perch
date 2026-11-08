@@ -499,10 +499,10 @@ private enum UserBubbleFixture {
             let rows = descendants(root)
             let user = rows.first { $0.identifier?.rawValue == entries[0].id }!
             let process = rows.first { $0.identifier?.rawValue == entries[1].id }!
-            // User row (message) to the following process record: entry spacing
-            // plus the record row's own 2 pt top inset, read from live tokens.
+            // User row (message) to the following process record: exactly the
+            // entry spacing (the historical "+2" inset no longer exists).
             let measuredGap = rect(process, in: root).minY - rect(user, in: root).maxY
-            let expectedGap = ReplyStyle.entrySpacing + 2
+            let expectedGap = ReplyStyle.entrySpacing
             require(abs(measuredGap - expectedGap) <= 1, "Process records must be \(Int(expectedGap)) pt below the user bubble (measured \(measuredGap))")
             let answer = rows.compactMap { $0 as? ReplyTextView }.first { $0.string == "我会继续调研更轻量的方案。" }!
             require(abs(rect(answer, in: root).minX) <= 1, "Assistant replies must keep their existing left alignment")
