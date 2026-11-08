@@ -1690,6 +1690,8 @@ private struct LongOutputViewport: NSViewRepresentable {
 struct ReplyCopyButton: View {
     let text: String
     var label: LocalizedStringKey = "复制回复"
+    /// Card banners read the affordance at full strength (DSH's copy label is primary).
+    var prominent = false
     @State private var copied = false
     var body: some View {
         Button {
@@ -1699,7 +1701,7 @@ struct ReplyCopyButton: View {
         } label: {
             Image(systemName: copied ? "checkmark" : "doc.on.doc").font(.system(size: ReplyStyle.captionSize))
                 .frame(width: 24, height: 24).contentShape(Rectangle())
-        }.buttonStyle(.plain).foregroundStyle(.secondary).help(copied ? "已复制" : label)
+        }.buttonStyle(.plain).foregroundStyle(prominent ? .primary : .secondary).help(copied ? "已复制" : label)
             .accessibilityLabel(copied ? "已复制" : label)
             .task(id: copied) {
                 if copied { try? await Task.sleep(for: .seconds(2)); copied = false }
@@ -1740,16 +1742,16 @@ struct ReplyCode: View {
             if lineCount == 1 {
                 HStack(spacing: 0) {
                     ReplyCodeBody(source: source, language: language)
-                    ReplyCopyButton(text: source, label: "复制代码")
+                    ReplyCopyButton(text: source, label: "复制代码", prominent: true)
                         .padding(.trailing, ReplyStyle.Code.inset)
                 }
             } else {
                 HStack {
                     // NativeCodeCardView shows the same label once the reply settles.
                     Text(language.isEmpty ? L("代码") : language).font(.system(size: ReplyStyle.Code.labelSize, design: .monospaced))
-                        .foregroundStyle(ReplyStyle.ink)
+                        .foregroundStyle(.primary)
                     Spacer()
-                    ReplyCopyButton(text: source, label: "复制代码")
+                    ReplyCopyButton(text: source, label: "复制代码", prominent: true)
                 }.padding(.horizontal, ReplyStyle.Code.headerHorizontalPadding).padding(.vertical, ReplyStyle.Code.headerVerticalPadding)
                     // DSH banner strip: the card's surface in light, lighter in dark.
                     .background(Color(nsColor: WorkbenchTheme.replyBannerNS),
@@ -1757,7 +1759,7 @@ struct ReplyCode: View {
                 ReplyCodeBody(source: source, language: language)
                     .overlay(alignment: .bottomTrailing) {
                         if hovered && lineCount > 8 {
-                            ReplyCopyButton(text: source, label: "复制代码")
+                            ReplyCopyButton(text: source, label: "复制代码", prominent: true)
                                 .background(.regularMaterial, in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row, style: .continuous))
                                 .padding(8)
                         }

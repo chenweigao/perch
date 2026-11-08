@@ -252,7 +252,8 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
         super.init(links: links)
         // DSH banner: the language label is monospace 11 in primary ink.
         label.font = .monospacedSystemFont(ofSize: ReplyStyle.Code.labelSize, weight: .regular)
-        label.textColor = ReplyStyle.nativeInk
+        // DSH's infostring reads at full label strength.
+        label.textColor = .labelColor
         label.lineBreakMode = .byTruncatingTail
         copy.sizingOptions = []
         copy.safeAreaRegions = []
@@ -283,7 +284,7 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
         }
         if source != self.source {
             self.source = source
-            copy.rootView = ReplyCopyButton(text: source, label: "复制代码")
+            copy.rootView = ReplyCopyButton(text: source, label: "复制代码", prominent: true)
         }
         let codeText = self.codeText ?? {
             let view = SelectableReplyText.acquire(delegate: links)

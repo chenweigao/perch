@@ -436,7 +436,7 @@ struct ReplyMermaid: View {
                 .buttonStyle(.plain).foregroundStyle(.secondary)
                 .help(showsSource ? "查看图表" : "查看源码")
                 .accessibilityLabel(showsSource ? "查看图表" : "查看源码")
-                ReplyCopyButton(text: source, label: "复制代码")
+                ReplyCopyButton(text: source, label: "复制代码", prominent: true)
             }
             .padding(.horizontal, ReplyStyle.Code.headerHorizontalPadding)
             .padding(.vertical, ReplyStyle.Code.headerVerticalPadding)

@@ -2748,10 +2748,11 @@ private struct ThoughtToggle: View {
 
 struct ThoughtDisclosure: View {
     let text: String
+    @UILocalization private var L
     @RememberedExpansion("thought") private var expanded
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
-            ThoughtToggle(title: Text("Thoughts"),
+            ThoughtToggle(title: Text(verbatim: L("Thoughts")),
                           summary: expanded ? nil : ThoughtTextStyle.latestSummaryLine(text),
                           expanded: $expanded)
             WorkbenchDisclosureContent(expanded: expanded) { ThoughtText(text: text) }
@@ -2762,6 +2763,7 @@ struct ThoughtDisclosure: View {
 /// One stable disclosure through live and settled thought phases.
 struct ThoughtOutput: View {
     @Environment(\.conversationMemoryKey) private var memoryKey
+    @UILocalization private var L
     let messages: [KimiMessage]
     let finished: Bool
     var embedded = false
@@ -2775,7 +2777,7 @@ struct ThoughtOutput: View {
                 // A collapsed running thought shows its latest meaningful line beside
                 // the title (DSH's streaming summary), so the preview reads without
                 // pushing the reply down.
-                ThoughtToggle(title: finished ? Text("Thoughts") : Text("Thinking"),
+                ThoughtToggle(title: Text(verbatim: finished ? L("Thoughts") : L("Thinking")),
                               summary: expanded ? nil : ThoughtTextStyle.latestSummaryLine(fullText),
                               expanded: $expanded)
                     .accessibilityIdentifier("thought-disclosure:" + memoryKey)
