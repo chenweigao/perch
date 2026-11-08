@@ -484,7 +484,8 @@ private struct ReadingReviewControls: View {
     }
     window.appearance = NSAppearance(named: .aqua)
     // The failed call remains reachable inside its expanded fold and stage.
-    click("completed-process:activity:tool:lifecycle-edit")
+    // (Session B retained nothing, so the whole turn is one fold here.)
+    click("completed-process:text:lifecycle-progress:0")
     try await settle()
     click("activity-phase:activity:tool:lifecycle-check")
     try await settle()
