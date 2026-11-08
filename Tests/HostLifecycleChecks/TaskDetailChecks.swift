@@ -202,7 +202,7 @@ import WorkbenchCore
 
 /// The window's accessibility elements, depth first. SwiftUI virtual elements
 /// expose AX selectors without necessarily declaring the complete protocol.
-@MainActor private func taskPanelElements(_ window: NSWindow) -> [(identifier: String?, node: NSObject)] {
+@MainActor func taskPanelElements(_ window: NSWindow) -> [(identifier: String?, node: NSObject)] {
     var visited = Set<ObjectIdentifier>()
     var elements: [(identifier: String?, node: NSObject)] = []
     func visit(_ value: Any) {
@@ -218,7 +218,7 @@ import WorkbenchCore
     return elements
 }
 
-@MainActor private func taskPanelIdentifiers(_ window: NSWindow) -> [String] {
+@MainActor func taskPanelIdentifiers(_ window: NSWindow) -> [String] {
     taskPanelElements(window).compactMap(\.identifier).filter { !$0.isEmpty }
 }
 
