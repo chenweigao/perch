@@ -453,7 +453,8 @@ private struct ReadingReviewControls: View {
     try await settle()
     click("activity-phase:activity:tool:lifecycle-read")
     try await settle()
-    precondition(taskPanelControl(window, "tool-call:lifecycle-read") != nil)
+    precondition(taskPanelControl(window, "tool-call:lifecycle-read") != nil,
+                 "read tool card after phase click; ids: " + taskPanelIdentifiers(window).joined(separator: ", "))
     precondition(ConversationReadingMemory.shared.retainedEntries(session: "lifecycle-A").contains("activity:tool:lifecycle-read"))
     host.rootView = ReadingDesignFixture(messages: live, running: true, session: "lifecycle-A", folds: true)
     try await settle()
