@@ -31,7 +31,7 @@ func checkReplySelection() {
 
     1. 第一项
     2. 第二项
-       • 嵌套项
+       ◦ 嵌套项
 
     > 引用里的话
 
