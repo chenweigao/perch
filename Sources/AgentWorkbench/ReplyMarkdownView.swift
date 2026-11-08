@@ -1740,9 +1740,12 @@ struct ReplyCode: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                // DSH shows the banner on single-line blocks too.
-                Text(language.isEmpty ? L("代码") : language).font(.system(size: ReplyStyle.Code.labelSize, design: .monospaced))
-                    .foregroundStyle(.primary)
+                // DSH shows the banner on single-line blocks too; the language
+                // slot stays empty when the fence carries none.
+                if !language.isEmpty {
+                    Text(language).font(.system(size: ReplyStyle.Code.labelSize, design: .monospaced))
+                        .foregroundStyle(.primary)
+                }
                 Spacer()
                 ReplyCopyButton(text: source, label: "复制代码", prominent: true)
             }.padding(.horizontal, ReplyStyle.Code.headerHorizontalPadding).padding(.vertical, ReplyStyle.Code.headerVerticalPadding)

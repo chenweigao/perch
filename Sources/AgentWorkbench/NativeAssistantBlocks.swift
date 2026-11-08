@@ -274,9 +274,11 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
 
     override func update(_ block: NativeAssistantBlock) {
         guard case .code(let language, let source, let text) = block else { return }
-        // The SwiftUI card's label, including a fresh card whose block has no language.
-        let title = language.isEmpty ? L("代码") : language
+        // The SwiftUI card's label: DSH leaves the slot empty when the fence
+        // carries no language.
+        let title = language
         if label.stringValue != title { label.stringValue = title }
+        label.isHidden = title.isEmpty
         // Pooled cards outlive a body-size change.
         if label.font?.pointSize != ReplyStyle.Code.labelSize {
             label.font = .monospacedSystemFont(ofSize: ReplyStyle.Code.labelSize, weight: .regular)

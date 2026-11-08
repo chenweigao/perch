@@ -2388,24 +2388,27 @@ struct ProcessFoldRow: View {
         rows.lazy.compactMap { $0.activity?.narrative }.last { $0.source == .external && !$0.headline.isEmpty }?.headline
     }
     var body: some View {
-        let countLabel = toolCalls > 0 ? L("\(toolCalls) 次调用") : L("\(rows.count) 条记录")
+        let countLabel = toolCalls > 0 ? L("\(toolCalls) 个工具") : L("\(rows.count) 条记录")
         VStack(alignment: .leading, spacing: 2) {
             HStack(alignment: .center, spacing: 8) {
                 DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
                     HStack(spacing: 6) {
-                        Text("工作过程").fixedSize()
-                        Text(verbatim: "· " + countLabel).fixedSize()
+                        // PI's process disclosure: status icon + outcome first,
+                        // then duration and the tool count; the thinking summary
+                        // rides last (DSH's completed reasoning row).
+                        Image(systemName: "sparkles").font(.system(size: ReplyStyle.captionSize))
+                            .foregroundStyle(WorkbenchTheme.quiet).fixedSize()
+                        Text(L("运行完成")).fixedSize()
                         if let completedDuration, completedDuration >= 5 {
                             let isZh = locale.language.languageCode?.identifier.hasPrefix("zh") ?? true
                             Text(verbatim: "· " + ConversationTiming.duration(completedDuration, chinese: isZh))
                                 .monospacedDigit().fixedSize()
                         }
+                        Text(verbatim: "· " + countLabel).fixedSize()
                         if let editStat, actionContext == nil {
                             Text(L("· \(editStat.files) 个文件 +\(editStat.additions) −\(editStat.deletions)"))
                                 .monospacedDigit().fixedSize()
                         }
-                        // DSH's completed reasoning row: the first thinking line
-                        // rides the collapsed header, truncated to one line.
                         if !expanded, externalHeadline == nil, let summary = thinkingSummary {
                             Text(verbatim: "· " + summary)
                                 .lineLimit(1)

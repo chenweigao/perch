@@ -2060,6 +2060,9 @@
 "检查条件" = "Check condition";
 "思考中" = "Thinking";
 "工作过程" = "Work process";
+"运行完成" = "Finished";
+"运行中" = "Running";
+"%lld 个工具" = "%lld tools";
 
 "运行 %@" = "Run %@";
 
