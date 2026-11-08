@@ -480,7 +480,7 @@ private enum UserBubbleFixture {
                 require(bubbleWidth <= width * 0.72 + 1, "Rendered bubble must not exceed 72%: \(bubbleWidth)")
                 require(abs(CGFloat(paperPixels.last! + 1) / scale - width) <= 1, "Rendered bubble must be right aligned")
                 if index == 0 {
-                    require(abs(bubbleWidth - textViews[0].measure(width: nil).width - UserMessageStyle.horizontalPadding * 2) <= 1, "Short bubble must hug its text and padding")
+                    require(abs(bubbleWidth - textViews[0].measure(width: nil).width - UserMessageStyle.horizontalPadding * 2) <= 1, "Short bubble must hug its text and padding: bubble \(bubbleWidth), text \(textViews[0].measure(width: nil).width)")
                 }
                 if index == 3 {
                     var left = bitmap.pixelsWide, right = 0, pixels = 0
