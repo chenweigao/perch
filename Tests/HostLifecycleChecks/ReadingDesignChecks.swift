@@ -467,7 +467,8 @@ private struct ReadingReviewControls: View {
     // whose header carries the call count and the thinking's first line.
     precondition(taskPanelControl(window, "edit-step:lifecycle-edit") == nil)
     precondition(taskPanelControl(window, "activity-phase:activity:tool:lifecycle-check") == nil)
-    precondition(taskPanelLabel(window, "completed-process:text:lifecycle-progress:0")?.contains(L("3 次调用")) == true)
+    precondition(taskPanelLabel(window, "completed-process:text:lifecycle-progress:0")?.contains(L("3 次调用")) == true,
+                 "fold header label: \(String(describing: taskPanelLabel(window, "completed-process:text:lifecycle-progress:0"))); ids: \(taskPanelIdentifiers(window).filter { $0.contains("completed-process") || $0.contains("activity-phase") }.joined(separator: ", "))")
     try snapshot("lifecycle-retained")
     // A fresh reader sees the prompt, the fold and the answer. Session A's
     // explicit choice cannot leak to B.
