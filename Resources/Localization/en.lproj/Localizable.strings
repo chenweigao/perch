@@ -2029,7 +2029,6 @@
 "%lld 分钟没有新输出" = "No output for %lld min";
 "Command" = "Command";
 "… 其余 %lld 行已折叠" = "… %lld more lines folded";
-"⋯ 代码草稿 · %lld 行" = "⋯ Code draft · %lld lines";
 "读了 %lld 个文件" = "%lld files read";
 "搜索 %lld 次" = "%lld searches";
 "查找 %lld 次" = "%lld file lookups";
