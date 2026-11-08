@@ -225,11 +225,15 @@ extension NavigationRunner {
                             view.layoutSubtreeIfNeeded()
                         }
                         if isNative && !assistant {
+                            // The bubble carries the DSH blue tint (deepseek-50 light,
+                            // neutral-bluish-850 dark), not a neutral wash: blue leads red.
+                            let expectedRed: CGFloat = dark ? 44 / 255 : 237 / 255
                             guard let background = native.subviews.first(where: { $0.identifier?.rawValue == "native-user-bubble-background" }),
                                   let cgColor = background.layer?.backgroundColor,
                                   let color = NSColor(cgColor: cgColor)?.usingColorSpace(.deviceRGB),
                                   color.alphaComponent >= 0.03,
-                                  abs(color.redComponent - (dark ? 1 : 0)) <= 0.05,
+                                  abs(color.redComponent - expectedRed) <= 0.05,
+                                  color.blueComponent > color.redComponent,
                                   background.frame.width > 0, background.frame.height > 0 else {
                                 throw NavigationError("Native user bubble background is not visibly rendered")
                             }

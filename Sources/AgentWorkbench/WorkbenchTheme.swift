@@ -94,18 +94,15 @@ enum WorkbenchTheme {
 
     /// Code/mermaid/tool card surface (DSH `--dsw-alias-markdown-code-block`:
     /// neutral-bluish-50 / neutral-bluish-900).
-    static let replySurfaceNS = nsColor(light: NSColor(calibratedRed: 249/255, green: 250/255, blue: 251/255, alpha: 1),
-                                        dark: NSColor(calibratedRed: 27/255, green: 27/255, blue: 28/255, alpha: 1))
+    static let replySurfaceNS = nsColor(light: (249/255, 250/255, 251/255), dark: (27/255, 27/255, 28/255))
 
     /// Code card banner strip (DSH `--dsw-alias-markdown-code-block-banner`):
     /// identical to the surface in light, a lighter strip in dark.
-    static let replyBannerNS = nsColor(light: NSColor(calibratedRed: 249/255, green: 250/255, blue: 251/255, alpha: 1),
-                                       dark: NSColor(calibratedRed: 44/255, green: 44/255, blue: 46/255, alpha: 1))
+    static let replyBannerNS = nsColor(light: (249/255, 250/255, 251/255), dark: (44/255, 44/255, 46/255))
 
     /// User message bubble (DSH `--dsw-specific-bubble`: deepseek-50 light,
     /// neutral-bluish-850 dark) — a blue tint, not a neutral wash.
-    static let userBubbleNS = nsColor(light: NSColor(calibratedRed: 237/255, green: 243/255, blue: 254/255, alpha: 1),
-                                      dark: NSColor(calibratedRed: 44/255, green: 44/255, blue: 46/255, alpha: 1))
+    static let userBubbleNS = nsColor(light: (237/255, 243/255, 254/255), dark: (44/255, 44/255, 46/255))
 
     /// A primary-ink wash with independent light/dark alphas. labelColor resolves
     /// inside the requested appearance; applying alpha outside it can freeze the
