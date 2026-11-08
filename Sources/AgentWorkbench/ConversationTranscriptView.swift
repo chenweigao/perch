@@ -2365,11 +2365,15 @@ struct ProcessFoldRow: View {
         rows.reduce(0) { $0 + $1.entry.messages.flatMap(\.content).filter { $0.type == "tool_use" }.count }
     }
     /// First line of the folded thinking, DSH's completed-reasoning summary.
+    /// A provider-declared public summary wins; raw reasoning is only the
+    /// fallback, matching the collapsed thought header.
     private var thinkingSummary: String? {
-        for row in rows {
-            for part in row.entry.messages.flatMap(\.content) {
-                if let thinking = part.thinking, let line = ThoughtTextStyle.firstSummaryLine(thinking) { return line }
-            }
+        let parts = rows.flatMap { $0.entry.messages }.flatMap(\.content).filter { $0.thinking != nil }
+        for part in parts {
+            if let summary = ConversationThinkingSummary.publicSummary(of: part) { return summary }
+        }
+        for part in parts {
+            if let thinking = part.thinking, let line = ThoughtTextStyle.firstSummaryLine(thinking) { return line }
         }
         return nil
     }

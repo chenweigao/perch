@@ -14,6 +14,12 @@ public enum ConversationThinkingSummary {
         return clean([narrative.headline, narrative.detail].compactMap { $0 })
     }
 
+    /// The provider-declared summary of a thinking part, if any.
+    public static func publicSummary(of part: KimiPart) -> String? {
+        guard part.type == "thinking", part.source?["kind"].string == "activity_summary" else { return nil }
+        return clean(part.source?["summaryParts"].array.compactMap(\.string) ?? [])
+    }
+
     private static func clean(_ parts: [String]) -> String? {
         let text = parts.joined(separator: " ").split(whereSeparator: \.isWhitespace).joined(separator: " ")
         return text.isEmpty ? nil : text

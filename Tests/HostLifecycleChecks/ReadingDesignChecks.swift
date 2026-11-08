@@ -309,8 +309,8 @@ struct ReadingDesignFixture: View {
     try await Task.sleep(for: .milliseconds(300))
     precondition(taskPanelControl(window, "tool-call:phase-shell-0") == nil,
                  "Historical failures do not consume individual rows")
-    precondition(taskPanelLabel(window, "activity-phase:thinking:phase-thought:0")?.contains(L("\(1) 次失败")) == true,
-                 "The collapsed stage explicitly discloses historical failures")
+    precondition(taskPanelLabel(window, "activity-phase:thinking:phase-thought:0")?.contains("Permission denied") == true,
+                 "The collapsed stage header names the failure's first line")
     precondition(taskPanelControl(window, "tool-call:phase-shell-1") == nil,
                  "Successful calls stay inside the collapsed stage")
     try snapshot("phases-failure")
@@ -448,6 +448,9 @@ private struct ReadingReviewControls: View {
     try snapshot("lifecycle-running")
     host.rootView = ReadingDesignFixture(messages: live, running: false, session: "lifecycle-A", folds: true)
     try await settle()
+    // The unfinished turn folds like any other; open the fold, then the step.
+    click("completed-process:text:lifecycle-progress:0")
+    try await settle()
     click("activity-phase:activity:tool:lifecycle-read")
     try await settle()
     precondition(taskPanelControl(window, "tool-call:lifecycle-read") != nil)
@@ -459,29 +462,32 @@ private struct ReadingReviewControls: View {
     try await settle()
     precondition(taskPanelControl(window, "tool-call:lifecycle-read") != nil, "Completion cannot close a process the reader opened")
     precondition(taskPanelControl(window, "live-thinking-summary") == nil)
-    precondition(taskPanelControl(window, "edit-step:lifecycle-edit") != nil)
-    precondition(taskPanelControl(window, "tool-call:lifecycle-check") == nil)
-    precondition(taskPanelLabel(window, "activity-phase:activity:tool:lifecycle-check")?.contains(L("\(1) 次失败")) == true)
+    // Uniform fold: the edit receipt and the failed call sit inside the fold,
+    // whose header carries the call count and the thinking's first line.
+    precondition(taskPanelControl(window, "edit-step:lifecycle-edit") == nil)
+    precondition(taskPanelControl(window, "activity-phase:activity:tool:lifecycle-check") == nil)
+    precondition(taskPanelLabel(window, "completed-process:text:lifecycle-progress:0")?.contains(L("3 次调用")) == true)
     try snapshot("lifecycle-retained")
-    // A fresh reader sees only the result, edit receipt, failure summary and
-    // compact process entry. Session A's explicit choice cannot leak to B.
+    // A fresh reader sees the prompt, the fold and the answer. Session A's
+    // explicit choice cannot leak to B.
     host.rootView = ReadingDesignFixture(messages: done, session: "lifecycle-B", folds: true)
     for (name, width, appearance) in [("lifecycle-completed", 1000.0, NSAppearance.Name.aqua), ("lifecycle-narrow", 540.0, .aqua), ("lifecycle-dark", 1000.0, .darkAqua)] {
         window.setContentSize(NSSize(width: width, height: 760)); window.appearance = NSAppearance(named: appearance)
         try await settle()
         precondition(taskPanelControl(window, "tool-call:lifecycle-read") == nil)
-        precondition(taskPanelControl(window, "edit-step:lifecycle-edit") != nil && taskPanelControl(window, "tool-call:lifecycle-check") == nil)
-        precondition(taskPanelLabel(window, "activity-phase:activity:tool:lifecycle-check")?.contains(L("\(1) 次失败")) == true)
+        precondition(taskPanelControl(window, "edit-step:lifecycle-edit") == nil && taskPanelControl(window, "activity-phase:activity:tool:lifecycle-check") == nil)
         precondition(!readingTextViews(host).contains { $0.string.contains("我先检查窗口状态") })
         precondition(readingTextViews(host).contains { $0.string.contains("已修复首次打开文件") })
         try snapshot(name)
     }
     window.appearance = NSAppearance(named: .aqua)
-    click("activity-phase:activity:tool:lifecycle-check")
+    // The failed call remains reachable inside the expanded fold.
+    click("completed-process:text:lifecycle-progress:0")
     try await settle()
-    precondition(taskPanelControl(window, "tool-call:lifecycle-check") != nil, "The failed call remains reachable from its explicit summary")
-    click("activity-phase:activity:tool:lifecycle-check")
+    precondition(taskPanelControl(window, "tool-call:lifecycle-check") != nil, "The failed call remains reachable inside the fold")
+    click("completed-process:text:lifecycle-progress:0")
     try await settle()
+    precondition(!readingTextViews(host).contains { $0.string.contains("我先检查窗口状态") }, "Re-collapsing the fold hides the process again")
     click("completed-process:text:lifecycle-progress:0")
     try await settle()
     precondition(readingTextViews(host).contains { $0.string.contains("我先检查窗口状态") }, "Completed process remains reachable")
@@ -525,7 +531,8 @@ private struct ReadingReviewControls: View {
     }
     let stage = "activity:tool:page-tool-0"
     try await settle()
-    precondition(taskPanelLabel(window, "activity-phase:" + stage)?.contains(L("\(26) 次调用")) == true)
+    precondition(taskPanelLabel(window, "activity-phase:" + stage)?.contains("git show") == true,
+                 "The stage header names the latest targets")
     precondition(taskPanelControl(window, "activity-phase:activity:tool:page-tool-24") == nil)
     click("activity-phase:" + stage)
     try await settle()

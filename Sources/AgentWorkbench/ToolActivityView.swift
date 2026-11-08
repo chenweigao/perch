@@ -75,64 +75,50 @@ struct KimiActivityView: View {
         let _ = NavigationRenderMetrics.count("activity_row_tool_scan", by: items.count)
         #endif
         let edit = items.count == 1 && ToolPresentation.isEdit(items[0].name) ? items[0] : nil
-        let thinking = entry.messages.last?.content.last?.type == "thinking"
-        let hasRunningTool = items.contains { $0.status == .running }
-        let failures = items.filter { $0.status == .failed }.count
-        // Body status describes actual activity. Generic turn liveness belongs
-        // to the composer stop control, not to the last completed stage.
-        let showsLiveStatus = isLive && (thinking || hasRunningTool)
         let title = entry.processPhase.map { ToolPresentation.phaseTitle($0, tools: items) }
             ?? items.first.map { ToolPresentation.action($0.name) } ?? L("运行上下文")
+        /// The header's trailing summary slot (DSH ToolRow form: title · summary,
+        /// packed leading, one line). Priority: the live public summary (follows
+        /// the active phase), the running tool's latest output line, the first
+        /// failure's line in error ink, then the settled recent-targets list.
+        var rowSummary: (text: String, isError: Bool, isLiveSummary: Bool)? {
+            if isLive, let liveThinkingSummary { return (liveThinkingSummary, false, true) }
+            if isLive, let running = items.last(where: { $0.status == .running }) {
+                return (ToolPresentation.runningOutputTail(running, maxLines: 1).last
+                        ?? ToolPresentation.compactTarget(running), false, false)
+            }
+            if let failed = items.first(where: { $0.status == .failed }) {
+                let firstLine = failed.output?.display.split(whereSeparator: \.isNewline)
+                    .map { $0.trimmingCharacters(in: .whitespaces) }.first { !$0.isEmpty }
+                let target = ToolPresentation.compactTarget(failed)
+                return (firstLine.map { "\(target): \($0)" } ?? L("\(target) 失败"), true, false)
+            }
+            let targets = ToolPresentation.recentTargets(items)
+            return targets.isEmpty ? nil : (targets, false, false)
+        }
         VStack(alignment: .leading, spacing: 0) {
             if let edit {
                 EditStepRow(tool: edit, messageID: entry.messages[0].id, expanded: expansion)
             } else {
                 HStack(spacing: 8) {
                     DisclosureGroup(isExpanded: expansion) { EmptyView() } label: {
-                        HStack(spacing: 8) {
+                        HStack(spacing: 6) {
+                            if isLive { PerchBusyIndicator(size: 11) }
                             Text(verbatim: title)
-                                .lineLimit(1).truncationMode(.middle)
+                                .lineLimit(1).truncationMode(.middle).fixedSize()
                                 .help(Text(verbatim: title))
-                            if entry.processPhase == nil {
-                                Text(ToolPresentation.recentTargets(items)).lineLimit(1).truncationMode(.middle)
-                            }
-                            Spacer(minLength: 0)
-                            if entry.processPhase != nil {
-                                Text(verbatim: L("\(items.count) 次调用"))
-                                    .font(.system(size: ReplyStyle.captionSize)).fixedSize()
-                            }
-                            if failures > 0 {
-                                Text(verbatim: L("\(failures) 次失败"))
-                                    .font(.system(size: ReplyStyle.captionSize)).fixedSize()
-                                    .help(Text("展开查看失败记录"))
-                                    .accessibilityIdentifier("activity-failures:" + entry.id)
+                            if let rowSummary {
+                                Text(verbatim: "·").fixedSize()
+                                Text(verbatim: rowSummary.text)
+                                    .lineLimit(1).truncationMode(.tail)
+                                    .foregroundStyle(rowSummary.isError ? Color.red : WorkbenchTheme.quiet)
+                                    .layoutPriority(-1)
+                                    .accessibilityIdentifier(rowSummary.isLiveSummary ? "live-thinking-summary" : "activity-summary:" + entry.id)
                             }
                         }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(WorkbenchTheme.quiet)
                     }.disclosureGroupStyle(ProcessDisclosureStyle())
                         .accessibilityIdentifier("activity-phase:" + entry.id)
                     if let planProgress { trailingMetadata(planProgress: planProgress) }
-                }
-            }
-            if isLive, !expanded, let liveThinkingSummary {
-                LiveThinkingSummary(text: liveThinkingSummary)
-                    .padding(.leading, ReplyStyle.Process.nestedIndent)
-            }
-            if showsLiveStatus {
-                HStack(spacing: 6) {
-                    PerchBusyIndicator(size: 13)
-                    Text(verbatim: thinking ? L("思考中")
-                         : items.last(where: { $0.status == .running }).map { ToolPresentation.compactTarget($0) } ?? "")
-                        .font(.system(size: ReplyStyle.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
-                        .lineLimit(1).truncationMode(.tail)
-                }.padding(.leading, ReplyStyle.Process.nestedIndent).padding(.top, 4)
-                    .accessibilityIdentifier("activity-live-status:" + entry.id)
-            }
-            if isLive && !expanded, let running = items.last(where: { $0.status == .running }) {
-                let tail = ToolPresentation.runningOutputTail(running)
-                ForEach(Array(tail.enumerated()), id: \.offset) { _, line in
-                    Text(verbatim: line).font(.system(size: ReplyStyle.captionSize, design: .monospaced))
-                        .foregroundStyle(WorkbenchTheme.quiet).lineLimit(1).truncationMode(.tail)
-                        .padding(.leading, ReplyStyle.Process.nestedIndent)
                 }
             }
             if let narrative {
