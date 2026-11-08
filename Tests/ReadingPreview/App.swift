@@ -200,6 +200,14 @@ private struct ReadingPreview: View {
 private final class PreviewDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         checkNativeTextLayout()
+        if CommandLine.arguments.contains("--chip-probe") {
+            NSApp.setActivationPolicy(.accessory)
+            Task { @MainActor in
+                await chipProbe()
+                NSApp.terminate(nil)
+            }
+            return
+        }
         if let captureIndex = CommandLine.arguments.firstIndex(of: "--capture") {
             NSApp.setActivationPolicy(.accessory)
             let directory = CommandLine.arguments[CommandLine.arguments.index(after: captureIndex)]
@@ -223,6 +231,40 @@ private final class PreviewDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         !CommandLine.arguments.contains("--check-user-bubbles")
     }
+}
+
+/// Real onscreen window probe for chip rendering: the offscreen --capture path
+/// (layer render) proved the fill paints, but the shipping app showed
+/// border-only chips. This reproduces the real window compositing path.
+@MainActor private func chipProbe() async {
+    let text = "验证 chip 在真机窗口的填充：`inline_code` 应该贴字形带底色。"
+    let host = NSHostingController(rootView: AnyView(
+        KimiMarkdown(text: text).padding(24).background(Color(nsColor: .textBackgroundColor))))
+    host.sizingOptions = []
+    host.safeAreaRegions = []
+    let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 700, height: 200), styleMask: [.titled], backing: .buffered, defer: false)
+    window.isReleasedWhenClosed = false
+    window.appearance = NSAppearance(named: .aqua)
+    window.contentViewController = host
+    window.orderFront(nil)
+    host.view.layoutSubtreeIfNeeded()
+    try? await Task.sleep(for: .milliseconds(600))
+    host.view.displayIfNeeded()
+    CATransaction.flush()
+    let view = host.view
+    let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds)!
+    view.cacheDisplay(in: view.bounds, to: bitmap)
+    let png = bitmap.representation(using: .png, properties: [:])!
+    try! png.write(to: URL(fileURLWithPath: "/tmp/perch-chip-probe.png"))
+    // Report the fill pixel under the chip's center.
+    let scale = CGFloat(bitmap.pixelsWide) / view.bounds.width
+    let midY = Int(view.bounds.height / 2 * scale)
+    var samples: [String] = []
+    for x in stride(from: 300, to: min(500, bitmap.pixelsWide), by: 20) {
+        let c = bitmap.colorAt(x: x, y: midY)!.usingColorSpace(.deviceRGB)!
+        samples.append(String(format: "%d:%02x%02x%02x", x, Int(c.redComponent * 255), Int(c.greenComponent * 255), Int(c.blueComponent * 255)))
+    }
+    print("CHIP-PROBE midline:", samples.joined(separator: " "))
 }
 
 /// Regression checks for the sizing boundary used by Grid and scrolling text.
