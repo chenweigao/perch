@@ -238,27 +238,24 @@ private final class PreviewDelegate: NSObject, NSApplicationDelegate {
 /// border-only chips. This reproduces the real window compositing path.
 @MainActor private func chipProbe() async {
     let text = "验证 chip 在真机窗口的填充：`inline_code` 应该贴字形带底色。"
-    let host = NSHostingController(rootView: AnyView(
-        KimiMarkdown(text: text).padding(24).background(Color(nsColor: .textBackgroundColor))))
-    host.sizingOptions = []
-    host.safeAreaRegions = []
+    let host = NSHostingView(rootView: KimiMarkdown(text: text).padding(24).background(Color(nsColor: .textBackgroundColor)))
     let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 700, height: 200), styleMask: [.titled], backing: .buffered, defer: false)
     window.isReleasedWhenClosed = false
     window.appearance = NSAppearance(named: .aqua)
-    window.contentViewController = host
+    window.contentView = host
     window.orderFront(nil)
-    host.view.layoutSubtreeIfNeeded()
+    window.setContentSize(NSSize(width: 700, height: 200))
+    host.layoutSubtreeIfNeeded()
     try? await Task.sleep(for: .milliseconds(600))
-    host.view.displayIfNeeded()
+    host.display()
     CATransaction.flush()
-    let view = host.view
-    let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds)!
-    view.cacheDisplay(in: view.bounds, to: bitmap)
+    let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds)!
+    host.cacheDisplay(in: host.bounds, to: bitmap)
     let png = bitmap.representation(using: .png, properties: [:])!
     try! png.write(to: URL(fileURLWithPath: "/tmp/perch-chip-probe.png"))
     // Report the fill pixel under the chip's center.
-    let scale = CGFloat(bitmap.pixelsWide) / view.bounds.width
-    let midY = Int(view.bounds.height / 2 * scale)
+    let scale = CGFloat(bitmap.pixelsWide) / host.bounds.width
+    let midY = Int(host.bounds.height / 2 * scale)
     var samples: [String] = []
     for x in stride(from: 300, to: min(500, bitmap.pixelsWide), by: 20) {
         let c = bitmap.colorAt(x: x, y: midY)!.usingColorSpace(.deviceRGB)!
