@@ -268,7 +268,11 @@ private final class PreviewDelegate: NSObject, NSApplicationDelegate {
     let running: [KimiMessage] = [
         message("run-user", role: "user", content: [["type": "text", "text": "读一下排版改造，再说说结论。"]]),
         message("run-thought", content: [["type": "thinking", "thinking": thought]]),
-        message("run-answer", content: [["type": "text", "text": "正在检查实现：已确认标题阶梯、列表缩进与代码卡片，\n\n```swift\nlet partial = streaming.tail"]]),
+    ]
+    let runningAnswer: [KimiMessage] = [
+        message("runa-user", role: "user", content: [["type": "text", "text": "读一下排版改造，再说说结论。"]]),
+        message("runa-thought", content: [["type": "thinking", "thinking": thought]]),
+        message("runa-answer", content: [["type": "text", "text": "正在检查实现：已确认标题阶梯、列表缩进与代码卡片，\n\n```swift\nlet partial = streaming.tail"]]),
     ]
     let runningTool: [KimiMessage] = [
         message("runt-user", role: "user", content: [["type": "text", "text": "继续，把渲染入口的代码读完。"]]),
@@ -288,6 +292,7 @@ private final class PreviewDelegate: NSObject, NSApplicationDelegate {
         Scene(name: "completed-dark", width: 900, dark: true, running: false, messages: completed),
         Scene(name: "running-light", width: 900, dark: false, running: true, messages: running),
         Scene(name: "running-dark", width: 900, dark: true, running: true, messages: running),
+        Scene(name: "running-answer-light", width: 900, dark: false, running: true, messages: runningAnswer),
         Scene(name: "running-tool-light", width: 900, dark: false, running: true, messages: runningTool),
     ]
     for scene in scenes {
@@ -496,8 +501,9 @@ private enum UserBubbleFixture {
             let process = rows.first { $0.identifier?.rawValue == entries[1].id }!
             // User row (message) to the following process record: entry spacing
             // plus the record row's own 2 pt top inset, read from live tokens.
+            let measuredGap = rect(process, in: root).minY - rect(user, in: root).maxY
             let expectedGap = ReplyStyle.entrySpacing + 2
-            require(abs(rect(process, in: root).minY - rect(user, in: root).maxY - expectedGap) <= 1, "Process records must be \(Int(expectedGap)) pt below the user bubble")
+            require(abs(measuredGap - expectedGap) <= 1, "Process records must be \(Int(expectedGap)) pt below the user bubble (measured \(measuredGap))")
             let answer = rows.compactMap { $0 as? ReplyTextView }.first { $0.string == "我会继续调研更轻量的方案。" }!
             require(abs(rect(answer, in: root).minX) <= 1, "Assistant replies must keep their existing left alignment")
             _ = snapshot(root, name: "bubble-transcript-\(Int(width))-\(scheme)")
