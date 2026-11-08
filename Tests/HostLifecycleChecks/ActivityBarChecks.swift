@@ -415,7 +415,7 @@ private struct ActivityBarCheckFixture: View {
                 to: URL(fileURLWithPath: "/private/tmp/perch-live-tail-\(suffix).png"))
         }
     }
-    precondition(busyIndicators(liveTailHost).contains { $0.bounds.size == CGSize(width: 13, height: 13) },
-                 "An actually executing tool keeps its factual inline activity indicator")
+    precondition(busyIndicators(liveTailHost).contains { $0.bounds.size == CGSize(width: 11, height: 11) },
+                 "An actually executing tool keeps its factual inline activity indicator in the row header")
     print("PASS: activity bar state transitions, pending/reconnect actions, composer turn feedback, factual tool activity and Recap target")
 }
