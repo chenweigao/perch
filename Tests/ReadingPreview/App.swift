@@ -342,7 +342,7 @@ private enum UserBubbleFixture {
                     let text = textViews[0], frame = rect(textViews[0], in: root)
                     let ideal = text.measure(width: nil)
                     require(abs(frame.width - ideal.width) <= 1, "Short messages must use their natural width")
-                    require(abs(frame.maxX - (width - 14)) <= 1, "Bubble must be right aligned")
+                    require(abs(frame.maxX - (width - UserMessageStyle.horizontalPadding)) <= 1, "Bubble must be right aligned")
                     require(abs(frame.minY - 20) <= 1 && abs(root.bounds.height - frame.maxY - 10) <= 1, "Bubble must have 10 pt vertical padding without extra bottom margin")
                     text.setSelectedRange(NSRange(location: 0, length: (text.string as NSString).length))
                     require((text.string as NSString).substring(with: text.selectedRange()) == UserBubbleFixture.shortText, "Native selection must preserve the complete message")
