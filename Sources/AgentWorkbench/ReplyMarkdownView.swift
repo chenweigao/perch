@@ -1327,7 +1327,7 @@ final class ReplyTextView: NSTextView {
                 let horizontal = manager.boundingRect(forGlyphRange: segment, in: container)
                 let charIndex = manager.characterIndexForGlyph(at: segment.location)
                 guard let runFont = storage.attribute(.font, at: charIndex, effectiveRange: nil) as? NSFont else { return }
-                let glyphOrigin = manager.location(ofGlyphAt: segment.location)
+                let glyphOrigin = manager.location(forGlyphAt: segment.location)
                 var rect = CGRect(x: horizontal.minX, y: glyphOrigin.y - runFont.ascender,
                                   width: horizontal.width, height: runFont.ascender - runFont.descender)
                 rect.origin.x += self.textContainerInset.width
