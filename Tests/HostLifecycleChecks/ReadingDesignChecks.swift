@@ -443,8 +443,8 @@ private struct ReadingReviewControls: View {
                  "A manually opened source remains visible when the preview moves into the tool stage")
     click("thought-disclosure:lifecycle-A:thinking:lifecycle-summary:0")
     try await settle()
-    guard let summaryFrame = taskPanelControl(window, "live-thinking-summary") else { fatalError("Public summary must follow the active phase") }
-    precondition(summaryFrame.height <= 46, "The live summary is bounded to two lines")
+    guard let stageLabel = taskPanelLabel(window, "activity-phase:activity:tool:lifecycle-read") else { fatalError("Missing the active stage header") }
+    precondition(stageLabel.contains("正在核对当前路径"), "The public summary rides the active phase header: \(stageLabel)")
     try snapshot("lifecycle-running")
     host.rootView = ReadingDesignFixture(messages: live, running: false, session: "lifecycle-A", folds: true)
     try await settle()

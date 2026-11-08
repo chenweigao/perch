@@ -81,20 +81,20 @@ struct KimiActivityView: View {
         /// packed leading, one line). Priority: the live public summary (follows
         /// the active phase), the running tool's latest output line, the first
         /// failure's line in error ink, then the settled recent-targets list.
-        var rowSummary: (text: String, isError: Bool, isLiveSummary: Bool)? {
-            if isLive, let liveThinkingSummary { return (liveThinkingSummary, false, true) }
+        var rowSummary: (text: String, isError: Bool)? {
+            if isLive, let liveThinkingSummary { return (liveThinkingSummary, false) }
             if isLive, let running = items.last(where: { $0.status == .running }) {
                 return (ToolPresentation.runningOutputTail(running, maxLines: 1).last
-                        ?? ToolPresentation.compactTarget(running), false, false)
+                        ?? ToolPresentation.compactTarget(running), false)
             }
             if let failed = items.first(where: { $0.status == .failed }) {
                 let firstLine = failed.output?.display.split(whereSeparator: \.isNewline)
                     .map { $0.trimmingCharacters(in: .whitespaces) }.first { !$0.isEmpty }
                 let target = ToolPresentation.compactTarget(failed)
-                return (firstLine.map { "\(target): \($0)" } ?? L("\(target) 失败"), true, false)
+                return (firstLine.map { "\(target): \($0)" } ?? L("\(target) 失败"), true)
             }
             let targets = ToolPresentation.recentTargets(items)
-            return targets.isEmpty ? nil : (targets, false, false)
+            return targets.isEmpty ? nil : (targets, false)
         }
         VStack(alignment: .leading, spacing: 0) {
             if let edit {
@@ -113,7 +113,6 @@ struct KimiActivityView: View {
                                     .lineLimit(1).truncationMode(.tail)
                                     .foregroundStyle(rowSummary.isError ? Color.red : WorkbenchTheme.quiet)
                                     .layoutPriority(-1)
-                                    .accessibilityIdentifier(rowSummary.isLiveSummary ? "live-thinking-summary" : "activity-summary:" + entry.id)
                             }
                         }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(WorkbenchTheme.quiet)
                     }.disclosureGroupStyle(ProcessDisclosureStyle())
