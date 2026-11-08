@@ -488,7 +488,7 @@ private enum UserBubbleFixture {
                 print("PASS: \(message.id), \(Int(width)) pt, \(scheme), height \(root.bounds.height)")
                 rendered.window.close()
             }
-            let rendered = await render(ConversationTranscript(messages: UserBubbleFixture.firstTurn, sessionId: "bubble-spacing-\(width)-\(scheme)"), width: width, scheme: scheme)
+            let rendered = await render(ConversationTranscript(messages: UserBubbleFixture.firstTurn, sessionId: "bubble-spacing-\(width)-\(scheme)", foldsProcess: false), width: width, scheme: scheme)
             let root = rendered.host.view
             let entries = ConversationTimelineEntry.make(UserBubbleFixture.firstTurn)
             let rows = descendants(root)
