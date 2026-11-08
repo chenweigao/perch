@@ -200,6 +200,15 @@ private struct ReadingPreview: View {
 private final class PreviewDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         checkNativeTextLayout()
+        if let captureIndex = CommandLine.arguments.firstIndex(of: "--capture") {
+            NSApp.setActivationPolicy(.accessory)
+            let directory = CommandLine.arguments[CommandLine.arguments.index(after: captureIndex)]
+            Task { @MainActor in
+                await runCapture(directory: directory)
+                NSApp.terminate(nil)
+            }
+            return
+        }
         if CommandLine.arguments.contains("--check-user-bubbles") {
             NSApp.setActivationPolicy(.accessory)
             Task { @MainActor in
@@ -236,6 +245,86 @@ private final class PreviewDelegate: NSObject, NSApplicationDelegate {
     view.update(NSAttributedString(string: text + "\n追加的一行", attributes: attributes))
     precondition(view.measure(width: 220).height > narrow.height, "Streaming text must invalidate cached height")
 }
+
+/// Offscreen capture matrix for visual review: renders real transcripts at
+/// fixed widths in both appearances and writes 2x PNGs. No hosts, no network.
+@MainActor private func runCapture(directory: String) async {
+    setbuf(stdout, nil)
+    let dir = URL(fileURLWithPath: directory)
+    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    let source = try! String(contentsOf: Bundle.main.url(forResource: "reply-reading", withExtension: "md")!, encoding: .utf8)
+    func message(_ id: String, role: String = "assistant", content: [[String: Any]]) -> KimiMessage {
+        try! KimiWire.decoder().decode(KimiMessage.self, from: JSONSerialization.data(withJSONObject: [
+            "id": id, "role": role, "created_at": id, "content": content]))
+    }
+    let thought = (1...8).map { "第 \($0) 行思考：检查排版 token 与渲染路径，确认增量解析只处理尾部块。" }.joined(separator: "\n")
+    let completed: [KimiMessage] = [
+        message("cap-user", role: "user", content: [["type": "text", "text": "把正文排版调成 DSH 那样的阅读节奏，中文长文要好读，代码和表格别挤。"]]),
+        message("cap-thought", content: [["type": "thinking", "thinking": thought]]),
+        message("cap-tool", content: [["type": "tool_use", "tool_call_id": "cap-read", "tool_name": "read", "input": ["path": "Sources/AgentWorkbench/ReplyMarkdownView.swift"]]]),
+        message("cap-result", role: "tool", content: [["type": "tool_result", "tool_call_id": "cap-read", "is_error": false, "output": "ok"]]),
+        message("cap-answer", content: [["type": "text", "text": source]]),
+    ]
+    let running: [KimiMessage] = [
+        message("run-user", role: "user", content: [["type": "text", "text": "读一下排版改造，再说说结论。"]]),
+        message("run-thought", content: [["type": "thinking", "thinking": thought]]),
+        message("run-tool", content: [["type": "tool_use", "tool_call_id": "run-read", "tool_name": "read", "input": ["path": "Sources/AgentWorkbench/ReplyMarkdownView.swift"]]]),
+        message("run-answer", content: [["type": "text", "text": "正在检查实现：已确认标题阶梯、列表缩进与代码卡片，\n\n```swift\nlet partial = streaming.tail"]]),
+    ]
+    struct Scene {
+        let name: String
+        let width: CGFloat
+        let dark: Bool
+        let running: Bool
+        let messages: [KimiMessage]
+    }
+    let scenes = [
+        Scene(name: "completed-wide-light", width: 900, dark: false, running: false, messages: completed),
+        Scene(name: "completed-narrow-light", width: 560, dark: false, running: false, messages: completed),
+        Scene(name: "completed-dark", width: 900, dark: true, running: false, messages: completed),
+        Scene(name: "running-light", width: 900, dark: false, running: true, messages: running),
+        Scene(name: "running-dark", width: 900, dark: true, running: true, messages: running),
+    ]
+    for scene in scenes {
+        let root = VStack(spacing: 0) {
+            ConversationTranscript(messages: scene.messages, sessionId: "capture-" + scene.name, isRunning: scene.running)
+        }
+        let host = NSHostingController(rootView: AnyView(root.fixedSize(horizontal: false, vertical: true)
+            .background(Color(nsColor: .textBackgroundColor))))
+        host.sizingOptions = []
+        host.safeAreaRegions = []
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: scene.width, height: 1200), styleMask: [], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.appearance = NSAppearance(named: scene.dark ? .darkAqua : .aqua)
+        window.contentViewController = host
+        window.orderFront(nil)
+        for _ in 0..<6 {
+            try? await Task.sleep(for: .milliseconds(80))
+            let size = host.sizeThatFits(in: CGSize(width: scene.width, height: 1_000_000))
+            window.setContentSize(NSSize(width: scene.width, height: min(ceil(size.height), 4200)))
+            host.view.layoutSubtreeIfNeeded()
+        }
+        let view = host.view
+        for text in captureDescendants(view).compactMap({ $0 as? ReplyTextView }) {
+            text.layoutManager?.ensureLayout(for: text.textContainer!)
+            text.needsDisplay = true
+        }
+        window.displayIfNeeded()
+        let scale: CGFloat = 2
+        let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(view.bounds.width * scale), pixelsHigh: Int(view.bounds.height * scale),
+            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+        let context = NSGraphicsContext(bitmapImageRep: bitmap)!.cgContext
+        context.translateBy(x: 0, y: CGFloat(bitmap.pixelsHigh))
+        context.scaleBy(x: scale, y: -scale)
+        view.effectiveAppearance.performAsCurrentDrawingAppearance { view.layer!.render(in: context) }
+        let file = dir.appendingPathComponent(scene.name + ".png")
+        try! bitmap.representation(using: .png, properties: [:])!.write(to: file)
+        print("CAPTURE: \(scene.name) \(Int(view.bounds.width))x\(Int(view.bounds.height))")
+        window.close()
+    }
+    print("PASS: capture matrix written to \(directory)")
+}
+@MainActor private func captureDescendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(captureDescendants) }
 
 private enum UserBubbleFixture {
     static let shortText = "Superpowers 太重了，再调研一下"
@@ -343,7 +432,9 @@ private enum UserBubbleFixture {
                     let ideal = text.measure(width: nil)
                     require(abs(frame.width - ideal.width) <= 1, "Short messages must use their natural width")
                     require(abs(frame.maxX - (width - UserMessageStyle.horizontalPadding)) <= 1, "Bubble must be right aligned")
-                    require(abs(frame.minY - 20) <= 1 && abs(root.bounds.height - frame.maxY - 10) <= 1, "Bubble must have 10 pt vertical padding without extra bottom margin")
+                    require(abs(frame.minY - (UserMessageStyle.topSpacing + UserMessageStyle.topPadding)) <= 1
+                        && abs(root.bounds.height - frame.maxY - UserMessageStyle.bottomPadding) <= 1,
+                        "Bubble must keep its token vertical padding without extra bottom margin: minY \(frame.minY), bottom \(root.bounds.height - frame.maxY)")
                     text.setSelectedRange(NSRange(location: 0, length: (text.string as NSString).length))
                     require((text.string as NSString).substring(with: text.selectedRange()) == UserBubbleFixture.shortText, "Native selection must preserve the complete message")
                     text.setSelectedRange(NSRange(location: 0, length: 0))
