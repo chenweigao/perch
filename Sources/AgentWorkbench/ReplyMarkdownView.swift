@@ -1739,32 +1739,24 @@ struct ReplyCode: View {
     private var lineCount: Int { CodeLineNumbers.count(in: source) }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if lineCount == 1 {
-                HStack(spacing: 0) {
-                    ReplyCodeBody(source: source, language: language)
-                    ReplyCopyButton(text: source, label: "复制代码", prominent: true)
-                        .padding(.trailing, ReplyStyle.Code.inset)
-                }
-            } else {
-                HStack {
-                    // NativeCodeCardView shows the same label once the reply settles.
-                    Text(language.isEmpty ? L("代码") : language).font(.system(size: ReplyStyle.Code.labelSize, design: .monospaced))
-                        .foregroundStyle(.primary)
-                    Spacer()
-                    ReplyCopyButton(text: source, label: "复制代码", prominent: true)
-                }.padding(.horizontal, ReplyStyle.Code.headerHorizontalPadding).padding(.vertical, ReplyStyle.Code.headerVerticalPadding)
-                    // DSH banner strip: the card's surface in light, lighter in dark.
-                    .background(Color(nsColor: WorkbenchTheme.replyBannerNS),
-                                in: UnevenRoundedRectangle(topLeadingRadius: ReplyStyle.Code.cornerRadius, topTrailingRadius: ReplyStyle.Code.cornerRadius))
-                ReplyCodeBody(source: source, language: language)
-                    .overlay(alignment: .bottomTrailing) {
-                        if hovered && lineCount > 8 {
-                            ReplyCopyButton(text: source, label: "复制代码", prominent: true)
-                                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row, style: .continuous))
-                                .padding(8)
-                        }
+            HStack {
+                // DSH shows the banner on single-line blocks too.
+                Text(language.isEmpty ? L("代码") : language).font(.system(size: ReplyStyle.Code.labelSize, design: .monospaced))
+                    .foregroundStyle(.primary)
+                Spacer()
+                ReplyCopyButton(text: source, label: "复制代码", prominent: true)
+            }.padding(.horizontal, ReplyStyle.Code.headerHorizontalPadding).padding(.vertical, ReplyStyle.Code.headerVerticalPadding)
+                // DSH banner strip: the card's surface in light, lighter in dark.
+                .background(Color(nsColor: WorkbenchTheme.replyBannerNS),
+                            in: UnevenRoundedRectangle(topLeadingRadius: ReplyStyle.Code.cornerRadius, topTrailingRadius: ReplyStyle.Code.cornerRadius))
+            ReplyCodeBody(source: source, language: language)
+                .overlay(alignment: .bottomTrailing) {
+                    if hovered && lineCount > 8 {
+                        ReplyCopyButton(text: source, label: "复制代码", prominent: true)
+                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row, style: .continuous))
+                            .padding(8)
                     }
-            }
+                }
         }.background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius))
             .onHover { hovered = $0 }
     }
