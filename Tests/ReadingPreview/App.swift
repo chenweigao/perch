@@ -268,8 +268,12 @@ private final class PreviewDelegate: NSObject, NSApplicationDelegate {
     let running: [KimiMessage] = [
         message("run-user", role: "user", content: [["type": "text", "text": "读一下排版改造，再说说结论。"]]),
         message("run-thought", content: [["type": "thinking", "thinking": thought]]),
-        message("run-tool", content: [["type": "tool_use", "tool_call_id": "run-read", "tool_name": "read", "input": ["path": "Sources/AgentWorkbench/ReplyMarkdownView.swift"]]]),
         message("run-answer", content: [["type": "text", "text": "正在检查实现：已确认标题阶梯、列表缩进与代码卡片，\n\n```swift\nlet partial = streaming.tail"]]),
+    ]
+    let runningTool: [KimiMessage] = [
+        message("runt-user", role: "user", content: [["type": "text", "text": "继续，把渲染入口的代码读完。"]]),
+        message("runt-note", content: [["type": "text", "text": "先看渲染入口文件的结构。"]]),
+        message("runt-tool", content: [["type": "tool_use", "tool_call_id": "runt-read", "tool_name": "read", "input": ["path": "Sources/AgentWorkbench/ReplyMarkdownView.swift"]]]),
     ]
     struct Scene {
         let name: String
@@ -284,6 +288,7 @@ private final class PreviewDelegate: NSObject, NSApplicationDelegate {
         Scene(name: "completed-dark", width: 900, dark: true, running: false, messages: completed),
         Scene(name: "running-light", width: 900, dark: false, running: true, messages: running),
         Scene(name: "running-dark", width: 900, dark: true, running: true, messages: running),
+        Scene(name: "running-tool-light", width: 900, dark: false, running: true, messages: runningTool),
     ]
     for scene in scenes {
         let root = VStack(spacing: 0) {
@@ -465,7 +470,7 @@ private enum UserBubbleFixture {
                 require(bubbleWidth <= width * 0.72 + 1, "Rendered bubble must not exceed 72%: \(bubbleWidth)")
                 require(abs(CGFloat(paperPixels.last! + 1) / scale - width) <= 1, "Rendered bubble must be right aligned")
                 if index == 0 {
-                    require(abs(bubbleWidth - textViews[0].measure(width: nil).width - 28) <= 1, "Short bubble must hug its text and padding")
+                    require(abs(bubbleWidth - textViews[0].measure(width: nil).width - UserMessageStyle.horizontalPadding * 2) <= 1, "Short bubble must hug its text and padding")
                 }
                 if index == 3 {
                     var left = bitmap.pixelsWide, right = 0, pixels = 0

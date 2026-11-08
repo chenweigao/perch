@@ -153,7 +153,7 @@ enum ReplyStyle {
         static var cellLineHeight: CGFloat { ReplyStyle.scale.secondary + 9 }
         /// The rule under the header reads stronger than the rules between rows.
         static let headerRuleOpacity: Double = 0.12
-        static let rowRuleOpacity: Double = 0.06
+        static let rowRuleOpacity: Double = 0.10
     }
 }
 
