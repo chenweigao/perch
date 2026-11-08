@@ -466,7 +466,10 @@ private enum UserBubbleFixture {
                     }
                 }
                 require(lightest - darkest > 0.45, "Native text must be visible in the rendered \(scheme) snapshot")
-                let scanY = Int(24 * scale)
+                // Scan at the text's own midline: near the top edge the rounded
+                // corner (radius 20) clips the first fully-paper pixels by up to
+                // a point per side and the width comparison lies.
+                let scanY = Int(rect(textViews[0], in: root).midY * scale)
                 let paper = bitmap.colorAt(x: bitmap.pixelsWide - Int(7 * scale), y: scanY)!.usingColorSpace(.deviceRGB)!
                 let background = bitmap.colorAt(x: 0, y: scanY)!.usingColorSpace(.deviceRGB)!
                 require(abs(paper.redComponent - background.redComponent) > 0.015, "Bubble background must remain visible")
