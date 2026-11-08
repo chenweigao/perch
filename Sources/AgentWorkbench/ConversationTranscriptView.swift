@@ -2602,6 +2602,7 @@ private enum ThoughtTextStyle {
             if result.length > 0 {
                 var newlineAttributes = result.attributes(at: result.length - 1, effectiveRange: nil)
                 newlineAttributes.removeValue(forKey: .backgroundColor)
+                newlineAttributes.removeValue(forKey: .replyChip)
                 result.append(NSAttributedString(string: "\n", attributes: newlineAttributes))
             }
             let start = result.length
@@ -2651,7 +2652,7 @@ private enum ThoughtTextStyle {
                     let codeText = String(line[contentStart..<close])
                     result.append(NSAttributedString(string: codeText, attributes: [
                         .font: codeFont, .foregroundColor: emphasisInk,
-                        .backgroundColor: codeTint, .paragraphStyle: paragraph
+                        .replyChip: codeTint, .paragraphStyle: paragraph
                     ]))
                     index = line.index(after: close)
                     plainStart = index

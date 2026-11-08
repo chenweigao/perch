@@ -584,6 +584,12 @@ extension EnvironmentValues {
     }
 }
 
+extension NSAttributedString.Key {
+    /// Glyph-hugging chip fill (inline code, mentions), painted by ReplyTextView
+    /// around the run's glyph bounds. Value: the fill NSColor.
+    static let replyChip = NSAttributedString.Key("PerchReplyChip")
+}
+
 /// Both native user rows and SwiftUI Markdown share exact text attributes.
 enum ReplyTextAttributes {
     /// Attributed paragraph text is a pure function of runs and style.
@@ -642,6 +648,7 @@ enum ReplyTextAttributes {
                 result.addAttribute(.paragraphStyle, value: separated, range: previous)
                 var separator = result.attributes(at: result.length - 1, effectiveRange: nil)
                 separator.removeValue(forKey: .link)
+                separator.removeValue(forKey: .replyChip)
                 result.append(NSAttributedString(string: "\n", attributes: separator))
             }
             for run in paragraphRuns {
@@ -656,15 +663,18 @@ enum ReplyTextAttributes {
                 let strongWeight: NSFont.Weight = run.strong && weight.rawValue < NSFont.Weight.semibold.rawValue ? .semibold : weight
                 // Links read at least medium (DSH anchors are 500).
                 let runWeight: NSFont.Weight = run.link != nil && strongWeight.rawValue < NSFont.Weight.medium.rawValue ? .medium : strongWeight
-                // Inline code at 0.875 em with a quiet chip fill (DSH inline code);
+                // Inline code at 0.875 em with a chip fill (DSH inline code);
                 // heading code keeps the heading's ramp share via the same ratio.
+                // The chip is not a TextKit background: that fills the whole line
+                // fragment, leading included. ReplyTextView paints `.replyChip`
+                // around the glyph bounds instead.
                 var font = run.code ? NSFont.monospacedSystemFont(ofSize: (size * 0.875).rounded(), weight: runWeight)
                                     : NSFont.systemFont(ofSize: size, weight: runWeight)
                 if run.emphasis { font = NSFontManager.shared.convert(font, toHaveTrait: .italicFontMask) }
                 var attributes: [NSAttributedString.Key: Any] = [
                     .font: font, .foregroundColor: ink, .paragraphStyle: paragraph
                 ]
-                if run.code { attributes[.backgroundColor] = WorkbenchTheme.inlineCodeTintNS }
+                if run.code { attributes[.replyChip] = WorkbenchTheme.inlineCodeTintNS }
                 if run.strikethrough { attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue }
                 if let link = run.link {
                     // Render layer: only allowlisted schemes become clickable;
@@ -703,7 +713,7 @@ enum ReplyTextAttributes {
                 if let url = comps.url {
                     result.addAttribute(.link, value: url, range: ref.range)
                 }
-                result.addAttribute(.backgroundColor, value: mentionTint, range: ref.range)
+                result.addAttribute(.replyChip, value: mentionTint, range: ref.range)
                 result.addAttribute(.font, value: NSFont.monospacedSystemFont(ofSize: max(11, size - 1), weight: .medium), range: ref.range)
             }
         }
@@ -1290,6 +1300,37 @@ final class ReplyTextView: NSTextView {
         if codeHighlighting == nil { codeHighlighting = CodeHighlightController(view: self) }
         codeHighlighting?.update(source: string, language: language, debounce: debounce)
     }
+    /// Chips (inline code, mentions) hug their glyphs. TextKit's background
+    /// attribute fills the whole line fragment — leading included — which reads
+    /// as a floating band on a 24 pt line. Painted under the text; selection and
+    /// find highlights still draw above.
+    override func draw(_ dirtyRect: NSRect) {
+        paintChips()
+        super.draw(dirtyRect)
+    }
+    private func paintChips() {
+        guard let storage = textStorage, let manager = layoutManager, let container = textContainer else { return }
+        var runs: [(color: NSColor, range: NSRange)] = []
+        storage.enumerateAttribute(.replyChip, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+            if let color = value as? NSColor, range.length > 0 { runs.append((color, range)) }
+        }
+        guard !runs.isEmpty else { return }
+        manager.ensureLayout(for: container)
+        for run in runs {
+            run.color.setFill()
+            let glyphs = manager.glyphRange(forCharacterRange: run.range, actualCharacterRange: nil)
+            manager.enumerateLineFragments(forGlyphRange: glyphs) { _, _, _, lineGlyphs, _ in
+                let segment = NSIntersectionRange(glyphs, lineGlyphs)
+                guard segment.length > 0 else { return }
+                var rect = manager.boundingRect(forGlyphRange: segment, in: container)
+                rect.origin.x += self.textContainerInset.width
+                rect.origin.y += self.textContainerInset.height
+                rect = rect.insetBy(dx: -4, dy: -2)
+                let radius = min(5, rect.height / 2)
+                NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
+            }
+        }
+    }
     var isConversationBodyText = false
     /// Extra context-menu items (message-level actions) supplied by the row.
     var extraMenuItems: (() -> [NSMenuItem])?
@@ -1345,11 +1386,10 @@ final class ReplyTextView: NSTextView {
         return resigned
     }
     /// The find bar's highlight color, kept as one instance so clearing it can
-    /// match by identity: inline-code chips and mention tints also use the
-    /// background attribute and must survive a find-highlight refresh.
+    /// match by identity.
     private static let findHighlightColor = NSColor.systemYellow.withAlphaComponent(0.35)
-    /// Background-color also carries inline-code chips and mention tints, so
-    /// clearing removes only ranges painted with the find-highlight instance.
+    /// Clearing removes only ranges painted with the find-highlight instance.
+    /// (Inline-code and mention chips ride `.replyChip`, not the background.)
     func applyFindHighlight() {
         guard let storage = textStorage, findHighlight != nil || hasFindHighlight else { return }
         let full = NSRange(location: 0, length: storage.length)
