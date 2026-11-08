@@ -702,11 +702,9 @@ enum ReplyTextAttributes {
             }
         }
         if result.string.contains("@\"") {
-            let mentionTint = NSColor(name: nil) { appearance in
-                var color = NSColor.labelColor
-                appearance.performAsCurrentDrawingAppearance { color = NSColor.labelColor.withAlphaComponent(0.06) }
-                return color
-            }
+            // Opaque like the inline-code chip: an alpha tint over the glass
+            // backdrop reads as a border-only bubble.
+            let mentionTint = WorkbenchTheme.nsColor(light: (242/255, 242/255, 243/255), dark: (54/255, 54/255, 56/255))
             for ref in ProjectFileReference.references(in: result.string) {
                 var comps = URLComponents(); comps.scheme = "perch-file"
                 comps.queryItems = [URLQueryItem(name: "path", value: ref.path)]

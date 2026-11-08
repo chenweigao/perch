@@ -73,8 +73,8 @@ enum WorkbenchTheme {
         Color(nsColor: nsColor(light: light, dark: dark))
     }
 
-    private static func nsColor(light: (Double, Double, Double),
-                                dark: (Double, Double, Double)) -> NSColor {
+    static func nsColor(light: (Double, Double, Double),
+                        dark: (Double, Double, Double)) -> NSColor {
         NSColor(name: nil) { appearance in
             let c = isDark(appearance) ? dark : light
             return NSColor(srgbRed: c.0, green: c.1, blue: c.2, alpha: 1)
@@ -88,9 +88,9 @@ enum WorkbenchTheme {
     }
 
     /// Inline-code chip fill in prose (DSH: `--dsw-alias-markdown-inline-code`,
-    /// neutral-50 with a hairline border; TextKit can't stroke the chip, so the
-    /// fill carries a little more weight). Rectangular, per the DSH waiver.
-    static let inlineCodeTintNS = washNS(light: 0.035, dark: 0.10)
+    /// neutral-50/800, OPAQUE like the web token: an alpha wash over the glass
+    /// backdrop reads as a border-only bubble. Rounded, self-drawn (ReplyTextView).
+    static let inlineCodeTintNS = nsColor(light: (250/255, 250/255, 250/255), dark: (41/255, 41/255, 41/255))
 
     /// Code/mermaid/tool card surface (DSH `--dsw-alias-markdown-code-block`:
     /// neutral-bluish-50 / neutral-bluish-900).
