@@ -1319,13 +1319,17 @@ final class ReplyTextView: NSTextView {
         for run in runs {
             run.color.setFill()
             let glyphs = manager.glyphRange(forCharacterRange: run.range, actualCharacterRange: nil)
-            manager.enumerateLineFragments(forGlyphRange: glyphs) { _, _, _, lineGlyphs, _ in
+            manager.enumerateLineFragments(forGlyphRange: glyphs) { _, usedRect, _, lineGlyphs, _ in
                 let segment = NSIntersectionRange(glyphs, lineGlyphs)
                 guard segment.length > 0 else { return }
                 var rect = manager.boundingRect(forGlyphRange: segment, in: container)
                 rect.origin.x += self.textContainerInset.width
-                rect.origin.y += self.textContainerInset.height
-                rect = rect.insetBy(dx: -4, dy: -2)
+                // Center the chip on the line: TextKit drops a line's extra
+                // leading above the glyphs, so raw glyph bounds read top-heavy.
+                let chipHeight = rect.height + 4
+                rect.origin.y = usedRect.minY + self.textContainerInset.height + (usedRect.height - chipHeight) / 2
+                rect.size.height = chipHeight
+                rect = rect.insetBy(dx: -4, dy: 0)
                 let radius = min(5, rect.height / 2)
                 NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
             }
