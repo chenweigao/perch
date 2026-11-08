@@ -467,8 +467,8 @@ private struct ReadingReviewControls: View {
     // whose header carries the call count and the thinking's first line.
     precondition(taskPanelControl(window, "edit-step:lifecycle-edit") == nil)
     precondition(taskPanelControl(window, "activity-phase:activity:tool:lifecycle-check") == nil)
-    precondition(taskPanelLabel(window, "completed-process:text:lifecycle-progress:0")?.contains(L("3 次调用")) == true,
-                 "fold header label: \(String(describing: taskPanelLabel(window, "completed-process:text:lifecycle-progress:0"))); ids: \(taskPanelIdentifiers(window).filter { $0.contains("completed-process") || $0.contains("activity-phase") }.joined(separator: ", "))")
+    precondition(taskPanelLabel(window, "completed-process:activity:tool:lifecycle-edit")?.contains(L("2 次调用")) == true,
+                 "The second fold (edit + check) carries the call count")
     try snapshot("lifecycle-retained")
     // A fresh reader sees the prompt, the fold and the answer. Session A's
     // explicit choice cannot leak to B.
@@ -483,8 +483,10 @@ private struct ReadingReviewControls: View {
         try snapshot(name)
     }
     window.appearance = NSAppearance(named: .aqua)
-    // The failed call remains reachable inside the expanded fold.
-    click("completed-process:text:lifecycle-progress:0")
+    // The failed call remains reachable inside its expanded fold and stage.
+    click("completed-process:activity:tool:lifecycle-edit")
+    try await settle()
+    click("activity-phase:activity:tool:lifecycle-check")
     try await settle()
     precondition(taskPanelControl(window, "tool-call:lifecycle-check") != nil, "The failed call remains reachable inside the fold")
     click("completed-process:text:lifecycle-progress:0")
