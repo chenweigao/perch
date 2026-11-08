@@ -2511,12 +2511,6 @@ private enum ThoughtTextStyle {
         [.font: NSFont.systemFont(ofSize: size, weight: .regular), .foregroundColor: ink,
          .paragraphStyle: paragraphStyle(lineHeight: lineHeight)]
     }
-    static func attributed(_ source: String) -> NSAttributedString {
-        attributed(source, elideCodeBlocks: false)
-    }
-    static func previewAttributed(_ source: String) -> NSAttributedString {
-        attributed(source, elideCodeBlocks: true)
-    }
     private static func isCommentSentinel(_ trimmed: String) -> Bool {
         if trimmed.hasPrefix("<!--") && trimmed.hasSuffix("-->") { // l10n-ignore
             let body = trimmed.dropFirst(4).dropLast(3).trimmingCharacters(in: .whitespaces)
@@ -2550,9 +2544,9 @@ private enum ThoughtTextStyle {
         }
         return latest
     }
-    static func attributed(_ source: String, elideCodeBlocks: Bool) -> NSAttributedString {
+    static func attributed(_ source: String) -> NSAttributedString {
         guard !source.isEmpty else { return NSAttributedString(string: "", attributes: attributes) }
-        if !elideCodeBlocks && !source.contains("`") && !source.contains("*") && !source.contains("#")
+        if !source.contains("`") && !source.contains("*") && !source.contains("#")
             && !source.contains("<!--") && !source.contains("\n\n")
             && !source.hasPrefix("- ") && !source.contains("\n- ") && !source.contains("\n* ") {
             return NSAttributedString(string: source, attributes: attributes)
@@ -2568,27 +2562,9 @@ private enum ThoughtTextStyle {
         let result = NSMutableAttributedString()
         var lastLineRange: NSRange?
         var inCodeBlock = false
-        var elidedCodeLines = 0
-        func flushElidedCodeBlock() {
-            guard elidedCodeLines > 0 else { return }
-            if result.length > 0 {
-                var newlineAttributes = result.attributes(at: result.length - 1, effectiveRange: nil)
-                newlineAttributes.removeValue(forKey: .backgroundColor)
-                result.append(NSAttributedString(string: "\n", attributes: newlineAttributes))
-            }
-            let start = result.length
-            let placeholder = L("⋯ 代码草稿 · \(elidedCodeLines) 行")
-            result.append(NSAttributedString(string: placeholder, attributes: [
-                .font: codeFont, .foregroundColor: ink,
-                .backgroundColor: codeTint, .paragraphStyle: tightParagraph
-            ]))
-            lastLineRange = NSRange(location: start, length: result.length - start)
-            elidedCodeLines = 0
-        }
         for rawLine in source.components(separatedBy: "\n") {
             let trimmed = rawLine.trimmingCharacters(in: .whitespaces)
             if trimmed.hasPrefix("```") { // l10n-ignore
-                if inCodeBlock && elideCodeBlocks { flushElidedCodeBlock() }
                 inCodeBlock.toggle()
                 continue
             }
@@ -2596,13 +2572,7 @@ private enum ThoughtTextStyle {
             if trimmed.isEmpty {
                 if !inCodeBlock, let range = lastLineRange {
                     result.addAttribute(.paragraphStyle, value: separatedParagraph, range: range)
-                } else if inCodeBlock && elideCodeBlocks {
-                    elidedCodeLines += 1
                 }
-                continue
-            }
-            if inCodeBlock && elideCodeBlocks {
-                elidedCodeLines += 1
                 continue
             }
             if result.length > 0 {
@@ -2635,7 +2605,6 @@ private enum ThoughtTextStyle {
             }
             lastLineRange = NSRange(location: start, length: result.length - start)
         }
-        if inCodeBlock && elideCodeBlocks { flushElidedCodeBlock() }
         return result.length > 0 ? result : NSAttributedString(string: source, attributes: attributes)
     }
     private static func appendInline(_ line: String, into result: NSMutableAttributedString,
@@ -2711,18 +2680,6 @@ private struct ThoughtRail<Content: View>: View {
     }
 }
 
-private struct ThoughtTopFade: View {
-    let active: Bool
-    var body: some View {
-        VStack(spacing: 0) {
-            LinearGradient(colors: [active ? Color.clear : Color.black, Color.black],
-                           startPoint: .top, endPoint: .bottom)
-                .frame(height: ReplyStyle.Process.thoughtTopFadeHeight)
-            Rectangle().fill(Color.black)
-        }
-    }
-}
-
 /// Expanded thoughts sit under their toggle's label, like every nested process row.
 private struct ThoughtText: View {
     let text: String
@@ -2749,7 +2706,7 @@ private struct ThoughtToggle: View {
                         .foregroundStyle(WorkbenchTheme.quiet)
                         .fixedSize()
                     Text(verbatim: summary)
-                        .font(.system(size: ReplyStyle.captionSize))
+                        .font(.system(size: ReplyStyle.secondarySize))
                         .foregroundStyle(WorkbenchTheme.quiet)
                         .lineLimit(1)
                         .truncationMode(.head)
@@ -2785,8 +2742,12 @@ struct ThoughtOutput: View {
             ThoughtText(text: fullText)
         } else {
             VStack(alignment: .leading, spacing: 9) {
+                // A collapsed running thought shows its latest meaningful line beside
+                // the title (DSH's streaming summary), so the preview reads without
+                // pushing the reply down.
                 ThoughtToggle(title: finished ? Text("Thoughts") : Text("Thinking"),
-                              summary: nil, expanded: $expanded)
+                              summary: expanded ? nil : ThoughtTextStyle.latestSummaryLine(fullText),
+                              expanded: $expanded)
                     .accessibilityIdentifier("thought-disclosure:" + memoryKey)
                 WorkbenchDisclosureContent(expanded: expanded) { ThoughtText(text: fullText) }
                 if !expanded, !finished, let summary = ConversationThinkingSummary.latest(in: messages) {
@@ -2797,91 +2758,7 @@ struct ThoughtOutput: View {
     }
 }
 
-/// TextKit keeps wrapped layout for existing text while a reasoning stream appends.
-/// Reuse TextKit layout to fit short thoughts and cap a growing preview at six lines.
-private struct ThinkingTextViewport: NSViewRepresentable {
-    let text: String
-    @Binding var overflows: Bool
-    final class Coordinator {
-        var previous = ""
-    }
-    func makeCoordinator() -> Coordinator { Coordinator() }
-    func makeNSView(context: Context) -> FollowingThoughtScrollView {
-        let scroll = FollowingThoughtScrollView()
-        scroll.drawsBackground = false
-        // The preview follows the stream; wheel gestures scroll the conversation.
-        scroll.hasVerticalScroller = false
-        scroll.autohidesScrollers = true
-        let view = NSTextView(frame: NSRect(x: 0, y: 0, width: 760, height: ReplyStyle.Process.thoughtPreviewHeight))
-        view.isEditable = false
-        view.enabledTextCheckingTypes = 0
-        view.isSelectable = true
-        view.drawsBackground = false
-        view.textContainerInset = .zero
-        view.textContainer?.lineFragmentPadding = 0
-        view.textContainer?.containerSize = NSSize(width: 760, height: CGFloat.greatestFiniteMagnitude)
-        view.textContainer?.widthTracksTextView = true
-        view.isHorizontallyResizable = false
-        view.isVerticallyResizable = true
-        view.minSize = .zero
-        view.autoresizingMask = [.width]
-        view.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
-        scroll.documentView = view
-        return scroll
-    }
-    func updateNSView(_ scroll: FollowingThoughtScrollView, context: Context) {
-        scroll.overflowChanged = { if overflows != $0 { overflows = $0 } }
-        guard context.coordinator.previous != text,
-              let view = scroll.documentView as? NSTextView, let storage = view.textStorage else { return }
-        storage.setAttributedString(ThoughtTextStyle.previewAttributed(text))
-        context.coordinator.previous = text
-        scroll.scheduleFollow()
-    }
-    func sizeThatFits(_ proposal: ProposedViewSize, nsView: FollowingThoughtScrollView, context: Context) -> CGSize? {
-        let width = proposal.width ?? 760
-        return CGSize(width: width, height: min(ReplyStyle.Process.thoughtPreviewHeight, nsView.textHeight(width: width)))
-    }
-}
+/// The live thought preview retired with the phase-aware transcript (ce591b2):
+/// running thoughts surface through the disclosure header's rolling summary and
+/// provider-declared summaries, not a second scrolling text surface.
 
-/// A live preview, not a second reading surface. Full thoughts have their own popover.
-private final class FollowingThoughtScrollView: NSScrollView {
-    var overflowChanged: (Bool) -> Void = { _ in }
-
-    func textHeight(width: CGFloat) -> CGFloat {
-        guard let text = documentView as? NSTextView, let container = text.textContainer,
-              let layout = text.layoutManager else { return 0 }
-        text.setFrameSize(NSSize(width: width, height: text.frame.height))
-        layout.ensureLayout(for: container)
-        text.sizeToFit()
-        return text.frame.height
-    }
-    private var followScheduled = false
-
-    override func scrollWheel(with event: NSEvent) {
-        // A nested NSScrollView otherwise consumes the wheel while only a few
-        // thought lines move. Keep transcript navigation consistent under text.
-        enclosingScrollView?.scrollWheel(with: event)
-    }
-
-    override func setFrameSize(_ newSize: NSSize) {
-        let changed = frame.size != newSize
-        super.setFrameSize(newSize)
-        if changed { scheduleFollow() }
-    }
-    func scheduleFollow() {
-        guard !followScheduled else { return }
-        followScheduled = true
-        DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            self.followScheduled = false
-            guard let text = self.documentView as? NSTextView else { return }
-            self.layoutSubtreeIfNeeded()
-            if let container = text.textContainer { text.layoutManager?.ensureLayout(for: container) }
-            text.sizeToFit()
-            self.overflowChanged(text.bounds.height > self.contentView.bounds.height + 0.5)
-            let bottom = max(0, text.bounds.maxY - self.contentView.bounds.height)
-            self.contentView.scroll(to: NSPoint(x: 0, y: bottom))
-            self.reflectScrolledClipView(self.contentView)
-        }
-    }
-}
