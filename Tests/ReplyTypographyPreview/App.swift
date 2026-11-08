@@ -117,7 +117,7 @@ import SwiftUI
 
     行内公式 $E=mc^2$ 与正文同排不错位，货币 $5 和 $10 不触发渲染。
 
-    $$\frac{1}{2}\sum_{i=1}^{n} x_i^2 + \sqrt{\alpha^2 + \beta^2}$$
+    $$\\frac{1}{2}\\sum_{i=1}^{n} x_i^2 + \\sqrt{\\alpha^2 + \\beta^2}$$
 
     ## 警示块
 
