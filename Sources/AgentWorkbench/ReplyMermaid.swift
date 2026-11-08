@@ -440,10 +440,8 @@ struct ReplyMermaid: View {
             }
             .padding(.horizontal, ReplyStyle.Code.headerHorizontalPadding)
             .padding(.vertical, ReplyStyle.Code.headerVerticalPadding)
-            Rectangle().fill(.primary.opacity(0.055)).frame(height: 1)
             content()
         }
         .background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius))
-        .overlay(RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius).strokeBorder(.primary.opacity(0.055)))
     }
 }

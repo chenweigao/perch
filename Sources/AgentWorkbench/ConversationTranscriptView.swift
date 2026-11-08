@@ -24,7 +24,7 @@ enum NavigationRenderMetrics {
 }
 #endif
 
-private let kimiPaper = Color.primary.opacity(0.035)
+private let kimiPaper = Color(nsColor: WorkbenchTheme.userBubbleNS)
 
 /// Compaction marks a context boundary, not a message: a slim divider row with
 /// the agent's handoff notes folded behind it.

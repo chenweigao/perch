@@ -54,10 +54,9 @@ enum WorkbenchTheme {
     static let actionGlyphNS = nsColor(light: (1, 1, 1), dark: (0.106, 0.114, 0.141))
     static let actionGlyph = Color(nsColor: actionGlyphNS)
 
-    /// Links in reply text; NSTextView resolves dynamic colors while drawing. The
-    /// dark value trades a little saturation for luminance so underlined links do
-    /// not vibrate against the canvas.
-    static let link = nsColor(light: (0.18, 0.36, 0.55), dark: (0.500, 0.651, 0.910))
+    /// Links in reply text; NSTextView resolves dynamic colors while drawing.
+    /// DSH anchor blue (deepseek-500 light / deepseek-400 dark).
+    static let link = nsColor(light: (65/255, 118/255, 230/255), dark: (122/255, 170/255, 255/255))
 
     /// Diff and hunk ink: in dark, each hue is lifted in lightness and slightly
     /// desaturated, keeping the three roles distinct without neon edges.
@@ -88,9 +87,20 @@ enum WorkbenchTheme {
         }
     }
 
-    /// Inline-code chip fill in prose (DSH: `--dsw-alias-markdown-inline-code`).
-    /// TextKit backgrounds are rectangular, so the chip is a quiet square wash.
-    static let inlineCodeTintNS = washNS(light: 0.055, dark: 0.10)
+    /// Inline-code chip fill in prose (DSH: `--dsw-alias-markdown-inline-code`,
+    /// neutral-50 with a hairline border; TextKit can't stroke the chip, so the
+    /// fill carries a little more weight). Rectangular, per the DSH waiver.
+    static let inlineCodeTintNS = washNS(light: 0.035, dark: 0.10)
+
+    /// Code/mermaid/tool card surface (DSH `--dsw-alias-markdown-code-block`:
+    /// neutral-bluish-50 / neutral-bluish-900).
+    static let replySurfaceNS = nsColor(light: NSColor(calibratedRed: 249/255, green: 250/255, blue: 251/255, alpha: 1),
+                                        dark: NSColor(calibratedRed: 27/255, green: 27/255, blue: 28/255, alpha: 1))
+
+    /// User message bubble (DSH `--dsw-specific-bubble`: deepseek-50 light,
+    /// neutral-bluish-850 dark) — a blue tint, not a neutral wash.
+    static let userBubbleNS = nsColor(light: NSColor(calibratedRed: 237/255, green: 243/255, blue: 254/255, alpha: 1),
+                                      dark: NSColor(calibratedRed: 44/255, green: 44/255, blue: 46/255, alpha: 1))
 
     /// A primary-ink wash with independent light/dark alphas. labelColor resolves
     /// inside the requested appearance; applying alpha outside it can freeze the
@@ -177,7 +187,7 @@ extension WorkbenchTheme {
         static let row: CGFloat = 10
         static let chip: CGFloat = 5
         static let card: CGFloat = 10
-        /// Shares the user message bubble's 18 pt radius and contains the 36 pt send circle.
+        /// The composer's own radius (the message bubble is 20); contains the 36 pt send circle.
         static let composer: CGFloat = 18
         /// Floating glass controls (return-to-latest, selection bar, bookmarks).
         /// Frame panels use `framePanel(windowCorner:inset:)` instead.

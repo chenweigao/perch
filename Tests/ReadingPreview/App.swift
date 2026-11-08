@@ -296,8 +296,13 @@ private final class PreviewDelegate: NSObject, NSApplicationDelegate {
         Scene(name: "running-tool-light", width: 900, dark: false, running: true, messages: runningTool),
     ]
     for scene in scenes {
+        // Wrap the transcript like ConversationScrollControls does: the 748 pt
+        // reading column plus 24 pt insets, centered in the window.
         let root = VStack(spacing: 0) {
             ConversationTranscript(messages: scene.messages, sessionId: "capture-" + scene.name, isRunning: scene.running)
+                .frame(width: min(ReplyStyle.readingWidth, max(1, scene.width - 2 * ReplyStyle.horizontalPadding)), alignment: .leading)
+                .padding(.horizontal, ReplyStyle.horizontalPadding)
+                .frame(width: scene.width, alignment: .center)
         }
         let host = NSHostingController(rootView: AnyView(root.fixedSize(horizontal: false, vertical: true)
             .background(Color(nsColor: .textBackgroundColor))))

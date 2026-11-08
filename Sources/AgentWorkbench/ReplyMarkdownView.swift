@@ -71,7 +71,9 @@ enum ReplyStyle {
     static func headingTopSpacing(_ level: Int, compact: Bool) -> CGFloat {
         scale.spacing(compact ? (level <= 3 ? 16 : 8) : (level <= 3 ? 32 : 16))
     }
-    static let paper = Color.primary.opacity(0.035)
+    /// Reply surface for code/mermaid/tool cards: DSH neutral-bluish-50/900,
+    /// a touch lighter and cooler than a flat black wash.
+    static let paper = Color(nsColor: WorkbenchTheme.replySurfaceNS)
     // Preserve a dynamic color in cached attributed text. Applying alpha to
     // labelColor once can freeze the system appearance before the light window exists.
     static let nativeInk = NSColor(name: nil) { appearance in
@@ -129,7 +131,8 @@ enum ReplyStyle {
     }
     enum ListLayout {
         static let markerGap: CGFloat = 8
-        static let minimumMarkerWidth: CGFloat = 16
+        /// With the 8 pt gap this gives the DSH 18 px indent per list level.
+        static let minimumMarkerWidth: CGFloat = 10
         /// DSH lists sit items 6 pt apart, uniformly.
         static let itemSpacing: CGFloat = 6
     }
@@ -200,7 +203,8 @@ extension ReplyStyle.BlockKind {
 
 enum UserMessageStyle {
     /// Nine lines of a folded long prompt; prompts past eleven lines fold.
-    static var lineHeight: CGFloat { ReplyStyle.lineHeight }
+    /// Bubble text runs one step tighter than the reply body (DSH: 14/22).
+    static var lineHeight: CGFloat { ReplyStyle.scale.body + 8 }
     static var collapsedHeight: CGFloat { lineHeight * 9 }
     static var foldThreshold: CGFloat { lineHeight * 11 }
     static let horizontalPadding: CGFloat = 16
@@ -217,7 +221,8 @@ enum UserMessageStyle {
     }
     static var topPadding: CGFloat { verticalPadding - textLift }
     static var bottomPadding: CGFloat { verticalPadding + textLift }
-    static let cornerRadius: CGFloat = 18
+    /// DSH bubble radius (radius-xl = 20 px).
+    static let cornerRadius: CGFloat = 20
     /// DSH caps the bubble at 0.702 of the column (525/748).
     static let maxWidthRatio: CGFloat = 0.72
     static let topSpacing: CGFloat = 8
@@ -445,7 +450,7 @@ private struct ReplyAlertBlock: View {
     }
 }
 
-/// One right-aligned marker column per list, at least 16 pt wide, shared by the
+/// One right-aligned marker column per list, at least 10 pt wide, shared by the
 /// SwiftUI and native renderers. Item text starts at the same x for "9." and
 /// "10.", and switching between native admission and SwiftUI fallback keeps the
 /// same geometry. Widths are measured with the marker's own label metrics.
@@ -484,6 +489,7 @@ private struct ReplyAlertBlock: View {
 /// Use the same marker metrics as native transcript rows. SwiftUI Text's rounded
 /// baseline can otherwise add a pixel to every list item at some font sizes.
 /// Quiet prose sets its markers like its text: quiet size, secondary ink.
+/// Markers stay in secondary ink (DSH `li::marker` label-secondary).
 private struct ReplyListMarker: View {
     let marker: String
     @Environment(\.replyTone) private var tone
@@ -492,7 +498,7 @@ private struct ReplyListMarker: View {
     var body: some View {
         let quiet = tone == .quiet
         let size = (quiet ? ReplyStyle.quietSize : ReplyStyle.bodySize) * documentFontScale
-        ReplyListMarkerLabel(marker: marker, size: size, ink: quiet ? ReplyStyle.quietInk : ReplyStyle.nativeInk)
+        ReplyListMarkerLabel(marker: marker, size: size, ink: ReplyStyle.quietInk)
             .fixedSize()
             .alignmentGuide(.firstTextBaseline) { _ in
                 let font = NSFont.systemFont(ofSize: size)
@@ -646,8 +652,10 @@ enum ReplyTextAttributes {
                     result.append(attachment)
                     continue
                 }
-                // Strong text is at least medium; it never lightens a semibold heading.
-                let runWeight: NSFont.Weight = run.strong && weight.rawValue < NSFont.Weight.medium.rawValue ? .medium : weight
+                // Strong text is semibold (DSH base-strong 600); it never lightens a heading.
+                let strongWeight: NSFont.Weight = run.strong && weight.rawValue < NSFont.Weight.semibold.rawValue ? .semibold : weight
+                // Links read at least medium (DSH anchors are 500).
+                let runWeight: NSFont.Weight = run.link != nil && strongWeight.rawValue < NSFont.Weight.medium.rawValue ? .medium : strongWeight
                 // Inline code at 0.875 em with a quiet chip fill (DSH inline code);
                 // heading code keeps the heading's ramp share via the same ratio.
                 var font = run.code ? NSFont.monospacedSystemFont(ofSize: (size * 0.875).rounded(), weight: runWeight)
@@ -1053,7 +1061,7 @@ final class NativeUserMessageView: NSView {
     func update(_ content: [NSAttributedString], dark: Bool) {
         appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
         effectiveAppearance.performAsCurrentDrawingAppearance {
-            bubbleBackground.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.035).cgColor
+            bubbleBackground.layer?.backgroundColor = WorkbenchTheme.userBubbleNS.cgColor
         }
         while texts.count > content.count {
             let text = texts.removeLast(); text.removeFromSuperview(); SelectableReplyText.recycle(text)
@@ -1686,12 +1694,11 @@ struct ReplyCode: View {
             } else {
                 HStack {
                     // NativeCodeCardView shows the same label once the reply settles.
-                    Text(language.isEmpty ? L("代码") : language).font(.system(size: ReplyStyle.Code.labelSize, weight: .medium))
-                        .foregroundStyle(.secondary)
+                    Text(language.isEmpty ? L("代码") : language).font(.system(size: ReplyStyle.Code.labelSize, design: .monospaced))
+                        .foregroundStyle(ReplyStyle.ink)
                     Spacer()
                     ReplyCopyButton(text: source, label: "复制代码")
                 }.padding(.horizontal, ReplyStyle.Code.headerHorizontalPadding).padding(.vertical, ReplyStyle.Code.headerVerticalPadding)
-                Rectangle().fill(.primary.opacity(0.055)).frame(height: 1)
                 ReplyCodeBody(source: source, language: language)
                     .overlay(alignment: .bottomTrailing) {
                         if hovered && lineCount > 8 {
@@ -1702,7 +1709,6 @@ struct ReplyCode: View {
                     }
             }
         }.background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius))
-            .overlay(RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius).strokeBorder(.primary.opacity(0.055)))
             .onHover { hovered = $0 }
     }
 }
@@ -1772,8 +1778,10 @@ private struct ReplyTable: View {
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
     }
 
-    /// Header cells first, then one separator and one row of cells per data row:
-    /// the order `ReplyTableLayout` walks. The first separator is the header rule.
+    /// Header cells first, then one separator and one row of cells per data row,
+    /// closing with the trailing row rule: the order `ReplyTableLayout` walks.
+    /// The first separator is the header rule (DSH: th border-bottom l3, td l2,
+    /// the last row included).
     @ViewBuilder private var cells: some View {
         ForEach(Array(headers.indices), id: \.self) { column in
             cell(headers[column], column: column, header: true)
@@ -1786,6 +1794,9 @@ private struct ReplyTable: View {
                 cell(column < row.count ? row[column] : [], column: column, header: false)
             }
         }
+        Rectangle()
+            .fill(.primary.opacity(rows.isEmpty ? ReplyStyle.Table.headerRuleOpacity : ReplyStyle.Table.rowRuleOpacity))
+            .frame(height: 1)
     }
 
     private func cell(_ runs: [ReplyInline], column: Int, header: Bool) -> some View {
@@ -1845,7 +1856,7 @@ private struct ReplyTableLayout: Layout {
         var index = 0
         while index < subviews.count {
             if isSeparator(index) {
-                placements[index] = (.zero, CGSize(width: total, height: separatorHeight))
+                placements[index] = (CGPoint(x: 0, y: height), CGSize(width: total, height: separatorHeight))
                 height += separatorHeight
                 index += 1
                 continue

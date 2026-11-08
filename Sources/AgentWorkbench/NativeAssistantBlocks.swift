@@ -237,7 +237,6 @@ private final class NativeRuleBlockView: NativeAssistantBlockView {
 private final class NativeCodeCardView: NativeAssistantBlockView {
     private let label = NSTextField(labelWithString: "")
     private let copy: NSHostingView<ReplyCopyButton>
-    private let separator = NSView()
     private let scroll = NSScrollView()
     private let document = NSView()
     /// Masks the viewport while the code overflows, like the SwiftUI card's
@@ -251,12 +250,12 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
     override init(links: SelectableReplyText.Coordinator) {
         copy = NSHostingView(rootView: ReplyCopyButton(text: "", label: "复制代码"))
         super.init(links: links)
-        label.font = .systemFont(ofSize: ReplyStyle.Code.labelSize, weight: .medium)
-        label.textColor = WorkbenchTheme.quietNS
+        // DSH banner: the language label is monospace 11 in primary ink.
+        label.font = .monospacedSystemFont(ofSize: ReplyStyle.Code.labelSize, weight: .regular)
+        label.textColor = ReplyStyle.nativeInk
         label.lineBreakMode = .byTruncatingTail
         copy.sizingOptions = []
         copy.safeAreaRegions = []
-        separator.wantsLayer = true
         scroll.hasVerticalScroller = false
         scroll.hasHorizontalScroller = true
         scroll.scrollerStyle = .overlay
@@ -269,7 +268,7 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
         fade.startPoint = CGPoint(x: 0, y: 0.5)
         fade.endPoint = CGPoint(x: 1, y: 0.5)
         fade.colors = [NSColor.black.cgColor, NSColor.black.cgColor, NSColor.clear.cgColor]
-        for view in [label, copy, separator, scroll] { addSubview(view) }
+        for view in [label, copy, scroll] { addSubview(view) }
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
@@ -280,7 +279,7 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
         if label.stringValue != title { label.stringValue = title }
         // Pooled cards outlive a body-size change.
         if label.font?.pointSize != ReplyStyle.Code.labelSize {
-            label.font = .systemFont(ofSize: ReplyStyle.Code.labelSize, weight: .medium)
+            label.font = .monospacedSystemFont(ofSize: ReplyStyle.Code.labelSize, weight: .regular)
         }
         if source != self.source {
             self.source = source
@@ -319,7 +318,7 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
     private func textSize() -> CGSize { codeText?.measure(width: nil) ?? .zero }
     private func gutterSize() -> CGSize { gutter?.measure(width: nil) ?? .zero }
     override func contentHeight(width: CGFloat) -> CGFloat {
-        (compact ? 0 : ReplyStyle.Code.headerHeight + 1) + textSize().height + ReplyStyle.Code.inset * 2
+        (compact ? 0 : ReplyStyle.Code.headerHeight) + textSize().height + ReplyStyle.Code.inset * 2
     }
     override func placeContent(width: CGFloat) {
         typealias Card = ReplyStyle.Code
@@ -335,15 +334,11 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
                                 height: labelSize.height)
         if label.frame != labelFrame { label.frame = labelFrame }
         label.isHidden = compact
-        separator.isHidden = compact
         let copyY = compact ? (text.height + Card.inset * 2 - Card.copyButtonSize) / 2 : Card.headerVerticalPadding
         let copyFrame = CGRect(x: width - Card.headerHorizontalPadding - Card.copyButtonSize, y: copyY,
                                width: Card.copyButtonSize, height: Card.copyButtonSize)
         if copy.frame != copyFrame { copy.frame = copyFrame }
-        let separatorFrame = CGRect(x: 0, y: Card.headerHeight, width: width, height: 1)
-        if separator.frame != separatorFrame { separator.frame = separatorFrame }
-        separator.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.055).cgColor
-        let scrollFrame = CGRect(x: 0, y: compact ? 0 : Card.headerHeight + 1,
+        let scrollFrame = CGRect(x: 0, y: compact ? 0 : Card.headerHeight,
                                  width: compact ? width - Card.copyButtonSize - Card.inset : width,
                                  height: text.height + Card.inset * 2)
         if scroll.frame != scrollFrame { scroll.frame = scrollFrame }
@@ -392,10 +387,8 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
     override func textViews() -> [ReplyTextView] { codeText.map { [$0] } ?? [] }
     override func draw(_ dirtyRect: NSRect) {
         let radius = ReplyStyle.Code.cornerRadius
-        NSColor.labelColor.withAlphaComponent(0.035).setFill()
+        WorkbenchTheme.replySurfaceNS.setFill()
         NSBezierPath(roundedRect: bounds, xRadius: radius, yRadius: radius).fill()
-        NSColor.labelColor.withAlphaComponent(0.055).setStroke()
-        NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: radius, yRadius: radius).stroke()
     }
 }
 
@@ -452,7 +445,7 @@ private final class NativeListBlockView: NativeAssistantBlockView {
         init(links: SelectableReplyText.Coordinator) {
             content = NativeAssistantStackView(compact: true, links: links)
             marker.font = nativeMarkerMetrics().font
-            marker.textColor = ReplyStyle.nativeInk
+            marker.textColor = ReplyStyle.quietInk
             marker.alignment = .right
             marker.lineBreakMode = .byClipping
         }
