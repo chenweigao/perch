@@ -92,7 +92,17 @@ public struct ReplyTableGeometry {
             surplus -= spent
         }
         if surplus > 0.5 {
-            let weights = contentWidths.map { max(1, $0) }
+            // Leftover keeps the table viewport-wide, spread by content weight so
+            // narrow columns do not balloon. While content still competes for room
+            // the cap holds: a clamped column (its content exceeded
+            // `maximumContentWidth`) takes nothing here, and neither does a
+            // genuinely narrow column; only a viewport wider than every column's
+            // demand stretches columns past the cap.
+            var weights = widths.indices.map { index -> CGFloat in
+                floors[index] <= narrowColumnWidth || contentWidths[index] > maximumContentWidth
+                    ? 0 : max(1, contentWidths[index])
+            }
+            if weights.allSatisfy({ $0 == 0 }) { weights = contentWidths.map { max(1, $0) } }
             let total = weights.reduce(0, +)
             for index in widths.indices { widths[index] += surplus * weights[index] / total }
         }
