@@ -55,7 +55,11 @@ import WorkbenchCore
     try await settle()
     guard let rect = anchorRect(in: scroll.documentView) else { preconditionFailure("Long history must mount the chosen glyphs") }
     let location = rect.minY
-    clip.scroll(to: NSPoint(x: 0, y: location - 140)); scroll.reflectScrolledClipView(clip)
+    // 320 pt puts the anchor deep in the answer so the saved reading row is the
+    // answer itself on any reasonable typography. Near the top edge the pin can
+    // land on a process row that folds at completion; the fold remap approximates
+    // that case (fold top, offset 0) and is not pixel-exact by design.
+    clip.scroll(to: NSPoint(x: 0, y: location - 320)); scroll.reflectScrolledClipView(clip)
     try await settle()
     let before = anchorY()!
     let output = URL(fileURLWithPath: "/private/tmp/perch-reading-design")

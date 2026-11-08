@@ -1352,15 +1352,10 @@ private final class ConversationDocumentView: NSView {
         // already on screen. Anchor those displayed rows while its height is
         // resolved, rather than anchoring the unmeasured placeholder itself.
         let visible = viewportRect
-        let rowsInView = mounted.compactMap { id -> Int? in
+        return mounted.compactMap { id -> Int? in
             guard let controller = controllers[id], controller.view.frame.intersects(visible) else { return nil }
             return indices[id]
-        }
-        // Process rows fold away when a turn completes; a durable message row in
-        // view is a strictly better anchor, because a position saved on an
-        // ephemeral row has to be remapped through the fold and loses its offset.
-        let durable = rowsInView.filter { !contents[$0].entry.isProcess }
-        return (durable.isEmpty ? nil : durable.min()) ?? rowsInView.min() ?? geometry.readingRow(at: max(0, visible.minY))
+        }.min() ?? geometry.readingRow(at: max(0, visible.minY))
     }
     private func saveReadingPosition() {
         guard !suspended, !preparingInitialViewport, restoreTarget == nil, !sessionId.isEmpty, let clip = observedClip,
