@@ -160,8 +160,11 @@ public enum ToolPresentation {
     public static func recentTargets(_ tools: [VisibleTool]) -> String {
         var seen = Set<String>(), labels: [String] = []
         for tool in tools.reversed() where !tool.staysVisible {
-            let label = rowSummary(tool)
-            guard !label.isEmpty else { continue }
+            let detail = rowSummary(tool)
+            guard !detail.isEmpty else { continue }
+            // A stage summarizes several calls; a tool row shows its full argument.
+            let compact = compactTarget(tool)
+            let label = compact == tool.name || compact.isEmpty ? detail : compact
             if seen.insert(label).inserted { labels.append(label) }
             if labels.count == 2 { break }
         }
