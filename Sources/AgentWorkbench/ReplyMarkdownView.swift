@@ -1326,7 +1326,7 @@ final class ReplyTextView: NSTextView {
         }
         manager.ensureLayout(for: container)
         for run in runs {
-            run.color.setFill()
+            if ProcessInfo.processInfo.environment["CHIP_RED"] != nil { NSColor.red.setFill() } else { run.color.setFill() }
             let glyphs = manager.glyphRange(forCharacterRange: run.range, actualCharacterRange: nil)
             manager.enumerateLineFragments(forGlyphRange: glyphs) { _, _, _, lineGlyphs, _ in
                 let segment = NSIntersectionRange(glyphs, lineGlyphs)
