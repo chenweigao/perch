@@ -95,6 +95,7 @@ private struct ToolbarPreview: View {
                 MessageComposer(text: $text, placeholder: L("继续此任务…"), canSend: canSend, onSend: send)
                 ComposerToolbarLayout {
                     ComposerAddButton(supportsFiles: true) {}
+                        .background(ToolbarButtonProbe(id: "add"))
                     ComposerModelPicker(models: emptyModels ? [] : models, modelID: model, thinking: effort,
                                         disabledReason: disabledReason,
                                         unavailableReason: selectedProvider == .claude && !newTask ? L("此 Agent 暂不支持模型与思考设置。") : nil,
@@ -144,6 +145,12 @@ private final class ToolbarDelegate: NSObject, NSApplicationDelegate {
                         content.cacheDisplay(in: content.bounds, to: rep)
                         try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: capturePath))
                     }
+                    var frames: [String: String] = [:]
+                    for (id, view) in ToolbarProbe.controls {
+                        frames[id] = NSStringFromRect(view.convert(view.bounds, to: nil))
+                    }
+                    try? JSONSerialization.data(withJSONObject: frames, options: [.prettyPrinted, .sortedKeys])
+                        .write(to: URL(fileURLWithPath: capturePath + ".frames.json"))
                 }
                 NSApp.terminate(nil)
             }
