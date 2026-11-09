@@ -342,6 +342,7 @@
 "工具" = "Tool";
 "已完成" = "Completed";
 "失败" = "Failed";
+"退码 %lld · 失败" = "exit %lld · failed";
 "已取消" = "Cancelled";
 "排队中" = "Queued";
 "执行中" = "Working";

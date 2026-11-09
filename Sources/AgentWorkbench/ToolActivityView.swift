@@ -329,6 +329,8 @@ struct KimiToolCard: View {
                         }
                     }
                     Spacer(minLength: 0)
+                    // PI's status cluster: spinner while running, a red exit-code
+                    // capsule on failure, a quiet green outcome dot once settled.
                     if tool.status == .running { PerchBusyIndicator(size: 11) }
                     if let slowLabel {
                         Text(verbatim: slowLabel)
@@ -336,11 +338,22 @@ struct KimiToolCard: View {
                             .foregroundStyle(WorkbenchTheme.quiet)
                             .fixedSize()
                     }
-                    // A returned error keeps its quiet status label; only uncertainty
-                    // or a user decision earns the orange attention treatment.
-                    if showsAttention || tool.status == .running || tool.status == .failed {
+                    if showsAttention {
                         Image(systemName: symbol(exitReport: exitReport)).font(.system(size: ReplyStyle.captionSize)).accessibilityHidden(true)
                         Text(statusLabel).font(.system(size: ReplyStyle.captionSize)).fixedSize()
+                    } else if tool.status == .failed {
+                        Text(verbatim: exitReport.map { L("退码 \($0) · 失败") } ?? L("失败"))
+                            .font(.system(size: ReplyStyle.captionSize))
+                            .foregroundStyle(Color(nsColor: .systemRed))
+                            .padding(.horizontal, 6).padding(.vertical, 1)
+                            .background(Color(nsColor: .systemRed).opacity(0.12), in: Capsule())
+                            .fixedSize()
+                            .help(Text("展开查看失败记录"))
+                    } else if tool.status == .succeeded || tool.status == .returned {
+                        HStack(spacing: 4) {
+                            Circle().fill(Color(nsColor: .systemGreen)).frame(width: 5, height: 5)
+                            Text(L("已完成")).font(.system(size: ReplyStyle.captionSize))
+                        }.fixedSize()
                     }
                 }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(showsAttention ? Color.orange : WorkbenchTheme.quiet)
                     .accessibilityElement(children: .combine)

@@ -35,8 +35,9 @@ extension ReplyStyle {
 /// header and content mechanics, at the `ReplyStyle.Process` inset.
 struct ProcessDisclosureStyle: DisclosureGroupStyle {
     func makeBody(configuration: Configuration) -> some View {
+        // Process rows carry the caret on the trailing edge (PI/DSH form).
         WorkbenchDisclosureStyle(horizontalPadding: ReplyStyle.Process.leadingInset,
-                                 leadingWashOutset: ReplyStyle.Process.washOutset)
+                                 leadingWashOutset: ReplyStyle.Process.washOutset, trailingChevron: true)
             .makeBody(configuration: configuration)
     }
 }
