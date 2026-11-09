@@ -87,7 +87,10 @@ import WorkbenchCore
         ]
         data["interactions"] = []
         if index == 0 {
-            data["messages"] = (data["messages"] as! [[String: Any]]) + [
+            let questionAndAnswer = data["messages"] as! [[String: Any]]
+            // The rail check measures the visible answer. Text followed by tools
+            // is intermediate process content and is intentionally indented.
+            data["messages"] = [questionAndAnswer[0]] + [
                 ["id": "plan", "role": "assistant", "created_at": "", "content": [
                     ["type": "tool_use", "tool_call_id": "plan", "tool_name": "TodoList", "input": ["todos": [
                         ["title": "定位会话加载与恢复逻辑", "status": "done"],
@@ -95,7 +98,7 @@ import WorkbenchCore
                         ["title": "验证快速切换会话与返回后的状态", "status": "in_progress"]]]]]],
                 ["id": "plan-result", "role": "tool", "created_at": "", "content": [
                     ["type": "tool_result", "tool_call_id": "plan", "is_error": false, "output": "Updated"]]]
-            ]
+            ] + [questionAndAnswer[1]]
         }
         return try JSONSerialization.data(withJSONObject: data)
     }
