@@ -31,13 +31,27 @@ extension ReplyStyle {
     }
 }
 
-/// The disclosure every process row uses: `WorkbenchDisclosureStyle`'s full-width
-/// header and content mechanics, at the `ReplyStyle.Process` inset.
-struct ProcessDisclosureStyle: DisclosureGroupStyle {
+/// PI's activity-marker: a 4 pt dot pulsing beside the live status label.
+struct ProcessLivePulse: View {
+    @State private var pulsing = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    var body: some View {
+        Circle().fill(WorkbenchTheme.quiet).frame(width: 4, height: 4)
+            .opacity(pulsing ? 1 : 0.35)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.5).repeatForever(autoreverses: true),
+                       value: pulsing)
+            .onAppear { pulsing = true }
+            .accessibilityHidden(true)
+    }
+}
+    /// The turn fold's header closes its status cluster with the caret (PI's
+    /// turn-process header); leaf rows keep the caret on the trailing edge.
+    var caretFollowsContent = false
     func makeBody(configuration: Configuration) -> some View {
         // Process rows carry the caret on the trailing edge (PI/DSH form).
         WorkbenchDisclosureStyle(horizontalPadding: ReplyStyle.Process.leadingInset,
-                                 leadingWashOutset: ReplyStyle.Process.washOutset, trailingChevron: true)
+                                 leadingWashOutset: ReplyStyle.Process.washOutset,
+                                 trailingChevron: true, caretFollowsContent: caretFollowsContent)
             .makeBody(configuration: configuration)
     }
 }

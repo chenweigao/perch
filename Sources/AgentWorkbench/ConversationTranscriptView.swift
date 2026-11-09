@@ -366,7 +366,8 @@ struct ConversationTranscript: View {
                 isLive: isLiveActivity, preservesExpandedProcess: row.entry.presentation != .processFold,
                 liveThinkingSummary: (isLiveActivity || row.live) ? ConversationThinkingSummary.current(snapshot.narrative.current) : nil,
                 planProgress: isLiveActivity ? planProgress : nil,
-                completedDuration: foldDuration, liveProcessFold: row.live)
+                completedDuration: foldDuration, liveProcessFold: row.live,
+                liveStartedAt: row.live ? timing?.startedAt : nil)
         }
         let _ = PerfDiagnostics.end("snapshot_projection", projectionProbe,
                                     detail: "messages=\(messages.count) rows=\(contents.count)")
@@ -2254,6 +2255,8 @@ private struct ConversationEntryView: View, Equatable {
     var completedDuration: TimeInterval? = nil
     /// The running turn's process fold: auto-opens and settles in place (PI).
     var liveProcessFold = false
+    /// Live turn start for the fold header's ticking duration (PI).
+    var liveStartedAt: Date? = nil
     @RememberedExpansion("commentary") private var commentaryExpanded
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.entry == rhs.entry && lhs.tools == rhs.tools && lhs.api === rhs.api
@@ -2267,6 +2270,7 @@ private struct ConversationEntryView: View, Equatable {
             && lhs.planProgress == rhs.planProgress
             && lhs.completedDuration == rhs.completedDuration
             && lhs.liveProcessFold == rhs.liveProcessFold
+            && lhs.liveStartedAt == rhs.liveStartedAt
     }
     /// Ordinary provider progress prose needs the same rhythm as narrative anchors.
     var isStageNote: Bool { isProgressNote || entry.presentation == .progress }
@@ -2308,7 +2312,7 @@ private struct ConversationEntryView: View, Equatable {
                         ProcessFoldRow(rows: foldedRows, api: api, sessionId: sessionId,
                                        completedDuration: completedDuration,
                                        sourceMemoryPrefix: String(memoryKey.dropLast(entry.id.count + 1)),
-                                       live: liveProcessFold)
+                                       live: liveProcessFold, liveStartedAt: liveStartedAt)
                     }
                 default:
                     if entry.presentation == .record {
@@ -2350,16 +2354,19 @@ struct ProcessFoldRow: View {
     /// The running turn's process disclosure (PI: active turns start open and
     /// settle in place on completion; the row id is stable across the flip).
     var live = false
+    /// Live turn start, so the header's duration ticks while it runs (PI).
+    var liveStartedAt: Date? = nil
     @UILocalization private var L
     @Environment(\.locale) private var locale
     @Environment(\.conversationMemoryKey) private var memoryKey
     @Environment(\.conversationActionContext) private var actionContext
 
     init(rows: [ConversationPresentationModel.Row], api: KimiAPI?, sessionId: String,
-         completedDuration: TimeInterval? = nil, sourceMemoryPrefix: String? = nil, live: Bool = false) {
+         completedDuration: TimeInterval? = nil, sourceMemoryPrefix: String? = nil,
+         live: Bool = false, liveStartedAt: Date? = nil) {
         self.rows = rows; self.api = api; self.sessionId = sessionId
         self.completedDuration = completedDuration; self.sourceMemoryPrefix = sourceMemoryPrefix
-        self.live = live
+        self.live = live; self.liveStartedAt = liveStartedAt
         _expanded = RememberedExpansion("process-fold", initial: live)
     }
     @RememberedExpansion("process-fold") private var expanded
@@ -2402,20 +2409,36 @@ struct ProcessFoldRow: View {
     private var externalHeadline: String? {
         rows.lazy.compactMap { $0.activity?.narrative }.last { $0.source == .external && !$0.headline.isEmpty }?.headline
     }
+    /// Live wording follows PI: a streaming thought at the tail reads as
+    /// "thinking", anything else as the plain running status.
+    private var liveLabel: String {
+        if rows.last?.entry.presentation == .thinkingPreview { return L("思考中") }
+        return L("执行中")
+    }
     var body: some View {
         let countLabel = toolCalls > 0 ? L("\(toolCalls) 个工具") : L("\(rows.count) 条记录")
         VStack(alignment: .leading, spacing: 2) {
             HStack(alignment: .center, spacing: 8) {
                 DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
                     HStack(spacing: 6) {
-                        // PI's process disclosure: status icon + outcome first,
-                        // then duration and the tool count; the thinking summary
-                        // rides last (DSH's completed reasoning row).
-                        if live { PerchBusyIndicator(size: 11) }
+                        // PI's process disclosure: one sparkles glyph for every
+                        // state, then status, a live pulse dot, duration and the
+                        // tool count; the thinking summary rides last (DSH's
+                        // completed reasoning row).
                         Image(systemName: "sparkles").font(.system(size: ReplyStyle.captionSize))
                             .foregroundStyle(WorkbenchTheme.quiet).fixedSize()
-                        Text(verbatim: live ? L("执行中") : L("运行完成")).fixedSize()
-                        if !live, let completedDuration, completedDuration >= 5 {
+                        Text(verbatim: live ? liveLabel : L("运行完成")).fixedSize()
+                        if live {
+                            ProcessLivePulse()
+                        }
+                        if live, let liveStartedAt {
+                            let isZh = locale.language.languageCode?.identifier.hasPrefix("zh") ?? true
+                            TimelineView(.periodic(from: liveStartedAt, by: 1)) { context in
+                                Text(verbatim: "· " + ConversationTiming.duration(
+                                    max(0, context.date.timeIntervalSince(liveStartedAt)).rounded(), chinese: isZh))
+                                    .monospacedDigit()
+                            }.fixedSize()
+                        } else if !live, let completedDuration, completedDuration >= 5 {
                             let isZh = locale.language.languageCode?.identifier.hasPrefix("zh") ?? true
                             Text(verbatim: "· " + ConversationTiming.duration(completedDuration, chinese: isZh))
                                 .monospacedDigit().fixedSize()
@@ -2435,7 +2458,7 @@ struct ProcessFoldRow: View {
                     .font(.system(size: externalHeadline != nil ? ReplyStyle.captionSize : ReplyStyle.Process.labelSize))
                     .foregroundStyle(externalHeadline != nil ? WorkbenchTheme.quiet : Color.secondary)
                 }
-                .disclosureGroupStyle(ProcessDisclosureStyle())
+                .disclosureGroupStyle(ProcessDisclosureStyle(caretFollowsContent: true))
                 .accessibilityValue(Text(expanded ? "已展开" : "已收起"))
                 .accessibilityIdentifier("completed-process:" + rows[0].entry.id)
                 if let editStat, let actionContext {

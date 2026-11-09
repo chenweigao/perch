@@ -145,3 +145,13 @@ let answer = 42
 ## 连续行内代码与标点
 
 chip 填充本来就是不透明的 `#FAFAFA`，我多此一举用了 alpha。已改成不透明色值（浅 `#FAFAFA` / 深 `#292929`，与 DSH token 一致），`mention` 底色（`@"…"` 引用）同样处理。
+
+## 行内代码的边界形态
+
+跨行长 chip 折行时应该像一条连续的带子，不是两个独立胶囊：`Worktree/Perch/Sources/AgentWorkbench/ConversationTranscriptView.swift 里的 ProcessFoldRow 负责折叠头的状态文案与脉冲点`，折行处不断开。
+
+行首 chip 开头：`README.md` 在行首，标点在外的 `token`，行尾收尾 `View.swift`。
+
+连续 chip 之间：`a.swift``b.swift``c.swift` 三个紧邻，`x = 1` 和 `y = 2` 之间只有空格。
+
+加粗里的 **重点 `code` 混合**，链接里的 [`linked`](https://example.com) 与 code 相邻 `chip`。
