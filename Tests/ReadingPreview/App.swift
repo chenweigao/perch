@@ -339,7 +339,15 @@ private final class PreviewDelegate: NSObject, NSApplicationDelegate {
         let running: Bool
         let messages: [KimiMessage]
     }
-    let scenes = [
+    let scenes: [Scene]
+    if ProcessInfo.processInfo.environment["CHIP_SOLO"] != nil {
+        // Isolate one paragraph: a long inline-code span that wraps.
+        scenes = [Scene(name: "chip-solo", width: 900, dark: false, running: false, messages: [
+            message("solo-user", role: "user", content: [["type": "text", "text": "chip 隔离"]]),
+            message("solo-answer", content: [["type": "text", "text": "跨行长 chip 折行时应该像一条连续的带子，不是两个独立胶囊：`Worktree/Perch/Sources/AgentWorkbench/ConversationTranscriptView.swift 里的 ProcessFoldRow 负责折叠头的状态文案与脉冲点`，折行处不断开。"]]),
+        ])]
+    } else {
+    scenes = [
         Scene(name: "completed-wide-light", width: 900, dark: false, running: false, messages: completed),
         Scene(name: "completed-narrow-light", width: 560, dark: false, running: false, messages: completed),
         Scene(name: "completed-dark", width: 900, dark: true, running: false, messages: completed),
@@ -348,6 +356,7 @@ private final class PreviewDelegate: NSObject, NSApplicationDelegate {
         Scene(name: "running-answer-light", width: 900, dark: false, running: true, messages: runningAnswer),
         Scene(name: "running-tool-light", width: 900, dark: false, running: true, messages: runningTool),
     ]
+    }
     for scene in scenes {
         // Wrap the transcript like ConversationScrollControls does: the 748 pt
         // reading column plus 24 pt insets, centered in the window.
