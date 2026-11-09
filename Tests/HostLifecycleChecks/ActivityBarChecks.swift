@@ -342,7 +342,7 @@ private struct ActivityBarCheckFixture: View {
     precondition(glints(inlineHost).isEmpty, "The compact process header stays still while its status indicates progress")
     precondition(!busyIndicators(inlineHost).contains { $0.bounds.width == 13 && $0.bounds.height == 13 },
                  "A completed stage must not retain a generic waiting indicator")
-    precondition(busyIndicators(inlineHost).contains { $0.bounds.size == CGSize(width: 36, height: 36) },
+    precondition(busyIndicators(inlineHost).contains { $0.bounds.size == CGSize(width: 28, height: 28) },
                  "The running turn remains visible in the composer stop control")
 
     let sqlNoteText = """

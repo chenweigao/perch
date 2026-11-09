@@ -185,7 +185,7 @@ func runToolbarChecks() async {
             try await press("send")
             try expect(ToolbarProbe.payload.hasPrefix("model=fixture/reasoner thinking="), "Send must use the selected configuration")
             print("PASS: visible entry in offline/running/empty states and selected configuration at send")
-            // Exercise the native control after send clears the draft: the 36pt
+            // Exercise the native control after send clears the draft: the 28pt
             // stop target must survive running, attention and stopping.
             func animatedArcs(_ layer: CALayer?) -> Int {
                 guard let layer else { return 0 }
@@ -196,7 +196,7 @@ func runToolbarChecks() async {
                 views(main.contentView!).reduce(0) { $0 + animatedArcs($1.layer) }
             }
             let actionSize = ToolbarProbe.controls["send"]!.bounds.size
-            try expect(actionSize == CGSize(width: 36, height: 36), "Running action must keep its 36pt target")
+            try expect(actionSize == CGSize(width: 28, height: 28), "Running action must keep its 28pt target")
             try expect(arcs() > 0, "Running stop control must show the activity arc")
             for control in ["waiting", "offline"] {
                 try await press(control)
