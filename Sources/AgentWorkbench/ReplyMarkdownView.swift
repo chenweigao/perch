@@ -1343,6 +1343,9 @@ final class ReplyTextView: NSTextView {
                 // Crisp hairline at any backing scale: a fractional 0.5 pt stroke
                 // reads as a double edge on Retina.
                 rect = self.backingAlignedRect(rect, options: .alignAllEdgesNearest)
+                if ProcessInfo.processInfo.environment["CHIP_DEBUG"] != nil {
+                    print("CHIP-DRAW range=\(run.range) rect=\(rect) lineGlyphs=\(lineGlyphs) segment=\(segment)")
+                }
                 let radius = min(7, rect.height / 2)
                 let path = NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
                 path.fill()
