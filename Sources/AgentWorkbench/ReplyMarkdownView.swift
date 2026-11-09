@@ -1320,6 +1320,10 @@ final class ReplyTextView: NSTextView {
             if let color = value as? NSColor, range.length > 0 { runs.append((color, range)) }
         }
         guard !runs.isEmpty else { return }
+        if ProcessInfo.processInfo.environment["CHIP_TRACE"] != nil {
+            let snippet = storage.string.count > 30 ? String(storage.string.prefix(30)) : storage.string
+            print("CHIP-PAINT view=\(Unmanaged.passUnretained(self).toOpaque()) runs=\(runs.count) bounds=\(NSStringFromRect(bounds)) text=«\(snippet)»")
+        }
         manager.ensureLayout(for: container)
         for run in runs {
             run.color.setFill()
