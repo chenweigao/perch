@@ -376,6 +376,10 @@ private final class PreviewDelegate: NSObject, NSApplicationDelegate {
         for text in captureDescendants(view).compactMap({ $0 as? ReplyTextView }) {
             text.layoutManager?.ensureLayout(for: text.textContainer!)
             text.needsDisplay = true
+            if ProcessInfo.processInfo.environment["CHIP_NO_SPELL"] != nil {
+                text.isContinuousSpellCheckingEnabled = false
+                text.isGrammarCheckingEnabled = false
+            }
         }
         if ProcessInfo.processInfo.environment["CHIP_DUMP"] != nil {
             for text in captureDescendants(view).compactMap({ $0 as? ReplyTextView }) {
