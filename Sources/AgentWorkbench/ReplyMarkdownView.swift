@@ -1328,25 +1328,28 @@ final class ReplyTextView: NSTextView {
         for run in runs {
             if ProcessInfo.processInfo.environment["CHIP_RED"] != nil { NSColor.red.setFill() } else { run.color.setFill() }
             let glyphs = manager.glyphRange(forCharacterRange: run.range, actualCharacterRange: nil)
-            manager.enumerateLineFragments(forGlyphRange: glyphs) { _, _, _, lineGlyphs, _ in
+            manager.enumerateLineFragments(forGlyphRange: glyphs) { lineRect, _, _, lineGlyphs, _ in
                 let segment = NSIntersectionRange(glyphs, lineGlyphs)
                 guard segment.length > 0 else { return }
                 // Horizontal: glyph locations, not boundingRect — the latter can
                 // extend past the last glyph and swallow following punctuation.
+                // location(forGlyphAt:) is line-fragment-relative: the fragment
+                // origin must be added back, or a wrapped chip's later segments
+                // paint over the first line.
                 let horizontal = manager.boundingRect(forGlyphRange: segment, in: container)
                 let charIndex = manager.characterIndexForGlyph(at: segment.location)
                 guard let runFont = storage.attribute(.font, at: charIndex, effectiveRange: nil) as? NSFont else { return }
-                let left = manager.location(forGlyphAt: segment.location).x
+                let left = lineRect.origin.x + manager.location(forGlyphAt: segment.location).x
                 let right: CGFloat
                 if NSMaxRange(segment) < NSMaxRange(lineGlyphs) {
-                    right = manager.location(forGlyphAt: NSMaxRange(segment)).x
+                    right = lineRect.origin.x + manager.location(forGlyphAt: NSMaxRange(segment)).x
                 } else {
                     right = horizontal.maxX
                 }
                 // Vertical: anchor to the run's own baseline. boundingRect's y
                 // tracks the line fragment, whose leading sits above the glyphs.
                 let glyphOrigin = manager.location(forGlyphAt: segment.location)
-                var rect = CGRect(x: left, y: glyphOrigin.y - runFont.ascender,
+                var rect = CGRect(x: left, y: lineRect.origin.y + glyphOrigin.y - runFont.ascender,
                                   width: right - left, height: runFont.ascender - runFont.descender)
                 rect.origin.x += self.textContainerInset.width
                 rect.origin.y += self.textContainerInset.height
