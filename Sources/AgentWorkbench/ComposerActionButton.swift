@@ -51,18 +51,19 @@ struct ComposerActionButton: View {
                 if isRunning { onStop() } else { onSend() }
             } label: {
                 ZStack {
-                    Circle().fill(enabled ? WorkbenchTheme.accent : Color.gray.opacity(0.3))
+                    Circle().fill(enabled ? WorkbenchTheme.accent : WorkbenchTheme.ink.opacity(0.10))
                     if isStopping {
-                        ProgressView().controlSize(.mini).tint(WorkbenchTheme.actionGlyph)
+                        ProgressView().controlSize(.mini).tint(WorkbenchTheme.quiet)
                     } else {
                         if active {
-                            PerchBusyIndicator(size: 36, ink: WorkbenchTheme.actionGlyphNS)
+                            PerchBusyIndicator(size: 28, ink: WorkbenchTheme.actionGlyphNS)
                                 .allowsHitTesting(false)
                         }
                         Image(systemName: isRunning ? "stop.fill" : "arrow.up")
-                            .font(.system(size: isRunning ? (active ? 8 : 12) : 15, weight: .semibold)).foregroundStyle(WorkbenchTheme.actionGlyph)
+                            .font(.system(size: isRunning ? (active ? 7 : 10) : 13, weight: .semibold))
+                            .foregroundStyle(enabled ? WorkbenchTheme.actionGlyph : WorkbenchTheme.quiet)
                     }
-                }.frame(width: 36, height: 36)
+                }.frame(width: 28, height: 28)
             }.buttonStyle(.plain).disabled(!enabled).accessibilityLabel(title)
                 .accessibilityValue(active ? L("Working…") : "")
                 .accessibilityIdentifier("composer-primary-action")
@@ -78,7 +79,7 @@ struct ComposerAddButton: View {
     var onChoose: () -> Void = {}
     var body: some View {
         Button(action: onChoose) {
-            Image(systemName: "plus").font(.system(size: 17)).frame(width: 28, height: 28).contentShape(Rectangle())
+            Image(systemName: "plus").font(.system(size: 15)).frame(width: 28, height: 28).contentShape(Rectangle())
         }.buttonStyle(.plain).foregroundStyle(.secondary)
             .disabled(disabled || !supportsFiles)
             .help(supportsFiles ? L("Add images or files") : L("Attachments are not supported by this agent connection"))

@@ -26,6 +26,7 @@ struct ComposerModelPicker: View {
     let onSelectThinking: (ThinkingLevel) -> Void
     @State private var presented = false
     @State private var thinkingPresented = false
+    @State private var hovering = false
 
     private var model: AgentModel? { models.first { $0.id == modelID } }
     private var modelTitle: String { model?.name ?? (modelID.isEmpty ? L("默认模型") : modelID) }
@@ -39,15 +40,30 @@ struct ComposerModelPicker: View {
         if layout == .combined {
             ModelControlWidth(maximum: 300) {
                 Button { presented.toggle() } label: {
-                    HStack(spacing: 5) {
-                        Text(modelTitle).lineLimit(1).truncationMode(.middle).layoutPriority(1)
-                        Text("· \(thinkingTitle)").foregroundStyle(.secondary).fixedSize()
-                        chevron
+                    HStack(spacing: 6) {
+                        Text(modelTitle)
+                            .font(.system(size: WorkbenchTheme.Typography.body, weight: .medium))
+                            .foregroundStyle(WorkbenchTheme.ink)
+                            .lineLimit(1).truncationMode(.tail).layoutPriority(1)
+                        // The reasoning level rides along as a tonal badge, never
+                        // competing with the model name (PI's chip contract).
+                        if let model, model.supportsThinking, unavailableReason == nil {
+                            Text(verbatim: thinkingTitle)
+                                .font(.system(size: WorkbenchTheme.Typography.caption - 1))
+                                .foregroundStyle(WorkbenchTheme.quiet)
+                                .padding(.horizontal, 6).padding(.vertical, 1)
+                                .background(Capsule().fill(WorkbenchTheme.Fill.surface))
+                                .fixedSize()
+                        }
+                        Image(systemName: "chevron.down").font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(.tertiary)
                     }
-                    .font(.system(size: WorkbenchTheme.Typography.body))
-                    .padding(.vertical, 6).contentShape(Rectangle())
+                    .padding(.leading, 10).padding(.trailing, 8).padding(.vertical, 5)
+                    .background(Capsule().fill(presented ? WorkbenchTheme.Fill.selected : hovering ? WorkbenchTheme.Fill.hover : .clear))
+                    .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
+                .onHover { hovering = $0 }
                 .help(disabledReason ?? L("模型与思考"))
                 .accessibilityLabel(L("模型与思考"))
                 .accessibilityValue("\(modelTitle) · \(thinkingTitle)")

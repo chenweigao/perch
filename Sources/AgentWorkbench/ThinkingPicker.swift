@@ -72,21 +72,25 @@ struct ContextMeter: View {
         Button { presented.toggle() } label: {
             HStack(spacing: 5) {
                 ZStack {
-                    Circle().stroke(Color.secondary.opacity(0.2), lineWidth: 2)
+                    Circle().stroke(WorkbenchTheme.ink.opacity(0.14), lineWidth: 2.5)
                     if let budget, !isStale {
                         Circle().trim(from: 0, to: budget.usedFraction)
-                            .stroke(tint, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                            .stroke(tint, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
                             .rotationEffect(.degrees(-90))
                     } else {
                         Text(isStale ? "–" : "?").font(.system(size: 9, weight: .medium))
                     }
-                }.frame(width: 14, height: 14)
-                if isStale {
-                    Text(L("未同步")).font(.system(size: WorkbenchTheme.Typography.caption))
-                } else if let budget, budget.pressure != .comfortable {
-                    Text(L("上下文将满")).font(.system(size: WorkbenchTheme.Typography.caption))
+                }.frame(width: 16, height: 16)
+                // PI's contract: the remaining percent rides beside the ring at all
+                // times; pressure only changes the ink.
+                if let budget, !isStale {
+                    Text("\(budget.remainingPercent)%")
+                        .font(.system(size: WorkbenchTheme.Typography.caption - 1, weight: .semibold))
+                        .monospacedDigit()
                 }
-            }.foregroundStyle(tint).frame(minWidth: 28, minHeight: 28).contentShape(Rectangle())
+            }.foregroundStyle(tint)
+                .padding(.horizontal, 6).padding(.vertical, 4)
+                .contentShape(Rectangle())
         }.buttonStyle(.plain).fixedSize()
             .help(summary).accessibilityLabel(summary)
             .popover(isPresented: $presented) {

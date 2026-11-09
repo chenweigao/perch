@@ -194,7 +194,7 @@ private struct KimiComposerView: View {
                                             onUseSessionModel: {
                                                 connection.modelChoices[sessionID] = ""
                                                 connection.thinkingChoices[sessionID] = connection.activeModel(for: sessionID)?.resolve(connection.thinkingChoices[sessionID])
-                                            }, scope: L("下一条消息生效"), onSelectModel: { model in
+                                            }, layout: .combined, scope: L("下一条消息生效"), onSelectModel: { model in
                                                 connection.modelChoices[sessionID] = model.id
                                                 connection.thinkingChoices[sessionID] = model.resolve(connection.thinkingChoices[sessionID])
                                             }, onSelectThinking: { connection.thinkingChoices[sessionID] = $0 })
