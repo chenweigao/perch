@@ -167,7 +167,11 @@ public enum ConversationProcessFold {
             // The forming answer (progress/commentary) stays outside — it is what
             // the turn produces, not part of what it did.
             let live = isRunning && lastPrompt != nil && index > lastPrompt!
-            let foldableNow = foldable(row) && !(live && (row.entry.presentation == .progress || row.entry.presentation == .commentary))
+            // The forming answer and the narrative's visible anchor stay outside
+            // the live disclosure: they are what the turn shows, not its process.
+            let visibleContent = row.entry.presentation == .progress || row.entry.presentation == .commentary
+                || row.activity?.isAnchor == true
+            let foldableNow = foldable(row) && !(live && visibleContent)
             if foldableNow {
                 if pendingLive && !live { flush() }
                 pendingLive = pendingLive || live
