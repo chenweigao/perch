@@ -205,7 +205,7 @@ struct KimiMessageView: View {
                                      preparation: markdownPreparation)
                             .environment(\.isConversationBodyText, true)
                     }
-                case "thinking": ThoughtDisclosure(text: part.thinking ?? "")
+                case "thinking": ThoughtDisclosure(text: part.thinking ?? "", publicSummary: ConversationThinkingSummary.publicSummary(of: part))
                 case "tool_use":
                     if let tool = tools[part.toolCallId ?? ""] { KimiToolCard(tool: tool) }
                 case "image", "file", "video":
@@ -2779,12 +2779,15 @@ private struct ThoughtToggle: View {
 
 struct ThoughtDisclosure: View {
     let text: String
+    /// A provider-declared public summary wins over the raw rolling line (the
+    /// collapsed header never surfaces redacted reasoning).
+    var publicSummary: String? = nil
     @UILocalization private var L
     @RememberedExpansion("thought") private var expanded
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
             ThoughtToggle(title: Text(verbatim: L("Thoughts")),
-                          summary: expanded ? nil : ThoughtTextStyle.latestSummaryLine(text),
+                          summary: expanded ? nil : (publicSummary ?? ThoughtTextStyle.latestSummaryLine(text)),
                           expanded: $expanded)
             WorkbenchDisclosureContent(expanded: expanded) { ThoughtText(text: text) }
         }
@@ -2805,11 +2808,13 @@ struct ThoughtOutput: View {
             ThoughtText(text: fullText)
         } else {
             VStack(alignment: .leading, spacing: 9) {
-                // A collapsed running thought shows its latest meaningful line beside
-                // the title (DSH's streaming summary), so the preview reads without
-                // pushing the reply down.
+                // A collapsed running thought shows the provider's public summary
+                // first, else its latest meaningful line beside the title (DSH's
+                // streaming summary), so the preview reads without pushing the
+                // reply down.
+                let publicSummary = messages.flatMap(\.content).compactMap { ConversationThinkingSummary.publicSummary(of: $0) }.first
                 ThoughtToggle(title: Text(verbatim: finished ? L("Thoughts") : L("Thinking")),
-                              summary: expanded ? nil : ThoughtTextStyle.latestSummaryLine(fullText),
+                              summary: expanded ? nil : (publicSummary ?? ThoughtTextStyle.latestSummaryLine(fullText)),
                               expanded: $expanded)
                     .accessibilityIdentifier("thought-disclosure:" + memoryKey)
                 WorkbenchDisclosureContent(expanded: expanded) { ThoughtText(text: fullText) }
