@@ -2484,15 +2484,7 @@ struct ProcessFoldRow: View {
                         }.buttonStyle(.borderless).font(.system(size: ReplyStyle.Process.labelSize))
                     }
                     ForEach(Array(rows[page.range]), id: \.entry.id) { row in
-                        let isLiveChild = live && row.entry.id == liveEntryID
-                        ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
-                                              memoryKey: (sourceMemoryPrefix ?? sessionId) + ":" + row.entry.id, activityNarrative: row.activity,
-                                              preservesExpandedProcess: true,
-                                              isLive: isLiveChild,
-                                              liveThinkingSummary: isLiveChild ? liveSummary : nil)
-                            .environment(\.conversationMemoryKey, (sourceMemoryPrefix ?? sessionId) + ":" + row.entry.id)
-                            .environment(\.isConversationBodyText, true)
-                            .background(ProcessFindAnchor(id: row.entry.id))
+                        foldedRowView(row)
                     }
                 }.padding(.top, ReplyStyle.Process.rowSpacing).padding(.leading, ReplyStyle.Process.nestedIndent)
                     .overlay(alignment: .leading) {
@@ -2500,6 +2492,19 @@ struct ProcessFoldRow: View {
                     }
             }
         }
+    }
+    /// One folded row; the live public summary forwards to the live activity
+    /// child so it keeps riding that stage's header inside the disclosure.
+    private func foldedRowView(_ row: ConversationPresentationModel.Row) -> some View {
+        let isLiveChild = live && row.entry.id == liveEntryID
+        return ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
+                                     memoryKey: (sourceMemoryPrefix ?? sessionId) + ":" + row.entry.id, activityNarrative: row.activity,
+                                     preservesExpandedProcess: true,
+                                     isLive: isLiveChild,
+                                     liveThinkingSummary: isLiveChild ? liveSummary : nil)
+            .environment(\.conversationMemoryKey, (sourceMemoryPrefix ?? sessionId) + ":" + row.entry.id)
+            .environment(\.isConversationBodyText, true)
+            .background(ProcessFindAnchor(id: row.entry.id))
     }
     private func editStatBadge(_ editStat: (files: Int, additions: Int, deletions: Int)) -> some View {
         HStack(spacing: 5) {
