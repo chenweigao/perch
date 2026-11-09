@@ -141,19 +141,37 @@ private final class ToolbarDelegate: NSObject, NSApplicationDelegate {
         if let capturePath = ProcessInfo.processInfo.environment["COMPOSER_TOOLBAR_CAPTURE"] {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                 if let window = NSApp.windows.first, let content = window.contentView {
+                    // Optionally open a probed control (e.g. the model chip) first.
+                    if let openID = ProcessInfo.processInfo.environment["COMPOSER_TOOLBAR_CAPTURE_OPEN"],
+                       let view = ToolbarProbe.controls[openID] {
+                        let point = view.convert(NSPoint(x: view.bounds.midX, y: view.bounds.midY), to: nil)
+                        for kind in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+                            if let event = NSEvent.mouseEvent(with: kind, location: point, modifierFlags: [],
+                                timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
+                                context: nil, eventNumber: 0, clickCount: 1, pressure: 1) {
+                                window.sendEvent(event)
+                            }
+                        }
+                        RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.8))
+                    }
                     window.displayIfNeeded()
                     content.layoutSubtreeIfNeeded()
+                    // A popover (model panel) is its own window: capture it instead.
+                    let target = NSApp.windows.last(where: { $0.isVisible }) ?? window
+                    let targetContent = target.contentView ?? content
+                    target.displayIfNeeded()
+                    targetContent.layoutSubtreeIfNeeded()
                     // cacheDisplay drops SwiftUI symbol layers; render the layer tree instead.
                     let scale: CGFloat = 2
                     if let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil,
-                            pixelsWide: Int(content.bounds.width * scale), pixelsHigh: Int(content.bounds.height * scale),
+                            pixelsWide: Int(targetContent.bounds.width * scale), pixelsHigh: Int(targetContent.bounds.height * scale),
                             bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
                             colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0),
                        let graphics = NSGraphicsContext(bitmapImageRep: bitmap) {
                         let context = graphics.cgContext
                         context.translateBy(x: 0, y: CGFloat(bitmap.pixelsHigh))
                         context.scaleBy(x: scale, y: -scale)
-                        content.effectiveAppearance.performAsCurrentDrawingAppearance { content.layer?.render(in: context) }
+                        targetContent.effectiveAppearance.performAsCurrentDrawingAppearance { targetContent.layer?.render(in: context) }
                         try? bitmap.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: capturePath))
                     }
                     var frames: [String: String] = [:]
