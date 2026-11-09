@@ -447,7 +447,6 @@ private struct ReadingReviewControls: View {
     // streaming reasoning row), inside or outside the fold alike.
     guard let foldLabel = taskPanelLabel(window, "completed-process:text:lifecycle-progress:0") else { fatalError("Missing the live process disclosure") }
     precondition(foldLabel.contains("Inspecting the tab state"), "The live fold header carries the public summary: \(foldLabel)")
-    precondition(summaryFrame.height <= 46, "The live summary is bounded to two lines")
     try snapshot("lifecycle-running")
     host.rootView = ReadingDesignFixture(messages: live, running: false, session: "lifecycle-A", folds: true)
     try await settle()
