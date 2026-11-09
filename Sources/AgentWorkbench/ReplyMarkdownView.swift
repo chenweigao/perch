@@ -890,6 +890,11 @@ struct SelectableReplyText: NSViewRepresentable {
         view.isEditable = false
         view.delegate = delegate
         view.enabledTextCheckingTypes = 0
+        // Read-only prose: the spell/grammar checker's dotted underlines read as
+        // rendering noise on mixed CJK/Latin agent output.
+        view.isContinuousSpellCheckingEnabled = false
+        view.isGrammarCheckingEnabled = false
+        view.isAutomaticSpellingCorrectionEnabled = false
         view.isSelectable = true
         view.drawsBackground = false
         view.textContainerInset = .zero
