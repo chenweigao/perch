@@ -221,6 +221,8 @@ private struct KimiComposerView: View {
                         }
                     ComposerActionButton(isRunning: isRunning,
                                          isStopping: connection.isStopping, canSend: canSend, canStop: connection.canStop,
+                                         hasDraft: !(connection.drafts[sessionID] ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                             || !(connection.attachments[sessionID] ?? []).isEmpty,
                                          showsActivity: connection.online && connection.snapshotReady
                                              && connection.conversation?.snapshot.pendingApprovals.isEmpty == true
                                              && connection.conversation?.snapshot.pendingQuestions.isEmpty == true,

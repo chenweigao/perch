@@ -1,14 +1,14 @@
 import SwiftUI
 import WorkbenchCore
 
-/// The primary action follows runtime state, never the contents of the draft.
-/// A separate queue action preserves composing while the current turn runs.
+/// PI's primary action: a draft sends, an empty running composer stops.
 struct ComposerActionButton: View {
     @UILocalization private var L
     let isRunning: Bool
     let isStopping: Bool
     let canSend: Bool
     let canStop: Bool
+    var hasDraft = false
     /// False while disconnected or waiting for the user, even if the turn is open.
     var showsActivity = true
     /// A localization key ("Queue", "Steer", "Run command").
@@ -17,9 +17,11 @@ struct ComposerActionButton: View {
     let onStop: () -> Void
     var onQueue: (() -> Void)? = nil
 
-    private var active: Bool { isRunning && canStop && showsActivity && !isStopping }
-    private var enabled: Bool { !isStopping && (isRunning ? canStop : canSend) }
-    private var title: String { isStopping ? L("Stopping…") : isRunning ? L("Stop task") : L("Send") }
+    private var showsStop: Bool { isRunning && !hasDraft }
+    private var stopping: Bool { isRunning && isStopping }
+    private var active: Bool { showsStop && canStop && showsActivity && !stopping }
+    private var enabled: Bool { !stopping && (showsStop ? canStop : canSend) }
+    private var title: String { stopping ? L("Stopping…") : showsStop ? L("Stop task") : L("Send") }
     /// The hint does what Return does; its tooltip names that key and ⌘Return.
     private var queuedSendHelp: String {
         switch queuedSendTitle {
@@ -30,11 +32,7 @@ struct ComposerActionButton: View {
     }
     var body: some View {
         HStack(spacing: 8) {
-            if isRunning && canSend && !isStopping {
-                Button(L(key: queuedSendTitle), action: onSend).buttonStyle(.plain)
-                    .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
-                    .accessibilityLabel(queuedSendTitle == "Queue" ? L("Queue message") : L(key: queuedSendTitle))
-                    .help(queuedSendHelp)
+            if isRunning && hasDraft && canSend && !stopping {
                 if let onQueue {
                     // ⌘↩ is text, not a key equivalent: the composer already handles
                     // ⌘Return, and a pop-up button can fire its items' equivalents
@@ -48,26 +46,21 @@ struct ComposerActionButton: View {
                 }
             }
             Button {
-                if isRunning { onStop() } else { onSend() }
+                if showsStop { onStop() } else { onSend() }
             } label: {
                 ZStack {
-                    Circle().fill(enabled ? WorkbenchTheme.accent : WorkbenchTheme.ink.opacity(0.10))
-                    if isStopping {
-                        ProgressView().controlSize(.mini).tint(WorkbenchTheme.quiet)
-                    } else {
-                        if active {
-                            PerchBusyIndicator(size: 28, ink: WorkbenchTheme.actionGlyphNS)
-                                .allowsHitTesting(false)
-                        }
-                        Image(systemName: isRunning ? "stop.fill" : "arrow.up")
-                            .font(.system(size: isRunning ? (active ? 7 : 10) : 13, weight: .semibold))
-                            .foregroundStyle(enabled ? WorkbenchTheme.actionGlyph : WorkbenchTheme.quiet)
-                    }
+                    Circle().fill(showsStop ? WorkbenchTheme.ink.opacity(0.16)
+                                  : enabled ? WorkbenchTheme.accent : WorkbenchTheme.ink.opacity(0.10))
+                    Image(systemName: showsStop ? "stop.fill" : "arrow.up")
+                        .font(.system(size: showsStop ? 14 : 15, weight: .semibold))
+                        .foregroundStyle(showsStop ? WorkbenchTheme.ink
+                                         : enabled ? WorkbenchTheme.actionGlyph : WorkbenchTheme.quiet)
+                        .opacity(showsStop && !enabled ? 0.5 : 1)
                 }.frame(width: 28, height: 28)
             }.buttonStyle(.plain).disabled(!enabled).accessibilityLabel(title)
                 .accessibilityValue(active ? L("Working…") : "")
                 .accessibilityIdentifier("composer-primary-action")
-                .help(active ? L("Working…") + " · " + title : isRunning || isStopping ? title : L("Return to send · Shift Return for a new line"))
+                .help(isRunning && hasDraft ? queuedSendHelp : showsStop || stopping ? title : L("Return to send · Shift Return for a new line"))
         }
     }
 }

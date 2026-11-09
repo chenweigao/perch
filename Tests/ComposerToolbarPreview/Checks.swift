@@ -7,6 +7,7 @@ enum ToolbarProbe {
     static var selection = ""
     static var payload = ""
     static var stops = 0
+    static var sends = 0
 }
 
 struct ToolbarButtonProbe: NSViewRepresentable {
@@ -80,6 +81,8 @@ private func closePanel(_ panel: NSWindow) async throws {
                                 characters: "\u{1b}", charactersIgnoringModifiers: "\u{1b}",
                                 isARepeat: false, keyCode: 53)!
     panel.sendEvent(event)
+    try await pause()
+    if panel.isVisible { panel.sendEvent(event) }
     try await expectDismissed(panel, "Escape must dismiss the panel")
 }
 
@@ -89,10 +92,36 @@ private func chooseModel(_ query: String, in panel: NSWindow) async throws {
     field.selectText(nil)
     (field.currentEditor() as! NSTextView).insertText(query, replacementRange: NSRange(location: NSNotFound, length: 0))
     try await pause()
-    let list = views(panel.contentView!).compactMap { $0 as? NSScrollView }.first!
-    let frame = list.convert(list.bounds, to: nil)
-    click(NSPoint(x: frame.midX, y: frame.maxY - 30), in: panel)
-    try await expectDismissed(panel, "Choosing a model must dismiss its panel")
+    for (characters, code) in [("\u{f701}", UInt16(125)), ("\r", UInt16(36))] {
+        let event = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [],
+                                    timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: panel.windowNumber,
+                                    context: nil, characters: characters, charactersIgnoringModifiers: characters,
+                                    isARepeat: false, keyCode: code)!
+        panel.sendEvent(event)
+        try await pause()
+    }
+    try expect(panel.isVisible, "Choosing a model must keep the PI model/reasoning surface open")
+    try await closePanel(panel)
+}
+
+@MainActor
+private func chooseThinking(_ index: Int, in panel: NSWindow) async throws {
+    guard let slider = views(panel.contentView!).compactMap({ $0 as? NSSlider }).first else {
+        throw NSError(domain: "Missing reasoning slider", code: 1)
+    }
+    let tick = slider.rectOfTickMark(at: index)
+    let bar = (slider.cell as! NSSliderCell).barRect(flipped: slider.isFlipped)
+    let point = slider.convert(NSPoint(x: tick.midX, y: bar.midY), to: nil)
+    // Native sliders run a tracking loop on mouse-down; queue the release first.
+    let up = NSEvent.mouseEvent(with: .leftMouseUp, location: point, modifierFlags: [],
+                               timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: panel.windowNumber,
+                               context: nil, eventNumber: 0, clickCount: 1, pressure: 0)!
+    let down = NSEvent.mouseEvent(with: .leftMouseDown, location: point, modifierFlags: [],
+                                 timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: panel.windowNumber,
+                                 context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!
+    NSApp.postEvent(up, atStart: true)
+    panel.sendEvent(down)
+    try await pause()
 }
 
 @MainActor
@@ -107,7 +136,7 @@ private func checkLayout(_ label: String) throws {
     try expect(!frames[0].intersects(frames[1]) && !frames[1].intersects(frames[2]), "Controls overlap: " + label)
     try expect(frames[0].width >= 50, "Model selector is squeezed out: " + label)
     if ToolbarProbe.selection.hasPrefix("fixture/long") {
-        try expect(frames[0].width >= 260, "Long model names must remain readable beside the longest effort label")
+        try expect(frames[0].width >= 190 && frames[0].width <= 320, "Long model names must retain the PI label/badge/caret width")
     }
     print("PASS layout", label, frames)
 }
@@ -132,14 +161,18 @@ func runToolbarChecks() async {
         } else {
             try await closePanel(panel)
             let lowPanel = try await openPanel(main, thinking: true)
-            click(NSPoint(x: 80, y: lowPanel.frame.height - 60), in: lowPanel)
-            try await pause()
-            try expect(ToolbarProbe.selection == "fixture/reasoner|low", "Low thinking row did not update selection")
-            try expect(!lowPanel.isVisible, "Selecting effort must close its popover")
-            let highPanel = try await openPanel(main, thinking: true)
-            click(NSPoint(x: 80, y: highPanel.frame.height - 60 - 3 * 33), in: highPanel)
-            try await pause()
-            try expect(ToolbarProbe.selection == "fixture/reasoner|xhigh", "Extra high thinking row did not update selection")
+            try await chooseThinking(0, in: lowPanel)
+            try expect(ToolbarProbe.selection == "fixture/reasoner|low", "Low reasoning stop did not update selection")
+            try expect(lowPanel.isVisible, "Selecting reasoning must keep its menu open")
+            let slider = views(lowPanel.contentView!).compactMap { $0 as? NSSlider }.first!
+            lowPanel.makeFirstResponder(slider)
+            let end = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [],
+                                      timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: lowPanel.windowNumber,
+                                      context: nil, characters: "\u{f72b}", charactersIgnoringModifiers: "\u{f72b}",
+                                      isARepeat: false, keyCode: 119)!
+            lowPanel.sendEvent(end); try await pause()
+            try expect(ToolbarProbe.selection == "fixture/reasoner|xhigh", "End must reach the last reasoning stop")
+            try await closePanel(lowPanel)
             try await chooseModel("Deep", in: openPanel(main))
             try expect(ToolbarProbe.selection == "fixture/deep|max", "Model switch must resolve unsupported effort to its own default")
             try await chooseModel("Plain", in: openPanel(main))
@@ -147,10 +180,10 @@ func runToolbarChecks() async {
             try await chooseModel("long", in: openPanel(main))
             try expect(ToolbarProbe.selection == "fixture/long|auto", "The extended model must select its reported default")
             let extended = try await openPanel(main, thinking: true)
-            click(NSPoint(x: 80, y: extended.frame.height - 60 - 5 * 33), in: extended)
-            try await pause()
-            try expect(ToolbarProbe.selection == "fixture/long|xhigh", "Extended effort rows must be reachable")
-            print("PASS: separate model/effort pickers, dismiss on selection, fallback and extended levels")
+            try await chooseThinking(5, in: extended)
+            try expect(ToolbarProbe.selection == "fixture/long|xhigh", "Extended reasoning stops must be reachable")
+            try await closePanel(extended)
+            print("PASS: combined model/reasoning menu, pointer/keyboard stops, fallback and extended levels")
         }
         try await press("narrow")
         try checkLayout("narrow Chinese long model")
@@ -166,15 +199,13 @@ func runToolbarChecks() async {
             try await press("offline")
             let offline = try await openPanel(main, thinking: true)
             let selection = ToolbarProbe.selection
-            click(NSPoint(x: 65, y: offline.frame.height - 60), in: offline)
-            try await pause()
+            try await chooseThinking(0, in: offline)
             try expect(ToolbarProbe.selection == selection, "Offline controls must not modify selection")
             try await closePanel(offline)
             try await press("offline")
             try await press("running")
             let running = try await openPanel(main, thinking: true)
-            click(NSPoint(x: 65, y: running.frame.height - 60), in: running)
-            try await pause()
+            try await chooseThinking(0, in: running)
             if agent != "kimi" { try expect(ToolbarProbe.selection == selection, "Native running sessions must not change thinking") }
             if running.isVisible { try await closePanel(running) }
             try await press("running")
@@ -197,13 +228,19 @@ func runToolbarChecks() async {
             }
             let actionSize = ToolbarProbe.controls["send"]!.bounds.size
             try expect(actionSize == CGSize(width: 28, height: 28), "Running action must keep its 28pt target")
-            try expect(arcs() > 0, "Running stop control must show the activity arc")
+            try expect(arcs() == 0, "PI's stop control stays static while the turn runs")
+            try await press("draft")
+            try await press("send")
+            try expect(ToolbarProbe.sends == 2 && ToolbarProbe.stops == 0, "A running composer with a draft must send")
+            try await press("finish-turn")
+            try await press("send")
+            try expect(ToolbarProbe.sends == 3 && ToolbarProbe.stops == 0, "Natural completion must restore Send")
             for control in ["waiting", "offline"] {
                 try await press(control)
                 try expect(arcs() == 0, "No chase while " + control)
                 try expect(ToolbarProbe.controls["send"]!.bounds.size == actionSize, "State changes must not resize the action")
                 try await press(control)
-                try expect(arcs() > 0, "Activity must resume after " + control)
+                try expect(arcs() == 0, "The primary action must stay static after " + control)
             }
             try await press("send")
             try expect(ToolbarProbe.stops == 1 && arcs() == 0, "Stop must fire once and end the activity chase")
@@ -212,7 +249,7 @@ func runToolbarChecks() async {
             try await press("confirm-stop")
             try expect(arcs() == 0 && ToolbarProbe.controls["send"]!.bounds.size == actionSize,
                        "Completion must restore idle without moving the control")
-            print("PASS: activity arc, attention/offline, stop confirmation, stable action size")
+            print("PASS: draft sends while running, natural completion, stop confirmation, stable static action")
         }
         result["status"] = "passed"
     } catch {

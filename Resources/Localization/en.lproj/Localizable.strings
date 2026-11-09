@@ -2077,3 +2077,9 @@
 "展开查看失败记录" = "Expand to view failed calls";
 
 "等待 Agent 新输出…" = "Waiting for new agent output…";
+
+"搜索模型" = "Search models";
+
+"推理" = "Reasoning";
+
+"视觉" = "Vision";

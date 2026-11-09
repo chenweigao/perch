@@ -131,6 +131,27 @@ extension WorkbenchTheme {
         static let secondary: CGFloat = body
         static let caption: CGFloat = 12
     }
+    /// PI composer-menus.css: compact rows, source rail and reasoning track.
+    enum Composer {
+        static let text: CGFloat = 12
+        static let metadata: CGFloat = 11
+        static let rowHeight: CGFloat = 28
+        static let railWidth: CGFloat = 116
+        static let paneMaximum: CGFloat = 264
+        static let sliderHeight: CGFloat = 24
+        static let motion = 0.2
+        static let raised = WorkbenchTheme.color(light: (1, 1, 1), dark: (40/255, 40/255, 40/255))
+        static func contextLabel(_ tokens: Int) -> String {
+            guard tokens > 0 else { return "—" }
+            guard tokens >= 1000 else { return String(tokens) }
+            let thousands = Double(tokens) / 1000
+            let millions = (thousands * 10).rounded() / 10 >= 1000
+            var value = String(format: millions ? "%.2f" : "%.1f", millions ? Double(tokens) / 1_000_000 : thousands)
+            while value.hasSuffix("0") { value.removeLast() }
+            if value.hasSuffix(".") { value.removeLast() }
+            return value + (millions ? "M" : "K")
+        }
+    }
 }
 
 extension WorkbenchTheme {

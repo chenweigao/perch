@@ -36,7 +36,7 @@ private struct ToolbarPreview: View {
     private var L: LocalizedUIStrings { LocalizedUIStrings(locale: locale) }
     private var canSend: Bool { !offline && !stopping && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     private var newTask: Bool { ProcessInfo.processInfo.environment["COMPOSER_PREVIEW_NEW_TASK"] == "1" }
-    private var combinedPicker: Bool { ProcessInfo.processInfo.environment["COMPOSER_PREVIEW_COMBINED"] == "1" }
+    private var combinedPicker: Bool { ProcessInfo.processInfo.environment["COMPOSER_PREVIEW_COMBINED"] != "0" }
     private var usesRuntimeDefault: Bool { [.qoder, .qoderintl].contains(selectedProvider) || (newTask && selectedProvider == .claude) }
     private var disabledReason: String? {
         if offline { return L("连接恢复后可修改设置。") }
@@ -49,9 +49,11 @@ private struct ToolbarPreview: View {
         sendCount += 1; text = ""; running = true
     }
     private let models = [
-        AgentModel(id: "fixture/reasoner", provider: "fixture", name: "Reasoner", thinking: [.low, .medium, .high, .xhigh], defaultThinking: .high),
-        AgentModel(id: "fixture/deep", provider: "fixture", name: "Deep reasoning", thinking: [.low, .high, .max], defaultThinking: .max),
-        AgentModel(id: "fixture/plain", provider: "fixture", name: "Plain model"),
+        AgentModel(id: "fixture/reasoner", provider: "fixture", name: "Reasoner", contextWindow: 272000,
+                   thinking: [.low, .medium, .high, .xhigh], defaultThinking: .high, hasVisionCapability: true),
+        AgentModel(id: "fixture/deep", provider: "fixture", name: "Deep reasoning", contextWindow: 1048576,
+                   thinking: [.low, .high, .max], defaultThinking: .max),
+        AgentModel(id: "fixture/plain", provider: "fixture", name: "Plain model", contextWindow: 8192),
         AgentModel(id: "fixture/long", provider: "extended", name: "A very long model name for narrow window layout validation", thinking: ThinkingLevel.allCases, defaultThinking: .auto),
         AgentModel(id: "fixture/default", provider: "extended", name: "Runtime default", thinking: [.low, .high])
     ]
@@ -89,6 +91,9 @@ private struct ToolbarPreview: View {
                 Toggle("Waiting", isOn: $waiting).background(ToolbarButtonProbe(id: "waiting"))
                 Button("Confirm stopped") { stopping = false; running = false }.disabled(!stopping)
                     .background(ToolbarButtonProbe(id: "confirm-stop"))
+                Button("Finish turn") { running = false; stopping = false; text = "Next message" }
+                    .background(ToolbarButtonProbe(id: "finish-turn"))
+                Button("Draft") { text = "Follow-up" }.background(ToolbarButtonProbe(id: "draft"))
                 Text("Sends: \(sendCount) · Stops: \(stopCount)").font(.caption).monospacedDigit()
             }
             VStack(alignment: .leading, spacing: 8) {
@@ -120,10 +125,12 @@ private struct ToolbarPreview: View {
                         .background(ToolbarButtonProbe(id: "templates"))
                     ContextMeter(budget: ContextBudget(used: low ? 95 : 29, limit: 100), isStale: offline)
                     ComposerActionButton(isRunning: running, isStopping: stopping, canSend: canSend,
-                                         canStop: running && !offline && !stopping, showsActivity: !offline && !waiting, onSend: send) {
+                                         canStop: running && !offline && !stopping, hasDraft: !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                                         showsActivity: !offline && !waiting, onSend: send) {
                         stopCount += 1; stopping = true
                     }.background(ToolbarButtonProbe(id: "send"))
                         .onChange(of: stopCount, initial: true) { _, value in ToolbarProbe.stops = value }
+                        .onChange(of: sendCount, initial: true) { _, value in ToolbarProbe.sends = value }
                 }
             }.padding(12).workbenchControlSurface().frame(width: narrow ? 540 : 840)
                 .accessibilityIdentifier("preview-composer").background(ToolbarButtonProbe(id: "composer"))

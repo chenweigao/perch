@@ -144,7 +144,7 @@ struct NewTaskView: View {
                 onRefreshCatalog: {
                     if provider == .kimi { await kimi.refreshModels() }
                     else { await native.loadModels() }
-                }, layout: .split, usesDefaultModel: agentModel.isEmpty,
+                }, layout: .combined, usesDefaultModel: agentModel.isEmpty,
                 onUseDefaultModel: provider == .codex ? nil : { agentModel = ""; thinking = nil },
                 scope: L("首条消息生效"), onSelectModel: { option in
                     agentModel = option.id; thinking = option.resolve(thinking)
