@@ -73,6 +73,8 @@ private struct ComposerThinkingRange: NSViewRepresentable {
         let slider = ComposerThinkingNSSlider()
         slider.cell = ComposerThinkingSliderCell()
         slider.controlSize = .small
+        slider.isVertical = false
+        slider.sliderType = .linear
         slider.isContinuous = true
         slider.target = context.coordinator
         slider.action = #selector(Coordinator.changed(_:))
@@ -129,7 +131,11 @@ private final class ComposerThinkingNSSlider: NSSlider {
 }
 
 private final class ComposerThinkingSliderCell: NSSliderCell {
-    override func draw(withFrame cellFrame: NSRect, in controlView: NSView) {}
+    // Keep NSSliderCell's layout/tracking pass; suppress only its paint.
+    override func drawBar(inside rect: NSRect, flipped: Bool) {}
+    override func drawKnob(_ knobRect: NSRect) {}
+    override func drawKnob() {}
+    override func drawTickMarks() {}
 }
 
 struct ThinkingPicker: View {
@@ -188,16 +194,13 @@ struct ContextMeter: View {
     private var summary: String {
         if isStale { return L("上下文用量未同步") }
         guard let budget else { return L("上下文用量未知") }
-        let percent = "\(budget.remainingPercent)%"
+        let percent = "\(displayedPercent ?? budget.remainingPercent)%"
         return L("上下文剩余约 \(percent)")
     }
     private var tint: Color {
         guard !isStale, let budget else { return .secondary }
-        switch budget.pressure {
-        case .comfortable: return .secondary
-        case .tight: return .orange
-        case .critical: return .red
-        }
+        let percent = displayedPercent ?? budget.remainingPercent
+        return percent <= 10 ? .red : percent <= 25 ? .orange : .secondary
     }
     private var displayedPercent: Int? { budget.map { 100 - Int(($0.usedFraction * 100).rounded()) } }
     var body: some View {
@@ -223,7 +226,7 @@ struct ContextMeter: View {
                         .monospacedDigit()
                 }
             }.foregroundStyle(tint)
-                .padding(.horizontal, 6).padding(.vertical, 4)
+                .padding(.leading, 5).padding(.trailing, 8).padding(.vertical, 3).frame(minHeight: 24)
                 .contentShape(Rectangle())
         }.buttonStyle(.plain).fixedSize()
             .help(summary).accessibilityLabel(summary)

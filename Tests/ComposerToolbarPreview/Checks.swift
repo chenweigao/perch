@@ -57,7 +57,10 @@ private func openPanel(_ main: NSWindow, thinking: Bool = false) async throws ->
     for _ in 0..<2 {
         click(view.convert(point, to: nil), in: main)
         for _ in 0..<40 {
-            if let panel = NSApp.windows.first(where: { $0.isVisible && $0 !== main }) { return panel }
+            if let panel = NSApp.windows.first(where: { $0.isVisible && $0 !== main }) {
+                try await pause()
+                return panel
+            }
             try await Task.sleep(for: .milliseconds(50))
         }
     }
@@ -112,6 +115,7 @@ private func chooseThinking(_ index: Int, in panel: NSWindow) async throws {
     let tick = slider.rectOfTickMark(at: index)
     let bar = (slider.cell as! NSSliderCell).barRect(flipped: slider.isFlipped)
     let point = slider.convert(NSPoint(x: tick.midX, y: bar.midY), to: nil)
+    let before = slider.doubleValue
     // Native sliders run a tracking loop on mouse-down; queue the release first.
     let up = NSEvent.mouseEvent(with: .leftMouseUp, location: point, modifierFlags: [],
                                timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: panel.windowNumber,
@@ -122,6 +126,8 @@ private func chooseThinking(_ index: Int, in panel: NSWindow) async throws {
     NSApp.postEvent(up, atStart: true)
     panel.sendEvent(down)
     try await pause()
+    print("Reasoning pointer", index, "value", before, "->", slider.doubleValue,
+          "enabled", slider.isEnabled, "frame", slider.frame, "tick", tick, "bar", bar)
 }
 
 @MainActor

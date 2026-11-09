@@ -148,9 +148,9 @@ public enum ToolPresentation {
     /// The detail slot is independent of the tool's title. PI renders it only
     /// when there is an argument to summarize; a bare call needs no second name.
     public static func rowSummary(_ tool: VisibleTool) -> String {
-        let compact = compactTarget(tool).trimmingCharacters(in: .whitespacesAndNewlines)
-        if !compact.isEmpty && compact != tool.name { return compact }
-        for key in ["cmd", "query", "url", "objective", "title", "prompt"] {
+        if let command = ShellActivity.command(tool), !command.isEmpty { return command }
+        if let path = path(tool), !path.isEmpty { return path }
+        for key in ["description", "pattern", "query", "url", "objective", "title", "prompt", "cmd"] {
             if let value = tool.input?[key].string?.trimmingCharacters(in: .whitespacesAndNewlines),
                !value.isEmpty, value != tool.name { return value }
         }

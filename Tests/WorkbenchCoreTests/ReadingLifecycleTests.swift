@@ -20,6 +20,11 @@ func checkReadingLifecycle() throws {
     precondition(ToolPresentation.rowSummary(bareGoal).isEmpty && ToolPresentation.rowSummary(bareTodo).isEmpty,
                  "Bare tools must not repeat their title in the detail slot")
     precondition(ToolPresentation.recentTargets([bareGoal, bareTodo]).isEmpty)
+    let shell = VisibleTool(id: "shell-summary", name: "bash", input: .object(["command": .string("cd /repo && swift test --filter Reading")]), status: .running)
+    let path = VisibleTool(id: "path-summary", name: "read", input: .object(["path": .string("/repo/Sources/a.swift")]), status: .succeeded)
+    precondition(ToolPresentation.rowSummary(shell) == "cd /repo && swift test --filter Reading"
+                 && ToolPresentation.rowSummary(path) == "/repo/Sources/a.swift",
+                 "The detail slot must preserve the observed command or path")
     precondition(ConversationThinkingSummary.latest(in: Array(messages.prefix(3))) == "Inspecting the tab state. Checking first open.")
     let privatePart = try KimiWire.decoder().decode([KimiMessage].self, from: Data("""
     [{"id":"private","role":"assistant","created_at":"11","content":[{"type":"thinking","thinking":"PRIVATE_REASONING_NOT_A_SUMMARY"}]}]

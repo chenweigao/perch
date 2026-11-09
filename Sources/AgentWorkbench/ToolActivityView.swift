@@ -321,7 +321,7 @@ struct KimiToolCard: View {
                     if !summary.isEmpty {
                         HStack(spacing: 0) {
                             Text(summary).font(.system(size: ReplyStyle.captionSize, design: .monospaced))
-                                .lineLimit(1).truncationMode(.middle)
+                                .lineLimit(1).truncationMode(.tail)
                             if let rangeSuffix {
                                 Text(verbatim: rangeSuffix)
                                     .font(.system(size: ReplyStyle.captionSize, design: .monospaced))

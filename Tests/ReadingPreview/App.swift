@@ -332,6 +332,24 @@ private final class PreviewDelegate: NSObject, NSApplicationDelegate {
         message("runt-note", content: [["type": "text", "text": "先看渲染入口文件的结构。"]]),
         message("runt-tool", content: [["type": "tool_use", "tool_call_id": "runt-read", "tool_name": "read", "input": ["path": "Sources/AgentWorkbench/ReplyMarkdownView.swift"]]]),
     ]
+    let previousTurn: [KimiMessage] = [
+        message("seq-old-user", role: "user", content: [["type": "text", "text": "检查第一轮。"]]),
+        message("seq-old-thought", content: [["type": "thinking", "thinking": "第一轮先读取文件，再记录结论。"]]),
+        message("seq-old-read", content: [["type": "tool_use", "tool_call_id": "seq-old-read", "tool_name": "read", "input": ["path": "a.swift"]]]),
+        message("seq-old-result", role: "tool", content: [["type": "tool_result", "tool_call_id": "seq-old-read", "is_error": false, "output": "ok"]]),
+        message("seq-old-answer", content: [["type": "text", "text": "第一轮已完成。"]]),
+    ]
+    let continuation: [KimiMessage] = previousTurn + [
+        message("seq-user", role: "user", content: [["type": "text", "text": "继续检查，工具之间会插入进展文字。"]]),
+        message("seq-thought", content: [["type": "thinking", "thinking": "本轮检查过程应始终只有一个执行中折叠头。"]]),
+        message("seq-goal", content: [["type": "tool_use", "tool_call_id": "seq-goal", "tool_name": "CreateGoal", "input": [:]]]),
+        message("seq-goal-result", role: "tool", content: [["type": "tool_result", "tool_call_id": "seq-goal", "is_error": false, "output": "ok"]]),
+        message("seq-progress", content: [["type": "text", "text": "目标已记录，接着更新清单并执行检查。"]]),
+        message("seq-todo", content: [["type": "tool_use", "tool_call_id": "seq-todo", "tool_name": "TodoList", "input": [:]]]),
+        message("seq-todo-result", role: "tool", content: [["type": "tool_result", "tool_call_id": "seq-todo", "is_error": false, "output": "ok"]]),
+        message("seq-progress-next", content: [["type": "text", "text": "清单已更新，开始验证。"]]),
+        message("seq-check", content: [["type": "tool_use", "tool_call_id": "seq-check", "tool_name": "bash", "input": ["command": "swift test"]]]),
+    ]
     struct Scene {
         let name: String
         let width: CGFloat
@@ -355,6 +373,11 @@ private final class PreviewDelegate: NSObject, NSApplicationDelegate {
         Scene(name: "running-dark", width: 900, dark: true, running: true, messages: running),
         Scene(name: "running-answer-light", width: 900, dark: false, running: true, messages: runningAnswer),
         Scene(name: "running-tool-light", width: 900, dark: false, running: true, messages: runningTool),
+        Scene(name: "running-continuation-light", width: 900, dark: false, running: true, messages: continuation),
+        Scene(name: "running-continuation-dark", width: 900, dark: true, running: true, messages: continuation),
+        Scene(name: "completed-continuation-light", width: 900, dark: false, running: false,
+              messages: continuation + [message("seq-check-result", role: "tool", content: [["type": "tool_result", "tool_call_id": "seq-check", "is_error": false, "output": "ok"]]),
+                                        message("seq-answer", content: [["type": "text", "text": "第二轮也已完成，折叠头原地变为运行完成。"]])]),
     ]
     }
     for scene in scenes {
@@ -411,6 +434,14 @@ private final class PreviewDelegate: NSObject, NSApplicationDelegate {
         view.effectiveAppearance.performAsCurrentDrawingAppearance { view.layer!.render(in: context) }
         let file = dir.appendingPathComponent(scene.name + ".png")
         try! bitmap.representation(using: .png, properties: [:])!.write(to: file)
+        let projection = ConversationPresentationModel(key: "capture-" + scene.name)
+            .update(.init(messages: scene.messages, isRunning: scene.running, language: "zh-Hans"))
+            .presented(activity: [:], foldsProcess: true, isRunning: scene.running)
+        let folds = projection.rows.filter { $0.foldedRows != nil }.map { row in
+            ["id": row.entry.id, "live": row.live, "children": row.foldedRows!.map(\.entry.id)] as [String: Any]
+        }
+        try! JSONSerialization.data(withJSONObject: ["folds": folds], options: [.prettyPrinted, .sortedKeys])
+            .write(to: dir.appendingPathComponent(scene.name + ".projection.json"))
         print("CAPTURE: \(scene.name) \(Int(view.bounds.width))x\(Int(view.bounds.height))")
         window.close()
     }
