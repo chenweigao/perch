@@ -144,10 +144,10 @@ struct ModelPickerRow: View {
         Button(action: action) {
             HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 3) {
-                    title.font(.system(size: WorkbenchTheme.Typography.body)).lineLimit(1).truncationMode(.middle)
+                    title.font(.system(size: WorkbenchTheme.Typography.body)).lineLimit(1).truncationMode(.tail)
                     if let detail {
                         Text(detail).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
-                            .lineLimit(1).truncationMode(.middle)
+                            .lineLimit(1).truncationMode(.tail)
                     }
                 }
                 Spacer(minLength: 0)
