@@ -361,6 +361,8 @@ struct ConversationTranscript: View {
         let contents = presented.rows.map { row in
             let isLiveActivity = row.entry.id == liveActivityID
             let foldDuration = row.entry.id == latestFoldID ? settledDuration : nil
+            return ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
+                memoryKey: key + ":" + row.entry.id, activityNarrative: row.activity, foldedRows: row.foldedRows,
                 isLive: isLiveActivity, preservesExpandedProcess: row.entry.presentation != .processFold,
                 liveThinkingSummary: (isLiveActivity || row.live) ? ConversationThinkingSummary.current(snapshot.narrative.current) : nil,
                 planProgress: isLiveActivity ? planProgress : nil,
