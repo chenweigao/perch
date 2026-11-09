@@ -140,10 +140,21 @@ private final class ToolbarDelegate: NSObject, NSApplicationDelegate {
         }
         if let capturePath = ProcessInfo.processInfo.environment["COMPOSER_TOOLBAR_CAPTURE"] {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                if let content = NSApp.windows.first?.contentView {
-                    if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
-                        content.cacheDisplay(in: content.bounds, to: rep)
-                        try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: capturePath))
+                if let window = NSApp.windows.first, let content = window.contentView {
+                    window.displayIfNeeded()
+                    content.layoutSubtreeIfNeeded()
+                    // cacheDisplay drops SwiftUI symbol layers; render the layer tree instead.
+                    let scale: CGFloat = 2
+                    if let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil,
+                            pixelsWide: Int(content.bounds.width * scale), pixelsHigh: Int(content.bounds.height * scale),
+                            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0),
+                       let graphics = NSGraphicsContext(bitmapImageRep: bitmap) {
+                        let context = graphics.cgContext
+                        context.translateBy(x: 0, y: CGFloat(bitmap.pixelsHigh))
+                        context.scaleBy(x: scale, y: -scale)
+                        content.effectiveAppearance.performAsCurrentDrawingAppearance { content.layer?.render(in: context) }
+                        try? bitmap.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: capturePath))
                     }
                     var frames: [String: String] = [:]
                     for (id, view) in ToolbarProbe.controls {
