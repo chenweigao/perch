@@ -80,9 +80,15 @@ private final class TaskSummaryProtocol: URLProtocol {
     precondition(taskPanelControl(window, "task-context-row-done") == nil &&
                  taskPanelControl(window, "task-context-row-cancelled") == nil,
                  "Completed/cancelled tasks start folded; failed/unknown remain visible")
+    func expectDetail(_ expected: TaskContextRoute?, _ message: String) async {
+        for _ in 0..<20 where model.taskContextWindow.detail != expected {
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+        precondition(model.taskContextWindow.detail == expected, message)
+    }
     try await press("task-context-row-build")
-    precondition(model.taskContextWindow.detail == TaskContextRoute(source: reference, taskID: "build"),
-                 "A compact summary keeps the new in-place detail navigation")
+    await expectDetail(TaskContextRoute(source: reference, taskID: "build"),
+                       "A compact summary keeps the new in-place detail navigation")
     _ = try await control("task-context-output")
     for name in [NSAppearance.Name.aqua, .darkAqua] {
         UserDefaults.standard.set(name == .aqua ? AppAppearance.light.rawValue : AppAppearance.dark.rawValue,
@@ -93,7 +99,7 @@ private final class TaskSummaryProtocol: URLProtocol {
         precondition(window.isVisible && abs(window.contentView!.bounds.width - 360) < 1)
     }
     try await press("task-context-back")
-    precondition(model.taskContextWindow.detail == nil)
+    await expectDetail(nil, "Back must clear the in-place detail")
     _ = try await control("task-context-row-build")
     print("PASS: compact Kimi summary, in-place detail/output/back in both appearances, failed/unknown visible and history folded")
     if CommandLine.arguments.contains("preview") {
