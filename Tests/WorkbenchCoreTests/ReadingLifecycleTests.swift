@@ -29,7 +29,7 @@ func checkReadingLifecycle() throws {
                  "An anchored-only live turn shows its summary prose, not an empty disclosure")
     let withTool = model.update(.init(messages: Array(messages.prefix(5)), isRunning: true, language: "en"))
     let withToolRows = withTool.presented(activity: [:], foldsProcess: true, isRunning: true)
-    precondition(withToolRows.contains { $0.entry.presentation == .processFold && $0.live },
+    precondition(withToolRows.rows.contains { $0.entry.presentation == .processFold && $0.live },
                  "Once a tool starts, the running turn rides one live process disclosure")
     let keptSummary = withTool.presented(activity: [:], foldsProcess: true, isRunning: true,
         preservingEntries: ["thinking:summary:0"])
