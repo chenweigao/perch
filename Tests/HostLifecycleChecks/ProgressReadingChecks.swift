@@ -75,7 +75,8 @@ private struct ProgressReadingFixture: View {
         precondition(prose.isSelectable && detail.isSelectable, "Progress prose stays selectable")
         let proseX = host.convert(prose.bounds, from: prose).minX
         let detailX = host.convert(detail.bounds, from: detail).minX
-        precondition(abs(proseX - detailX) < 1, "Progress sources align without a repeated status-icon gutter: prose \(proseX), detail \(detailX)")
+        let allDetail = views.filter { $0.string.contains("的 TTFB") }.map { "\(host.convert($0.bounds, from: $0).minX)" }.joined(separator: ", ")
+        precondition(abs(proseX - detailX) < 1, "Progress sources align without a repeated status-icon gutter: prose \(proseX), detail \(detailX), all detail views at [\(allDetail)]")
         guard let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { fatalError("Missing progress snapshot") }
         host.cacheDisplay(in: host.bounds, to: bitmap)
         try bitmap.representation(using: .png, properties: [:])!.write(to: output.appendingPathComponent("progress-" + label + ".png"))
