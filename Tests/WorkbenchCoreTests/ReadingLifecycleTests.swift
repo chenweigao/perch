@@ -24,15 +24,18 @@ func checkReadingLifecycle() throws {
     let model = ConversationPresentationModel(key: "lifecycle-core")
     let thinking = model.update(.init(messages: Array(messages.prefix(3)), isRunning: true, language: "en"))
     let thinkingRows = thinking.presented(activity: [:], foldsProcess: true, isRunning: true)
-    precondition(thinkingRows.rows.contains { $0.entry.presentation == .processFold && $0.live },
-                 "The running turn rides one live process disclosure")
-    precondition(thinkingRows.rows.first { $0.live }?.foldedRows?.contains { $0.entry.presentation == .thinkingPreview } == true,
-                 "A public summary before the first tool lives inside the live disclosure")
+    // A turn with only anchored thinking has no process to disclose: no fold.
+    precondition(!thinkingRows.rows.contains { $0.entry.presentation == .processFold },
+                 "An anchored-only live turn shows its summary prose, not an empty disclosure")
     let withTool = model.update(.init(messages: Array(messages.prefix(5)), isRunning: true, language: "en"))
+    let withToolRows = withTool.presented(activity: [:], foldsProcess: true, isRunning: true)
+    precondition(withToolRows.contains { $0.entry.presentation == .processFold && $0.live },
+                 "Once a tool starts, the running turn rides one live process disclosure")
     let keptSummary = withTool.presented(activity: [:], foldsProcess: true, isRunning: true,
         preservingEntries: ["thinking:summary:0"])
-    precondition(keptSummary.rows.first(where: { $0.live })?.foldedRows?.contains { $0.entry.id == "thinking:summary:0" } == true,
-                 "An opened summary source stays inside the live disclosure when its first tool arrives")
+    precondition(keptSummary.rows.contains { $0.entry.id == "thinking:summary:0" }
+                 || keptSummary.rows.first(where: { $0.live })?.foldedRows?.contains { $0.entry.id == "thinking:summary:0" } == true,
+                 "An opened summary source stays visible (retained top-level or inside the live disclosure)")
     let live = model.update(.init(messages: Array(messages.dropLast()), isRunning: true, language: "en"))
     precondition(live.presented(activity: [:], foldsProcess: true, isRunning: true).rows.contains { $0.entry.presentation == .processFold && $0.live },
                  "The running turn's process folds into a live disclosure")
