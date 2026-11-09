@@ -79,6 +79,23 @@ public enum ToolPresentation {
         ["agent", "task", "agent/spawnagent"].contains(name.lowercased())
     }
 
+    /// The row's leading glyph per tool kind (PI-Desktop's ToolActionIcon ladder):
+    /// the icon carries the verb family, the name carries the wording.
+    public static func kindIcon(_ name: String) -> String {
+        switch name.lowercased() {
+        case "read", "read_file", "readfile", "cat": return "doc.text"
+        case "grep", "search", "rg", "find": return "magnifyingglass"
+        case "glob", "find_files", "ls", "list": return "folder"
+        case "edit", "edit_file", "editfile", "apply_patch", "filechange": return "pencil"
+        case "write", "write_file", "writefile": return "square.and.pencil"
+        case "bash", "shell", "run", "exec", "python", "python3", "node", "terminal": return "terminal"
+        case "fetch", "web", "webfetch", "web_fetch", "browser": return "globe"
+        case "todo", "todowrite": return "checklist"
+        case "git": return "arrow.triangle.branch"
+        default: return "wrench"
+        }
+    }
+
     public static func action(_ name: String) -> String {
         if isSubagentCall(name: name) { return L("子 Agent") }
         switch name.lowercased() {

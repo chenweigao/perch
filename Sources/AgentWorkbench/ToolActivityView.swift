@@ -104,6 +104,12 @@ struct KimiActivityView: View {
                     DisclosureGroup(isExpanded: expansion) { EmptyView() } label: {
                         HStack(spacing: 6) {
                             if isLive { PerchBusyIndicator(size: 11) }
+                            // PI tool rows carry the kind's leading glyph; the
+                            // name carries the wording.
+                            Image(systemName: ToolPresentation.kindIcon(items.first?.name ?? ""))
+                                .font(.system(size: ReplyStyle.captionSize))
+                                .foregroundStyle(WorkbenchTheme.quiet)
+                                .fixedSize()
                             Text(verbatim: title)
                                 .lineLimit(1).truncationMode(.middle).fixedSize()
                                 .help(Text(verbatim: title))
@@ -305,10 +311,15 @@ struct KimiToolCard: View {
                 let rangeSuffix = mergedReadRange ?? ToolPresentation.readRange(tool).map { ":\($0)" }
                 let slowLabel = ToolPresentation.slowDurationLabel(tool)
                 HStack(spacing: 8) {
+                    Image(systemName: ToolPresentation.kindIcon(tool.name))
+                        .font(.system(size: ReplyStyle.captionSize))
+                        .foregroundStyle(WorkbenchTheme.quiet)
+                        .fixedSize()
                     Text(ToolPresentation.action(tool.name)).font(.system(size: ReplyStyle.Process.labelSize)).lineLimit(1)
                     if summary != tool.name {
                         HStack(spacing: 0) {
-                            Text(summary).lineLimit(1).truncationMode(.middle)
+                            Text(summary).font(.system(size: ReplyStyle.captionSize, design: .monospaced))
+                                .lineLimit(1).truncationMode(.middle)
                             if let rangeSuffix {
                                 Text(verbatim: rangeSuffix)
                                     .font(.system(size: ReplyStyle.captionSize, design: .monospaced))
@@ -318,6 +329,7 @@ struct KimiToolCard: View {
                         }
                     }
                     Spacer(minLength: 0)
+                    if tool.status == .running { PerchBusyIndicator(size: 11) }
                     if let slowLabel {
                         Text(verbatim: slowLabel)
                             .font(.system(size: ReplyStyle.captionSize, design: .monospaced))
