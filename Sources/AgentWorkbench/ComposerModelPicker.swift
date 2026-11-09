@@ -199,7 +199,11 @@ private struct ComposerModelPanel: View {
 
     private static let recentSection = "\u{1}recent"
     private var model: AgentModel? { models.first { $0.id == modelID } }
-    private var providers: [String] { Array(Set(models.map(\.provider))).sorted() }
+    private var providers: [String] {
+        // PI preserves the configured source order; the runtime catalog is ours.
+        var seen = Set<String>()
+        return models.compactMap { seen.insert($0.provider).inserted ? $0.provider : nil }
+    }
     private var recentModels: [AgentModel] { recents.models(from: models) }
     private var sections: [String] { (recentModels.isEmpty ? [] : [Self.recentSection]) + providers }
     private var searching: Bool { !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
