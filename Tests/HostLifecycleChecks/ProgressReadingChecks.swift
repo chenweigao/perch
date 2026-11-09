@@ -76,6 +76,8 @@ private struct ProgressReadingFixture: View {
         let proseX = host.convert(prose.bounds, from: prose).minX
         let detailX = host.convert(detail.bounds, from: detail).minX
         let allDetail = views.filter { $0.string.contains("的 TTFB") }.map { "\(host.convert($0.bounds, from: $0).minX)" }.joined(separator: ", ")
+        let allX = views.map { "\(host.convert($0.bounds, from: $0).minX)|\($0.string.prefix(14))" }.joined(separator: "  ")
+        print("TEXT-VIEWS:", allX)
         precondition(abs(proseX - detailX) < 1, "Progress sources align without a repeated status-icon gutter: prose \(proseX), detail \(detailX), all detail views at [\(allDetail)]")
         guard let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { fatalError("Missing progress snapshot") }
         host.cacheDisplay(in: host.bounds, to: bitmap)
