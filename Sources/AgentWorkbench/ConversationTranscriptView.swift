@@ -2499,8 +2499,8 @@ struct ProcessFoldRow: View {
         let isLiveChild = live && row.entry.id == liveEntryID
         return ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
                                      memoryKey: (sourceMemoryPrefix ?? sessionId) + ":" + row.entry.id, activityNarrative: row.activity,
-                                     preservesExpandedProcess: true,
                                      isLive: isLiveChild,
+                                     preservesExpandedProcess: true,
                                      liveThinkingSummary: isLiveChild ? liveSummary : nil)
             .environment(\.conversationMemoryKey, (sourceMemoryPrefix ?? sessionId) + ":" + row.entry.id)
             .environment(\.isConversationBodyText, true)
