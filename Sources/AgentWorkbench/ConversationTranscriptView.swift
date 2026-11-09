@@ -2496,12 +2496,15 @@ struct ProcessFoldRow: View {
     /// One folded row; the live public summary forwards to the live activity
     /// child so it keeps riding that stage's header inside the disclosure.
     private func foldedRowView(_ row: ConversationPresentationModel.Row) -> some View {
-        let isLiveChild = live && row.entry.id == liveEntryID
+        // Every child of the live fold is live: the thought row's summary surface
+        // and the activity rows' live tails all depend on it. The public summary
+        // itself forwards only to the live activity child.
+        let isSummaryChild = row.entry.id == liveEntryID
         return ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
                                      memoryKey: (sourceMemoryPrefix ?? sessionId) + ":" + row.entry.id, activityNarrative: row.activity,
-                                     isLive: isLiveChild,
+                                     isLive: live,
                                      preservesExpandedProcess: true,
-                                     liveThinkingSummary: isLiveChild ? liveSummary : nil)
+                                     liveThinkingSummary: live && isSummaryChild ? liveSummary : nil)
             .environment(\.conversationMemoryKey, (sourceMemoryPrefix ?? sessionId) + ":" + row.entry.id)
             .environment(\.isConversationBodyText, true)
             .background(ProcessFindAnchor(id: row.entry.id))
