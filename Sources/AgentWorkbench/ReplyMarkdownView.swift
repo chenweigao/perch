@@ -697,6 +697,8 @@ enum ReplyTextAttributes {
         defer { NavigationRenderMetrics.record("file_reference_scan", since: scanStart) }
         #endif
         for (range, reference) in ConversationFileReference.matches(in: result.string) {
+            // Inline code is never a file link: the chip owns those glyphs.
+            guard result.attribute(.replyChip, at: range.location, effectiveRange: nil) == nil else { continue }
             if result.attribute(.link, at: range.location, effectiveRange: nil) == nil {
                 result.addAttribute(.link, value: reference.url, range: range)
             }
