@@ -31,8 +31,8 @@ func checkReadingLifecycle() throws {
     let withTool = model.update(.init(messages: Array(messages.prefix(5)), isRunning: true, language: "en"))
     let keptSummary = withTool.presented(activity: [:], foldsProcess: true, isRunning: true,
         preservingEntries: ["thinking:summary:0"])
-    precondition(keptSummary.rows.contains { $0.entry.id == "thinking:summary:0" },
-                 "An opened summary source must not disappear when its first tool arrives")
+    precondition(keptSummary.rows.first(where: { $0.live })?.foldedRows?.contains { $0.entry.id == "thinking:summary:0" } == true,
+                 "An opened summary source stays inside the live disclosure when its first tool arrives")
     let live = model.update(.init(messages: Array(messages.dropLast()), isRunning: true, language: "en"))
     precondition(live.presented(activity: [:], foldsProcess: true, isRunning: true).rows.contains { $0.entry.presentation == .processFold && $0.live },
                  "The running turn's process folds into a live disclosure")
