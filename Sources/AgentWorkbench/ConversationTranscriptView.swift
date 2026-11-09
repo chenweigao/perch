@@ -2813,6 +2813,9 @@ struct ThoughtOutput: View {
                 // streaming summary), so the preview reads without pushing the
                 // reply down.
                 let publicSummary = messages.flatMap(\.content).compactMap { ConversationThinkingSummary.publicSummary(of: $0) }.first
+                if ProcessInfo.processInfo.environment["THOUGHT_DEBUG"] != nil {
+                    let _ = print("THOUGHT \(memoryKey) expanded=\(expanded) finished=\(finished) public=\(String(describing: publicSummary)) latest=\(String(describing: ThoughtTextStyle.latestSummaryLine(fullText)))")
+                }
                 ThoughtToggle(title: Text(verbatim: finished ? L("Thoughts") : L("Thinking")),
                               summary: expanded ? nil : (publicSummary ?? ThoughtTextStyle.latestSummaryLine(fullText)),
                               expanded: $expanded)
