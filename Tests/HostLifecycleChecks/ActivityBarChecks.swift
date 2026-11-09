@@ -342,8 +342,10 @@ private struct ActivityBarCheckFixture: View {
     precondition(glints(inlineHost).isEmpty, "The compact process header stays still while its status indicates progress")
     precondition(!busyIndicators(inlineHost).contains { $0.bounds.width == 13 && $0.bounds.height == 13 },
                  "A completed stage must not retain a generic waiting indicator")
-    precondition(busyIndicators(inlineHost).contains { $0.bounds.size == CGSize(width: 28, height: 28) },
-                 "The running turn remains visible in the composer stop control")
+    precondition(!busyIndicators(inlineHost).contains { $0.bounds.size == CGSize(width: 28, height: 28) },
+                 "PI's composer stop control has no activity arc")
+    precondition(taskPanelControl(window, "composer-primary-action")?.size == CGSize(width: 28, height: 28),
+                 "The static stop control remains visible at its 28pt target")
 
     let sqlNoteText = """
     规划已完成，开始派发：新计划有约 55.05 万项待算，已完成 189 项。旧结果已通过库存核对复用。
