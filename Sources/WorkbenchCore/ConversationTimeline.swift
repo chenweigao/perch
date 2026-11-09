@@ -153,15 +153,24 @@ public enum ConversationProcessFold {
         let lastPrompt = rows.lastIndex(where: isUserPrompt)
         var result: [ConversationPresentationModel.Row] = []
         var pending: [ConversationPresentationModel.Row] = []
+        var pendingLive = false
         func flush() {
             guard !pending.isEmpty else { return }
             let entry = ConversationTimelineEntry.processFold(firstEntry: pending[0].entry)
-            result.append(ConversationPresentationModel.Row(entry: entry, tools: [:], activity: nil, foldedRows: pending))
+            result.append(ConversationPresentationModel.Row(entry: entry, tools: [:], activity: nil, foldedRows: pending, live: pendingLive))
             pending = []
+            pendingLive = false
         }
         for (index, row) in rows.enumerated() {
+            // Live rows fold too: the running turn's process rides one auto-opened
+            // disclosure (PI's TurnProcess), marked live so it settles in place.
+            // The forming answer (progress/commentary) stays outside — it is what
+            // the turn produces, not part of what it did.
             let live = isRunning && lastPrompt != nil && index > lastPrompt!
-            if foldable(row), !live {
+            let foldableNow = foldable(row) && !(live && (row.entry.presentation == .progress || row.entry.presentation == .commentary))
+            if foldableNow {
+                if pendingLive && !live { flush() }
+                pendingLive = pendingLive || live
                 pending.append(row)
             } else {
                 flush()

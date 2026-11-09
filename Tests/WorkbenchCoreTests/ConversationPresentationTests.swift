@@ -345,7 +345,8 @@ func checkConversationProcessFold() throws {
     """)
     let singleFolded = ConversationProcessFold.fold(rows: rows(ConversationTimelineEntry.make(single)), isRunning: false)
     precondition(singleFolded.map(\.entry.presentation) == [.message, .processFold, .message])
-    // The running turn keeps its live process; earlier turns fold.
+    // The running turn's process rides one auto-opened live disclosure (PI's
+    // TurnProcess); earlier turns fold as before.
     let live = try messages("""
     [{"id":"u3","role":"user","created_at":"1","content":[{"type":"text","text":"继续"}]},
      {"id":"c1","role":"assistant","created_at":"2","content":[{"type":"thinking","thinking":"进行中"}]}]
@@ -353,10 +354,13 @@ func checkConversationProcessFold() throws {
     let twoTurns = turn + live
     let runningFold = ConversationProcessFold.fold(
         rows: rows(ConversationTimelineEntry.make(twoTurns, isRunning: true)), isRunning: true)
-    precondition(runningFold.filter { $0.entry.presentation == .processFold }.count == 1,
-                 "Only the completed turn folds while the session runs")
-    precondition(runningFold.suffix(2).map(\.entry.presentation) == [.message, .thinkingPreview],
-                 "The running turn's prompt and live thinking stay visible")
+    let runningFolds = runningFold.filter { $0.entry.presentation == .processFold }
+    precondition(runningFolds.count == 2 && runningFolds[0].live == false && runningFolds[1].live == true,
+                 "The running turn folds into a live disclosure beside the settled folds")
+    precondition(runningFold.suffix(2).map(\.entry.presentation) == [.message, .processFold],
+                 "The running turn's prompt and live disclosure stay top-level")
+    precondition(runningFolds[1].foldedRows?.map(\.entry.presentation) == [.thinkingPreview],
+                 "The live disclosure carries the running turn's thinking")
     let idleFold = ConversationProcessFold.fold(
         rows: rows(ConversationTimelineEntry.make(twoTurns, isRunning: false)), isRunning: false)
     precondition(idleFold.filter { $0.entry.presentation == .processFold }.count == 2,

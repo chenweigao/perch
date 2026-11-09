@@ -366,7 +366,7 @@ struct ConversationTranscript: View {
                 isLive: isLiveActivity, preservesExpandedProcess: row.entry.presentation != .processFold,
                 liveThinkingSummary: isLiveActivity ? ConversationThinkingSummary.current(snapshot.narrative.current) : nil,
                 planProgress: isLiveActivity ? planProgress : nil,
-                completedDuration: foldDuration)
+                completedDuration: foldDuration, liveProcessFold: row.live)
         }
         let _ = PerfDiagnostics.end("snapshot_projection", projectionProbe,
                                     detail: "messages=\(messages.count) rows=\(contents.count)")
@@ -2252,6 +2252,8 @@ private struct ConversationEntryView: View, Equatable {
     var planProgress: TurnStatus.Progress? = nil
     /// Static duration of a settled turn for its process fold header (>= 5s).
     var completedDuration: TimeInterval? = nil
+    /// The running turn's process fold: auto-opens and settles in place (PI).
+    var liveProcessFold = false
     @RememberedExpansion("commentary") private var commentaryExpanded
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.entry == rhs.entry && lhs.tools == rhs.tools && lhs.api === rhs.api
@@ -2264,6 +2266,7 @@ private struct ConversationEntryView: View, Equatable {
             && lhs.liveThinkingSummary == rhs.liveThinkingSummary
             && lhs.planProgress == rhs.planProgress
             && lhs.completedDuration == rhs.completedDuration
+            && lhs.liveProcessFold == rhs.liveProcessFold
     }
     /// Ordinary provider progress prose needs the same rhythm as narrative anchors.
     var isStageNote: Bool { isProgressNote || entry.presentation == .progress }
@@ -2304,7 +2307,8 @@ private struct ConversationEntryView: View, Equatable {
                     if let foldedRows {
                         ProcessFoldRow(rows: foldedRows, api: api, sessionId: sessionId,
                                        completedDuration: completedDuration,
-                                       sourceMemoryPrefix: String(memoryKey.dropLast(entry.id.count + 1)))
+                                       sourceMemoryPrefix: String(memoryKey.dropLast(entry.id.count + 1)),
+                                       live: liveProcessFold)
                     }
                 default:
                     if entry.presentation == .record {
@@ -2343,10 +2347,21 @@ struct ProcessFoldRow: View {
     let sessionId: String
     var completedDuration: TimeInterval? = nil
     var sourceMemoryPrefix: String? = nil
+    /// The running turn's process disclosure (PI: active turns start open and
+    /// settle in place on completion; the row id is stable across the flip).
+    var live = false
     @UILocalization private var L
     @Environment(\.locale) private var locale
     @Environment(\.conversationMemoryKey) private var memoryKey
     @Environment(\.conversationActionContext) private var actionContext
+
+    init(rows: [ConversationPresentationModel.Row], api: KimiAPI?, sessionId: String,
+         completedDuration: TimeInterval? = nil, sourceMemoryPrefix: String? = nil, live: Bool = false) {
+        self.rows = rows; self.api = api; self.sessionId = sessionId
+        self.completedDuration = completedDuration; self.sourceMemoryPrefix = sourceMemoryPrefix
+        self.live = live
+        _expanded = RememberedExpansion("process-fold", initial: live)
+    }
     @RememberedExpansion("process-fold") private var expanded
     @Environment(\.conversationDisclosureWillChange) private var disclosureWillChange
     @State private var pageRevision = 0
@@ -2396,10 +2411,11 @@ struct ProcessFoldRow: View {
                         // PI's process disclosure: status icon + outcome first,
                         // then duration and the tool count; the thinking summary
                         // rides last (DSH's completed reasoning row).
+                        if live { PerchBusyIndicator(size: 11) }
                         Image(systemName: "sparkles").font(.system(size: ReplyStyle.captionSize))
                             .foregroundStyle(WorkbenchTheme.quiet).fixedSize()
-                        Text(L("运行完成")).fixedSize()
-                        if let completedDuration, completedDuration >= 5 {
+                        Text(verbatim: live ? L("执行中") : L("运行完成")).fixedSize()
+                        if !live, let completedDuration, completedDuration >= 5 {
                             let isZh = locale.language.languageCode?.identifier.hasPrefix("zh") ?? true
                             Text(verbatim: "· " + ConversationTiming.duration(completedDuration, chinese: isZh))
                                 .monospacedDigit().fixedSize()

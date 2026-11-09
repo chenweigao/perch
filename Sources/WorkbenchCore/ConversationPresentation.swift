@@ -62,9 +62,13 @@ public final class ConversationPresentationModel {
         public let activity: ActivityNarrativeRow?
         /// Rows collapsed behind a process fold; non-nil only on fold rows.
         public let foldedRows: [Row]?
+        /// The running turn's process disclosure (PI: active turns auto-open):
+        /// the fold row exists while the turn is live, then settles in place.
+        public let live: Bool
         public init(entry: ConversationTimelineEntry, tools: [String: VisibleTool],
-                    activity: ActivityNarrativeRow?, foldedRows: [Row]? = nil) {
+                    activity: ActivityNarrativeRow?, foldedRows: [Row]? = nil, live: Bool = false) {
             self.entry = entry; self.tools = tools; self.activity = activity; self.foldedRows = foldedRows
+            self.live = live
         }
     }
     /// One earlier turn's rows, kept while the tool chunk it was built from is
