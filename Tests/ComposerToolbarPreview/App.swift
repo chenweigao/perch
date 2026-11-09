@@ -135,6 +135,12 @@ private struct ToolbarPreview: View {
 private final class ToolbarDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular); NSApp.activate(ignoringOtherApps: true)
+        if let seed = ProcessInfo.processInfo.environment["COMPOSER_PREVIEW_RECENTS"] {
+            UserDefaults.standard.set(seed.split(separator: ",").map { item -> String in
+                let parts = item.split(separator: "|", maxSplits: 1)
+                return parts.count == 2 ? String(parts[0]) + "\u{0}" + String(parts[1]) : String(item)
+            }, forKey: "perch.recentModels")
+        }
         if ProcessInfo.processInfo.environment["COMPOSER_TOOLBAR_CHECKS"] == "1" {
             Task { @MainActor in await runToolbarChecks() }
         }
