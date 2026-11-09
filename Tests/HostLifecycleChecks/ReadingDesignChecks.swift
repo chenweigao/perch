@@ -443,7 +443,7 @@ private struct ReadingReviewControls: View {
                  "A manually opened source remains visible when the preview moves into the tool stage")
     click("thought-disclosure:lifecycle-A:thinking:lifecycle-summary:0")
     try await settle()
-    guard let summaryFrame = taskPanelControl(window, "live-thinking-summary") else { fatalError("The public summary stays visible inside the live disclosure") }
+    guard let summaryFrame = taskPanelControl(window, "live-thinking-summary") else { fatalError("The public summary stays visible inside the live disclosure; ids: " + taskPanelIdentifiers(window).filter { $0.contains("lifecycle-summary") || $0.contains("process") || $0.contains("thinking") }.joined(separator: ", ")) }
     precondition(summaryFrame.height <= 46, "The live summary is bounded to two lines")
     try snapshot("lifecycle-running")
     host.rootView = ReadingDesignFixture(messages: live, running: false, session: "lifecycle-A", folds: true)
