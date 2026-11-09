@@ -393,12 +393,11 @@ private final class PreviewDelegate: NSObject, NSApplicationDelegate {
         if ProcessInfo.processInfo.environment["CHIP_DUMP"] != nil {
             for text in captureDescendants(view).compactMap({ $0 as? ReplyTextView }) {
                 guard let storage = text.textStorage else { continue }
-                for key in [NSAttributedString.Key.replyChip, .link, .underlineStyle, .backgroundColor] {
-                    storage.enumerateAttribute(key, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
-                        guard value != nil else { return }
-                        let snippet = (storage.string as NSString).substring(with: range)
-                        print("ATTR-RUN [\(scene.name)] \(key.rawValue) range={\(range.location),\(range.length)} «\(snippet.prefix(60))»")
-                    }
+                let frame = text.convert(text.bounds, to: nil)
+                storage.enumerateAttribute(.replyChip, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+                    guard value != nil else { return }
+                    let snippet = (storage.string as NSString).substring(with: range)
+                    print("CHIP-RUN [\(scene.name)] frame=\(NSStringFromRect(frame)) range={\(range.location),\(range.length)} «\(snippet.prefix(40))»")
                 }
             }
         }
