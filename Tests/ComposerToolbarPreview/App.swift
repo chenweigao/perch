@@ -36,6 +36,7 @@ private struct ToolbarPreview: View {
     private var L: LocalizedUIStrings { LocalizedUIStrings(locale: locale) }
     private var canSend: Bool { !offline && !stopping && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     private var newTask: Bool { ProcessInfo.processInfo.environment["COMPOSER_PREVIEW_NEW_TASK"] == "1" }
+    private var combinedPicker: Bool { ProcessInfo.processInfo.environment["COMPOSER_PREVIEW_COMBINED"] == "1" }
     private var usesRuntimeDefault: Bool { [.qoder, .qoderintl].contains(selectedProvider) || (newTask && selectedProvider == .claude) }
     private var disabledReason: String? {
         if offline { return L("连接恢复后可修改设置。") }
@@ -99,7 +100,7 @@ private struct ToolbarPreview: View {
                                         unavailableReason: selectedProvider == .claude && !newTask ? L("此 Agent 暂不支持模型与思考设置。") : nil,
                                         sessionModel: "fixture/reasoner", usesSessionModel: usesSessionModel, onUseSessionModel: {
                                             usesSessionModel = true; model = "fixture/reasoner"; effort = models[0].resolve(effort)
-                                        }, usesDefaultModel: usesRuntimeDefault && model.isEmpty,
+                                        }, layout: combinedPicker ? .combined : .split, usesDefaultModel: usesRuntimeDefault && model.isEmpty,
                                         onUseDefaultModel: usesRuntimeDefault ? {
                                             usesSessionModel = false; model = ""; effort = nil
                                         } : nil, scope: L(newTask ? "首条消息生效" : selectedProvider == .kimi ? "下一条消息生效" : "下一轮生效"),
@@ -135,6 +136,17 @@ private final class ToolbarDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.regular); NSApp.activate(ignoringOtherApps: true)
         if ProcessInfo.processInfo.environment["COMPOSER_TOOLBAR_CHECKS"] == "1" {
             Task { @MainActor in await runToolbarChecks() }
+        }
+        if let capturePath = ProcessInfo.processInfo.environment["COMPOSER_TOOLBAR_CAPTURE"] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                if let content = NSApp.windows.first?.contentView {
+                    if let rep = content.bitmapImageRepForCachingDisplay(in: content.bounds) {
+                        content.cacheDisplay(in: content.bounds, to: rep)
+                        try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: capturePath))
+                    }
+                }
+                NSApp.terminate(nil)
+            }
         }
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
