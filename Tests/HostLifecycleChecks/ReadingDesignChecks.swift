@@ -443,10 +443,14 @@ private struct ReadingReviewControls: View {
                  "A manually opened source remains visible when the preview moves into the tool stage")
     click("thought-disclosure:lifecycle-A:thinking:lifecycle-summary:0")
     try await settle()
-    // The public summary rides the live process disclosure's header (DSH's
-    // streaming reasoning row), inside or outside the fold alike.
-    guard let foldLabel = taskPanelLabel(window, "completed-process:activity:tool:lifecycle-read") else { fatalError("Missing the live process disclosure") }
-    precondition(foldLabel.contains("Inspecting the tab state"), "The live fold header carries the public summary: \(foldLabel)")
+    // The public summary stays visible while the turn runs — on the live fold
+    // header or the thought row, wherever it rides.
+    let labels = taskPanelElements(window).compactMap { element -> String? in
+        guard element.node.responds(to: NSSelectorFromString("accessibilityLabel")) else { return nil }
+        return element.node.perform(NSSelectorFromString("accessibilityLabel"))?.takeUnretainedValue() as? String
+    }
+    precondition(labels.contains { $0.contains("Inspecting the tab state") },
+                 "The public summary must stay visible while running: \(labels.filter { $0.contains("Inspect") })")
     try snapshot("lifecycle-running")
     host.rootView = ReadingDesignFixture(messages: live, running: false, session: "lifecycle-A", folds: true)
     try await settle()
