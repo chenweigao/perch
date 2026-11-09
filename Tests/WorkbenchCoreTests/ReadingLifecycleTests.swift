@@ -24,14 +24,18 @@ func checkReadingLifecycle() throws {
     let model = ConversationPresentationModel(key: "lifecycle-core")
     let thinking = model.update(.init(messages: Array(messages.prefix(3)), isRunning: true, language: "en"))
     let thinkingRows = thinking.presented(activity: [:], foldsProcess: true, isRunning: true)
-    precondition(thinkingRows.rows.contains { $0.entry.presentation == .thinkingPreview }, "A public summary before the first tool needs a visible live host")
+    precondition(thinkingRows.rows.contains { $0.entry.presentation == .processFold && $0.live },
+                 "The running turn rides one live process disclosure")
+    precondition(thinkingRows.rows.first { $0.live }?.foldedRows?.contains { $0.entry.presentation == .thinkingPreview } == true,
+                 "A public summary before the first tool lives inside the live disclosure")
     let withTool = model.update(.init(messages: Array(messages.prefix(5)), isRunning: true, language: "en"))
     let keptSummary = withTool.presented(activity: [:], foldsProcess: true, isRunning: true,
         preservingEntries: ["thinking:summary:0"])
     precondition(keptSummary.rows.contains { $0.entry.id == "thinking:summary:0" },
                  "An opened summary source must not disappear when its first tool arrives")
     let live = model.update(.init(messages: Array(messages.dropLast()), isRunning: true, language: "en"))
-    precondition(!live.presented(activity: [:], foldsProcess: true, isRunning: true).rows.contains { $0.entry.presentation == .processFold })
+    precondition(live.presented(activity: [:], foldsProcess: true, isRunning: true).rows.contains { $0.entry.presentation == .processFold && $0.live },
+                 "The running turn's process folds into a live disclosure")
     let finished = model.update(.init(messages: messages, language: "en"))
     let done = finished.presented(activity: [:], foldsProcess: true, isRunning: false)
     precondition(done.rows.contains { $0.entry.presentation == .processFold })

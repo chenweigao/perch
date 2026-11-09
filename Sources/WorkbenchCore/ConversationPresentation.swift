@@ -195,7 +195,7 @@ public final class ConversationPresentationModel {
                 var pending: [Row] = []
                 func flush() {
                     guard let first = pending.first else { return }
-                    result.append(Row(entry: .processFold(firstEntry: first.entry), tools: [:], activity: nil, foldedRows: pending))
+                    result.append(Row(entry: .processFold(firstEntry: first.entry), tools: [:], activity: nil, foldedRows: pending, live: row.live))
                     pending = []
                 }
                 for child in children {
