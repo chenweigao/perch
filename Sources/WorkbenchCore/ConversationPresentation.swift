@@ -189,7 +189,9 @@ public final class ConversationPresentationModel {
             guard !ids.isEmpty else { return self }
             var result: [Row] = []
             for row in rows {
-                guard let children = row.foldedRows, children.contains(where: { ids.contains($0.entry.id) }) else {
+                // An opened child stays inside the running turn's disclosure.
+                // Lifting it out would manufacture two sibling "running" heads.
+                guard !row.live, let children = row.foldedRows, children.contains(where: { ids.contains($0.entry.id) }) else {
                     result.append(row); continue
                 }
                 var pending: [Row] = []

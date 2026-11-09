@@ -15,6 +15,11 @@ func checkReadingLifecycle() throws {
      {"id":"final","role":"assistant","created_at":"10","content":[{"type":"text","text":"Fixed; tests need attention."}]}]
     """
     let messages = try KimiWire.decoder().decode([KimiMessage].self, from: Data(source.utf8))
+    let bareGoal = VisibleTool(id: "goal", name: "CreateGoal", input: .object([:]), status: .succeeded)
+    let bareTodo = VisibleTool(id: "todo", name: "TodoList", input: nil, status: .running)
+    precondition(ToolPresentation.rowSummary(bareGoal).isEmpty && ToolPresentation.rowSummary(bareTodo).isEmpty,
+                 "Bare tools must not repeat their title in the detail slot")
+    precondition(ToolPresentation.recentTargets([bareGoal, bareTodo]).isEmpty)
     precondition(ConversationThinkingSummary.latest(in: Array(messages.prefix(3))) == "Inspecting the tab state. Checking first open.")
     let privatePart = try KimiWire.decoder().decode([KimiMessage].self, from: Data("""
     [{"id":"private","role":"assistant","created_at":"11","content":[{"type":"thinking","thinking":"PRIVATE_REASONING_NOT_A_SUMMARY"}]}]
@@ -24,9 +29,8 @@ func checkReadingLifecycle() throws {
     let model = ConversationPresentationModel(key: "lifecycle-core")
     let thinking = model.update(.init(messages: Array(messages.prefix(3)), isRunning: true, language: "en"))
     let thinkingRows = thinking.presented(activity: [:], foldsProcess: true, isRunning: true)
-    // A turn with only anchored thinking has no process to disclose: no fold.
-    precondition(!thinkingRows.rows.contains { $0.entry.presentation == .processFold },
-                 "An anchored-only live turn shows its summary prose, not an empty disclosure")
+    precondition(thinkingRows.rows.filter { $0.entry.presentation == .processFold && $0.live }.count == 1,
+                 "Thinking and intermediate text share one live turn disclosure")
     let withTool = model.update(.init(messages: Array(messages.prefix(5)), isRunning: true, language: "en"))
     let withToolRows = withTool.presented(activity: [:], foldsProcess: true, isRunning: true)
     precondition(withToolRows.rows.contains { $0.entry.presentation == .processFold && $0.live },
@@ -41,6 +45,7 @@ func checkReadingLifecycle() throws {
                  "The running turn's process folds into a live disclosure")
     let finished = model.update(.init(messages: messages, language: "en"))
     let done = finished.presented(activity: [:], foldsProcess: true, isRunning: false)
+    precondition(!done.rows.contains(where: \.live), "A completed turn must settle every process head")
     precondition(done.rows.contains { $0.entry.presentation == .processFold })
     precondition(!done.rows.contains { $0.entry.id == "activity:tool:e" }, "Edit receipts fold with the rest of the process")
     precondition(!done.rows.contains { $0.tools["check"]?.status == .failed }, "A failed tool folds with the rest of the process")
@@ -62,5 +67,24 @@ func checkReadingLifecycle() throws {
     }
     let interrupted = model.update(.init(messages: Array(messages.dropLast()), language: "en"))
     precondition(interrupted.presented(activity: [:], foldsProcess: true, isRunning: false).rows.contains { $0.entry.presentation == .processFold }, "An unfinished turn folds its process like any other")
+    let continuation = try KimiWire.decoder().decode([KimiMessage].self, from: Data("""
+    [{"id":"u-next","role":"user","created_at":"11","content":[{"type":"text","text":"continue"}]},
+     {"id":"next-read","role":"assistant","created_at":"12","content":[{"type":"tool_use","tool_call_id":"next-r","tool_name":"read","input":{"path":"b.swift"}}]},
+     {"id":"next-progress","role":"assistant","created_at":"13","content":[{"type":"text","text":"Now checking the next file"}]},
+     {"id":"next-check","role":"assistant","created_at":"14","content":[{"type":"tool_use","tool_call_id":"next-c","tool_name":"bash","input":{"command":"swift test"}}]},
+     {"id":"next-answer","role":"assistant","created_at":"15","content":[{"type":"text","text":"Streaming reply"}]}]
+    """.utf8))
+    let next = model.update(.init(messages: messages + continuation, running: ["next-c"], isRunning: true, language: "en"))
+    let nextRows = next.presented(activity: [:], foldsProcess: true, isRunning: true)
+    let active = nextRows.rows.filter(\.live)
+    precondition(active.count == 1, "Progress between tools must not split a live turn into multiple heads")
+    precondition(active[0].foldedRows?.contains { $0.entry.messages.first?.id == "next-progress" } == true)
+    precondition(nextRows.rows.last?.entry.messages.first?.id == "next-answer", "The trailing reply remains outside the process")
+    precondition(nextRows.rows.contains { !$0.live && $0.entry.presentation == .processFold }, "Advancing the turn settles its earlier head")
+    let openChild = nextRows.retainingProcessEntries(["activity:tool:next-r"])
+    precondition(openChild.rows.filter(\.live).count == 1, "A reader-opened child cannot split the live turn")
+    let allDone = model.update(.init(messages: messages + continuation, language: "en"))
+        .presented(activity: [:], foldsProcess: true, isRunning: false)
+    precondition(!allDone.rows.contains(where: \.live), "The next completion also settles in place")
     print("PASS: live public summaries, completed process folding, manual expansion, uniform folding of edits and failures")
 }

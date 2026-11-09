@@ -128,7 +128,8 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
 
 /// History folds each completed turn's process (tools, thoughts, intermediate
 /// text) behind one disclosure, leaving prompts and final answers visible.
-/// The running turn keeps its live process. Expansion is view state; folded
+/// The running turn uses the same disclosure, leaving only its trailing reply
+/// outside (PI's projectTurnProcess). Expansion is view state; folded
 /// rows stay fully intact and re-mount in place.
 ///
 /// Folding is uniform: every non-live process row folds, whatever it carries —
@@ -151,6 +152,12 @@ public enum ConversationProcessFold {
 
     public static func fold(rows: [ConversationPresentationModel.Row], isRunning: Bool) -> [ConversationPresentationModel.Row] {
         let lastPrompt = rows.lastIndex(where: isUserPrompt)
+        // Intermediate text belongs to the turn's process. Keeping every progress
+        // or narrative anchor outside split one running turn into several live
+        // disclosures. Only the text at the tail is the forming answer.
+        let reply = rows.indices.last.flatMap { index -> Int? in
+            [.progress, .commentary, .record].contains(rows[index].entry.presentation) ? index : nil
+        }
         var result: [ConversationPresentationModel.Row] = []
         var pending: [ConversationPresentationModel.Row] = []
         var pendingLive = false
@@ -162,16 +169,8 @@ public enum ConversationProcessFold {
             pendingLive = false
         }
         for (index, row) in rows.enumerated() {
-            // Live rows fold too: the running turn's process rides one auto-opened
-            // disclosure (PI's TurnProcess), marked live so it settles in place.
-            // The forming answer (progress/commentary) stays outside — it is what
-            // the turn produces, not part of what it did.
-            let live = isRunning && lastPrompt != nil && index > lastPrompt!
-            // The forming answer and the narrative's visible anchor stay outside
-            // the live disclosure: they are what the turn shows, not its process.
-            let visibleContent = row.entry.presentation == .progress || row.entry.presentation == .commentary
-                || row.activity?.isAnchor == true
-            let foldableNow = foldable(row) && !(live && visibleContent)
+            let live = isRunning && index > (lastPrompt ?? -1)
+            let foldableNow = foldable(row) && index != reply
             if foldableNow {
                 if pendingLive && !live { flush() }
                 pendingLive = pendingLive || live

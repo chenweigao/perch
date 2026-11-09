@@ -2508,12 +2508,11 @@ struct ProcessFoldRow: View {
             }
         }
     }
-    /// One folded row; children of the live fold are live (the thought row's
-    /// summary surface and the activity rows' live tails all depend on it).
+    /// Only the tail child is live; earlier stages in the same turn have settled.
     private func foldedRowView(_ row: ConversationPresentationModel.Row) -> some View {
         return ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
                                      memoryKey: (sourceMemoryPrefix ?? sessionId) + ":" + row.entry.id, activityNarrative: row.activity,
-                                     isLive: live,
+                                     isLive: live && row.entry.id == rows.last?.entry.id,
                                      preservesExpandedProcess: true)
             .environment(\.conversationMemoryKey, (sourceMemoryPrefix ?? sessionId) + ":" + row.entry.id)
             .environment(\.isConversationBodyText, true)

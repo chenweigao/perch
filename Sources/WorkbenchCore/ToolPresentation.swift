@@ -145,10 +145,23 @@ public enum ToolPresentation {
         return target(tool)
     }
 
+    /// The detail slot is independent of the tool's title. PI renders it only
+    /// when there is an argument to summarize; a bare call needs no second name.
+    public static func rowSummary(_ tool: VisibleTool) -> String {
+        let compact = compactTarget(tool).trimmingCharacters(in: .whitespacesAndNewlines)
+        if !compact.isEmpty && compact != tool.name { return compact }
+        for key in ["cmd", "query", "url", "objective", "title", "prompt"] {
+            if let value = tool.input?[key].string?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !value.isEmpty, value != tool.name { return value }
+        }
+        return ""
+    }
+
     public static func recentTargets(_ tools: [VisibleTool]) -> String {
         var seen = Set<String>(), labels: [String] = []
         for tool in tools.reversed() where !tool.staysVisible {
-            let label = compactTarget(tool)
+            let label = rowSummary(tool)
+            guard !label.isEmpty else { continue }
             if seen.insert(label).inserted { labels.append(label) }
             if labels.count == 2 { break }
         }

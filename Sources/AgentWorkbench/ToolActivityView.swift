@@ -84,14 +84,16 @@ struct KimiActivityView: View {
         var rowSummary: (text: String, isError: Bool)? {
             if isLive, let liveThinkingSummary { return (liveThinkingSummary, false) }
             if isLive, let running = items.last(where: { $0.status == .running }) {
-                return (ToolPresentation.runningOutputTail(running, maxLines: 1).last
-                        ?? ToolPresentation.compactTarget(running), false)
+                let detail = ToolPresentation.runningOutputTail(running, maxLines: 1).last
+                    ?? ToolPresentation.rowSummary(running)
+                return detail.isEmpty ? nil : (detail, false)
             }
             if let failed = items.first(where: { $0.status == .failed }) {
                 let firstLine = failed.output?.display.split(whereSeparator: \.isNewline)
                     .map { $0.trimmingCharacters(in: .whitespaces) }.first { !$0.isEmpty }
-                let target = ToolPresentation.compactTarget(failed)
-                return (firstLine.map { "\(target): \($0)" } ?? L("\(target) 失败"), true)
+                let target = ToolPresentation.rowSummary(failed)
+                if let firstLine { return (target.isEmpty ? firstLine : "\(target): \(firstLine)", true) }
+                return target.isEmpty ? nil : (L("\(target) 失败"), true)
             }
             let targets = ToolPresentation.recentTargets(items)
             return targets.isEmpty ? nil : (targets, false)
@@ -284,7 +286,7 @@ struct KimiToolCard: View {
     }
     var body: some View {
         let exitReport = resolvedExitReport()
-        let summary = ToolPresentation.compactTarget(tool)
+        let summary = ToolPresentation.rowSummary(tool)
         // Named apart from the method so the local never shadows its own initializer.
         let showsAttention = attention()
         // The activity details name the same states with the same words.
@@ -316,7 +318,7 @@ struct KimiToolCard: View {
                         .foregroundStyle(WorkbenchTheme.quiet)
                         .fixedSize()
                     Text(ToolPresentation.action(tool.name)).font(.system(size: ReplyStyle.Process.labelSize)).lineLimit(1)
-                    if summary != tool.name {
+                    if !summary.isEmpty {
                         HStack(spacing: 0) {
                             Text(summary).font(.system(size: ReplyStyle.captionSize, design: .monospaced))
                                 .lineLimit(1).truncationMode(.middle)
