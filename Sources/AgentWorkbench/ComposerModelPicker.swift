@@ -264,7 +264,7 @@ private struct ComposerModelPanel: View {
                                     modelRow(option, showProvider: false)
                                 }
                             }
-                            if searching, providers.allSatisfy({ matches(models.filter { $0.provider == $0 }).isEmpty }) {
+                            if searching, providers.allSatisfy({ provider in matches(models.filter { $0.provider == provider }).isEmpty }) {
                                 Text(models.isEmpty
                                      ? L(onUseDefaultModel == nil ? "尚未读取到模型目录，可继续使用会话模型。" : "尚未读取到模型目录，可继续使用默认模型。")
                                      : L("没有匹配的模型"))
