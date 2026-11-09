@@ -237,7 +237,7 @@ private final class PreviewDelegate: NSObject, NSApplicationDelegate {
 /// (layer render) proved the fill paints, but the shipping app showed
 /// border-only chips. This reproduces the real window compositing path.
 @MainActor private func chipProbe() async {
-    let text = "验证 chip 在真机窗口的填充：`inline_code` 应该贴字形带底色。"
+    let text = "chip 填充本来就是不透明的 `#FAFAFA`，我多此一举用了 alpha。已改成不透明色值（浅 `#FAFAFA` / 深 `#292929`，与 DSH token 一致），`mention` 底色（`@\"…\"` 引用）同样处理。"
     let host = NSHostingView(rootView: KimiMarkdown(text: text).padding(24).background(Color(nsColor: .textBackgroundColor)))
     let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 700, height: 200), styleMask: [.titled], backing: .buffered, defer: false)
     window.isReleasedWhenClosed = false
@@ -262,6 +262,20 @@ private final class PreviewDelegate: NSObject, NSApplicationDelegate {
         samples.append(String(format: "%d:%02x%02x%02x", x, Int(c.redComponent * 255), Int(c.greenComponent * 255), Int(c.blueComponent * 255)))
     }
     print("CHIP-PROBE midline:", samples.joined(separator: " "))
+    // Dump chip-carrying ranges: any plain-text subrange with a chip is the bug.
+    for view in chipProbeTextViews(host) {
+        guard let storage = view.textStorage else { continue }
+        storage.enumerateAttribute(.replyChip, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+            if value != nil {
+                let text = (storage.string as NSString).substring(with: range)
+                let font = storage.attribute(.font, at: range.location, effectiveRange: nil) as? NSFont
+                print("CHIP-RANGE [\(range.location)+\(range.length)] '\(text)' font=\(font?.pointSize ?? 0)")
+            }
+        }
+    }
+}
+@MainActor private func chipProbeTextViews(_ root: NSView) -> [ReplyTextView] {
+    ([root] + root.subviews.flatMap(chipProbeTextViews)).compactMap { $0 as? ReplyTextView }
 }
 
 /// Regression checks for the sizing boundary used by Grid and scrolling text.
