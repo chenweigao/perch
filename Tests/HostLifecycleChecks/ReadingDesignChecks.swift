@@ -449,8 +449,8 @@ private struct ReadingReviewControls: View {
         guard element.node.responds(to: NSSelectorFromString("accessibilityLabel")) else { return nil }
         return element.node.perform(NSSelectorFromString("accessibilityLabel"))?.takeUnretainedValue() as? String
     }
-    precondition(labels.contains { $0.contains("Inspecting the tab state") },
-                 "The public summary must stay visible while running: \(labels.filter { $0.contains("Inspect") })")
+    precondition(labels.contains { $0.contains("正在核对当前路径") },
+                 "The public summary must stay visible while running: \(labels.filter { $0.contains("正在核对") })")
     try snapshot("lifecycle-running")
     host.rootView = ReadingDesignFixture(messages: live, running: false, session: "lifecycle-A", folds: true)
     try await settle()
