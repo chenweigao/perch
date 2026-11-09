@@ -361,12 +361,10 @@ struct ConversationTranscript: View {
         let contents = presented.rows.map { row in
             let isLiveActivity = row.entry.id == liveActivityID
             let foldDuration = row.entry.id == latestFoldID ? settledDuration : nil
-            return ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
-                memoryKey: key + ":" + row.entry.id, activityNarrative: row.activity, foldedRows: row.foldedRows,
                 isLive: isLiveActivity, preservesExpandedProcess: row.entry.presentation != .processFold,
-                liveThinkingSummary: isLiveActivity ? ConversationThinkingSummary.current(snapshot.narrative.current) : nil,
+                liveThinkingSummary: (isLiveActivity || row.live) ? ConversationThinkingSummary.current(snapshot.narrative.current) : nil,
                 planProgress: isLiveActivity ? planProgress : nil,
-                completedDuration: foldDuration, liveProcessFold: row.live)
+                completedDuration: foldDuration, liveProcessFold: row.live, liveActivityID: row.live ? liveActivityID : nil)
         }
         let _ = PerfDiagnostics.end("snapshot_projection", projectionProbe,
                                     detail: "messages=\(messages.count) rows=\(contents.count)")
@@ -2254,6 +2252,8 @@ private struct ConversationEntryView: View, Equatable {
     var completedDuration: TimeInterval? = nil
     /// The running turn's process fold: auto-opens and settles in place (PI).
     var liveProcessFold = false
+    /// The live activity row inside a live fold (the fold forwards the public summary).
+    var liveActivityID: String? = nil
     @RememberedExpansion("commentary") private var commentaryExpanded
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.entry == rhs.entry && lhs.tools == rhs.tools && lhs.api === rhs.api
@@ -2267,6 +2267,7 @@ private struct ConversationEntryView: View, Equatable {
             && lhs.planProgress == rhs.planProgress
             && lhs.completedDuration == rhs.completedDuration
             && lhs.liveProcessFold == rhs.liveProcessFold
+            && lhs.liveActivityID == rhs.liveActivityID
     }
     /// Ordinary provider progress prose needs the same rhythm as narrative anchors.
     var isStageNote: Bool { isProgressNote || entry.presentation == .progress }
@@ -2308,7 +2309,7 @@ private struct ConversationEntryView: View, Equatable {
                         ProcessFoldRow(rows: foldedRows, api: api, sessionId: sessionId,
                                        completedDuration: completedDuration,
                                        sourceMemoryPrefix: String(memoryKey.dropLast(entry.id.count + 1)),
-                                       live: liveProcessFold)
+                                       live: liveProcessFold, liveSummary: liveThinkingSummary, liveEntryID: liveActivityID)
                     }
                 default:
                     if entry.presentation == .record {
@@ -2350,16 +2351,21 @@ struct ProcessFoldRow: View {
     /// The running turn's process disclosure (PI: active turns start open and
     /// settle in place on completion; the row id is stable across the flip).
     var live = false
+    /// The public thinking summary and the live child it belongs to: the fold
+    /// forwards it so the summary still rides the active stage's header.
+    var liveSummary: String? = nil
+    var liveEntryID: String? = nil
     @UILocalization private var L
     @Environment(\.locale) private var locale
     @Environment(\.conversationMemoryKey) private var memoryKey
     @Environment(\.conversationActionContext) private var actionContext
 
     init(rows: [ConversationPresentationModel.Row], api: KimiAPI?, sessionId: String,
-         completedDuration: TimeInterval? = nil, sourceMemoryPrefix: String? = nil, live: Bool = false) {
+         completedDuration: TimeInterval? = nil, sourceMemoryPrefix: String? = nil, live: Bool = false,
+         liveSummary: String? = nil, liveEntryID: String? = nil) {
         self.rows = rows; self.api = api; self.sessionId = sessionId
         self.completedDuration = completedDuration; self.sourceMemoryPrefix = sourceMemoryPrefix
-        self.live = live
+        self.live = live; self.liveSummary = liveSummary; self.liveEntryID = liveEntryID
         _expanded = RememberedExpansion("process-fold", initial: live)
     }
     @RememberedExpansion("process-fold") private var expanded
@@ -2478,7 +2484,8 @@ struct ProcessFoldRow: View {
                     ForEach(Array(rows[page.range]), id: \.entry.id) { row in
                         ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
                                               memoryKey: (sourceMemoryPrefix ?? sessionId) + ":" + row.entry.id, activityNarrative: row.activity,
-                                              preservesExpandedProcess: true)
+                                              preservesExpandedProcess: true,
+                                              liveThinkingSummary: live && row.entry.id == liveEntryID ? liveSummary : nil)
                             .environment(\.conversationMemoryKey, (sourceMemoryPrefix ?? sessionId) + ":" + row.entry.id)
                             .environment(\.isConversationBodyText, true)
                             .background(ProcessFindAnchor(id: row.entry.id))
