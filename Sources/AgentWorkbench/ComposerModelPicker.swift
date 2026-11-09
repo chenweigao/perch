@@ -228,7 +228,7 @@ private struct ComposerModelPanel: View {
                     if showRail { rail }
                     ScrollView {
                         LazyVStack(spacing: 2) {
-                            if let onUseDefaultModel {
+                            if !searching, let onUseDefaultModel {
                                 ModelPickerRow(title: Text("使用默认模型"), detail: nil,
                                                selected: usesDefaultModel) {
                                     onUseDefaultModel()
@@ -237,7 +237,7 @@ private struct ComposerModelPanel: View {
                                     .disabled(disabledReason != nil).padding(.horizontal, 6)
                                     .accessibilityIdentifier("model-thinking-default")
                             }
-                            if let onUseSessionModel {
+                            if !searching, let onUseSessionModel {
                                 ModelPickerRow(title: Text("沿用会话模型"), detail: sessionModel,
                                                selected: usesSessionModel) {
                                     onUseSessionModel()
