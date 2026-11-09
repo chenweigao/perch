@@ -377,6 +377,16 @@ private final class PreviewDelegate: NSObject, NSApplicationDelegate {
             text.layoutManager?.ensureLayout(for: text.textContainer!)
             text.needsDisplay = true
         }
+        if ProcessInfo.processInfo.environment["CHIP_DUMP"] != nil {
+            for text in captureDescendants(view).compactMap({ $0 as? ReplyTextView }) {
+                guard let storage = text.textStorage else { continue }
+                storage.enumerateAttribute(.replyChip, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+                    guard value != nil else { return }
+                    let snippet = (storage.string as NSString).substring(with: range)
+                    print("CHIP-RUN [\(scene.name)] range={\(range.location),\(range.length)} «\(snippet.prefix(60))»")
+                }
+            }
+        }
         window.displayIfNeeded()
         let scale: CGFloat = 2
         let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(view.bounds.width * scale), pixelsHigh: Int(view.bounds.height * scale),
