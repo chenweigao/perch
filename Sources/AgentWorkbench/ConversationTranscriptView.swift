@@ -2487,6 +2487,7 @@ struct ProcessFoldRow: View {
                         ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
                                               memoryKey: (sourceMemoryPrefix ?? sessionId) + ":" + row.entry.id, activityNarrative: row.activity,
                                               preservesExpandedProcess: true,
+                                              isLive: live && row.entry.id == liveEntryID,
                                               liveThinkingSummary: live && row.entry.id == liveEntryID ? liveSummary : nil)
                             .environment(\.conversationMemoryKey, (sourceMemoryPrefix ?? sessionId) + ":" + row.entry.id)
                             .environment(\.isConversationBodyText, true)
