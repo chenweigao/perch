@@ -44,6 +44,10 @@ struct ProcessLivePulse: View {
             .accessibilityHidden(true)
     }
 }
+
+/// The disclosure every process row uses: `WorkbenchDisclosureStyle`'s full-width
+/// header and content mechanics, at the `ReplyStyle.Process` inset.
+struct ProcessDisclosureStyle: DisclosureGroupStyle {
     /// The turn fold's header closes its status cluster with the caret (PI's
     /// turn-process header); leaf rows keep the caret on the trailing edge.
     var caretFollowsContent = false
