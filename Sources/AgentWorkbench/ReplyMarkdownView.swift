@@ -1342,7 +1342,7 @@ final class ReplyTextView: NSTextView {
                 rect = rect.insetBy(dx: -4, dy: -2.5)
                 // Crisp hairline at any backing scale: a fractional 0.5 pt stroke
                 // reads as a double edge on Retina.
-                rect = backingAlignedRect(rect, options: .alignAllEdgesNearest)
+                rect = self.backingAlignedRect(rect, options: .alignAllEdgesNearest)
                 let radius = min(7, rect.height / 2)
                 let path = NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
                 path.fill()
