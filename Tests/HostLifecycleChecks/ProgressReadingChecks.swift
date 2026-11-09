@@ -75,7 +75,7 @@ private struct ProgressReadingFixture: View {
         precondition(prose.isSelectable && detail.isSelectable, "Progress prose stays selectable")
         let proseX = host.convert(prose.bounds, from: prose).minX
         let detailX = host.convert(detail.bounds, from: detail).minX
-        precondition(abs(proseX - detailX) < 1, "Progress sources align without a repeated status-icon gutter")
+        precondition(abs(proseX - detailX) < 1, "Progress sources align without a repeated status-icon gutter: prose \(proseX), detail \(detailX)")
         guard let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { fatalError("Missing progress snapshot") }
         host.cacheDisplay(in: host.bounds, to: bitmap)
         try bitmap.representation(using: .png, properties: [:])!.write(to: output.appendingPathComponent("progress-" + label + ".png"))
