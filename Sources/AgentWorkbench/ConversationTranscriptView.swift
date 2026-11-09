@@ -2516,7 +2516,13 @@ struct ProcessFoldRow: View {
         let prompt = rows.lastIndex { $0.entry.presentation == .message && $0.entry.messages.first?.isUserPrompt == true }
         let start = prompt.map { $0 + 1 } ?? 0
         guard start < rows.count else { return nil }
-        guard let last = rows.last, last.entry.presentation == .activity else { return nil }
+        guard let last = rows.last else { return nil }
+        // The live disclosure wraps the turn's process: the live activity is its
+        // last activity child.
+        if last.entry.presentation == .processFold, let children = last.foldedRows {
+            return children.last { $0.entry.presentation == .activity }?.entry.id
+        }
+        guard last.entry.presentation == .activity else { return nil }
         return last.entry.id
     }
     static func lastFoldOfLatestTurn(_ rows: [ConversationPresentationModel.Row]) -> String? {
