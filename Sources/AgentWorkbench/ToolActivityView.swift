@@ -78,8 +78,7 @@ struct KimiActivityView: View {
         let _ = NavigationRenderMetrics.count("activity_row_tool_scan", by: items.count)
         #endif
         let edit = items.count == 1 && ToolPresentation.isEdit(items[0].name) ? items[0] : nil
-        let title = entry.processPhase.map { ToolPresentation.phaseTitle($0, tools: items) }
-            ?? items.first.map { ToolPresentation.action($0.name) } ?? L("运行上下文")
+        let standaloneTool = edit == nil && entry.messages.count == 1 && items.count == 1 && planProgress == nil
         /// The header's trailing summary slot (DSH ToolRow form: title · summary,
         /// packed leading, one line). Priority: the live public summary (follows
         /// the active phase), the running tool's latest output line, the first
@@ -104,7 +103,9 @@ struct KimiActivityView: View {
         VStack(alignment: .leading, spacing: 0) {
             if let edit {
                 EditStepRow(tool: edit, messageID: entry.messages[0].id, expanded: expansion)
-            } else {
+            } else if !standaloneTool {
+                let title = entry.processPhase.map { ToolPresentation.phaseTitle($0, tools: items) }
+                    ?? items.first.map { ToolPresentation.action($0.name) } ?? L("运行上下文")
                 HStack(spacing: 8) {
                     DisclosureGroup(isExpanded: expansion) { EmptyView() } label: {
                         HStack(spacing: 6) {
@@ -120,7 +121,10 @@ struct KimiActivityView: View {
                             if !items.isEmpty {
                                 ProcessStatusDot(status: stageStatus(items))
                             }
-                            if let rowSummary {
+                            if expanded, items.count > 1 {
+                                Text(verbatim: "· " + L("\(items.count) 个工具")).fixedSize()
+                            }
+                            if !expanded, let rowSummary {
                                 Text(verbatim: "·").fixedSize()
                                 Text(verbatim: rowSummary.text)
                                     .lineLimit(1).truncationMode(.tail)
@@ -133,10 +137,12 @@ struct KimiActivityView: View {
                     if let planProgress { trailingMetadata(planProgress: planProgress) }
                 }
             }
-            if let narrative {
-                WorkbenchDisclosureContent(expanded: expanded) {
+            // Local inference repeats the tool's target/action. Provider and
+            // agent prose, and summaries requested by the user, carry content.
+            if let narrative, narrative.source != .local {
+                WorkbenchDisclosureContent(expanded: expanded || standaloneTool || edit != nil) {
                     ActivityNarrativeHistoryView(narrative: narrative)
-                        .padding(.leading, ReplyStyle.Process.nestedIndent).padding(.top, 4)
+                        .padding(.leading, standaloneTool ? 0 : ReplyStyle.Process.nestedIndent).padding(.top, 4)
                 }
             }
             let mergedRanges = Self.mergedReadRangesByPath(items)
@@ -148,11 +154,12 @@ struct KimiActivityView: View {
                     // visible receipt and reveal its raw call from that arrow.
                     let alwaysVisible = edit == nil && ToolPresentation.showsResultOutsideStage(
                         tool, isLive: isLive, lastPartToolID: entry.messages.last?.content.last?.toolCallId)
-                    WorkbenchDisclosureContent(expanded: expanded || alwaysVisible) {
-                        KimiToolCard(tool: tool, mergedReadRange: ToolPresentation.path(tool).flatMap { mergedRanges[$0] })
-                            .environment(\.conversationMemoryKey, memoryKey + ":tool:" + tool.id)
-                            .background(ProcessFindAnchor(id: "tool:" + tool.id))
-                            .padding(.leading, ReplyStyle.Process.nestedIndent).padding(.top, 4)
+                    if standaloneTool {
+                        toolRow(tool, mergedRanges: mergedRanges, nested: false)
+                    } else {
+                        WorkbenchDisclosureContent(expanded: expanded || alwaysVisible) {
+                            toolRow(tool, mergedRanges: mergedRanges, nested: true)
+                        }
                     }
                 } else {
                     WorkbenchDisclosureContent(expanded: expanded) {
@@ -169,6 +176,13 @@ struct KimiActivityView: View {
                 }
             }
         }
+    }
+
+    private func toolRow(_ tool: VisibleTool, mergedRanges: [String: String], nested: Bool) -> some View {
+        KimiToolCard(tool: tool, mergedReadRange: ToolPresentation.path(tool).flatMap { mergedRanges[$0] })
+            .environment(\.conversationMemoryKey, memoryKey + ":tool:" + tool.id)
+            .background(ProcessFindAnchor(id: "tool:" + tool.id))
+            .padding(.leading, nested ? ReplyStyle.Process.nestedIndent : 0).padding(.top, nested ? 4 : 0)
     }
 
     private static func mergedReadRangesByPath(_ tools: [VisibleTool]) -> [String: String] {

@@ -2349,8 +2349,8 @@ struct ProcessFoldRow: View {
     let sessionId: String
     var completedDuration: TimeInterval? = nil
     var sourceMemoryPrefix: String? = nil
-    /// The process stays expanded by default through completion. An explicit
-    /// user collapse is remembered for this turn.
+    /// Untouched processes open while running and close on completion.
+    /// An explicit user choice remains authoritative for this turn.
     var live = false
     /// Live turn start, so the header's duration ticks while it runs (PI).
     var liveStartedAt: Date? = nil
@@ -2365,7 +2365,7 @@ struct ProcessFoldRow: View {
         self.rows = rows; self.api = api; self.sessionId = sessionId
         self.completedDuration = completedDuration; self.sourceMemoryPrefix = sourceMemoryPrefix
         self.live = live; self.liveStartedAt = liveStartedAt
-        _expanded = RememberedExpansion("process-fold", initial: true)
+        _expanded = RememberedExpansion("process-fold", initial: live)
     }
     @RememberedExpansion("process-fold") private var expanded
     @Environment(\.conversationDisclosureWillChange) private var disclosureWillChange
@@ -2403,6 +2403,7 @@ struct ProcessFoldRow: View {
     }
     var body: some View {
         let countLabel = toolCalls > 0 ? L("\(toolCalls) 个工具") : L("\(rows.count) 条记录")
+        let headline = expanded ? nil : externalHeadline
         VStack(alignment: .leading, spacing: 2) {
             HStack(alignment: .center, spacing: 8) {
                 DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
@@ -2432,15 +2433,15 @@ struct ProcessFoldRow: View {
                             Text(L("· \(editStat.files) 个文件 +\(editStat.additions) −\(editStat.deletions)"))
                                 .monospacedDigit().fixedSize()
                         }
-                        if live || !expanded, externalHeadline == nil, let summary = thinkingSummary {
+                        if !expanded, headline == nil, let summary = thinkingSummary {
                             Text(verbatim: "· " + summary)
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                                 .layoutPriority(-1)
                         }
                     }
-                    .font(.system(size: externalHeadline != nil ? ReplyStyle.captionSize : ReplyStyle.Process.labelSize))
-                    .foregroundStyle(externalHeadline != nil ? WorkbenchTheme.quiet : Color.secondary)
+                    .font(.system(size: headline != nil ? ReplyStyle.captionSize : ReplyStyle.Process.labelSize))
+                    .foregroundStyle(headline != nil ? WorkbenchTheme.quiet : Color.secondary)
                 }
                 .disclosureGroupStyle(ProcessDisclosureStyle(caretFollowsContent: true))
                 .accessibilityValue(Text(expanded ? "已展开" : "已收起"))
@@ -2455,7 +2456,7 @@ struct ProcessFoldRow: View {
                         .accessibilityValue(Text(verbatim: L("本轮改了 \(editStat.files) 个文件") + " +\(editStat.additions) −\(editStat.deletions)"))
                 }
             }
-            if let externalHeadline {
+            if let externalHeadline = headline {
                 Button { expanded.toggle() } label: {
                     Text(verbatim: externalHeadline)
                         .font(.system(size: ReplyStyle.Process.labelSize))

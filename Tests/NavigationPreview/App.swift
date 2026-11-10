@@ -446,13 +446,9 @@ final class NavigationRunner {
         }) != nil else {
             throw NavigationError("no fold disclosure mounted; fold: \(foldID); bindings: \(ConversationDisclosureFixture.bindings.keys.count)")
         }
-        guard let initiallyExpandedRow = findRow(foldID, in: host) else { throw NavigationError("fold row is not mounted") }
-        let initiallyExpandedViews = countViews(initiallyExpandedRow)
-        ConversationDisclosureFixture.bindings[key]!.wrappedValue = false
-        guard await flushAndWait(host, until: {
-            guard let row = self.findRow(foldID, in: host) else { return false }
-            return self.countViews(row) < initiallyExpandedViews
-        }) != nil else { throw NavigationError("the user could not collapse the initially expanded process") }
+        guard !ConversationDisclosureFixture.bindings[key]!.wrappedValue else {
+            throw NavigationError("an untouched completed process must start collapsed")
+        }
         guard let foldRow = findRow(foldID, in: host) else { throw NavigationError("collapsed fold row is not mounted") }
         let collapsedHeight = foldRow.frame.height
         let collapsedViews = countViews(foldRow)

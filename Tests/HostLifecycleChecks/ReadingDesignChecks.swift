@@ -440,7 +440,7 @@ private struct ReadingReviewControls: View {
         record("lifecycle-progress", [["type": "text", "text": "我先检查窗口状态，再修改边界判断。"]]),
         record("lifecycle-summary", [["type": "thinking", "thinking": "PRIVATE_LIFECYCLE_REASONING", "source": ["kind": "activity_summary", "summaryParts": ["正在核对当前路径与标签列表的更新顺序，确认首次读取尚未完成时的处理方式。"], "state": "streaming"]]])]
     let read = record("lifecycle-read", [["type": "tool_use", "tool_call_id": "lifecycle-read", "tool_name": "read", "input": ["path": "DocumentReader.swift"]]])
-    let readResult = record("lifecycle-read-result", [["type": "tool_result", "tool_call_id": "lifecycle-read", "output": "ok", "is_error": false]], role: "tool")
+    let readResult = record("lifecycle-read-result", [["type": "tool_result", "tool_call_id": "lifecycle-read", "output": "LIFECYCLE_READ_BODY", "is_error": false]], role: "tool")
     let live = try decode(start + [read, readResult])
     let edit = record("lifecycle-edit", [["type": "tool_use", "tool_call_id": "lifecycle-edit", "tool_name": "edit", "input": ["path": "DocumentReader.swift", "old_string": "old line\nold guard", "new_string": "new line\nnew guard\nnew check"]]])
     let editResult = record("lifecycle-edit-result", [["type": "tool_result", "tool_call_id": "lifecycle-edit", "output": "ok", "is_error": false]], role: "tool")
@@ -486,14 +486,18 @@ private struct ReadingReviewControls: View {
     try snapshot("lifecycle-running")
     host.rootView = ReadingDesignFixture(messages: live, running: false, session: "lifecycle-A", folds: true)
     try await settle()
-    precondition(taskPanelControl(window, "tool-call:lifecycle-read") != nil, "Completed processes remain expanded by default")
-    try await readingClickControl(window, "activity-phase:activity:tool:lifecycle-read")
+    precondition(taskPanelControl(window, "tool-call:lifecycle-read") == nil, "An untouched turn closes its process on completion")
+    try await readingClickControl(window, "completed-process:text:lifecycle-progress:0")
     try await settle()
-    precondition(taskPanelControl(window, "tool-call:lifecycle-read") == nil, "A user may collapse an individual stage")
-    try await readingClickControl(window, "activity-phase:activity:tool:lifecycle-read")
+    precondition(taskPanelControl(window, "tool-call:lifecycle-read") != nil)
+    precondition(taskPanelControl(window, "activity-phase:activity:tool:lifecycle-read") == nil,
+                 "A single read has one operation row, without a duplicate stage header")
+    try await readingClickControl(window, "tool-call:lifecycle-read")
     try await settle()
-    precondition(taskPanelControl(window, "tool-call:lifecycle-read") != nil,
-                 "read tool card after phase click; ids: " + taskPanelIdentifiers(window).joined(separator: ", "))
+    precondition(readingTextViews(host).contains { $0.string.contains("LIFECYCLE_READ_BODY") }, "The operation row opens its actual result")
+    try await readingClickControl(window, "tool-call:lifecycle-read")
+    try await settle()
+    precondition(!readingTextViews(host).contains { $0.string.contains("LIFECYCLE_READ_BODY") }, "Raw details may be collapsed independently")
     precondition(ConversationReadingMemory.shared.retainedEntries(session: "lifecycle-A").contains("activity:tool:lifecycle-read"))
     host.rootView = ReadingDesignFixture(messages: live, running: true, session: "lifecycle-A", folds: true)
     try await settle()
@@ -504,27 +508,30 @@ private struct ReadingReviewControls: View {
     precondition(taskPanelControl(window, "live-thinking-summary") == nil)
     // Uniform fold: the edit receipt and the failed call sit inside the fold,
     // whose header carries the call count and the thinking's first line.
-    precondition(taskPanelControl(window, "edit-step:lifecycle-edit") != nil)
-    precondition(taskPanelControl(window, "activity-phase:activity:tool:lifecycle-check") != nil)
+    precondition(taskPanelControl(window, "edit-step:lifecycle-edit") == nil, "New untouched history folds start closed")
     precondition(taskPanelLabel(window, "completed-process:activity:tool:lifecycle-edit")?.contains(L("2 个工具")) == true,
                  "The second fold (edit + check) carries the tool count")
+    try await readingClickControl(window, "completed-process:activity:tool:lifecycle-edit")
+    try await settle()
+    precondition(taskPanelControl(window, "edit-step:lifecycle-edit") != nil && taskPanelControl(window, "tool-call:lifecycle-check") != nil)
     try snapshot("lifecycle-retained")
-    // A fresh reader sees the expanded process and answer. Explicit thinking
-    // and stage choices remain scoped to their originating session.
+    // An untouched live turn opens, then closes when its answer arrives.
+    host.rootView = ReadingDesignFixture(messages: live, running: true, session: "lifecycle-B", folds: true)
+    try await settle()
+    precondition(taskPanelControl(window, "tool-call:lifecycle-read") != nil)
     host.rootView = ReadingDesignFixture(messages: done, session: "lifecycle-B", folds: true)
     for (name, width, appearance) in [("lifecycle-completed", 1000.0, NSAppearance.Name.aqua), ("lifecycle-narrow", 540.0, .aqua), ("lifecycle-dark", 1000.0, .darkAqua)] {
         window.setContentSize(NSSize(width: width, height: 760)); window.appearance = NSAppearance(named: appearance)
         try await settle()
-        precondition(taskPanelControl(window, "tool-call:lifecycle-read") != nil)
-        precondition(taskPanelControl(window, "edit-step:lifecycle-edit") != nil && taskPanelControl(window, "activity-phase:activity:tool:lifecycle-check") != nil)
-        precondition(readingTextViews(host).contains { $0.string.contains("我先检查窗口状态") })
+        precondition(taskPanelControl(window, "tool-call:lifecycle-read") == nil && taskPanelControl(window, "edit-step:lifecycle-edit") == nil)
+        precondition(!readingTextViews(host).contains { $0.string.contains("我先检查窗口状态") })
         precondition(readingTextViews(host).contains { $0.string.contains("已修复首次打开文件") })
         try snapshot(name)
     }
     window.appearance = NSAppearance(named: .aqua)
-    // The failed call remains reachable inside its expanded fold and stage.
-    // (Session B retained nothing, so the whole turn is one fold here.)
-    precondition(taskPanelControl(window, "tool-call:lifecycle-check") != nil, "The failed call remains reachable inside the fold")
+    try await readingClickControl(window, "completed-process:text:lifecycle-progress:0")
+    try await settle()
+    precondition(taskPanelControl(window, "tool-call:lifecycle-check") != nil, "The failed call remains reachable on manual reopen")
     try await readingClickControl(window, "completed-process:text:lifecycle-progress:0")
     try await settle()
     precondition(!readingTextViews(host).contains { $0.string.contains("我先检查窗口状态") }, "Re-collapsing the fold hides the process again")
@@ -539,7 +546,7 @@ private struct ReadingReviewControls: View {
     host.rootView = ReadingDesignFixture(messages: done, session: "lifecycle-A", folds: true)
     try await settle()
     precondition(taskPanelControl(window, "tool-call:lifecycle-read") != nil, "Switching sessions restores the expanded step")
-    print("PASS: default expanded thinking and completed process, public summary after collapse, edit/error visibility and manual choices through completion/new turn/session switch")
+    print("PASS: expanded live thinking, automatic completed collapse, single operation rows, edit/error visibility and manual choices through completion/new turn/session switch")
 }
 
 /// The full work stage remains continuous through collapse, append, completion,
@@ -577,8 +584,8 @@ private struct ReadingReviewControls: View {
             to: URL(fileURLWithPath: "/private/tmp/perch-reading-design/" + name + ".png"))
     }
     try await settle()
-    precondition(taskPanelLabel(window, "activity-phase:" + stage)?.contains("git show") == true,
-                 "The stage header names the latest targets")
+    precondition(taskPanelLabel(window, "activity-phase:" + stage)?.contains(L("26 个工具")) == true,
+                 "An open stage shows the call count rather than repeating its targets")
     precondition(taskPanelControl(window, "activity-phase:activity:tool:page-tool-24") == nil)
     precondition(taskPanelControl(window, "tool-call:page-tool-0") != nil)
     precondition(taskPanelControl(window, "tool-call:page-tool-24") != nil, "The stage defaults open and includes records after the former page boundary")
@@ -598,7 +605,10 @@ private struct ReadingReviewControls: View {
     precondition(taskPanelControl(window, "tool-call:page-tool-24") != nil, "Completion preserves the visible process")
     host.rootView = ReadingDesignFixture(messages: try records(26), running: true, session: "stage-page-B", folds: true)
     try await settle()
-    precondition(taskPanelControl(window, "tool-call:page-tool-24") != nil, "A fresh session also defaults to the full expanded stage")
+    precondition(taskPanelControl(window, "tool-call:page-tool-24") == nil, "A fresh completed session defaults collapsed")
+    try await readingClickControl(window, "completed-process:" + stage)
+    try await settle()
+    precondition(taskPanelControl(window, "tool-call:page-tool-24") != nil, "Reopening restores the full continuous stage")
     try await readingClickControl(window, "activity-phase:" + stage)
     try await settle()
     precondition(ConversationReadingMemory.shared.expansions["stage-page-B:" + stage + ":expanded"] == false,

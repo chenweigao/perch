@@ -120,10 +120,14 @@ import WorkbenchCore
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading))
         window.contentView = continuous; window.setContentSize(NSSize(width: 720, height: 700))
         try await Task.sleep(for: .milliseconds(300))
+        precondition(!controlViews(continuous).contains { $0.identifier?.rawValue.hasPrefix("process-entry:") == true },
+                     "A completed process starts collapsed")
+        controlClick(window, identifier: "completed-process:" + rows[0].entry.id)
+        try await Task.sleep(for: .milliseconds(350))
         let identifiers = controlViews(continuous).compactMap(\.identifier?.rawValue)
         let mountedEntries = identifiers.filter { $0.hasPrefix("process-entry:") }
         precondition(Set(mountedEntries) == Set(rows.map { "process-entry:" + $0.entry.id }),
-                     "The initially expanded process contains every record, including those beyond the former page boundaries")
+                     "Opening the process reveals every record across the former page boundaries")
         precondition(!identifiers.contains { $0.contains("previous-page") || $0.contains("next-page") }, "The process has no pagination controls")
         let texts = controlViews(continuous).compactMap { $0 as? NSTextView }.map(\.string)
         precondition(texts.contains("记录 0") && texts.contains("记录 34"), "Thought contents default open across the entire process")
