@@ -93,7 +93,7 @@ struct ReadingDesignFixture: View {
         let views = readingTextViews(host)
         let content = views.map(\.string).joined(separator: "\n")
         precondition(content.contains("让回复成为阅读的主角") && content.contains("清晰的内容，安静的过程"))
-        precondition(!content.contains("PRIVATE_PROCESS_MARKER"), "Completed process must start collapsed")
+        precondition(content.contains("PRIVATE_PROCESS_MARKER"), "Completed process and thinking start expanded by default")
         precondition(views.filter { $0.string.contains("正文清楚呈现") || $0.string.contains("let answer") }.allSatisfy { $0.isSelectable }, "Reply and code text must remain selectable")
         let heading = views.first { $0.string == "让回复成为阅读的主角" }!
         let headingFont = heading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont
@@ -266,18 +266,14 @@ struct ReadingDesignFixture: View {
         try await Task.sleep(for: .milliseconds(350))
         precondition(taskPanelControl(window, "activity-phase:" + phaseID) != nil)
         precondition(taskPanelControl(window, "edit-step:phase-edit-1") != nil && taskPanelControl(window, "edit-step:phase-edit-2") != nil,
-                     "Each same-file edit remains independently accessible beside the collapsed phase")
-        precondition(!readingTextViews(host).contains { $0.string.contains("先核对运行时能力") })
+                     "Each same-file edit remains independently accessible in the expanded process")
+        precondition(readingTextViews(host).contains { $0.string.contains("先核对运行时能力") }, "The work stage and thinking default open")
         try snapshot(name)
     }
     window.appearance = NSAppearance(named: .aqua)
     host.rootView = ReadingDesignFixture(messages: initial, running: true)
     try await Task.sleep(for: .milliseconds(250))
     func descendants(_ root: NSView) -> [NSView] { [root] + root.subviews.flatMap(descendants) }
-    let thought = descendants(host).first { $0.identifier?.rawValue == phaseID }!
-    let bounds = thought.convert(thought.bounds, to: nil)
-    click(bounds)
-    try await Task.sleep(for: .milliseconds(200))
     precondition(readingTextViews(host).contains { $0.string.contains("先核对运行时能力") })
     host.rootView = ReadingDesignFixture(messages: try decode(liveSource), running: true)
     try await Task.sleep(for: .milliseconds(350))
