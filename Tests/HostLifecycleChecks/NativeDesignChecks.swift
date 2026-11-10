@@ -246,7 +246,6 @@ import WorkbenchCore
     precondition(abs(draftFrame.midX - readingCenterX) < 2 &&
                  abs(replyX - (readingCenterX - ReplyStyle.readingWidth / 2)) < 2,
                  "Reply and editor must center in the space remaining beside the inspector")
-    let sidebarToggle = window.toolbar!.items.first { $0.itemIdentifier.rawValue == "WorkbenchSidebarToggle" }!.view!
     for cycle in 0..<3 {
         split.toggleSidebar(nil)
         try await Task.sleep(for: .milliseconds(200))
@@ -427,8 +426,11 @@ import WorkbenchCore
     precondition(split.isSidebarShown && !split.isSidebarYieldingToInspector && !split.isInspectorOverlayingContent,
                  "Asking for a yielding sidebar must bring it back without overlaying the inspector")
     try await place(width: 900)
-    precondition(split.isSidebarOverlayingContent && split.sidebarOverlayBackdropView?.isHidden == false,
-                 "A narrow window must back the overlaying sidebar with its glass panel")
+    let narrowSidebarFrame = split.floatingSidebarView!.convert(split.floatingSidebarView!.bounds, to: window.contentView)
+    let narrowTitleFrame = title.convert(title.bounds, to: window.contentView)
+    precondition(split.isSidebarOverlayingContent && split.sidebarOverlayBackdropView?.isHidden == false &&
+                 narrowTitleFrame.minX > narrowSidebarFrame.maxX,
+                 "A narrow window must back the overlaying sidebar with its glass panel and shift the header title clear of the sidebar: title=\(narrowTitleFrame), sidebar=\(narrowSidebarFrame)")
     checkSidebarEdges()
     try await capture("native-narrow-light")
     split.setFloatingSidebarVisible(false)

@@ -14,12 +14,10 @@ struct EditRecordInspectorView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 6) {
                 Button { model.taskContextWindow.showPage(.task, model: model) } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chevron.left")
-                        Text("任务面板")
-                    }.font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: WorkbenchTheme.Typography.caption, weight: .semibold))
                         .foregroundStyle(WorkbenchTheme.quiet)
-                        .padding(.horizontal, 6).frame(height: 24).contentShape(Rectangle())
+                        .frame(width: 24, height: 24).contentShape(Rectangle())
                 }.buttonStyle(WorkbenchDisclosureButtonStyle())
                     .help("返回任务列表").accessibilityLabel("返回任务列表")
                     .accessibilityIdentifier("edit-record-back")

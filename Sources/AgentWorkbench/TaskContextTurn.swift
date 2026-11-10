@@ -90,7 +90,7 @@ struct TaskSessionOverviewSection: View {
             snapshot: snapshot,
             recapEntry: retainedEntry,
             isGeneratingRecap: isGenerating || (exactEntry == nil && retainedEntry != nil && snapshot.busy),
-            updatedAtFallback: item.updatedAt > 0 ? Date(timeIntervalSince1970: item.updatedAt) : nil
+            updatedAtFallback: item.updatedAt > 946_684_800 ? Date(timeIntervalSince1970: item.updatedAt) : nil
         )
     }
 

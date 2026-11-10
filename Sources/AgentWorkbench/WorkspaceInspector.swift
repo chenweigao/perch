@@ -55,12 +55,10 @@ struct FilesInspectorView: View {
             VStack(spacing: 0) {
                 HStack(spacing: 6) {
                     Button { model.taskContextWindow.showPage(.task, model: model) } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "chevron.left")
-                            Text("任务面板")
-                        }.font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: WorkbenchTheme.Typography.caption, weight: .semibold))
                             .foregroundStyle(WorkbenchTheme.quiet)
-                            .padding(.horizontal, 6).frame(height: 24).contentShape(Rectangle())
+                            .frame(width: 24, height: 24).contentShape(Rectangle())
                     }.buttonStyle(WorkbenchDisclosureButtonStyle())
                         .help("返回任务列表").accessibilityLabel("返回任务列表")
                         .accessibilityIdentifier("files-inspector-back")
@@ -195,12 +193,10 @@ struct ChangesInspectorView: View {
     private var header: some View {
         HStack(spacing: 6) {
             Button { model.taskContextWindow.showPage(.task, model: model) } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "chevron.left")
-                    Text("任务面板")
-                }.font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
+                Image(systemName: "chevron.left")
+                    .font(.system(size: WorkbenchTheme.Typography.caption, weight: .semibold))
                     .foregroundStyle(WorkbenchTheme.quiet)
-                    .padding(.horizontal, 6).frame(height: 24).contentShape(Rectangle())
+                    .frame(width: 24, height: 24).contentShape(Rectangle())
             }.buttonStyle(WorkbenchDisclosureButtonStyle())
                 .help("返回任务列表").accessibilityLabel("返回任务列表")
                 .accessibilityIdentifier("changes-inspector-back")

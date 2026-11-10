@@ -404,6 +404,7 @@ final class WorkbenchDetailController: NSViewController {
     private var cardLeadingConstraint: NSLayoutConstraint?
     private var cardTrailingConstraint: NSLayoutConstraint?
     private var readingTrailingConstraint: NSLayoutConstraint?
+    private var headerLeadingConstraint: NSLayoutConstraint?
     /// Sidebar avoidance; 0 while the sidebar is hidden or overlays the card.
     private(set) var contentLeadingInset: CGFloat = 0
     private(set) var contentTrailingInset: CGFloat = 0
@@ -459,9 +460,11 @@ final class WorkbenchDetailController: NSViewController {
         let leading = card.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: inset)
         let trailing = card.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -inset)
         let cardBottom = card.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -inset)
+        let headerLeading = header.leadingAnchor.constraint(equalTo: headerBar.leadingAnchor, constant: WorkbenchTheme.Reading.inset)
         cardLeadingConstraint = leading
         cardTrailingConstraint = trailing
         cardBottomDirect = cardBottom
+        headerLeadingConstraint = headerLeading
         NSLayoutConstraint.activate([
             card.topAnchor.constraint(equalTo: view.topAnchor, constant: WorkspaceLayoutMetrics.contentTopInset),
             leading,
@@ -471,7 +474,7 @@ final class WorkbenchDetailController: NSViewController {
             headerBar.leadingAnchor.constraint(equalTo: card.leadingAnchor),
             headerBar.trailingAnchor.constraint(equalTo: card.trailingAnchor),
             headerBar.heightAnchor.constraint(equalToConstant: WorkbenchChrome.headerHeight),
-            header.leadingAnchor.constraint(equalTo: headerBar.leadingAnchor, constant: WorkbenchTheme.Reading.inset),
+            headerLeading,
             header.centerYAnchor.constraint(equalTo: headerBar.centerYAnchor),
             header.trailingAnchor.constraint(lessThanOrEqualTo: actions.leadingAnchor, constant: -12),
             actions.trailingAnchor.constraint(equalTo: headerBar.trailingAnchor, constant: -12),
@@ -498,6 +501,12 @@ final class WorkbenchDetailController: NSViewController {
         if abs(trailing - contentTrailingInset) > 0.5 {
             contentTrailingInset = trailing
             cardTrailingConstraint?.constant = -max(WorkspaceLayoutMetrics.frameInset, trailing)
+        }
+    }
+
+    func setHeaderLeadingInset(_ inset: CGFloat) {
+        if let headerLeadingConstraint, abs(headerLeadingConstraint.constant - inset) > 0.5 {
+            headerLeadingConstraint.constant = inset
         }
     }
 
@@ -1125,6 +1134,11 @@ final class WorkbenchSplitController: NSSplitViewController {
         detailController?.setInspectorWidth(inspectorWidth)
         if isFloatingInspectorVisible { inspectorWidthConstraint?.constant = inspectorWidth }
         isSidebarOverlayingContent = sidebarShown && !avoidSidebar
+        detailController?.setHeaderLeadingInset(
+            isSidebarOverlayingContent
+                ? floatingSidebarWidth + WorkspaceLayoutMetrics.sidebarGap + WorkbenchTheme.Reading.inset
+                : WorkbenchTheme.Reading.inset
+        )
         sidebarOverlayBackdrop?.isHidden = !isSidebarOverlayingContent
         sidebarOverlayShadow?.isHidden = !isSidebarOverlayingContent
         isInspectorOverlayingContent = false
