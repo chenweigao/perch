@@ -1,5 +1,4 @@
 import AppKit
-import ApplicationServices
 import SwiftUI
 import Observation
 import WorkbenchCore
@@ -409,25 +408,6 @@ private struct ActivityBarCheckFixture: View {
         .background(WorkbenchTheme.contentBackground))
     window.contentView = liveTailHost
     window.setContentSize(NSSize(width: 680, height: 440))
-    AXUIElementSetAttributeValue(AXUIElementCreateApplication(getpid()), "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)
-    func paintedStateDot(_ identifier: String, green: Bool) -> Bool {
-        guard let frame = taskPanelControl(window, identifier) else { return false }
-        let region = liveTailHost.convert(frame, from: nil).intersection(liveTailHost.bounds)
-        guard !region.isEmpty, let bitmap = liveTailHost.bitmapImageRepForCachingDisplay(in: region) else { return false }
-        liveTailHost.cacheDisplay(in: region, to: bitmap)
-        var coloredPixels = 0
-        for y in 0..<bitmap.pixelsHigh {
-            for x in 0..<bitmap.pixelsWide {
-                guard let color = bitmap.colorAt(x: x, y: y)?.usingColorSpace(.sRGB) else { continue }
-                let r = color.redComponent, g = color.greenComponent, b = color.blueComponent
-                // Hue survives both appearances and the running dot's pulse.
-                let matches = green ? g > r + 0.12 && g > b + 0.08
-                    : r > b + 0.12 && g > b + 0.08 && r >= g - 0.05
-                if matches { coloredPixels += 1 }
-            }
-        }
-        return coloredPixels >= 8
-    }
     for (suffix, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
         window.appearance = NSAppearance(named: appearance)
         try await Task.sleep(for: .milliseconds(350))
@@ -437,10 +417,47 @@ private struct ActivityBarCheckFixture: View {
             try? bitmap.representation(using: .png, properties: [:])?.write(
                 to: URL(fileURLWithPath: "/private/tmp/perch-live-tail-\(suffix).png"))
         }
-        precondition(paintedStateDot("tool-call:bench-run", green: false),
-                     "An executing tool paints a yellow status dot in its own header in \(suffix)")
-        precondition(paintedStateDot("completed-process:" + sqlActivityEntry.id, green: true),
-                     "The completed process paints a green status dot in its header in \(suffix)")
+    }
+    // Read the painted tool card itself, so another row's state dot cannot
+    // satisfy the assertion and native AX coordinates cannot shift the crop.
+    func toolStateView(_ tool: VisibleTool, scope: String) -> some View {
+        KimiToolCard(tool: tool).padding(16)
+            .frame(width: 400, height: 120, alignment: .topLeading)
+            .background(WorkbenchTheme.contentBackground)
+            .environment(\.conversationMemoryKey, scope)
+    }
+    func coloredPixels(_ bitmap: NSBitmapImageRep, green: Bool) -> Int {
+        var count = 0
+        for y in 0..<bitmap.pixelsHigh {
+            for x in 0..<bitmap.pixelsWide {
+                guard let color = bitmap.colorAt(x: x, y: y)?.usingColorSpace(.sRGB) else { continue }
+                let r = color.redComponent, g = color.greenComponent, b = color.blueComponent
+                let matches = green ? g > r + 0.12 && g > b + 0.08
+                    : r > b + 0.12 && g > b + 0.08 && r >= g - 0.05
+                if matches { count += 1 }
+            }
+        }
+        return count
+    }
+    let completedBenchTool = VisibleTool(id: streamingBenchTool.id, name: streamingBenchTool.name,
+        input: streamingBenchTool.input, output: .string("Benchmark complete."), status: .succeeded)
+    for (suffix, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
+        let scope = "activity-state-dot:" + suffix
+        let toolHost = NSHostingView(rootView: toolStateView(streamingBenchTool, scope: scope))
+        window.appearance = NSAppearance(named: appearance)
+        window.contentView = toolHost; window.setContentSize(NSSize(width: 400, height: 120))
+        for (state, tool) in [("running", streamingBenchTool), ("completed", completedBenchTool)] {
+            toolHost.rootView = toolStateView(tool, scope: scope)
+            try await Task.sleep(for: .milliseconds(350))
+            toolHost.layoutSubtreeIfNeeded()
+            let bitmap = toolHost.bitmapImageRepForCachingDisplay(in: toolHost.bounds)!
+            toolHost.cacheDisplay(in: toolHost.bounds, to: bitmap)
+            try bitmap.representation(using: .png, properties: [:])!.write(
+                to: URL(fileURLWithPath: "/private/tmp/perch-tool-state-\(suffix)-\(state).png"))
+            let yellow = coloredPixels(bitmap, green: false), green = coloredPixels(bitmap, green: true)
+            precondition(state == "running" ? yellow >= 8 : green >= 8 && yellow == 0,
+                         "The same tool paints yellow while executing and green after completion in \(suffix): \(yellow) yellow, \(green) green")
+        }
     }
     print("PASS: activity bar state transitions, pending/reconnect actions, composer turn feedback, factual tool activity and Recap target")
 }
