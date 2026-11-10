@@ -60,8 +60,7 @@ check(editor.string.isEmpty, "Confirmed successful send can clear the committed 
 editor.syncDraft("另一段会话草稿")
 check(editor.string == "另一段会话草稿", "New committed draft can replace the editing buffer")
 check(editor.selectedRange() == NSRange(location: (editor.string as NSString).length, length: 0), "Completion and quotes leave the caret after the new draft")
-editor.setSelectedRange(NSRange(location: (editor.string as NSString).length, length: 0))
-let citationCaretBeforeLocalization = editor.selectedRange()
+editor.setSelectedRange(NSRange(location: 2, length: 0))
 editor.syncDraft(editor.string)
 check(editor.selectedRange().location == 2, "An unchanged streaming refresh must not move the caret")
 editor.string = "开头 replace 结尾"
@@ -339,7 +338,8 @@ let firstCitationFrame = editor.citationFrames[0].1
 check(editor.activateCitation(at: NSPoint(x: firstCitationFrame.maxX - 8, y: firstCitationFrame.midY)), "The citation remove target is clickable")
 check(editor.citationFrames.count == 1 && editor.draftSelection.location == canonicalCaret - (citationToken as NSString).length,
       "Removal preserves the editing caret and the other citation")
-editor.setSelectedRange(NSRange(location: 2, length: 0))
+editor.setSelectedRange(NSRange(location: (editor.string as NSString).length, length: 0))
+let citationCaretBeforeLocalization = editor.selectedRange()
 let localizedDraft = editor.draftString
 editor.citations = [ComposerCitation(token: citationToken, label: "Quote · 3 lines", missingMessage: "missing citation", load: { citationContent })]
 editor.syncDraft(localizedDraft)
