@@ -8,8 +8,8 @@ struct ConversationBusyIndicator: View {
     var body: some View { PerchBusyIndicator() }
 }
 
-/// A quiet live phase just above the composer. The mark owns its animation;
-/// streaming tokens never drive this row's text or animation clock.
+/// A live caption inside the composer's top edge. A cached ink copy carries
+/// one soft sweep; the phase, rather than streaming tokens, owns its lifetime.
 struct ConversationLiveStatus: View, Equatable {
     let phase: ConversationRunPhase?
     var reduceMotionOverride: Bool? = nil
@@ -25,18 +25,20 @@ struct ConversationLiveStatus: View, Equatable {
     var body: some View {
         let _ = countBody()
         if let phase {
-            HStack(spacing: 8) {
-                ConversationLiveMark(phase: phase, animated: !reduceMotion)
-                    .frame(width: 16, height: 16).accessibilityHidden(true)
+            HStack(spacing: 0) {
                 Text(verbatim: L(key: phase.titleKey))
-                    .font(.system(size: WorkbenchTheme.Reading.secondarySize))
+                    .font(.system(size: WorkbenchTheme.Typography.secondary, weight: .medium))
                     .foregroundStyle(phase.needsInput ? Color.orange : WorkbenchTheme.quiet)
                     .lineLimit(1)
+                    .overlay {
+                        ConversationLiveGlow(text: L(key: phase.titleKey), size: WorkbenchTheme.Typography.secondary,
+                                             phase: phase, animated: !reduceMotion)
+                            .accessibilityHidden(true)
+                    }
                     .contentTransition(.opacity)
                     .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: phase)
                 Spacer(minLength: 0)
-            }.padding(.horizontal, 14)
-                .frame(height: Self.height)
+            }.frame(height: Self.height)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(Text(verbatim: L(key: phase.titleKey)))
                 .accessibilityIdentifier("conversation-live-status")

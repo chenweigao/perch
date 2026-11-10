@@ -20,12 +20,12 @@ public enum ConversationRunPhase: Equatable, Sendable {
     public var needsInput: Bool { self == .waitingForConfirmation || self == .waitingForAnswer }
     public var titleKey: String {
         switch self {
-        case .thinking: return "Thinking…"
-        case .running: return "Running…"
-        case .executing: return "Executing…"
-        case .waitingForConfirmation: return "Waiting for confirmation…"
-        case .waitingForAnswer: return "Waiting for an answer…"
-        case .stopping: return "Stopping…"
+        case .thinking: return "Thinking"
+        case .running: return "Working"
+        case .executing: return "Executing"
+        case .waitingForConfirmation: return "Waiting for your confirmation"
+        case .waitingForAnswer: return "Waiting for your answer"
+        case .stopping: return "Stopping"
         }
     }
 }

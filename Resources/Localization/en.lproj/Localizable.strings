@@ -2114,3 +2114,10 @@
 "环境与详情" = "Environment & details";
 "运行出错" = "Error";
 "阻塞" = "Blocked";
+
+/* Live composer caption */
+"Working" = "Working";
+"Executing" = "Executing";
+"Waiting for your confirmation" = "Waiting for your confirmation";
+"Waiting for your answer" = "Waiting for your answer";
+"Stopping" = "Stopping";

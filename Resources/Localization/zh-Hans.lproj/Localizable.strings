@@ -2072,3 +2072,10 @@
 "环境与详情" = "环境与详情";
 "运行出错" = "运行出错";
 "阻塞" = "阻塞";
+
+/* Live composer caption */
+"Working" = "正在处理";
+"Executing" = "正在执行";
+"Waiting for your confirmation" = "等待你确认";
+"Waiting for your answer" = "等待你回答";
+"Stopping" = "正在停止";

@@ -115,14 +115,11 @@ struct KimiWorkspaceView: View {
                 }.id(sessionID)
             }
             let request = TurnRequest.kimi(approvals: conversation.snapshot.pendingApprovals, questions: conversation.snapshot.pendingQuestions)
-            ConversationLiveStatus(phase: ConversationRunPhase(turn: turn, online: connection.online && connection.snapshotReady,
+            let phase = ConversationRunPhase(turn: turn, online: connection.online && connection.snapshotReady,
                 stopping: connection.isStopping, request: request?.kind,
                 hasRunningTools: conversation.live?.runningTools.isEmpty == false,
-                thinking: conversation.live?.thinkingText.isEmpty == false && conversation.live?.assistantText.isEmpty != false))
-                .equatable()
-                .frame(maxWidth: ReplyStyle.composerWidth).padding(.horizontal, ReplyStyle.composerPadding)
-                .frame(maxWidth: .infinity, alignment: .center).id("live-status:" + sessionID)
-            KimiComposerView(connection: connection, sessionID: sessionID, onInput: onInput)
+                thinking: conversation.live?.thinkingText.isEmpty == false && conversation.live?.assistantText.isEmpty != false)
+            KimiComposerView(connection: connection, sessionID: sessionID, livePhase: phase, onInput: onInput)
                 .id(sessionID)
         }
     }
@@ -148,6 +145,7 @@ private struct KimiComposerView: View {
     @UILocalization private var L
     let connection: KimiConnection
     let sessionID: String
+    let livePhase: ConversationRunPhase?
     let onInput: () -> Void
     @State private var chooseFiles = false
     @State private var palette = CommandPaletteState()
@@ -165,6 +163,7 @@ private struct KimiComposerView: View {
                 }
             }
             VStack(alignment: .leading, spacing: 8) {
+                ConversationLiveStatus(phase: livePhase).equatable().id("live-status:" + sessionID)
                 if let files = connection.attachments[sessionID], !files.isEmpty {
                     ScrollView(.horizontal) {
                         HStack {

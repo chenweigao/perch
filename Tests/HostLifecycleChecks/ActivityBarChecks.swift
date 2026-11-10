@@ -484,11 +484,8 @@ private struct ActivityBarCheckFixture: View {
         try await Task.sleep(for: .milliseconds(180))
         host.layoutSubtreeIfNeeded(); host.displayIfNeeded(); CATransaction.flush()
     }
-    func mark(_ view: NSView) -> ConversationLiveMarkView? {
-        (view as? ConversationLiveMarkView) ?? view.subviews.lazy.compactMap(mark).first
-    }
-    func opacities(_ view: ConversationLiveMarkView) -> [Float] {
-        (view.layer?.sublayers ?? []).map { $0.presentation()?.opacity ?? $0.opacity }
+    func glow(_ view: NSView) -> ConversationLiveGlowView? {
+        (view as? ConversationLiveGlowView) ?? view.subviews.lazy.compactMap(glow).first
     }
     func accessibleStatus() -> String {
         taskPanelElements(window).filter { $0.identifier == "conversation-live-status" }.flatMap { element in
@@ -502,16 +499,16 @@ private struct ActivityBarCheckFixture: View {
     try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
     for (suffix, width, appearance) in [("light", 700.0, NSAppearance.Name.aqua), ("narrow-dark", 340.0, .darkAqua)] {
         window.appearance = NSAppearance(named: appearance); window.setContentSize(NSSize(width: width, height: 180))
-        for (phase, label) in [(ConversationRunPhase.thinking, "思考中"), (.executing, "执行中"), (.running, "运行中"), (.waitingForConfirmation, "等待你确认"), (.waitingForAnswer, "等待你回答"), (.stopping, "正在停止")] {
+        for (phase, label) in [(ConversationRunPhase.thinking, "正在思考"), (.executing, "正在执行"), (.running, "正在处理"), (.waitingForConfirmation, "等待你确认"), (.waitingForAnswer, "等待你回答"), (.stopping, "正在停止")] {
             host.rootView = root(phase)
             try await settle()
             precondition(accessibleStatus().contains(label),
                          "The live footer speaks only its current phase: \(label); actual \(accessibleStatus()); ids \(taskPanelIdentifiers(window))")
             precondition(abs(measuredHeight - ConversationLiveStatus.height) < 0.5,
                          "Every live phase shares one footer height")
-            let icon = mark(host)!
+            let caption = glow(host)!
             if !phase.animates {
-                precondition((icon.layer?.sublayers ?? []).allSatisfy { $0.animationKeys()?.isEmpty != false },
+                precondition(caption.motionLayer.animationKeys()?.isEmpty != false,
                              "Waiting and stopping must hold still")
             }
             let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds)!
@@ -520,19 +517,19 @@ private struct ActivityBarCheckFixture: View {
         }
     }
     host.rootView = root(.thinking); try await settle()
-    let icon = mark(host)!
-    let before = opacities(icon)
+    let caption = glow(host)!
+    let before = caption.motionLayer.presentation()!.position.x
     try await Task.sleep(for: .milliseconds(420))
-    let after = opacities(icon)
-    precondition(zip(before, after).contains { abs($0.0 - $0.1) > 0.1 }, "The thinking mark visibly breathes without changing status text")
+    let after = caption.motionLayer.presentation()!.position.x
+    precondition(abs(before - after) > 5, "The thinking caption visibly sweeps while its text stays readable")
     host.rootView = root(.thinking, reduced: true); try await settle()
-    precondition((mark(host)!.layer?.sublayers ?? []).allSatisfy { $0.animationKeys()?.isEmpty != false }, "Reduce Motion stops the same mounted mark")
+    precondition(glow(host)!.motionLayer.animationKeys()?.isEmpty != false, "Reduce Motion stops the same mounted caption")
     host.rootView = root(.thinking, locale: "en"); try await settle()
     precondition(accessibleStatus().contains("Thinking"), "An unchanged phase follows the app language: \(accessibleStatus())")
     window.orderOut(nil); try await settle()
-    precondition((mark(host)!.layer?.sublayers ?? []).allSatisfy { $0.animationKeys()?.isEmpty != false }, "An invisible window pauses the mark")
+    precondition(glow(host)!.motionLayer.animationKeys()?.isEmpty != false, "An invisible window pauses the caption")
     window.makeKeyAndOrderFront(nil)
     host.rootView = root(nil); try await settle()
-    precondition(taskPanelControl(window, "conversation-live-status") == nil && mark(host) == nil, "Completion removes the live footer and its animation")
+    precondition(taskPanelControl(window, "conversation-live-status") == nil && glow(host) == nil, "Completion removes the live footer and its animation")
     print("PASS: live footer phases, stable geometry, visible native motion, waiting/reduced/hidden pause, locale refresh and completed teardown")
 }

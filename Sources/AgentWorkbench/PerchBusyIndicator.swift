@@ -3,100 +3,122 @@ import QuartzCore
 import SwiftUI
 import WorkbenchCore
 
-/// PI's compact nine-dot mark: a slow diagonal breath while thinking, a soft
-/// left-to-right ripple while executing, and a still mark when input is needed.
-struct ConversationLiveMark: NSViewRepresentable {
+/// A narrow ink band crossing the live caption. The base SwiftUI text stays
+/// legible throughout; Core Animation moves only this cached overlay.
+struct ConversationLiveGlow: NSViewRepresentable {
+    let text: String
+    let size: CGFloat
     let phase: ConversationRunPhase
     let animated: Bool
-    func makeNSView(context: Context) -> ConversationLiveMarkView { ConversationLiveMarkView(phase: phase, animated: animated) }
-    func updateNSView(_ view: ConversationLiveMarkView, context: Context) { view.update(phase: phase, animated: animated) }
+    func makeNSView(context: Context) -> ConversationLiveGlowView { ConversationLiveGlowView() }
+    func updateNSView(_ view: ConversationLiveGlowView, context: Context) {
+        view.update(text: text, size: size, phase: phase, animated: animated)
+    }
 }
 
-final class ConversationLiveMarkView: NSView {
-    private let dots = (0..<9).map { _ in CAShapeLayer() }
-    private var phase: ConversationRunPhase
-    private var animated: Bool
+final class ConversationLiveGlowView: NSView {
+    private let inkCopy = CALayer()
+    private let band = CAGradientLayer()
+    private var text = ""
+    private var size: CGFloat = 0
+    private var phase: ConversationRunPhase = .running
+    private var animated = false
     private var observers: [NSObjectProtocol] = []
-    private var builtSize: CGSize = .zero
+    private var rendered: (text: String, size: CGFloat, bounds: CGSize, scale: CGFloat, dark: Bool)?
     private var playing = false
-    private var ink: NSColor { phase.needsInput ? .systemOrange : WorkbenchTheme.quietNS }
     override var isFlipped: Bool { true }
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    /// The actual moving layer, also sampled by the native motion check.
+    var motionLayer: CALayer { band }
 
-    init(phase: ConversationRunPhase, animated: Bool) {
-        self.phase = phase; self.animated = animated
+    init() {
         super.init(frame: .zero)
         wantsLayer = true
-        identifier = NSUserInterfaceItemIdentifier("conversation-live-mark")
+        identifier = NSUserInterfaceItemIdentifier("conversation-live-glow")
         setAccessibilityElement(false)
-        for dot in dots { layer?.addSublayer(dot) }
+        layer?.addSublayer(inkCopy)
+        band.startPoint = CGPoint(x: 0, y: 0.5)
+        band.endPoint = CGPoint(x: 1, y: 0.5)
+        band.colors = [NSColor(white: 1, alpha: 0).cgColor, NSColor(white: 1, alpha: 0.75).cgColor,
+                       NSColor(white: 1, alpha: 0).cgColor]
+        inkCopy.mask = band
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    func update(phase: ConversationRunPhase, animated: Bool) {
-        guard self.phase != phase || self.animated != animated else { return }
-        self.phase = phase; self.animated = animated
-        setInk(); refreshMotion(force: true)
+    func update(text: String, size: CGFloat, phase: ConversationRunPhase, animated: Bool) {
+        guard self.text != text || self.size != size || self.phase != phase || self.animated != animated else { return }
+        self.text = text; self.size = size; self.phase = phase; self.animated = animated
+        render(); refreshMotion(force: true)
     }
     override func layout() {
         super.layout()
-        guard bounds.size != builtSize, bounds.width > 0 else { return }
-        CATransaction.begin(); CATransaction.setDisableActions(true)
-        let unit = min(bounds.width, bounds.height) / 16
-        for (index, dot) in dots.enumerated() {
-            let x = CGFloat(index % 3) * 4 + 4, y = CGFloat(index / 3) * 4 + 4
-            dot.frame = bounds
-            dot.path = CGPath(ellipseIn: CGRect(x: (x - 1.25) * unit, y: (y - 1.25) * unit,
-                                              width: 2.5 * unit, height: 2.5 * unit), transform: nil)
-            dot.contentsScale = window?.backingScaleFactor ?? 2
-        }
-        CATransaction.commit()
-        builtSize = bounds.size; setInk(); refreshMotion(force: true)
+        if render() { refreshMotion(force: true) }
     }
-    override func viewDidChangeEffectiveAppearance() { super.viewDidChangeEffectiveAppearance(); setInk() }
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        if render() { refreshMotion(force: true) }
+    }
+    override func viewDidChangeBackingProperties() {
+        super.viewDidChangeBackingProperties()
+        if render() { refreshMotion(force: true) }
+    }
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         for observer in observers { NotificationCenter.default.removeObserver(observer) }
         observers.removeAll()
         if let window {
-            // orderOut can resign key/main before macOS delivers an occlusion
-            // change. Recheck actual visibility on those lifecycle events too.
             for name in [NSWindow.didChangeOcclusionStateNotification, NSWindow.didMiniaturizeNotification,
                          NSWindow.didDeminiaturizeNotification, NSWindow.didResignKeyNotification, NSWindow.didResignMainNotification] {
                 observers.append(NotificationCenter.default.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
-                    // Resign notifications precede the final orderOut visibility.
                     DispatchQueue.main.async { [weak self] in self?.refreshMotion() }
                 })
             }
         }
-        refreshMotion(force: true)
+        render(); refreshMotion(force: true)
     }
-    private func setInk() {
-        var color = ink.cgColor
-        effectiveAppearance.performAsCurrentDrawingAppearance { color = ink.cgColor }
+    @discardableResult private func render() -> Bool {
+        guard let window, bounds.width > 0, bounds.height > 0, !text.isEmpty else {
+            inkCopy.contents = nil; rendered = nil
+            return false
+        }
+        let scale = window.backingScaleFactor
+        let dark = effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+        if let rendered, rendered.text == text, rendered.size == size, rendered.bounds == bounds.size,
+           rendered.scale == scale, rendered.dark == dark { return false }
+        var ink = WorkbenchTheme.inkNS
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            ink = WorkbenchTheme.inkNS.usingColorSpace(.sRGB) ?? WorkbenchTheme.inkNS
+        }
+        let renderer = ImageRenderer(content: Text(verbatim: text)
+            .font(.system(size: size, weight: .medium)).foregroundStyle(Color(nsColor: ink))
+            .lineLimit(1).truncationMode(.tail)
+            .frame(width: bounds.width, height: bounds.height, alignment: .leading))
+        renderer.scale = scale
         CATransaction.begin(); CATransaction.setDisableActions(true)
-        for dot in dots { dot.fillColor = color }
+        inkCopy.frame = bounds; inkCopy.contentsScale = scale; inkCopy.contents = renderer.cgImage
+        let width = max(28, bounds.height * 2.4)
+        band.frame = CGRect(x: -width, y: 0, width: width, height: bounds.height)
         CATransaction.commit()
+        rendered = (text, size, bounds.size, scale, dark)
+        return true
     }
     private func refreshMotion(force: Bool = false) {
-        let shouldPlay = animated && phase.animates && window?.isVisible == true
+        let shouldPlay = animated && phase.animates && inkCopy.contents != nil && window?.isVisible == true
             && window?.occlusionState.contains(.visible) == true && !isHiddenOrHasHiddenAncestor
         guard force || shouldPlay != playing else { return }
         playing = shouldPlay
         CATransaction.begin(); CATransaction.setDisableActions(true)
-        for (index, dot) in dots.enumerated() {
-            dot.removeAllAnimations(); dot.opacity = phase.needsInput ? 0.7 : 0.5
-            if shouldPlay {
-                let duration = phase == .executing ? 1.6 : phase == .thinking ? 2.4 : 2.0
-                let delay = phase == .executing ? Double(index % 3) * 0.16 : Double(index % 3 + index / 3) * 0.18
-                let breath = CAKeyframeAnimation(keyPath: "opacity")
-                breath.values = [0.24, 0.9, 0.24]
-                breath.keyTimes = [0, 0.5, 1]
-                breath.timingFunctions = [CAMediaTimingFunction(name: .easeInEaseOut), CAMediaTimingFunction(name: .easeInEaseOut)]
-                breath.duration = duration; breath.repeatCount = .infinity
-                breath.beginTime = CACurrentMediaTime() - delay
-                dot.add(breath, forKey: "live-breath")
-            }
+        band.removeAllAnimations()
+        band.position.x = -band.bounds.width / 2
+        if shouldPlay {
+            let duration = phase == .thinking ? 3.2 : phase == .executing ? 2.4 : 2.8
+            let end = bounds.width + band.bounds.width / 2
+            let sweep = CAKeyframeAnimation(keyPath: "position.x")
+            sweep.values = [-band.bounds.width / 2, end, end]
+            sweep.keyTimes = [0, 0.72, 1]
+            sweep.timingFunctions = [CAMediaTimingFunction(name: .easeInEaseOut), CAMediaTimingFunction(name: .linear)]
+            sweep.duration = duration; sweep.repeatCount = .infinity
+            band.add(sweep, forKey: "live-sweep")
         }
         CATransaction.commit()
     }

@@ -182,14 +182,11 @@ struct NativeAgentView: View {
                 }.padding(6)
             }
             let tail = s.messages.last?.content.last
-            ConversationLiveStatus(phase: ConversationRunPhase(turn: turn, online: connection.online && isCurrent(s),
+            let phase = ConversationRunPhase(turn: turn, online: connection.online && isCurrent(s),
                 stopping: connection.isStopping, request: TurnRequest.native(s.interactions)?.kind,
                 hasRunningTools: activeToolID != nil,
-                thinking: tail?.type == "thinking" && tail?.source?["kind"].string != "activity_summary"))
-                .equatable()
-                .frame(maxWidth: ReplyStyle.composerWidth).padding(.horizontal, ReplyStyle.composerPadding)
-                .frame(maxWidth: .infinity, alignment: .center).id("live-status:" + readingKey)
-            NativeComposerView(connection: connection, s: s).id(s.id)
+                thinking: tail?.type == "thinking" && tail?.source?["kind"].string != "activity_summary")
+            NativeComposerView(connection: connection, s: s, livePhase: phase).id(s.id)
         }
     }
 
@@ -216,6 +213,7 @@ private struct NativeComposerView: View {
     @UILocalization private var L
     let connection: NativeAgentConnection
     let s: NativeAgentSnapshot
+    let livePhase: ConversationRunPhase?
     @State private var palette = CommandPaletteState()
     @State private var recall = ComposerRecall()
     @State private var chooseFiles = false
@@ -228,6 +226,7 @@ private struct NativeComposerView: View {
                 }
             }
             VStack(alignment: .leading, spacing: 8) {
+                ConversationLiveStatus(phase: livePhase).equatable().id("live-status:" + s.id)
                 if let files = connection.attachments[s.id], !files.isEmpty {
                     ScrollView(.horizontal) {
                         HStack {
