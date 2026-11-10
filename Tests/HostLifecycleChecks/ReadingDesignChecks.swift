@@ -134,6 +134,8 @@ struct ReadingDesignFixture: View {
         let content = views.map(\.string).joined(separator: "\n")
         precondition(content.contains("让回复成为阅读的主角") && content.contains("清晰的内容，安静的过程"))
         precondition(content.contains("PRIVATE_PROCESS_MARKER"), "Completed process and thinking start expanded by default")
+        precondition(taskPanelControl(window, "edit-step:edit-1") != nil && taskPanelControl(window, "tool-call:edit-1") == nil,
+                     "A completed edit has one visible receipt, with raw details behind its arrow")
         precondition(views.filter { $0.string.contains("正文清楚呈现") || $0.string.contains("let answer") }.allSatisfy { $0.isSelectable }, "Reply and code text must remain selectable")
         let heading = views.first { $0.string == "让回复成为阅读的主角" }!
         let headingFont = heading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont

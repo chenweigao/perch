@@ -35,7 +35,6 @@ struct KimiActivityView: View {
     @UILocalization private var L
     @RememberedExpansion("expanded", initial: true) private var toolExpanded
     @RememberedExpansion("thought", initial: true) private var thoughtExpanded
-    @Environment(\.conversationDisclosureWillChange) private var disclosureWillChange
     private var expansion: Binding<Bool> {
         entry.messages.first?.content.first?.type == "thinking" ? $thoughtExpanded : $toolExpanded
     }
@@ -48,6 +47,18 @@ struct KimiActivityView: View {
     var liveThinkingSummary: String? = nil
     var planProgress: TurnStatus.Progress? = nil
     var reduceMotionOverride: Bool? = nil
+    init(entry: ConversationTimelineEntry, tools: [String: VisibleTool], api: KimiAPI?, sessionId: String,
+         narrative: ActivityNarrative? = nil, isLive: Bool = false, liveThinkingSummary: String? = nil,
+         planProgress: TurnStatus.Progress? = nil, reduceMotionOverride: Bool? = nil) {
+        self.entry = entry; self.tools = tools; self.api = api; self.sessionId = sessionId
+        self.narrative = narrative; self.isLive = isLive; self.liveThinkingSummary = liveThinkingSummary
+        self.planProgress = planProgress; self.reduceMotionOverride = reduceMotionOverride
+        let items = entry.messages.flatMap(\.content).compactMap { tools[$0.toolCallId ?? ""] }
+        // An edit receipt is already a visible process record. Its arrow owns
+        // the raw call details, like a leaf tool row, rather than another stage.
+        let isEditReceipt = items.count == 1 && ToolPresentation.isEdit(items[0].name)
+        _toolExpanded = RememberedExpansion("expanded", initial: !isEditReceipt)
+    }
     private var reduceMotion: Bool { reduceMotionOverride ?? (systemReduceMotion || conversationReduceMotion) }
     private func stageStatus(_ tools: [VisibleTool]) -> VisibleTool.Status {
         let priorities: [VisibleTool.Status] = [.failed, .running, .awaitingApproval, .disconnected, .missingResult]
@@ -311,8 +322,8 @@ struct KimiToolCard: View {
                         }
                     }
                     Spacer(minLength: 0)
-                    // PI's status cluster: spinner while running, a red exit-code
-                    // capsule on failure, a quiet green outcome dot once settled.
+                    // The requested yellow live dot, a red exit-code capsule
+                    // on failure, and PI's green outcome dot once settled.
                     if tool.status == .running { ProcessStatusDot(status: .running) }
                     if let slowLabel {
                         Text(verbatim: slowLabel)
