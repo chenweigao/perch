@@ -39,6 +39,12 @@
   "error": null,
   "codexHome": "/home/developer/.codex",
   "context": null,
+  "commands": [
+    {
+      "name": "compact",
+      "description": "压缩上下文，腾出模型上下文窗口"
+    }
+  ],
   "resume": "native-thread-1",
   "permission": {
     "selected": "workspace-ask",
