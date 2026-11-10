@@ -28,6 +28,46 @@ struct ReadingDesignFixture: View {
 @MainActor private func readingTextViews(_ view: NSView) -> [NSTextView] {
     (view as? NSTextView).map { [$0] } ?? view.subviews.flatMap(readingTextViews)
 }
+@MainActor private func readingScrollView(_ view: NSView) -> NSScrollView? {
+    (view as? NSScrollView) ?? view.subviews.lazy.compactMap(readingScrollView).first
+}
+@MainActor private func readingScroll(_ view: NSView, toEnd: Bool) async throws {
+    guard let scroll = readingScrollView(view), let document = scroll.documentView else {
+        preconditionFailure("Missing production conversation scroll view")
+    }
+    scroll.contentView.scroll(to: NSPoint(x: 0, y: toEnd ? max(0, document.bounds.height - scroll.contentView.bounds.height) : 0))
+    scroll.reflectScrolledClipView(scroll.contentView)
+    NotificationCenter.default.post(name: NSScrollView.didLiveScrollNotification, object: scroll)
+    try await Task.sleep(for: .milliseconds(350))
+    view.layoutSubtreeIfNeeded()
+}
+@MainActor private func readingClickControl(_ window: NSWindow, _ identifier: String) async throws {
+    guard var frame = taskPanelControl(window, identifier) else {
+        preconditionFailure("Missing disclosure control: \(identifier)")
+    }
+    // An expanded process can extend beyond the viewport. Bring the actual
+    // control into view before sending mouse events, just as a reader would.
+    if let host = window.contentView, let scroll = readingScrollView(host), let document = scroll.documentView {
+        let target = document.convert(frame, from: nil)
+        if !scroll.documentVisibleRect.contains(target) {
+            let y = min(max(0, target.minY - 40), max(0, document.bounds.height - scroll.contentView.bounds.height))
+            scroll.contentView.scroll(to: NSPoint(x: 0, y: y))
+            scroll.reflectScrolledClipView(scroll.contentView)
+            NotificationCenter.default.post(name: NSScrollView.didLiveScrollNotification, object: scroll)
+            try await Task.sleep(for: .milliseconds(150))
+            host.layoutSubtreeIfNeeded()
+            guard let visible = taskPanelControl(window, identifier) else {
+                preconditionFailure("Disclosure disappeared while scrolling to it: \(identifier)")
+            }
+            frame = visible
+        }
+    }
+    for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+        window.sendEvent(NSEvent.mouseEvent(with: type, location: NSPoint(x: frame.midX, y: frame.midY),
+            modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
+            context: nil, eventNumber: 1, clickCount: 1, pressure: type == .leftMouseDown ? 1 : 0)!)
+    }
+}
 @MainActor func checkReadingDesign() async throws {
     NSApp.activate(ignoringOtherApps: true)
     AXUIElementSetAttributeValue(AXUIElementCreateApplication(getpid()), "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)
@@ -113,18 +153,6 @@ struct ReadingDesignFixture: View {
         host.cacheDisplay(in: host.bounds, to: bitmap)
         try bitmap.representation(using: .png, properties: [:])!.write(to: output.appendingPathComponent(label + ".png"))
     }
-    // Locate the production disclosure control instead of assuming a prompt
-    // height: typography and reading width may move the header.
-    func clickHeader(_ identifier: String) {
-        guard let frame = taskPanelControl(window, identifier) else { preconditionFailure("Missing disclosure control: \(identifier)") }
-        let point = NSPoint(x: frame.midX, y: frame.midY)
-        for kind in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
-            let event = NSEvent.mouseEvent(with: kind, location: point, modifierFlags: [],
-                timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
-                context: nil, eventNumber: 1, clickCount: 1, pressure: kind == .leftMouseDown ? 1 : 0)!
-            window.sendEvent(event)
-        }
-    }
     var chosen: (String, String)?
     let observer = NotificationCenter.default.addObserver(forName: .conversationAction, object: nil, queue: .main) { notification in
         if let payload = notification.object as? ConversationActionPayload,
@@ -144,7 +172,7 @@ struct ReadingDesignFixture: View {
     let thoughtEntry = ConversationTimelineEntry.make(messages).first { $0.messages.contains { $0.id == "thought" } }!
     let foldID = thoughtEntry.id
     let thoughtHeader = "thought-disclosure:reading-design:" + foldID
-    clickHeader(thoughtHeader)
+    try await readingClickControl(window, thoughtHeader)
     precondition(ConversationReadingMemory.shared.expansions["reading-design:" + foldID + ":thought"] == false,
                  "Clicking the actual thought header must change its remembered expansion")
     // The content unmounts after the 250 ms disclosure animation completes.
@@ -154,7 +182,7 @@ struct ReadingDesignFixture: View {
         host.layoutSubtreeIfNeeded()
     }
     precondition(!readingTextViews(host).contains { $0.string.contains("PRIVATE_PROCESS_MARKER") }, "The user may collapse the initially expanded thought")
-    clickHeader(thoughtHeader)
+    try await readingClickControl(window, thoughtHeader)
     try await Task.sleep(for: .milliseconds(400))
     guard let expanded = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { fatalError("No snapshot") }
     host.cacheDisplay(in: host.bounds, to: expanded)
@@ -172,7 +200,7 @@ struct ReadingDesignFixture: View {
     host.rootView = ReadingDesignFixture(messages: messages, running: false)
     try await Task.sleep(for: .milliseconds(200))
     precondition(readingTextViews(host).contains { $0.string.contains("PRIVATE_PROCESS_MARKER") })
-    clickHeader(thoughtHeader)
+    try await readingClickControl(window, thoughtHeader)
     try await Task.sleep(for: .milliseconds(400))
     precondition(!readingTextViews(host).contains { $0.string.contains("PRIVATE_PROCESS_MARKER") })
     // The reader's body size re-renders mounted native rows: every size of the
@@ -257,33 +285,29 @@ struct ReadingDesignFixture: View {
         host.cacheDisplay(in: host.bounds, to: bitmap)
         try bitmap.representation(using: .png, properties: [:])!.write(to: output.appendingPathComponent(name + ".png"))
     }
-    func click(_ frame: NSRect) {
-        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
-            window.sendEvent(NSEvent.mouseEvent(with: type, location: NSPoint(x: frame.midX, y: frame.midY), modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: type == .leftMouseDown ? 1 : 0)!)
-        }
-    }
     let phaseID = "thinking:phase-thought:0"
     for (name, width, appearance) in [("phases-wide", 1000.0, NSAppearance.Name.aqua), ("phases-narrow", 540.0, .aqua), ("phases-dark", 1000.0, .darkAqua)] {
         window.setContentSize(NSSize(width: width, height: 800)); window.appearance = NSAppearance(named: appearance)
         try await Task.sleep(for: .milliseconds(350))
+        try await readingScroll(host, toEnd: false)
         precondition(taskPanelControl(window, "activity-phase:" + phaseID) != nil)
-        precondition(taskPanelControl(window, "edit-step:phase-edit-1") != nil && taskPanelControl(window, "edit-step:phase-edit-2") != nil,
-                     "Each same-file edit remains independently accessible in the expanded process")
         precondition(readingTextViews(host).contains { $0.string.contains("先核对运行时能力") }, "The work stage and thinking default open")
         try snapshot(name)
+        try await readingScroll(host, toEnd: true)
+        precondition(taskPanelControl(window, "edit-step:phase-edit-1") != nil && taskPanelControl(window, "edit-step:phase-edit-2") != nil,
+                     "Scrolling the expanded process reaches each same-file edit independently")
+        try snapshot(name + "-edits")
     }
     window.appearance = NSAppearance(named: .aqua)
     host.rootView = ReadingDesignFixture(messages: initial, running: true)
     try await Task.sleep(for: .milliseconds(250))
-    func descendants(_ root: NSView) -> [NSView] { [root] + root.subviews.flatMap(descendants) }
     precondition(readingTextViews(host).contains { $0.string.contains("先核对运行时能力") })
     host.rootView = ReadingDesignFixture(messages: try decode(liveSource), running: true)
     try await Task.sleep(for: .milliseconds(350))
     precondition(readingTextViews(host).contains { $0.string.contains("先核对运行时能力") }, "An opened thought stays readable when Bash grows it into a stage")
     try snapshot("phases-expanded")
-    guard let expandedControl = taskPanelControl(window, "activity-phase:" + phaseID) else { fatalError("Missing phase disclosure") }
+    try await readingClickControl(window, "activity-phase:" + phaseID)
     let closingStarted = ContinuousClock.now
-    click(expandedControl)
     try await Task.sleep(for: .milliseconds(40))
     // Sleep is a minimum delay: a busy CI main actor can resume after the
     // entire 250 ms transition. Only inspect an actual intermediate frame;
@@ -423,26 +447,20 @@ private struct ReadingReviewControls: View {
         host.cacheDisplay(in: host.bounds, to: bitmap)
         try bitmap.representation(using: .png, properties: [:])!.write(to: output.appendingPathComponent(name + ".png"))
     }
-    func click(_ identifier: String) {
-        guard let frame = taskPanelControl(window, identifier) else { preconditionFailure("Missing visible control: \(identifier)") }
-        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
-            window.sendEvent(NSEvent.mouseEvent(with: type, location: NSPoint(x: frame.midX, y: frame.midY), modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: type == .leftMouseDown ? 1 : 0)!)
-        }
-    }
     try await settle()
     precondition(readingTextViews(host).contains { $0.string.contains("PRIVATE_LIFECYCLE_REASONING") }, "Thinking defaults expanded before any tool starts")
-    click("thought-disclosure:lifecycle-A:thinking:lifecycle-summary:0")
+    try await readingClickControl(window, "thought-disclosure:lifecycle-A:thinking:lifecycle-summary:0")
     try await settle()
     precondition(taskPanelControl(window, "live-thinking-summary") != nil, "A public summary stays available when the user collapses thinking")
     precondition(!readingTextViews(host).contains { $0.string.contains("PRIVATE_LIFECYCLE_REASONING") })
-    click("thought-disclosure:lifecycle-A:thinking:lifecycle-summary:0")
+    try await readingClickControl(window, "thought-disclosure:lifecycle-A:thinking:lifecycle-summary:0")
     try await settle()
     precondition(readingTextViews(host).contains { $0.string.contains("PRIVATE_LIFECYCLE_REASONING") })
     host.rootView = ReadingDesignFixture(messages: live, running: true, session: "lifecycle-A", folds: true)
     try await settle()
     precondition(readingTextViews(host).contains { $0.string.contains("PRIVATE_LIFECYCLE_REASONING") },
                  "A manually opened source remains visible when the preview moves into the tool stage")
-    click("thought-disclosure:lifecycle-A:thinking:lifecycle-summary:0")
+    try await readingClickControl(window, "thought-disclosure:lifecycle-A:thinking:lifecycle-summary:0")
     try await settle()
     // The public summary stays visible while the turn runs — on the live fold
     // header or the thought row, wherever it rides.
@@ -456,10 +474,10 @@ private struct ReadingReviewControls: View {
     host.rootView = ReadingDesignFixture(messages: live, running: false, session: "lifecycle-A", folds: true)
     try await settle()
     precondition(taskPanelControl(window, "tool-call:lifecycle-read") != nil, "Completed processes remain expanded by default")
-    click("activity-phase:activity:tool:lifecycle-read")
+    try await readingClickControl(window, "activity-phase:activity:tool:lifecycle-read")
     try await settle()
     precondition(taskPanelControl(window, "tool-call:lifecycle-read") == nil, "A user may collapse an individual stage")
-    click("activity-phase:activity:tool:lifecycle-read")
+    try await readingClickControl(window, "activity-phase:activity:tool:lifecycle-read")
     try await settle()
     precondition(taskPanelControl(window, "tool-call:lifecycle-read") != nil,
                  "read tool card after phase click; ids: " + taskPanelIdentifiers(window).joined(separator: ", "))
@@ -494,10 +512,10 @@ private struct ReadingReviewControls: View {
     // The failed call remains reachable inside its expanded fold and stage.
     // (Session B retained nothing, so the whole turn is one fold here.)
     precondition(taskPanelControl(window, "tool-call:lifecycle-check") != nil, "The failed call remains reachable inside the fold")
-    click("completed-process:text:lifecycle-progress:0")
+    try await readingClickControl(window, "completed-process:text:lifecycle-progress:0")
     try await settle()
     precondition(!readingTextViews(host).contains { $0.string.contains("我先检查窗口状态") }, "Re-collapsing the fold hides the process again")
-    click("completed-process:text:lifecycle-progress:0")
+    try await readingClickControl(window, "completed-process:text:lifecycle-progress:0")
     try await settle()
     precondition(readingTextViews(host).contains { $0.string.contains("我先检查窗口状态") }, "Completed process remains reachable")
     let next = try decode([record("next-prompt", [["type": "text", "text": "继续验证"]], role: "user"), record("next-thought", [["type": "thinking", "thinking": "PRIVATE_NEXT_REASONING"]])])
@@ -532,12 +550,6 @@ private struct ReadingReviewControls: View {
     let host = NSHostingView(rootView: ReadingDesignFixture(messages: try records(26), running: true, session: "stage-page-A", folds: true))
     window.contentView = host; window.makeKeyAndOrderFront(nil)
     func settle() async throws { try await Task.sleep(for: .milliseconds(350)); host.layoutSubtreeIfNeeded() }
-    func click(_ identifier: String) {
-        guard let frame = taskPanelControl(window, identifier) else { preconditionFailure("Missing process control: \(identifier)") }
-        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
-            window.sendEvent(NSEvent.mouseEvent(with: type, location: NSPoint(x: frame.midX, y: frame.midY), modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: type == .leftMouseDown ? 1 : 0)!)
-        }
-    }
     let stage = "activity:tool:page-tool-0"
     try await settle()
     precondition(taskPanelLabel(window, "activity-phase:" + stage)?.contains("git show") == true,
@@ -547,9 +559,9 @@ private struct ReadingReviewControls: View {
     precondition(taskPanelControl(window, "tool-call:page-tool-24") != nil, "The stage defaults open and includes records after the former page boundary")
     precondition(taskPanelControl(window, "stage-next-page:" + stage) == nil && taskPanelControl(window, "stage-previous-page:" + stage) == nil,
                  "The stage has no pagination controls")
-    click("activity-phase:" + stage)
+    try await readingClickControl(window, "activity-phase:" + stage)
     try await settle()
-    click("activity-phase:" + stage)
+    try await readingClickControl(window, "activity-phase:" + stage)
     try await settle()
     precondition(taskPanelControl(window, "tool-call:page-tool-24") != nil && taskPanelControl(window, "tool-call:page-tool-0") != nil,
                  "Collapsing and reopening restores the entire stage")
@@ -562,13 +574,13 @@ private struct ReadingReviewControls: View {
     host.rootView = ReadingDesignFixture(messages: try records(26), running: true, session: "stage-page-B", folds: true)
     try await settle()
     precondition(taskPanelControl(window, "tool-call:page-tool-24") != nil, "A fresh session also defaults to the full expanded stage")
-    click("activity-phase:" + stage)
+    try await readingClickControl(window, "activity-phase:" + stage)
     try await settle()
     precondition(taskPanelControl(window, "tool-call:page-tool-24") == nil, "The user may collapse that session's stage")
     host.rootView = ReadingDesignFixture(messages: try records(27, done: true), session: "stage-page-A", folds: true)
     try await settle()
     precondition(taskPanelControl(window, "tool-call:page-tool-24") != nil, "Another session's manual collapse does not change this stage")
-    click("activity-phase:" + stage)
+    try await readingClickControl(window, "activity-phase:" + stage)
     try await settle()
     precondition(taskPanelControl(window, "tool-call:page-tool-0") == nil && taskPanelControl(window, "tool-call:page-tool-24") == nil)
     let searchRecords = try records(27, done: true)
@@ -592,7 +604,7 @@ private struct ReadingReviewControls: View {
     try await settle()
     precondition(taskPanelControl(window, "tool-call:page-tool-25") != nil,
                  "The last failed call is present in the continuous stage")
-    click("activity-phase:" + stage)
+    try await readingClickControl(window, "activity-phase:" + stage)
     try await settle()
     precondition(taskPanelControl(window, "tool-call:page-tool-25") != nil && taskPanelControl(window, "tool-call:page-tool-24") == nil)
     print("PASS: native continuous full stage, default expansion, exact find, failure visibility, collapse/append/completion/session-return continuity")
