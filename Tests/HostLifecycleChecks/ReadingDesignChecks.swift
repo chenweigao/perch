@@ -45,8 +45,9 @@ struct ReadingDesignFixture: View {
     func buttonFrame() -> NSRect? {
         guard let root = taskPanelElements(window).first(where: { $0.identifier == identifier })?.node else { return nil }
         func find(_ node: NSObject) -> NSRect? {
-            if node.responds(to: NSSelectorFromString("accessibilityRole")),
-               node.value(forKey: "accessibilityRole") as? String == NSAccessibility.Role.button.rawValue,
+            let role = node.responds(to: NSSelectorFromString("accessibilityRole"))
+                ? node.value(forKey: "accessibilityRole") as? String : nil
+            if role == NSAccessibility.Role.button.rawValue || role == NSAccessibility.Role.disclosureTriangle.rawValue,
                let value = node.value(forKey: "accessibilityFrame") as? NSValue, !value.rectValue.isEmpty {
                 return window.convertFromScreen(value.rectValue)
             }
