@@ -59,7 +59,10 @@ final class ConversationLiveMarkView: NSView {
         for observer in observers { NotificationCenter.default.removeObserver(observer) }
         observers.removeAll()
         if let window {
-            for name in [NSWindow.didChangeOcclusionStateNotification, NSWindow.didMiniaturizeNotification, NSWindow.didDeminiaturizeNotification] {
+            // orderOut can resign key/main before macOS delivers an occlusion
+            // change. Recheck actual visibility on those lifecycle events too.
+            for name in [NSWindow.didChangeOcclusionStateNotification, NSWindow.didMiniaturizeNotification,
+                         NSWindow.didDeminiaturizeNotification, NSWindow.didResignKeyNotification, NSWindow.didResignMainNotification] {
                 observers.append(NotificationCenter.default.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
                     self?.refreshMotion()
                 })
