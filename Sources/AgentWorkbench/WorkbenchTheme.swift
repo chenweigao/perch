@@ -210,9 +210,9 @@ extension WorkbenchTheme {
     enum Stroke {
         /// Hairline borders of panels and cards. At night the hairline carries
         /// more of the region separation than the shadow does, so it is stronger.
-        static let hairline = wash(light: 0.08, dark: 0.14)
+        static let hairline = wash(light: 0.12, dark: 0.18)
         /// AppKit layers (CALayer borders) resolve the same token as an NSColor.
-        static let hairlineNS = washNS(light: 0.08, dark: 0.14)
+        static let hairlineNS = washNS(light: 0.12, dark: 0.18)
     }
     enum Elevation {
         /// Floating-panel shadow color. Light separates with shadow; dark keeps
@@ -226,7 +226,7 @@ extension WorkbenchTheme {
     enum Radius {
         static let row: CGFloat = 10
         static let chip: CGFloat = 5
-        static let card: CGFloat = 10
+        static let card: CGFloat = 12
         /// The composer's own radius (the message bubble is 20); contains the 36 pt send circle.
         static let composer: CGFloat = 18
         /// Floating glass controls (return-to-latest, selection bar, bookmarks).
@@ -234,7 +234,7 @@ extension WorkbenchTheme {
         static let panel: CGFloat = 20
         /// The corner of a toolbar window on macOS 26 and later, used while the
         /// window reports none (full screen, or before the window exists).
-        static let toolbarWindowCorner: CGFloat = 26
+        static let toolbarWindowCorner: CGFloat = 32
 
         /// The window frame's panels — conversation card, inspector and the
         /// narrow-window sidebar overlay — sit `inset` inside the window edge and

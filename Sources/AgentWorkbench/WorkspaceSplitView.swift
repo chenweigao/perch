@@ -507,7 +507,8 @@ final class WorkbenchDetailController: NSViewController {
     }
 
     /// One clipped sheet contains the reader and its full-height auxiliary lane,
-    /// separated by clean whitespace rather than a hard vertical rule.
+    /// separated by a subtle vertical hairline so the right column reads as
+    /// a distinct but integrated part of the main container.
     func installInspector(_ inspector: NSView) -> (NSView, NSLayoutConstraint) {
         _ = view
         let sheet = card!
@@ -520,6 +521,10 @@ final class WorkbenchDetailController: NSViewController {
         }
         inspector.translatesAutoresizingMaskIntoConstraints = false
         panel.addSubview(inspector)
+        let divider = NSBox()
+        divider.boxType = .separator
+        divider.translatesAutoresizingMaskIntoConstraints = false
+        panel.addSubview(divider)
         let width = panel.widthAnchor.constraint(equalToConstant: WorkspaceLayoutMetrics.inspectorDefaultWidth)
         NSLayoutConstraint.activate([
             panel.topAnchor.constraint(equalTo: sheet.topAnchor),
@@ -528,8 +533,12 @@ final class WorkbenchDetailController: NSViewController {
             width,
             inspector.topAnchor.constraint(equalTo: panel.topAnchor, constant: WorkbenchChrome.headerHeight),
             inspector.bottomAnchor.constraint(equalTo: panel.bottomAnchor),
-            inspector.leadingAnchor.constraint(equalTo: panel.leadingAnchor),
+            inspector.leadingAnchor.constraint(equalTo: panel.leadingAnchor, constant: 1),
             inspector.trailingAnchor.constraint(equalTo: panel.trailingAnchor),
+            divider.leadingAnchor.constraint(equalTo: panel.leadingAnchor),
+            divider.topAnchor.constraint(equalTo: panel.topAnchor, constant: WorkbenchChrome.headerHeight),
+            divider.bottomAnchor.constraint(equalTo: panel.bottomAnchor),
+            divider.widthAnchor.constraint(equalToConstant: 1),
         ])
         return (panel, width)
     }
@@ -704,9 +713,9 @@ private final class WorkbenchPanelShadowView: NSView {
             layer?.backgroundColor = WorkbenchTheme.contentBackgroundNS.cgColor
             let elevation = NSShadow()
             elevation.shadowColor = NSColor.black.withAlphaComponent(
-                effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? 0.28 : 0.10)
-            elevation.shadowBlurRadius = 12
-            elevation.shadowOffset = NSSize(width: 0, height: -3)
+                effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? 0.38 : 0.16)
+            elevation.shadowBlurRadius = 20
+            elevation.shadowOffset = NSSize(width: 0, height: -6)
             shadow = elevation
         }
     }
