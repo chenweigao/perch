@@ -714,7 +714,17 @@ private struct ReadingReviewControls: View {
     precondition(taskPanelControl(window, "tool-call:page-tool-24") != nil, "Another session's manual collapse does not change this stage")
     try await readingClickControl(window, "activity-phase:" + stage)
     try await settle()
-    precondition(taskPanelControl(window, "tool-call:page-tool-0") == nil && taskPanelControl(window, "tool-call:page-tool-24") == nil)
+    precondition(ConversationReadingMemory.shared.expansions["stage-page-A:" + stage + ":expanded"] == false,
+                 "The restored session's actual stage button must remember collapse: \(ConversationReadingMemory.shared.expansions.filter { $0.key.hasPrefix("stage-page-A:") })")
+    // Closing the retained stage can reattach it to its completed parent fold.
+    // Wait for the old native host to unmount, then inspect both ends of the list.
+    try await waitForHidden("tool-call:page-tool-0")
+    try await waitForHidden("tool-call:page-tool-24")
+    if taskPanelControl(window, "tool-call:page-tool-0") != nil || taskPanelControl(window, "tool-call:page-tool-24") != nil {
+        try captureCollapseFailure("stage-A-collapse-failure")
+    }
+    precondition(taskPanelControl(window, "tool-call:page-tool-0") == nil && taskPanelControl(window, "tool-call:page-tool-24") == nil,
+                 "Closing the restored stage hides every tool")
     let searchRecords = try records(27, done: true)
     let hit = ConversationSearch().hits(in: searchRecords, query: "marker-26", running: false).hits.first!
     NotificationCenter.default.post(name: .init("PerchRevealConversationHit"), object: ConversationFindTarget(
