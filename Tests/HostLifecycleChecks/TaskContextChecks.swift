@@ -428,10 +428,11 @@ import WorkbenchCore
                  split.floatingInspectorView?.superview === split.detailCardView &&
                  !split.isInspectorOverlayingContent &&
                  abs(cardFrame.minY - frameInset) < 1 &&
-                 abs(safeFrame.maxY - cardFrame.maxY - WorkspaceLayoutMetrics.contentTopInset) < 1 &&
+                 abs(safeFrame.maxY - cardFrame.maxY - frameInset) < 1 &&
+                 abs(safeFrame.maxX - cardFrame.maxX - frameInset) < 1 &&
                  abs(hostedContentFrame.minX - cardFrame.minX) < 1 &&
                  abs(hostedContentFrame.maxX - inspectorFrame().minX) < 1,
-                 "The reader and full-height inspector must share one rounded sheet without a gutter")
+                 "The reader and full-height inspector must share one rounded sheet with equal top, bottom, and trailing margins")
     precondition(contentView?.window === page)
 
     page.setContentSize(NSSize(width: 1000, height: 780))

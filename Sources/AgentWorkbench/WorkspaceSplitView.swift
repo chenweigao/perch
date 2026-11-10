@@ -452,10 +452,6 @@ final class WorkbenchDetailController: NSViewController {
         actions.translatesAutoresizingMaskIntoConstraints = false
         headerBar.addSubview(header)
         headerBar.addSubview(actions)
-        let headerDivider = NSBox()
-        headerDivider.boxType = .separator
-        headerDivider.translatesAutoresizingMaskIntoConstraints = false
-        headerBar.addSubview(headerDivider)
         let inset = WorkspaceLayoutMetrics.frameInset
         let leading = card.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: inset)
         let trailing = card.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -inset)
@@ -466,7 +462,7 @@ final class WorkbenchDetailController: NSViewController {
         cardBottomDirect = cardBottom
         headerLeadingConstraint = headerLeading
         NSLayoutConstraint.activate([
-            card.topAnchor.constraint(equalTo: view.topAnchor, constant: WorkspaceLayoutMetrics.contentTopInset),
+            card.topAnchor.constraint(equalTo: view.topAnchor, constant: inset),
             leading,
             trailing,
             cardBottom,
@@ -479,10 +475,6 @@ final class WorkbenchDetailController: NSViewController {
             header.trailingAnchor.constraint(lessThanOrEqualTo: actions.leadingAnchor, constant: -12),
             actions.trailingAnchor.constraint(equalTo: headerBar.trailingAnchor, constant: -12),
             actions.centerYAnchor.constraint(equalTo: headerBar.centerYAnchor),
-            headerDivider.leadingAnchor.constraint(equalTo: headerBar.leadingAnchor),
-            headerDivider.trailingAnchor.constraint(equalTo: headerBar.trailingAnchor),
-            headerDivider.bottomAnchor.constraint(equalTo: headerBar.bottomAnchor),
-            headerDivider.heightAnchor.constraint(equalToConstant: 1),
             detail.topAnchor.constraint(equalTo: headerBar.bottomAnchor),
             detail.leadingAnchor.constraint(equalTo: card.leadingAnchor),
             detail.bottomAnchor.constraint(equalTo: card.bottomAnchor),
@@ -514,7 +506,8 @@ final class WorkbenchDetailController: NSViewController {
         readingTrailingConstraint?.constant = -width
     }
 
-    /// One clipped sheet contains the reader and its full-height auxiliary lane.
+    /// One clipped sheet contains the reader and its full-height auxiliary lane,
+    /// separated by clean whitespace rather than a hard vertical rule.
     func installInspector(_ inspector: NSView) -> (NSView, NSLayoutConstraint) {
         _ = view
         let sheet = card!
@@ -527,10 +520,6 @@ final class WorkbenchDetailController: NSViewController {
         }
         inspector.translatesAutoresizingMaskIntoConstraints = false
         panel.addSubview(inspector)
-        let divider = NSBox()
-        divider.boxType = .separator
-        divider.translatesAutoresizingMaskIntoConstraints = false
-        panel.addSubview(divider)
         let width = panel.widthAnchor.constraint(equalToConstant: WorkspaceLayoutMetrics.inspectorDefaultWidth)
         NSLayoutConstraint.activate([
             panel.topAnchor.constraint(equalTo: sheet.topAnchor),
@@ -539,12 +528,8 @@ final class WorkbenchDetailController: NSViewController {
             width,
             inspector.topAnchor.constraint(equalTo: panel.topAnchor, constant: WorkbenchChrome.headerHeight),
             inspector.bottomAnchor.constraint(equalTo: panel.bottomAnchor),
-            inspector.leadingAnchor.constraint(equalTo: panel.leadingAnchor, constant: 1),
+            inspector.leadingAnchor.constraint(equalTo: panel.leadingAnchor),
             inspector.trailingAnchor.constraint(equalTo: panel.trailingAnchor),
-            divider.leadingAnchor.constraint(equalTo: panel.leadingAnchor),
-            divider.topAnchor.constraint(equalTo: panel.topAnchor, constant: WorkbenchChrome.headerHeight),
-            divider.bottomAnchor.constraint(equalTo: panel.bottomAnchor),
-            divider.widthAnchor.constraint(equalToConstant: 1),
         ])
         return (panel, width)
     }
@@ -1134,11 +1119,23 @@ final class WorkbenchSplitController: NSSplitViewController {
         detailController?.setInspectorWidth(inspectorWidth)
         if isFloatingInspectorVisible { inspectorWidthConstraint?.constant = inspectorWidth }
         isSidebarOverlayingContent = sidebarShown && !avoidSidebar
-        detailController?.setHeaderLeadingInset(
-            isSidebarOverlayingContent
-                ? floatingSidebarWidth + WorkspaceLayoutMetrics.sidebarGap + WorkbenchTheme.Reading.inset
-                : WorkbenchTheme.Reading.inset
-        )
+        let headerLeading: CGFloat
+        if isSidebarOverlayingContent {
+            headerLeading = floatingSidebarWidth + WorkspaceLayoutMetrics.sidebarGap + WorkbenchTheme.Reading.inset
+        } else if !avoidSidebar {
+            headerLeading = 120
+        } else {
+            headerLeading = WorkbenchTheme.Reading.inset
+        }
+        detailController?.setHeaderLeadingInset(headerLeading)
+        if let titlebarContainer = view.window?.standardWindowButton(.closeButton)?.superview?.superview {
+            var frame = titlebarContainer.frame
+            let maxToolbarWidth = min(view.bounds.width, 196)
+            if abs(frame.width - maxToolbarWidth) > 0.5 {
+                frame.size.width = maxToolbarWidth
+                titlebarContainer.frame = frame
+            }
+        }
         sidebarOverlayBackdrop?.isHidden = !isSidebarOverlayingContent
         sidebarOverlayShadow?.isHidden = !isSidebarOverlayingContent
         isInspectorOverlayingContent = false

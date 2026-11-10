@@ -11,10 +11,18 @@ struct WorkbenchHeader: View {
         return item?.title ?? L("正在恢复会话…")
     }
     var body: some View {
-        Text(title).font(.system(size: WorkbenchTheme.Typography.title, weight: .medium))
-            .lineLimit(1).truncationMode(.tail)
-            .frame(minWidth: 80, maxWidth: 360, alignment: .leading)
-            .help(item.map { "\($0.title)\n\($0.reference.kind.label) · \($0.hostName)\n\($0.directory)" } ?? title)
+        HStack(spacing: 6) {
+            if !model.showDashboard {
+                Image(systemName: "folder")
+                    .font(.system(size: WorkbenchTheme.Typography.caption))
+                    .foregroundStyle(WorkbenchTheme.quiet)
+                    .accessibilityHidden(true)
+            }
+            Text(title).font(.system(size: WorkbenchTheme.Typography.title, weight: .medium))
+                .lineLimit(1).truncationMode(.tail)
+        }
+        .frame(minWidth: 80, maxWidth: 380, alignment: .leading)
+        .help(item.map { "\($0.title)\n\($0.reference.kind.label) · \($0.hostName)\n\($0.directory)" } ?? title)
     }
 }
 

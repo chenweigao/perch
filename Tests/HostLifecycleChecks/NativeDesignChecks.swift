@@ -179,9 +179,10 @@ import WorkbenchCore
         let sidebar = split.floatingSidebarView!
         let sidebarFrame = sidebar.convert(sidebar.bounds, to: window.contentView)
         let contentFrame = card.convert(card.bounds, to: window.contentView)
+        let sidebarTop = window.contentView!.isFlipped ? sidebarFrame.minY : window.contentView!.bounds.maxY - sidebarFrame.maxY
         precondition(abs(sidebarFrame.minY - contentFrame.minY) < 1 &&
-                     abs(sidebarFrame.maxY - contentFrame.maxY) < 1,
-                     "Sidebar controls must stay below the toolbar and share the reading sheet's top/bottom edges: sidebar=\(sidebarFrame), content=\(contentFrame)")
+                     abs(sidebarTop - WorkspaceLayoutMetrics.contentTopInset) < 1,
+                     "Sidebar controls stay below the window controls and share the main container's bottom edge: sidebar=\(sidebarFrame), content=\(contentFrame)")
     }
     checkSidebarEdges()
     let draftFrame = draft.convert(draft.bounds, to: window.contentView)
@@ -203,11 +204,13 @@ import WorkbenchCore
                  "Frame panels must be concentric with the window corner: window=\(windowCorner), panels=\(split.panelCornerRadius), expected=\(panelRadius)")
     precondition(split.sidebarOverlayBackdropView?.isHidden == true,
                  "Wide windows draw navigation straight on the window glass; only the narrow overlay gets its own glass panel")
-    precondition(abs(distanceFromTop(cardFrame) - WorkspaceLayoutMetrics.contentTopInset) < 1 &&
+    precondition(abs(distanceFromTop(cardFrame) - WorkspaceLayoutMetrics.frameInset) < 1 &&
+                 abs(cardFrame.minY - WorkspaceLayoutMetrics.frameInset) < 1 &&
+                 abs(window.contentView!.bounds.maxX - cardFrame.maxX - WorkspaceLayoutMetrics.frameInset) < 1 &&
                  abs(distanceFromTop(inspectorFrame) - distanceFromTop(cardFrame)) < 1 &&
                  abs(inspectorFrame.height - cardFrame.height) < 1 &&
                  abs(inspectorFrame.maxX - cardFrame.maxX) < 1,
-                 "The full-height inspector must share the workspace sheet's top, bottom and trailing edge")
+                 "The main floating container must have equal top, bottom, and trailing margins, shared with the full-height inspector")
     precondition(inspector.superview === card && (inspector.layer?.shadowOpacity ?? 0) == 0,
                  "The inspector belongs inside the sheet without a separate elevation")
     precondition(connection.models(for: .codex).count == 2 &&
@@ -252,9 +255,9 @@ import WorkbenchCore
         window.contentView!.layoutSubtreeIfNeeded()
         let collapsedCard = card.convert(card.bounds, to: window.contentView)
         let collapsedTitle = title.convert(title.bounds, to: window.contentView)
-        precondition(abs(collapsedTitle.minX - (collapsedCard.minX + WorkbenchTheme.Reading.inset)) < 2 &&
+        precondition(collapsedTitle.minX >= collapsedCard.minX + 100 &&
                      collapsedTitle.minX < titleX - 100,
-                     "Collapsed sidebar must keep the title anchored to the expanded main container: cycle=\(cycle), title=\(collapsedTitle), card=\(collapsedCard)")
+                     "Collapsed sidebar must shift the title clear of the top-left window controls inside the expanded main container: cycle=\(cycle), title=\(collapsedTitle), card=\(collapsedCard)")
         split.toggleSidebar(nil)
         try await Task.sleep(for: .milliseconds(200))
         window.contentView!.layoutSubtreeIfNeeded()
@@ -327,9 +330,11 @@ import WorkbenchCore
                  "Use the native compact toolbar rather than sliding content underneath a tall toolbar: \(actualTitlebarHeight)")
     let liveCardFrame = card.convert(card.bounds, to: nil)
     let liveCardTop = window.frame.height - liveCardFrame.maxY
-    precondition(abs(liveCardTop - 44) < 1 && liveCardTop >= actualTitlebarHeight &&
-                 abs(liveCardFrame.minY - WorkspaceLayoutMetrics.frameInset) < 1,
-                 "The reading sheet must start at 44 pt with a clear toolbar and a balanced bottom gutter")
+    let liveCardRight = window.frame.width - liveCardFrame.maxX
+    precondition(abs(liveCardTop - WorkspaceLayoutMetrics.frameInset) < 1 &&
+                 abs(liveCardFrame.minY - WorkspaceLayoutMetrics.frameInset) < 1 &&
+                 abs(liveCardRight - WorkspaceLayoutMetrics.frameInset) < 1,
+                 "The main floating container must have equal top, bottom, and trailing margins (12pt)")
     let closeFrame = fromTop(window.standardWindowButton(.closeButton))
     if let toggle {
         precondition(abs((fromTop(toggle)["midY"] ?? 0) - (closeFrame["midY"] ?? 0)) < 2,

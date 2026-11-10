@@ -133,8 +133,9 @@ struct TaskContextView: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            header.fixedSize(horizontal: false, vertical: true).padding(.bottom, 6)
-                .overlay(alignment: .bottom) { Divider().opacity(scrolled && detail == nil ? 1 : 0) }
+            if detached || model.taskContextWindow.locked != nil {
+                header.fixedSize(horizontal: false, vertical: true).padding(.bottom, 6)
+            }
             if let fileDetail, let item {
                 TaskContextFileView(model: model, item: item, route: fileDetail)
                     .id(fileDetail)
@@ -381,16 +382,15 @@ struct TaskContextView: View {
         }.frame(maxWidth: .infinity).padding(.vertical, 40).padding(.horizontal, 12)
     }
     private func sectionTitle(_ title: LocalizedStringKey, icon: String, count: Int) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon).font(.system(size: 12, weight: .medium))
-                .foregroundStyle(WorkbenchTheme.quiet).frame(width: 16).accessibilityHidden(true)
-            Text(title).font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold))
-            Text(count.formatted()).font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
-                .monospacedDigit().foregroundStyle(WorkbenchTheme.quiet)
-                .padding(.horizontal, 6).frame(minWidth: 20, minHeight: 18)
-                .background(WorkbenchTheme.Fill.surface, in: Capsule())
+        HStack(spacing: 6) {
+            Text(title).font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
+                .foregroundStyle(WorkbenchTheme.quiet)
+            if count > 0 {
+                Text(count.formatted()).font(.system(size: WorkbenchTheme.Typography.caption))
+                    .monospacedDigit().foregroundStyle(.tertiary)
+            }
             Spacer(minLength: 0)
-        }.padding(.bottom, 4).accessibilityElement(children: .combine).accessibilityAddTraits(.isHeader)
+        }.padding(.bottom, 2).accessibilityElement(children: .combine).accessibilityAddTraits(.isHeader)
     }
     private func toolRow(_ tool: VisibleTool) -> some View { TaskContextToolRow(tool: tool) }
     /// The whole row opens the task in place of the list.

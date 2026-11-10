@@ -103,26 +103,29 @@ struct TaskSessionOverviewSection: View {
     var body: some View {
         let overview = self.overview
         VStack(alignment: .leading, spacing: 8) {
-            header(overview)
             if let overview {
                 overviewCard(overview)
                 if let failureMessage {
                     failureBanner(failureMessage)
                 }
             } else if isGenerating {
-                HStack(spacing: 8) {
-                    ProgressView().controlSize(.small)
-                    Text("正在生成会话概述…")
-                        .font(.system(size: WorkbenchTheme.Typography.caption))
-                        .foregroundStyle(WorkbenchTheme.quiet)
+                VStack(alignment: .leading, spacing: 8) {
+                    cardTopBar(nil)
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small)
+                        Text("正在生成会话概述…")
+                            .font(.system(size: WorkbenchTheme.Typography.caption))
+                            .foregroundStyle(WorkbenchTheme.quiet)
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(12)
+                .padding(14)
                 .background(WorkbenchTheme.Fill.surface,
                             in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous))
                 .accessibilityIdentifier("task-overview-loading")
             } else if let failureMessage {
                 VStack(alignment: .leading, spacing: 8) {
+                    cardTopBar(nil)
                     Label("会话概述生成失败", systemImage: "exclamationmark.triangle")
                         .font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
                         .foregroundStyle(.orange)
@@ -141,7 +144,7 @@ struct TaskSessionOverviewSection: View {
                     }.font(.system(size: WorkbenchTheme.Typography.caption))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(12)
+                .padding(14)
                 .background(WorkbenchTheme.Fill.surface,
                             in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous))
                 .accessibilityIdentifier("task-overview-failed")
@@ -161,15 +164,50 @@ struct TaskSessionOverviewSection: View {
         .sheet(isPresented: $showSettings) { ActivitySummarySettingsSheet() }
     }
 
-    private func header(_ overview: SessionOverview?) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(WorkbenchTheme.quiet)
-                .frame(width: 16)
-                .accessibilityHidden(true)
-            Text("会话概述")
-                .font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold))
+    private func cardTopBar(_ overview: SessionOverview?) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Image(systemName: "leaf")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.green.opacity(0.85))
+                    .accessibilityHidden(true)
+                Text("会话概述")
+                    .font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
+                    .foregroundStyle(WorkbenchTheme.quiet)
+                Spacer(minLength: 4)
+                if !snapshot.messages.isEmpty {
+                    Button {
+                        if configured { triggerGenerate(force: true) }
+                        else { showSettings = true }
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 11))
+                            .foregroundStyle(WorkbenchTheme.quiet)
+                            .frame(width: 20, height: 20)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(WorkbenchDisclosureButtonStyle())
+                    .disabled(isGenerating || snapshot.busy)
+                    .help(configured ? "更新会话概述" : "配置活动叙事与 Recap…")
+                    .accessibilityLabel("更新会话概述")
+                    .accessibilityIdentifier("task-overview-refresh")
+                }
+                if overview != nil {
+                    Button {
+                        withAnimation(.snappy(duration: 0.18)) { reading.overviewExpanded.toggle() }
+                    } label: {
+                        Text(reading.overviewExpanded ? "收起" : "展开")
+                            .font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
+                            .foregroundStyle(WorkbenchTheme.quiet)
+                            .padding(.horizontal, 6)
+                            .frame(height: 20)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(WorkbenchDisclosureButtonStyle())
+                    .accessibilityValue(reading.overviewExpanded ? "已展开" : "已收起")
+                    .accessibilityIdentifier("task-overview-toggle")
+                }
+            }
             if overview?.isUpdating == true || isGenerating {
                 HStack(spacing: 4) {
                     ProgressView().controlSize(.mini)
@@ -181,45 +219,12 @@ struct TaskSessionOverviewSection: View {
             } else if let updatedAt = overview?.updatedAt, updatedAt.timeIntervalSince1970 > 0 {
                 SessionTimeText(updatedAt: updatedAt.timeIntervalSince1970, tone: .tertiary)
             }
-            Spacer(minLength: 4)
-            if !snapshot.messages.isEmpty {
-                Button {
-                    if configured { triggerGenerate(force: true) }
-                    else { showSettings = true }
-                } label: {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.system(size: WorkbenchTheme.Typography.caption))
-                        .foregroundStyle(WorkbenchTheme.quiet)
-                        .frame(width: 22, height: 22)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(WorkbenchDisclosureButtonStyle())
-                .disabled(isGenerating || snapshot.busy)
-                .help(configured ? "更新会话概述" : "配置活动叙事与 Recap…")
-                .accessibilityLabel("更新会话概述")
-                .accessibilityIdentifier("task-overview-refresh")
-            }
-            if overview != nil {
-                Button {
-                    withAnimation(.snappy(duration: 0.18)) { reading.overviewExpanded.toggle() }
-                } label: {
-                    Text(reading.overviewExpanded ? "收起" : "展开")
-                        .font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
-                        .foregroundStyle(WorkbenchTheme.quiet)
-                        .padding(.horizontal, 6)
-                        .frame(height: 22)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(WorkbenchDisclosureButtonStyle())
-                .accessibilityValue(reading.overviewExpanded ? "已展开" : "已收起")
-                .accessibilityIdentifier("task-overview-toggle")
-            }
         }
-        .padding(.bottom, 2)
     }
 
     private func overviewCard(_ overview: SessionOverview) -> some View {
         VStack(alignment: .leading, spacing: 8) {
+            cardTopBar(overview)
             if reading.overviewExpanded {
                 expandedBody(overview)
             } else {
@@ -227,7 +232,7 @@ struct TaskSessionOverviewSection: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
+        .padding(14)
         .background(WorkbenchTheme.Fill.surface,
                     in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous))
         .accessibilityIdentifier(reading.overviewExpanded ? "task-overview-expanded" : "task-overview-compact")
@@ -236,37 +241,39 @@ struct TaskSessionOverviewSection: View {
     /// Default 3–5 line summary covering goal, completed progress, current status/next step, and blockers.
     @ViewBuilder private func compactBody(_ overview: SessionOverview) -> some View {
         if !overview.blockers.isEmpty {
-            compactRow(label: "阻塞", text: overview.blockers.joined(separator: "；"), tint: .orange, lines: 1)
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("阻塞")
+                    .font(.system(size: WorkbenchTheme.Typography.caption, weight: .semibold))
+                    .foregroundStyle(.orange)
+                Text(verbatim: overview.blockers.joined(separator: "；"))
+                    .font(.system(size: WorkbenchTheme.Typography.caption))
+                    .foregroundStyle(.orange)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
         }
-        compactRow(label: "目标", text: overview.goal, tint: .primary, lines: overview.blockers.isEmpty ? 2 : 1)
-        compactRow(
-            label: "已完成",
-            text: overview.completed.isEmpty ? L("暂无已完成项") : overview.completed.joined(separator: "；"),
-            tint: overview.completed.isEmpty ? WorkbenchTheme.quiet : .primary,
-            lines: 1
-        )
-        if !overview.inProgress.isEmpty {
-            compactRow(label: "进行中", text: overview.inProgress.joined(separator: "；"), tint: .primary, lines: 1)
-        } else if !overview.planned.isEmpty {
-            compactRow(label: "计划", text: overview.planned.joined(separator: "；"), tint: WorkbenchTheme.quiet, lines: 1)
-        } else if !overview.nextSteps.isEmpty {
-            compactRow(label: "下一步", text: overview.nextSteps.joined(separator: "；"), tint: WorkbenchTheme.quiet, lines: 1)
-        }
+        Text(verbatim: compactParagraph(overview))
+            .font(.system(size: WorkbenchTheme.Typography.caption))
+            .foregroundStyle(WorkbenchTheme.ink.opacity(0.88))
+            .lineSpacing(3)
+            .lineLimit(overview.blockers.isEmpty ? 5 : 4)
+            .truncationMode(.tail)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func compactRow(label: LocalizedStringKey, text: String, tint: Color, lines: Int) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(label)
-                .font(.system(size: WorkbenchTheme.Typography.caption, weight: .semibold))
-                .foregroundStyle(tint == .orange ? .orange : WorkbenchTheme.quiet)
-                .frame(width: 42, alignment: .leading)
-            Text(verbatim: text)
-                .font(.system(size: WorkbenchTheme.Typography.caption))
-                .foregroundStyle(tint)
-                .lineLimit(lines)
-                .truncationMode(.tail)
-                .frame(maxWidth: .infinity, alignment: .leading)
+    private func compactParagraph(_ overview: SessionOverview) -> String {
+        var sentences: [String] = [overview.goal]
+        if !overview.completed.isEmpty {
+            sentences.append("\(L("已完成"))：\(overview.completed.joined(separator: "；"))")
         }
+        if !overview.inProgress.isEmpty {
+            sentences.append("\(L("进行中"))：\(overview.inProgress.joined(separator: "；"))")
+        } else if !overview.planned.isEmpty {
+            sentences.append("\(L("计划"))：\(overview.planned.joined(separator: "；"))")
+        } else if !overview.nextSteps.isEmpty {
+            sentences.append("\(L("下一步"))：\(overview.nextSteps.joined(separator: "；"))")
+        }
+        return sentences.joined(separator: "。")
     }
 
     @ViewBuilder private func expandedBody(_ overview: SessionOverview) -> some View {
@@ -301,7 +308,6 @@ struct TaskSessionOverviewSection: View {
             if !overview.nextSteps.isEmpty {
                 expandedSection("下一步", items: overview.nextSteps, tint: WorkbenchTheme.quiet)
             }
-            Divider()
             HStack(spacing: 12) {
                 Button(copied ? "已复制" : "复制") { copyOverview(overview) }
                     .buttonStyle(.borderless)
@@ -317,6 +323,7 @@ struct TaskSessionOverviewSection: View {
             }
             .font(.system(size: WorkbenchTheme.Typography.caption))
             .foregroundStyle(WorkbenchTheme.quiet)
+            .padding(.top, 2)
         }
     }
 
@@ -362,6 +369,7 @@ struct TaskSessionOverviewSection: View {
 
     private var emptyCard: some View {
         VStack(alignment: .leading, spacing: 6) {
+            cardTopBar(nil)
             Text("暂无会话概述")
                 .font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
                 .foregroundStyle(WorkbenchTheme.quiet)
@@ -385,7 +393,7 @@ struct TaskSessionOverviewSection: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
+        .padding(14)
         .background(WorkbenchTheme.Fill.surface,
                     in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous))
         .accessibilityIdentifier("task-overview-empty")
@@ -447,14 +455,10 @@ struct TaskEnvironmentDetailsSection: View {
         let branch = branchCache.branch(hostID: item.reference.hostID, directory: item.directory)
         let changedCount = snapshot.edits?.perFile.count ?? 0
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: "server.rack")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(WorkbenchTheme.quiet)
-                    .frame(width: 16)
-                    .accessibilityHidden(true)
+            HStack(spacing: 6) {
                 Text("环境与详情")
-                    .font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold))
+                    .font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
+                    .foregroundStyle(WorkbenchTheme.quiet)
                 Spacer(minLength: 0)
             }.padding(.bottom, 2)
 
