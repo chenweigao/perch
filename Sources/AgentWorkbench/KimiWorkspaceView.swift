@@ -114,6 +114,12 @@ struct KimiWorkspaceView: View {
                     actions.post(.turnStalled(minutes: $0))
                 }.id(sessionID)
             }
+            let request = TurnRequest.kimi(approvals: conversation.snapshot.pendingApprovals, questions: conversation.snapshot.pendingQuestions)
+            ConversationLiveStatus(phase: ConversationRunPhase(turn: turn, online: connection.online && connection.snapshotReady,
+                stopping: connection.isStopping, request: request?.kind,
+                hasRunningTools: conversation.live?.runningTools.isEmpty == false,
+                thinking: conversation.live?.thinkingText.isEmpty == false && conversation.live?.assistantText.isEmpty != false))
+                .equatable().id("live-status:" + sessionID)
             KimiComposerView(connection: connection, sessionID: sessionID, onInput: onInput)
                 .id(sessionID)
         }

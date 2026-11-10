@@ -1,4 +1,6 @@
 import AppKit
+import ApplicationServices
+import QuartzCore
 import SwiftUI
 import Observation
 import WorkbenchCore
@@ -460,4 +462,69 @@ private struct ActivityBarCheckFixture: View {
         }
     }
     print("PASS: activity bar state transitions, pending/reconnect actions, composer turn feedback, factual tool activity and Recap target")
+    try await checkLiveStatusFooter()
+}
+
+@MainActor private func checkLiveStatusFooter() async throws {
+    NSApp.activate(ignoringOtherApps: true)
+    AXUIElementSetAttributeValue(AXUIElementCreateApplication(getpid()), "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)
+    let window = NSWindow(contentRect: NSRect(x: 80, y: 80, width: 700, height: 180), styleMask: [.titled], backing: .buffered, defer: false)
+    defer { window.orderOut(nil) }
+    var measuredHeight: CGFloat = 0
+    func root(_ phase: ConversationRunPhase?, reduced: Bool = false, locale: String = "zh-Hans") -> AnyView {
+        AnyView(ConversationLiveStatus(phase: phase, reduceMotionOverride: reduced).equatable()
+            .environment(\.locale, Locale(identifier: locale))
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { measuredHeight = $0 }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(WorkbenchTheme.contentBackground))
+    }
+    let host = NSHostingView(rootView: root(.thinking))
+    window.contentView = host; window.makeKeyAndOrderFront(nil)
+    func settle() async throws {
+        try await Task.sleep(for: .milliseconds(180))
+        host.layoutSubtreeIfNeeded(); host.displayIfNeeded(); CATransaction.flush()
+    }
+    func mark(_ view: NSView) -> ConversationLiveMarkView? {
+        (view as? ConversationLiveMarkView) ?? view.subviews.lazy.compactMap(mark).first
+    }
+    func opacities(_ view: ConversationLiveMarkView) -> [Float] {
+        (view.layer?.sublayers ?? []).map { $0.presentation()?.opacity ?? $0.opacity }
+    }
+    let output = URL(fileURLWithPath: ProcessInfo.processInfo.environment["PERCH_DESIGN_CAPTURES"] ?? "/private/tmp/perch-live-status")
+    try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+    for (suffix, width, appearance) in [("light", 700.0, NSAppearance.Name.aqua), ("narrow-dark", 340.0, .darkAqua)] {
+        window.appearance = NSAppearance(named: appearance); window.setContentSize(NSSize(width: width, height: 180))
+        for (phase, label) in [(ConversationRunPhase.thinking, "思考中"), (.executing, "执行中"), (.running, "运行中"), (.waitingForConfirmation, "等待你确认"), (.waitingForAnswer, "等待你回答"), (.stopping, "正在停止")] {
+            host.rootView = root(phase)
+            try await settle()
+            precondition(taskPanelLabel(window, "conversation-live-status")?.contains(label) == true,
+                         "The live footer speaks only its current phase: \(label)")
+            precondition(abs(measuredHeight - ConversationLiveStatus.height) < 0.5,
+                         "Every live phase shares one footer height")
+            let icon = mark(host)!
+            if !phase.animates {
+                precondition((icon.layer?.sublayers ?? []).allSatisfy { $0.animationKeys()?.isEmpty != false },
+                             "Waiting and stopping must hold still")
+            }
+            let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds)!
+            host.cacheDisplay(in: host.bounds, to: bitmap)
+            try bitmap.representation(using: .png, properties: [:])!.write(to: output.appendingPathComponent("live-status-\(suffix)-\(label).png"))
+        }
+    }
+    host.rootView = root(.thinking); try await settle()
+    let icon = mark(host)!
+    let before = opacities(icon)
+    try await Task.sleep(for: .milliseconds(420))
+    let after = opacities(icon)
+    precondition(zip(before, after).contains { abs($0 - $1) > 0.1 }, "The thinking mark visibly breathes without changing status text")
+    host.rootView = root(.thinking, reduced: true); try await settle()
+    precondition((mark(host)!.layer?.sublayers ?? []).allSatisfy { $0.animationKeys()?.isEmpty != false }, "Reduce Motion stops the same mounted mark")
+    host.rootView = root(.thinking, locale: "en"); try await settle()
+    precondition(taskPanelLabel(window, "conversation-live-status")?.contains("Thinking") == true, "An unchanged phase follows the app language")
+    window.orderOut(nil); try await settle()
+    precondition((mark(host)!.layer?.sublayers ?? []).allSatisfy { $0.animationKeys()?.isEmpty != false }, "An invisible window pauses the mark")
+    window.makeKeyAndOrderFront(nil)
+    host.rootView = root(nil); try await settle()
+    precondition(taskPanelControl(window, "conversation-live-status") == nil && mark(host) == nil, "Completion removes the live footer and its animation")
+    print("PASS: live footer phases, stable geometry, visible native motion, waiting/reduced/hidden pause, locale refresh and completed teardown")
 }

@@ -8,6 +8,48 @@ struct ConversationBusyIndicator: View {
     var body: some View { PerchBusyIndicator() }
 }
 
+/// A quiet live phase just above the composer. The mark owns its animation;
+/// streaming tokens never drive this row's text or animation clock.
+struct ConversationLiveStatus: View, Equatable {
+    let phase: ConversationRunPhase?
+    var reduceMotionOverride: Bool? = nil
+    @UILocalization private var L
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    private var reduceMotion: Bool { reduceMotionOverride ?? systemReduceMotion }
+    static let height: CGFloat = 26
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.phase == rhs.phase && lhs.reduceMotionOverride == rhs.reduceMotionOverride
+    }
+
+    var body: some View {
+        let _ = countBody()
+        if let phase {
+            HStack(spacing: 8) {
+                ConversationLiveMark(phase: phase, animated: !reduceMotion)
+                    .frame(width: 16, height: 16).accessibilityHidden(true)
+                Text(verbatim: L(key: phase.titleKey))
+                    .font(.system(size: ReplyStyle.secondarySize))
+                    .foregroundStyle(phase.needsInput ? Color.orange : WorkbenchTheme.quiet)
+                    .lineLimit(1)
+                    .contentTransition(.opacity)
+                    .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: phase)
+                Spacer(minLength: 0)
+            }.padding(.horizontal, 14)
+                .frame(height: Self.height)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text(verbatim: L(key: phase.titleKey)))
+                .accessibilityIdentifier("conversation-live-status")
+        }
+    }
+
+    private func countBody() {
+        #if TRANSCRIPT_CHECKS
+        NavigationRenderMetrics.count("live_status_body")
+        #endif
+    }
+}
+
 /// Results the reader has moved on from, by session and end time. In memory only:
 /// a relaunch starts with no results, because it watched no turn end.
 @MainActor enum TurnResultMemory {
