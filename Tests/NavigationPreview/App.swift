@@ -1668,6 +1668,14 @@ extension NavigationRunner {
                 ConversationTranscript.navigator(in: host)?.reveal?(targetRowID)
                 return ["demo": true]
             }
+            // Thinking now starts expanded. This fixture measures repeated
+            // collapse/expand transitions from a deliberately collapsed
+            // baseline, independent of the production opening preference.
+            if !full {
+                binding(for: kind)!.wrappedValue = false
+                try await Task.sleep(for: .milliseconds(350))
+                host.layoutSubtreeIfNeeded()
+            }
             try recordReveal("before toggle")
             guard let collapsed = rows().first?.frame.height, collapsed > 0 else {
                 throw NavigationError("Disclosure target was not mounted before toggling")
