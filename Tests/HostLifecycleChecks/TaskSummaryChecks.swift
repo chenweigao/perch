@@ -90,6 +90,7 @@ private final class TaskSummaryProtocol: URLProtocol {
         precondition(model.taskContextWindow.detail == expected, message)
     }
     try await press("task-context-row-build")
+    _ = try await control("task-context-back")
     await expectDetail(TaskContextRoute(source: reference, taskID: "build"),
                        "A compact summary keeps the new in-place detail navigation")
     _ = try await control("task-context-output")
