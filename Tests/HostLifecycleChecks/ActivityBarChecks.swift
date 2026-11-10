@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 import SwiftUI
 import Observation
 import WorkbenchCore
@@ -408,6 +409,25 @@ private struct ActivityBarCheckFixture: View {
         .background(WorkbenchTheme.contentBackground))
     window.contentView = liveTailHost
     window.setContentSize(NSSize(width: 680, height: 440))
+    AXUIElementSetAttributeValue(AXUIElementCreateApplication(getpid()), "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)
+    func paintedStateDot(_ identifier: String, green: Bool) -> Bool {
+        guard let frame = taskPanelControl(window, identifier) else { return false }
+        let region = liveTailHost.convert(frame, from: nil).intersection(liveTailHost.bounds)
+        guard !region.isEmpty, let bitmap = liveTailHost.bitmapImageRepForCachingDisplay(in: region) else { return false }
+        liveTailHost.cacheDisplay(in: region, to: bitmap)
+        var coloredPixels = 0
+        for y in 0..<bitmap.pixelsHigh {
+            for x in 0..<bitmap.pixelsWide {
+                guard let color = bitmap.colorAt(x: x, y: y)?.usingColorSpace(.sRGB) else { continue }
+                let r = color.redComponent, g = color.greenComponent, b = color.blueComponent
+                // Hue survives both appearances and the running dot's pulse.
+                let matches = green ? g > r + 0.12 && g > b + 0.08
+                    : r > b + 0.12 && g > b + 0.08 && r >= g - 0.05
+                if matches { coloredPixels += 1 }
+            }
+        }
+        return coloredPixels >= 8
+    }
     for (suffix, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
         window.appearance = NSAppearance(named: appearance)
         try await Task.sleep(for: .milliseconds(350))
@@ -417,8 +437,10 @@ private struct ActivityBarCheckFixture: View {
             try? bitmap.representation(using: .png, properties: [:])?.write(
                 to: URL(fileURLWithPath: "/private/tmp/perch-live-tail-\(suffix).png"))
         }
+        precondition(paintedStateDot("tool-call:bench-run", green: false),
+                     "An executing tool paints a yellow status dot in its own header in \(suffix)")
+        precondition(paintedStateDot("completed-process:" + sqlActivityEntry.id, green: true),
+                     "The completed process paints a green status dot in its header in \(suffix)")
     }
-    precondition(busyIndicators(liveTailHost).contains { $0.bounds.size == CGSize(width: 11, height: 11) },
-                 "An actually executing tool keeps its factual inline activity indicator in the row header")
     print("PASS: activity bar state transitions, pending/reconnect actions, composer turn feedback, factual tool activity and Recap target")
 }
