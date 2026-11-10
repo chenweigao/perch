@@ -1072,7 +1072,7 @@ final class KimiConnection {
         guard let message = queue.nextDelivery(for: reference, isStreaming: false) else { return }
         let expansion = pastes.expand(message.text)
         guard expansion.missing.isEmpty else {
-            queue.markFailed(message.id, L("粘贴内容已丢失，可移回草稿重新粘贴。"))
+            queue.markFailed(message.id, L("引用或粘贴内容已丢失，可移回草稿重新添加。"))
             return
         }
         sendingSessions.insert(id)
@@ -1162,7 +1162,7 @@ final class KimiConnection {
         // silently send a prompt with a dead token in it.
         let expansion = pastes.expand(draftText)
         guard expansion.missing.isEmpty else {
-            actionError = L("粘贴内容已丢失，请重新粘贴后再发送。")
+            actionError = L("引用或粘贴内容已丢失，请重新添加后再发送。")
             return
         }
         var text = expansion.text

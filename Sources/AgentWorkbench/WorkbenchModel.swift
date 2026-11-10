@@ -989,20 +989,11 @@ final class WorkbenchModel {
         guard !showDashboard, let reference = selectedReference else { return false }
         return reference.kind == .kimi ? kimi.online : [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(reference.kind) && native.online
     }
-    /// Appends the selection to the current session's draft as a Markdown quote.
+    /// Stage a compact citation; the original Markdown quote is restored on send.
     /// Existing draft text is kept: quoting is an addition, not a replacement.
     func quoteSelection(_ text: String) {
         guard canQuoteSelection, let reference = selectedReference else { return }
-        let quoted = text.split(separator: "\n", omittingEmptySubsequences: false)
-            .map { "> " + $0 }.joined(separator: "\n")
-        let id = reference.terminalID
-        if reference.kind == .kimi {
-            let existing = kimi.drafts[id] ?? ""
-            kimi.drafts[id] = existing.isEmpty ? quoted + "\n\n" : existing + "\n\n" + quoted + "\n\n"
-        } else if [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(reference.kind) {
-            let existing = native.drafts[id] ?? ""
-            native.drafts[id] = existing.isEmpty ? quoted + "\n\n" : existing + "\n\n" + quoted + "\n\n"
-        }
+        appendQuoteToDraft(text, kimi: kimi, native: native, isKimi: reference.kind == .kimi, id: reference.terminalID)
         DispatchQueue.main.async { NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil) }
     }
     /// Message-level transcript actions (quote / edit-and-resend / resend /
@@ -1015,9 +1006,7 @@ final class WorkbenchModel {
         let isKimi = context.kind == .kimi
         switch payload.action {
         case .quote(let text):
-            let quoted = text.split(separator: "\n", omittingEmptySubsequences: false)
-                .map { "> " + $0 }.joined(separator: "\n")
-            appendToDraft(kimi: kimi, native: native, isKimi: isKimi, id: id, text: quoted + "\n\n")
+            appendQuoteToDraft(text, kimi: kimi, native: native, isKimi: isKimi, id: id)
         case .editAndResend(let text):
             appendToDraft(kimi: kimi, native: native, isKimi: isKimi, id: id, text: text)
         case .resend(let text):
@@ -1067,6 +1056,17 @@ final class WorkbenchModel {
         if page == .task, taskContextWindow.detail?.source == reference { taskContextWindow.detail = nil }
         if page == .task, taskContextWindow.fileDetail?.source == reference { taskContextWindow.fileDetail = nil }
         taskContextWindow.showPage(page, model: self)
+    }
+    private func appendQuoteToDraft(_ text: String, kimi: KimiConnection?, native: NativeAgentConnection?, isKimi: Bool, id: String) {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              let store = isKimi ? kimi?.pastes : native?.pastes else { return }
+        do {
+            let token = DraftPaste.token(id: try store.save(DraftPaste.quote(text)), kind: .cite)
+            appendToDraft(kimi: kimi, native: native, isKimi: isKimi, id: id, text: token + "\n\n")
+        } catch {
+            let message = L("无法保存引用：\(error.localizedDescription)")
+            if isKimi { kimi?.actionError = message } else { native?.actionError = message }
+        }
     }
     private func appendToDraft(kimi: KimiConnection?, native: NativeAgentConnection?, isKimi: Bool, id: String, text: String) {
         if isKimi, let kimi {

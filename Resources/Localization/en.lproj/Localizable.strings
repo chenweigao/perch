@@ -1326,6 +1326,12 @@
 "刷新" = "Refresh";
 "移除粘贴内容" = "Remove pasted content";
 "粘贴 · %lld 行" = "Paste · %lld lines";
+"引用 · %lld 行" = "Quote · %lld lines";
+"引用内容" = "Quoted context";
+"引用内容已丢失，请重新引用。" = "The quoted context is missing. Quote it again.";
+"无法保存引用：%@" = "Could not save quoted context: %@";
+"引用或粘贴内容已丢失，请重新添加后再发送。" = "The quoted or pasted content is missing. Add it again before sending.";
+"引用或粘贴内容已丢失，可移回草稿重新添加。" = "The quoted or pasted content is missing. Move it back to the draft and add it again.";
 "粘贴内容" = "Pasted content";
 "粘贴文本 · %lld 行 · %lld 字节" = "Pasted content · %lld lines · %lld bytes";
 "粘贴文本" = "Pasted content";

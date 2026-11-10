@@ -1,20 +1,27 @@
 import Foundation
 
-/// A long paste stays out of the visible draft as a `@paste("id")` token; the
+/// Folded text stays out of the visible draft as a `@paste("id")` or `@cite("id")` token; the
 /// full text is stored locally and expanded back in when the prompt is sent.
 /// Like project file references, tokens are plain draft text, so drafts,
 /// history and the queue carry them without another channel.
 public struct DraftPaste: Equatable {
+    public enum Kind: String { case paste, cite }
     public let id: String
     public let range: NSRange
-    private static let tokenPattern = try! NSRegularExpression(pattern: #"@paste\("([0-9a-f]{8})"\)"#)
+    public let kind: Kind
+    private static let tokenPattern = try! NSRegularExpression(pattern: #"@(paste|cite)\("([0-9a-f]{8})"\)"#)
 
-    public static func token(id: String) -> String { "@paste(\"\(id)\")" }
+    public static func token(id: String, kind: Kind = .paste) -> String { "@\(kind.rawValue)(\"\(id)\")" }
+
+    public static func quote(_ text: String) -> String {
+        text.split(separator: "\n", omittingEmptySubsequences: false).map { "> " + $0 }.joined(separator: "\n")
+    }
 
     public static func references(in draft: String) -> [DraftPaste] {
         let source = draft as NSString
         return tokenPattern.matches(in: draft, range: NSRange(location: 0, length: source.length))
-            .map { DraftPaste(id: source.substring(with: $0.range(at: 1)), range: $0.range) }
+            .map { DraftPaste(id: source.substring(with: $0.range(at: 2)), range: $0.range,
+                              kind: Kind(rawValue: source.substring(with: $0.range(at: 1)))!) }
     }
 
     /// Short text pastes inline as before; a wall of log or diff folds.

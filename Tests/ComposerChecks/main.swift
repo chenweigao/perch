@@ -290,6 +290,58 @@ check(edgeLines(caretAt(5), .downstream) == "last" && edgeLines(caretAt(4), .dow
 lines.syncDraft("")
 check(edgeLines(caretAt(0), .downstream) == "both", "An empty draft is on both edge lines")
 print("Composer edge-line checks passed: hard and soft line breaks, selection, affinity and arrow payloads")
+
+let citationToken = "@cite(\"deadbeef\")"
+let citationContent = "> 第一段上下文 👩🏽‍💻\n> \n> 第二段 `code`"
+editor.citations = [ComposerCitation(token: citationToken, label: "引用 · 3 行", missingMessage: "missing citation", load: { citationContent })]
+editor.isRichText = true; editor.importsGraphics = false
+editor.font = .systemFont(ofSize: WorkbenchTheme.Reading.bodySize)
+editor.textContainer?.lineFragmentPadding = 0
+let citationDraft = "前缀 👩🏽‍💻 \(citationToken) 后续问题"
+editor.syncDraft(citationDraft)
+draft = citationDraft
+check(editor.draftString == citationDraft && !editor.string.contains(citationToken), "The chip hides the storage token without changing persisted draft text")
+let citationIndex = (editor.string as NSString).range(of: "\u{fffc}").location
+check(citationIndex != NSNotFound && editor.citationFrames.count == 1, "The context is one native editing attachment")
+editor.setSelectedRange(NSRange(location: citationIndex, length: 1))
+plainBoard.clearContents()
+check(editor.writeSelection(to: plainBoard, type: .string) && plainBoard.string(forType: .string) == citationContent,
+      "Copy exports full context instead of the attachment character or a storage ID")
+editor.setSelectedRange(NSRange(location: citationIndex + 1, length: 0))
+editor.deleteBackward(nil); editor.breakUndoCoalescing()
+check(!editor.draftString.contains(citationToken) && draft == editor.draftString && editor.string.contains("后续问题"),
+      "Backspace deletes the citation atomically and preserves surrounding text")
+editor.undoManager?.undo()
+check(editor.draftString == citationDraft && editor.citationFrames.count == 1, "Undo restores the complete citation")
+editor.undoManager?.redo()
+check(!editor.draftString.contains(citationToken), "Redo removes the complete citation")
+editor.syncDraft(citationDraft)
+let citationFrame = editor.citationFrames[0].1
+check(editor.activateCitation(at: NSPoint(x: citationFrame.minX + 8, y: citationFrame.midY)), "Clicking a citation expands it")
+check(editor.draftString == "前缀 👩🏽‍💻 \(citationContent) 后续问题" && editor.citationFrames.isEmpty && draft == editor.draftString,
+      "Expansion produces editable full context and keeps the suffix")
+editor.syncDraft(citationDraft)
+draft = citationDraft
+editor.setSelectedRange(NSRange(location: (editor.string as NSString).length, length: 0))
+editor.setMarkedText("zhongwen", selectedRange: NSRange(location: 8, length: 0), replacementRange: NSRange(location: NSNotFound, length: 0))
+let citationComposing = editor.string
+for _ in 0..<100 { editor.syncDraft(draft) }
+check(editor.hasMarkedText() && editor.string == citationComposing && draft == citationDraft, "Citation refresh preserves IME composition and the committed draft")
+editor.insertText("中文", replacementRange: NSRange(location: NSNotFound, length: 0))
+check(editor.draftString == citationDraft + "中文" && draft == editor.draftString, "Chinese commit beside a citation preserves its canonical token")
+let duplicateDraft = "👩🏽‍💻 \(citationToken) \(citationToken) suffix"
+let canonicalCaret = (duplicateDraft as NSString).length
+editor.syncDraft(duplicateDraft, selection: NSRange(location: canonicalCaret, length: 0))
+check(editor.citationFrames.count == 2 && editor.draftSelection.location == canonicalCaret,
+      "Repeated citations preserve UTF-16 selection offsets")
+let firstCitationFrame = editor.citationFrames[0].1
+check(editor.activateCitation(at: NSPoint(x: firstCitationFrame.maxX - 8, y: firstCitationFrame.midY)), "The citation remove target is clickable")
+check(editor.citationFrames.count == 1 && editor.draftSelection.location == canonicalCaret - (citationToken as NSString).length,
+      "Removal preserves the editing caret and the other citation")
+editor.syncDraft("")
+check(editor.undoManager?.canUndo == false, "A sent citation cannot be restored into the next draft by Undo")
+editor.citations = []
+print("Citation checks passed: inline attachment, full-context copy, atomic delete/undo/redo, expansion, IME and caret mapping")
 if let path = ProcessInfo.processInfo.environment["COMPOSER_CHECK_RESULT"] {
     try Data("{\"status\":\"passed\"}\n".utf8).write(to: URL(fileURLWithPath: path), options: .atomic)
 }
