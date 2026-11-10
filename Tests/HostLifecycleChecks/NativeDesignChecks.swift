@@ -180,7 +180,9 @@ import WorkbenchCore
         let sidebarFrame = sidebar.convert(sidebar.bounds, to: window.contentView)
         let contentFrame = card.convert(card.bounds, to: window.contentView)
         let sidebarTop = window.contentView!.isFlipped ? sidebarFrame.minY : window.contentView!.bounds.maxY - sidebarFrame.maxY
-        precondition(abs(sidebarFrame.minY - contentFrame.minY) < 1 &&
+        let sidebarBottom = window.contentView!.isFlipped ? sidebarFrame.maxY : sidebarFrame.minY
+        let contentBottom = window.contentView!.isFlipped ? contentFrame.maxY : contentFrame.minY
+        precondition(abs(sidebarBottom - contentBottom) < 1 &&
                      abs(sidebarTop - WorkspaceLayoutMetrics.contentTopInset) < 1,
                      "Sidebar controls stay below the window controls and share the main container's bottom edge: sidebar=\(sidebarFrame), content=\(contentFrame)")
     }
@@ -189,6 +191,9 @@ import WorkbenchCore
     let replyFrame = reply.convert(reply.bounds, to: window.contentView)
     func distanceFromTop(_ frame: NSRect) -> CGFloat {
         window.contentView!.isFlipped ? frame.minY : window.contentView!.bounds.maxY - frame.maxY
+    }
+    func distanceFromBottom(_ frame: NSRect) -> CGFloat {
+        window.contentView!.isFlipped ? window.contentView!.bounds.maxY - frame.maxY : frame.minY
     }
     let backdrop = split.windowBackdropView!
     let backdropFrame = backdrop.convert(backdrop.bounds, to: window.contentView)
@@ -205,7 +210,7 @@ import WorkbenchCore
     precondition(split.sidebarOverlayBackdropView?.isHidden == true,
                  "Wide windows draw navigation straight on the window glass; only the narrow overlay gets its own glass panel")
     precondition(abs(distanceFromTop(cardFrame) - WorkspaceLayoutMetrics.frameInset) < 1 &&
-                 abs(cardFrame.minY - WorkspaceLayoutMetrics.frameInset) < 1 &&
+                 abs(distanceFromBottom(cardFrame) - WorkspaceLayoutMetrics.frameInset) < 1 &&
                  abs(window.contentView!.bounds.maxX - cardFrame.maxX - WorkspaceLayoutMetrics.frameInset) < 1 &&
                  abs(distanceFromTop(inspectorFrame) - distanceFromTop(cardFrame)) < 1 &&
                  abs(inspectorFrame.height - cardFrame.height) < 1 &&
