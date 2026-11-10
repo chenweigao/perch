@@ -113,15 +113,8 @@ struct ReadingDesignFixture: View {
         host.cacheDisplay(in: host.bounds, to: bitmap)
         try bitmap.representation(using: .png, properties: [:])!.write(to: output.appendingPathComponent(label + ".png"))
     }
-    // Locate the production row anchors instead of assuming a prompt height:
-    // body font, wrapping, and reading width may move both disclosure headers.
-    func descendants(_ root: NSView) -> [NSView] { [root] + root.subviews.flatMap(descendants) }
-    func mounted(_ identifier: String) -> NSView {
-        guard let view = descendants(host).first(where: { $0.identifier?.rawValue == identifier }) else {
-            fatalError("Missing production disclosure row: \(identifier)")
-        }
-        return view
-    }
+    // Locate the production disclosure control instead of assuming a prompt
+    // height: typography and reading width may move the header.
     func clickHeader(_ identifier: String) {
         guard let frame = taskPanelControl(window, identifier) else { preconditionFailure("Missing disclosure control: \(identifier)") }
         let point = NSPoint(x: frame.midX, y: frame.midY)
@@ -152,7 +145,14 @@ struct ReadingDesignFixture: View {
     let foldID = thoughtEntry.id
     let thoughtHeader = "thought-disclosure:reading-design:" + foldID
     clickHeader(thoughtHeader)
-    try await Task.sleep(for: .milliseconds(250))
+    precondition(ConversationReadingMemory.shared.expansions["reading-design:" + foldID + ":thought"] == false,
+                 "Clicking the actual thought header must change its remembered expansion")
+    // The content unmounts after the 250 ms disclosure animation completes.
+    // Wait for that observable result rather than racing its final frame.
+    for _ in 0..<40 where readingTextViews(host).contains(where: { $0.string.contains("PRIVATE_PROCESS_MARKER") }) {
+        try await Task.sleep(for: .milliseconds(50))
+        host.layoutSubtreeIfNeeded()
+    }
     precondition(!readingTextViews(host).contains { $0.string.contains("PRIVATE_PROCESS_MARKER") }, "The user may collapse the initially expanded thought")
     clickHeader(thoughtHeader)
     try await Task.sleep(for: .milliseconds(400))
