@@ -52,7 +52,13 @@ struct ReadingDesignFixture: View {
                 ? node.value(forKey: "accessibilityRole") as? String : nil
             if role == NSAccessibility.Role.button.rawValue || role == NSAccessibility.Role.disclosureTriangle.rawValue,
                let value = node.value(forKey: "accessibilityFrame") as? NSValue, !value.rectValue.isEmpty {
-                return window.convertFromScreen(value.rectValue)
+                let group = window.convertFromScreen(value.rectValue)
+                // AXDisclosureTriangle includes the raw-detail body once open.
+                // Mouse input must land on the physical header at its top;
+                // use the production style's header height, then verify the
+                // remembered state changed after the actual mouse event.
+                let height = min(group.height, WorkbenchDisclosureStyle().minHeight)
+                return NSRect(x: group.minX, y: group.maxY - height, width: group.width, height: height)
             }
             guard node.responds(to: NSSelectorFromString("accessibilityChildren")) else { return nil }
             for child in node.value(forKey: "accessibilityChildren") as? [NSObject] ?? [] {
