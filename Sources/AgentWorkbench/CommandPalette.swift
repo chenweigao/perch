@@ -31,9 +31,10 @@ struct CommandPalette: View {
             Text("↑↓ 选择 · Tab 补全 · Return 执行完整命令 · Esc 关闭")
                 .font(.system(size: 11)).foregroundStyle(.secondary).padding(10)
         }.frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
-            .overlay(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card)
+            .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous)
                 .strokeBorder(WorkbenchTheme.Stroke.hairline))
+            .shadow(color: .black.opacity(0.12), radius: 10, y: 3)
             .accessibilityLabel("命令建议，\(completion.matches.count) 项")
     }
 }

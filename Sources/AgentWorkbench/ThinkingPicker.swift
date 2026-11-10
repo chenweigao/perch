@@ -276,6 +276,7 @@ struct ContextMeter: View {
                         }
                     }
                 }.font(.system(size: WorkbenchTheme.Typography.body)).padding(16).frame(width: 290, alignment: .leading)
+                    .onExitCommand { presented = false }
             }
     }
 }

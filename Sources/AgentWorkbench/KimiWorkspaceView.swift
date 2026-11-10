@@ -200,8 +200,6 @@ private struct KimiComposerView: View {
                                             }, onSelectThinking: { connection.thinkingChoices[sessionID] = $0 })
                     }
                     HStack(spacing: 6) {
-                        ComposerEnvironmentMenu(host: connection.host, provider: "Kimi",
-                                                directory: connection.conversation?.snapshot.session.cwd ?? "")
                         PermissionPicker(provider: .kimi, capability: connection.permissionCapability(for: sessionID),
                                          disabled: connection.sending) { mode in
                             connection.setPermission(mode, for: sessionID)
@@ -212,13 +210,7 @@ private struct KimiComposerView: View {
                             connection.drafts[sessionID] = existing.isEmpty ? template : existing + "\n\n" + template
                             NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil)
                         }
-                        ContextMeter(budget: connection.conversation?.snapshot.session.budget,
-                                     isStale: !connection.online || !connection.snapshotReady,
-                                     autoCompactHost: connection.host.id, autoCompactSession: sessionID)
-                    }.foregroundStyle(.secondary).padding(.leading, 10)
-                        .overlay(alignment: .leading) {
-                            Rectangle().fill(WorkbenchTheme.Stroke.hairline).frame(width: 1, height: 16)
-                        }
+                    }.foregroundStyle(.secondary)
                     ComposerActionButton(isRunning: isRunning,
                                          isStopping: connection.isStopping, canSend: canSend, canStop: connection.canStop,
                                          hasDraft: !(connection.drafts[sessionID] ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -231,8 +223,13 @@ private struct KimiComposerView: View {
                                          onQueue: nextTurnSend)
                 }
             }.padding(ReplyStyle.composerInset).workbenchComposerSurface()
-            ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError,
-                                 draftLength: (connection.drafts[sessionID] ?? "").count)
+            ComposerEnvironmentBar(host: connection.host, provider: "Kimi",
+                                   directory: connection.conversation?.snapshot.session.cwd ?? "",
+                                   budget: connection.conversation?.snapshot.session.budget,
+                                   isStale: !connection.online || !connection.snapshotReady,
+                                   autoCompactHost: connection.host.id, autoCompactSession: sessionID,
+                                   sending: connection.sending, saveError: connection.draftSaveError,
+                                   draftLength: (connection.drafts[sessionID] ?? "").count)
         }.dropDestination(for: URL.self) { files, _ in
             addAttachments(files.filter(\.isFileURL), to: sessionID)
             return files.contains(where: \.isFileURL)

@@ -133,8 +133,9 @@ struct TaskContextView: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            header.fixedSize(horizontal: false, vertical: true).padding(.bottom, 6)
-                .overlay(alignment: .bottom) { Divider().opacity(scrolled && detail == nil ? 1 : 0) }
+            if detached || model.taskContextWindow.locked != nil {
+                header.fixedSize(horizontal: false, vertical: true).padding(.bottom, 6)
+            }
             if let fileDetail, let item {
                 TaskContextFileView(model: model, item: item, route: fileDetail)
                     .id(fileDetail)
@@ -269,6 +270,9 @@ struct TaskContextView: View {
     @ViewBuilder private func sections(_ value: TaskContextSnapshot, item: WorkspaceSession) -> some View {
         @Bindable var reading = model.taskContextWindow.readingState(for: item.reference)
         let online = item.online && state.error == nil
+        // 1. 会话概述
+        TaskSessionOverviewSection(model: model, item: item, snapshot: value, reading: reading)
+        // 2. 需要处理（无内容时不占位）
         if !value.requests.isEmpty || value.failure != nil {
             VStack(alignment: .leading, spacing: 8) {
                 sectionTitle("需要你处理", icon: "bubble.left", count: value.requests.count + (value.failure == nil ? 0 : 1))
@@ -301,7 +305,7 @@ struct TaskContextView: View {
                 ForEach(uncertain) { tool in toolRow(tool) }
             }
         }
-        TaskPlanSection(controller: model.taskContextWindow, source: item.reference, todos: value.todos)
+        // 3. 产出（文档、文件及其他可打开成果）
         if !value.files.isEmpty {
             VStack(alignment: .leading, spacing: 4) {
                 sectionTitle("文档与产物", icon: "doc.text", count: value.files.count)
@@ -345,6 +349,9 @@ struct TaskContextView: View {
             }
         }
         TaskTurnSection(model: model, item: item, snapshot: value)
+        // 4. 环境与详情入口（主机、目录、分支，以及改动、文件、运行详情）
+        TaskEnvironmentDetailsSection(model: model, item: item, snapshot: value)
+        TaskPlanSection(controller: model.taskContextWindow, source: item.reference, todos: value.todos)
         if !value.tasks.isEmpty || value.taskError != nil {
             VStack(alignment: .leading, spacing: 8) {
                 sectionTitle("后台任务与子 Agent", icon: "square.stack.3d.up", count: value.tasks.count)
@@ -366,10 +373,6 @@ struct TaskContextView: View {
             }))
             #endif
         }
-        if value.files.isEmpty && value.tasks.isEmpty && uncertain.isEmpty &&
-            value.requests.isEmpty && value.failure == nil && value.todos.isEmpty && value.edits == nil {
-            emptyState("tray", "此任务暂时没有计划、改动或文件。")
-        }
     }
     private func emptyState(_ icon: String, _ text: LocalizedStringKey) -> some View {
         VStack(spacing: 10) {
@@ -379,16 +382,15 @@ struct TaskContextView: View {
         }.frame(maxWidth: .infinity).padding(.vertical, 40).padding(.horizontal, 12)
     }
     private func sectionTitle(_ title: LocalizedStringKey, icon: String, count: Int) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon).font(.system(size: 12, weight: .medium))
-                .foregroundStyle(WorkbenchTheme.quiet).frame(width: 16).accessibilityHidden(true)
-            Text(title).font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold))
-            Text(count.formatted()).font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
-                .monospacedDigit().foregroundStyle(WorkbenchTheme.quiet)
-                .padding(.horizontal, 6).frame(minWidth: 20, minHeight: 18)
-                .background(WorkbenchTheme.Fill.surface, in: Capsule())
+        HStack(spacing: 6) {
+            Text(title).font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
+                .foregroundStyle(WorkbenchTheme.quiet)
+            if count > 0 {
+                Text(count.formatted()).font(.system(size: WorkbenchTheme.Typography.caption))
+                    .monospacedDigit().foregroundStyle(.tertiary)
+            }
             Spacer(minLength: 0)
-        }.padding(.bottom, 4).accessibilityElement(children: .combine).accessibilityAddTraits(.isHeader)
+        }.padding(.bottom, 2).accessibilityElement(children: .combine).accessibilityAddTraits(.isHeader)
     }
     private func toolRow(_ tool: VisibleTool) -> some View { TaskContextToolRow(tool: tool) }
     /// The whole row opens the task in place of the list.

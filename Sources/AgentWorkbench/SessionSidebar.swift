@@ -576,8 +576,8 @@ private struct SessionSidebarRow: View {
     let selected: Bool
     let onOpen: () -> Void
     private var subtitle: String? {
-        if item.archived { return nil }
-        if !item.online { return compact ? nil : L("离线 · 状态未同步") }
+        if item.archived || compact { return nil }
+        if !item.online { return L("离线 · 状态未同步") }
         return item.section == .attention ? item.detail : nil
     }
     var body: some View {
@@ -589,6 +589,8 @@ private struct SessionSidebarRow: View {
                          directory: item.directory, detail: item.detail,
                          groups: groups, updatedAt: item.updatedAt, compact: compact,
                          running: item.online && !item.archived && item.section == .running,
+                         waiting: item.online && !item.archived && item.section == .attention && item.turn.state != .failed,
+                         failed: item.online && !item.archived && item.turn.state == .failed,
                          unread: item.online && !item.archived && item.section == .review,
                          offline: compact && !item.online && !item.archived,
                          selected: selected,

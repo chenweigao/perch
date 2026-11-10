@@ -66,6 +66,9 @@ private final class TaskSummaryProtocol: URLProtocol {
         preconditionFailure("Missing task summary control: \(identifier)")
     }
     func press(_ identifier: String) async throws {
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
+        for _ in 0..<100 where !NSApp.isActive || !window.isKeyWindow { try await Task.sleep(for: .milliseconds(20)) }
         let frame = try await control(identifier)
         for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
             window.sendEvent(NSEvent.mouseEvent(with: type, location: NSPoint(x: frame.midX, y: frame.midY), modifierFlags: [],

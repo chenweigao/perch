@@ -115,3 +115,167 @@ struct ComposerDeliveryHint: View {
         }
     }
 }
+
+@MainActor @Observable final class ComposerGitBranchCache {
+    static let shared = ComposerGitBranchCache()
+    private var branches: [String: String] = [:]
+    @ObservationIgnored private var checked = Set<String>()
+
+    private init() {}
+
+    private func key(hostID: UUID, directory: String) -> String {
+        "\(hostID.uuidString):\(directory)"
+    }
+
+    func branch(hostID: UUID, directory: String) -> String? {
+        guard !directory.isEmpty else { return nil }
+        return branches[key(hostID: hostID, directory: directory)]
+    }
+
+    func record(hostID: UUID, directory: String, branch: String?) {
+        guard !directory.isEmpty else { return }
+        let entryKey = key(hostID: hostID, directory: directory)
+        checked.insert(entryKey)
+        if let branch, !branch.isEmpty {
+            branches[entryKey] = branch
+        } else {
+            branches.removeValue(forKey: entryKey)
+        }
+    }
+
+    func load(host: SSHHost, directory: String) async {
+        #if PERCH_ACCEPTANCE
+        return
+        #else
+        guard !directory.isEmpty else { return }
+        let entryKey = key(hostID: host.id, directory: directory)
+        guard !checked.contains(entryKey) else { return }
+        checked.insert(entryKey)
+        do {
+            let data: Data
+            if host.isLocal {
+                data = try await ProcessRunner.run("/usr/bin/git", ["-C", directory, "rev-parse", "--abbrev-ref", "HEAD"])
+            } else {
+                try SSHCommand.validateDestination(host.destination)
+                let remoteCommand = "git -C \(SSHCommand.quote(directory)) rev-parse --abbrev-ref HEAD 2>/dev/null"
+                data = try await ProcessRunner.run("/usr/bin/ssh", ["-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "--", host.destination, remoteCommand])
+            }
+            guard !Task.isCancelled else { return }
+            let resolved = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+            if !resolved.isEmpty {
+                branches[entryKey] = resolved
+            }
+        } catch {
+            // Non-repository or unreachable directories simply omit the branch badge.
+        }
+        #endif
+    }
+}
+
+/// Third layer below the composer: host, working directory or project, Git branch, and context usage.
+struct ComposerEnvironmentBar: View {
+    @UILocalization private var L
+    let host: SSHHost
+    let provider: String
+    let directory: String
+    let budget: ContextBudget?
+    var reportedAt: Double? = nil
+    var isStale = false
+    var autoCompactHost: UUID? = nil
+    var autoCompactSession: String? = nil
+    var sending = false
+    var saveError: String? = nil
+    var draftLength = 0
+    @State private var presented = false
+    private var branchCache: ComposerGitBranchCache { .shared }
+
+    private var shortDirectory: String {
+        guard !directory.isEmpty else { return "" }
+        let parts = directory.split(separator: "/", omittingEmptySubsequences: true)
+        if parts.count <= 2 { return directory }
+        return parts.suffix(2).joined(separator: "/")
+    }
+
+    var body: some View {
+        let branch = branchCache.branch(hostID: host.id, directory: directory)
+        HStack(spacing: 10) {
+            Button { presented.toggle() } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: host.isLocal ? "desktopcomputer" : "server.rack")
+                        .font(.system(size: WorkbenchTheme.Composer.metadata))
+                    Text(host.name)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    if !shortDirectory.isEmpty {
+                        Text(verbatim: "·").foregroundStyle(.tertiary)
+                        Image(systemName: "folder")
+                            .font(.system(size: WorkbenchTheme.Composer.metadata))
+                        Text(shortDirectory)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                    if let branch, !branch.isEmpty {
+                        Text(verbatim: "·").foregroundStyle(.tertiary)
+                        Image(systemName: "arrow.triangle.branch")
+                            .font(.system(size: WorkbenchTheme.Composer.metadata))
+                        Text(verbatim: branch)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .frame(maxWidth: 140, alignment: .leading)
+                    }
+                }
+                .font(.system(size: WorkbenchTheme.Composer.text))
+                .foregroundStyle(WorkbenchTheme.quiet)
+                .padding(.horizontal, 6)
+                .frame(minHeight: 24)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(WorkbenchDisclosureButtonStyle())
+            .accessibilityLabel("机器")
+            .accessibilityValue([host.name, directory, branch].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
+            .help([host.name, directory, branch].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: "\n"))
+            .popover(isPresented: $presented, arrowEdge: .bottom) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 6) {
+                        Image(systemName: host.isLocal ? "desktopcomputer" : "server.rack")
+                            .foregroundStyle(.secondary)
+                        Text(host.name).font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold))
+                        Text(verbatim: "·").foregroundStyle(.tertiary)
+                        Text(provider).foregroundStyle(.secondary)
+                    }
+                    if !host.isLocal, !host.destination.isEmpty {
+                        Text(host.destination)
+                            .font(.system(size: WorkbenchTheme.Typography.caption, design: .monospaced))
+                            .foregroundStyle(WorkbenchTheme.quiet)
+                            .textSelection(.enabled)
+                    }
+                    if !directory.isEmpty {
+                        Divider()
+                        Text(directory)
+                            .font(.system(size: WorkbenchTheme.Typography.caption, design: .monospaced))
+                            .foregroundStyle(.primary)
+                            .textSelection(.enabled)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if let branch, !branch.isEmpty {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.triangle.branch").foregroundStyle(.secondary)
+                            Text(verbatim: branch)
+                                .font(.system(size: WorkbenchTheme.Typography.caption, design: .monospaced))
+                                .textSelection(.enabled)
+                        }
+                    }
+                }.font(.system(size: WorkbenchTheme.Typography.body)).padding(14).frame(width: 300, alignment: .leading)
+                    .onExitCommand { presented = false }
+            }
+            Spacer(minLength: 8)
+            ComposerDeliveryHint(sending: sending, saveError: saveError, draftLength: draftLength)
+            ContextMeter(budget: budget, reportedAt: reportedAt, isStale: isStale,
+                         autoCompactHost: autoCompactHost, autoCompactSession: autoCompactSession)
+        }
+        .padding(.horizontal, 4)
+        .task(id: "\(host.id.uuidString):\(directory)") {
+            await branchCache.load(host: host, directory: directory)
+        }
+    }
+}

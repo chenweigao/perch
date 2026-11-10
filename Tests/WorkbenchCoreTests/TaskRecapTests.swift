@@ -207,5 +207,51 @@ func checkTaskRecaps() throws {
         precondition(value.taskRecapRevision == nil)
     }
 
-    print("PASS: bounded task Recap input, privacy boundary, request/response contract, stable cache")
+    var sessionCache = TaskRecapCache()
+    let t1 = Date(timeIntervalSince1970: 1_000)
+    let t2 = Date(timeIntervalSince1970: 2_000)
+    sessionCache.store(TaskRecapResult(outcome: "Turn 1 summary", changes: ["Step A"]),
+                       for: "host:kimi:session-1:completed:1", at: t1)
+    sessionCache.store(TaskRecapResult(outcome: "Other session", changes: ["Other"]),
+                       for: "host:kimi:session-10:completed:1", at: t2)
+    precondition(sessionCache.latestEntry(forSession: "host:kimi:session-1")?.result.outcome == "Turn 1 summary",
+                 "Session prefix lookup must not match another session with a longer ID")
+    sessionCache.store(TaskRecapResult(outcome: "Turn 2 summary", changes: ["Step A", "Step B"]),
+                       for: "host:kimi:session-1:completed:2", at: t2)
+    precondition(sessionCache.latestEntry(forSession: "host:kimi:session-1")?.result.outcome == "Turn 2 summary" &&
+                 sessionCache.latestEntry(forSession: "host:kimi:session-1")?.createdAt == t2)
+
+    let emptySnapshot = TaskContextSnapshot(title: "Title alone", directory: "/fixture", busy: false, messages: [])
+    precondition(SessionOverview.derive(snapshot: emptySnapshot) == nil,
+                 "An empty session must show the explicit empty state rather than echoing its title")
+    let singleMessageSnapshot = TaskContextSnapshot(
+        title: "Single message", directory: "/fixture", busy: false,
+        messages: try decode([user(0), answer(0)]))
+    precondition(SessionOverview.derive(snapshot: singleMessageSnapshot) == nil,
+                 "A single plain turn without structured progress or model recap must not fake a completed overview")
+
+    let structuredSnapshot = TaskContextSnapshot(
+        title: "Structured session", directory: "/fixture", busy: true,
+        requests: [TaskContextRequest(id: "req-1", title: "Approve deployment?")],
+        failure: "Test suite timed out",
+        messages: sensitiveMessages)
+    let derived = SessionOverview.derive(snapshot: structuredSnapshot)!
+    precondition(derived.goal == "Implement a recap")
+    precondition(derived.completed.contains("Add Recap UI") && !derived.completed.contains("Validate privacy boundary"),
+                 "In-progress or pending plan steps must never be reported as completed")
+    precondition(derived.inProgress.contains("Validate privacy boundary"))
+    precondition(derived.blockers.contains("Approve deployment?") && derived.blockers.contains("Test suite timed out"))
+    precondition(derived.isUpdating)
+
+    let retainedOverview = SessionOverview.derive(
+        snapshot: structuredSnapshot,
+        recapEntry: sessionCache.latestEntry(forSession: "host:kimi:session-1"),
+        isGeneratingRecap: true)!
+    precondition(retainedOverview.isModelGenerated && retainedOverview.isUpdating &&
+                 retainedOverview.goal == "Turn 2 summary" &&
+                 retainedOverview.completed == ["Step A", "Step B"] &&
+                 retainedOverview.blockers.contains("Approve deployment?"),
+                 "Updating overview must retain the previous model recap while surfacing live blockers")
+
+    print("PASS: bounded task Recap input, privacy boundary, request/response contract, stable cache, and session overview")
 }

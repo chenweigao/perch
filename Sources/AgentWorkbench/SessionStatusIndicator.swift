@@ -31,12 +31,13 @@ struct SidebarAgentIndicator: View {
 /// the row itself (dimmed, with a trailing symbol); other states show the agent
 /// mark alone.
 private struct SidebarStatusBadge: View {
-    private enum Kind { case attention, review }
+    private enum Kind { case waiting, failed, review }
     private let kind: Kind
 
     init?(_ item: WorkspaceSession) {
         guard item.online else { return nil }
-        if item.section == .attention { kind = .attention }
+        if item.turn.state == .failed { kind = .failed }
+        else if item.section == .attention { kind = .waiting }
         else if item.section == .review { kind = .review }
         else { return nil }
     }
@@ -44,8 +45,10 @@ private struct SidebarStatusBadge: View {
     var body: some View {
         Group {
             switch kind {
-            case .attention:
+            case .waiting:
                 Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.orange)
+            case .failed:
+                Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.red)
             case .review:
                 Circle().fill(.blue).frame(width: SidebarMetrics.badgeDotSize, height: SidebarMetrics.badgeDotSize)
             }
