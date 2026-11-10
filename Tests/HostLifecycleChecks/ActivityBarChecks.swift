@@ -490,6 +490,14 @@ private struct ActivityBarCheckFixture: View {
     func opacities(_ view: ConversationLiveMarkView) -> [Float] {
         (view.layer?.sublayers ?? []).map { $0.presentation()?.opacity ?? $0.opacity }
     }
+    func accessibleStatus() -> String {
+        taskPanelElements(window).filter { $0.identifier == "conversation-live-status" }.flatMap { element in
+            ["accessibilityLabel", "accessibilityValue"].compactMap { key -> String? in
+                guard element.node.responds(to: NSSelectorFromString(key)) else { return nil }
+                return element.node.value(forKey: key) as? String
+            }
+        }.joined(separator: " · ")
+    }
     let output = URL(fileURLWithPath: ProcessInfo.processInfo.environment["PERCH_DESIGN_CAPTURES"] ?? "/private/tmp/perch-live-status")
     try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
     for (suffix, width, appearance) in [("light", 700.0, NSAppearance.Name.aqua), ("narrow-dark", 340.0, .darkAqua)] {
@@ -497,8 +505,8 @@ private struct ActivityBarCheckFixture: View {
         for (phase, label) in [(ConversationRunPhase.thinking, "思考中"), (.executing, "执行中"), (.running, "运行中"), (.waitingForConfirmation, "等待你确认"), (.waitingForAnswer, "等待你回答"), (.stopping, "正在停止")] {
             host.rootView = root(phase)
             try await settle()
-            precondition(taskPanelLabel(window, "conversation-live-status")?.contains(label) == true,
-                         "The live footer speaks only its current phase: \(label)")
+            precondition(accessibleStatus().contains(label),
+                         "The live footer speaks only its current phase: \(label); actual \(accessibleStatus()); ids \(taskPanelIdentifiers(window))")
             precondition(abs(measuredHeight - ConversationLiveStatus.height) < 0.5,
                          "Every live phase shares one footer height")
             let icon = mark(host)!
@@ -516,11 +524,11 @@ private struct ActivityBarCheckFixture: View {
     let before = opacities(icon)
     try await Task.sleep(for: .milliseconds(420))
     let after = opacities(icon)
-    precondition(zip(before, after).contains { abs($0 - $1) > 0.1 }, "The thinking mark visibly breathes without changing status text")
+    precondition(zip(before, after).contains { abs($0.0 - $0.1) > 0.1 }, "The thinking mark visibly breathes without changing status text")
     host.rootView = root(.thinking, reduced: true); try await settle()
     precondition((mark(host)!.layer?.sublayers ?? []).allSatisfy { $0.animationKeys()?.isEmpty != false }, "Reduce Motion stops the same mounted mark")
     host.rootView = root(.thinking, locale: "en"); try await settle()
-    precondition(taskPanelLabel(window, "conversation-live-status")?.contains("Thinking") == true, "An unchanged phase follows the app language")
+    precondition(accessibleStatus().contains("Thinking"), "An unchanged phase follows the app language: \(accessibleStatus())")
     window.orderOut(nil); try await settle()
     precondition((mark(host)!.layer?.sublayers ?? []).allSatisfy { $0.animationKeys()?.isEmpty != false }, "An invisible window pauses the mark")
     window.makeKeyAndOrderFront(nil)
