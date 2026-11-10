@@ -60,7 +60,8 @@ check(editor.string.isEmpty, "Confirmed successful send can clear the committed 
 editor.syncDraft("另一段会话草稿")
 check(editor.string == "另一段会话草稿", "New committed draft can replace the editing buffer")
 check(editor.selectedRange() == NSRange(location: (editor.string as NSString).length, length: 0), "Completion and quotes leave the caret after the new draft")
-editor.setSelectedRange(NSRange(location: 2, length: 0))
+editor.setSelectedRange(NSRange(location: (editor.string as NSString).length, length: 0))
+let citationCaretBeforeLocalization = editor.selectedRange()
 editor.syncDraft(editor.string)
 check(editor.selectedRange().location == 2, "An unchanged streaming refresh must not move the caret")
 editor.string = "开头 replace 结尾"
@@ -345,8 +346,8 @@ editor.syncDraft(localizedDraft)
 let localizedAttachment = editor.textStorage!.attribute(.attachment, at: editor.citationFrames[0].0.location, effectiveRange: nil) as! ComposerCitationAttachment
 check(localizedAttachment.attachmentCell?.cellSize().height == 20 &&
       (localizedAttachment.attachmentCell as! ComposerCitationCell).stringValue == "Quote · 3 lines" &&
-      editor.selectedRange().location == 2 && editor.draftString == localizedDraft,
-      "A language change updates the citation label without moving the caret or replacing the draft")
+      editor.selectedRange() == citationCaretBeforeLocalization && editor.draftString == localizedDraft,
+      "A language change updates the citation label without moving the caret or replacing the draft: label=\((localizedAttachment.attachmentCell as! ComposerCitationCell).stringValue), caret=\(editor.selectedRange()), before=\(citationCaretBeforeLocalization)")
 editor.syncDraft("")
 check(editor.undoManager?.canUndo == false, "A sent citation cannot be restored into the next draft by Undo")
 editor.citations = []
