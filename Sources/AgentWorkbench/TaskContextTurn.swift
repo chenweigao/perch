@@ -127,29 +127,31 @@ struct TaskSessionOverviewSection: View {
             } else if let failureMessage {
                 VStack(alignment: .leading, spacing: 8) {
                     cardTopBar(nil)
-                    Label("会话概述生成失败", systemImage: "exclamationmark.triangle")
-                        .font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
-                        .foregroundStyle(.orange)
-                    Text(failureMessage)
-                        .font(.system(size: WorkbenchTheme.Typography.caption))
-                        .foregroundStyle(WorkbenchTheme.quiet)
-                        .textSelection(.enabled)
-                        .fixedSize(horizontal: false, vertical: true)
-                    HStack(spacing: 12) {
-                        Button("重试") { triggerGenerate(force: true) }
-                            .buttonStyle(.borderless)
-                            .fontWeight(.medium)
-                        Button("配置活动叙事与 Recap…") { showSettings = true }
-                            .buttonStyle(.borderless)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("会话概述生成失败", systemImage: "exclamationmark.triangle")
+                            .font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
+                            .foregroundStyle(.orange)
+                        Text(failureMessage)
+                            .font(.system(size: WorkbenchTheme.Typography.caption))
                             .foregroundStyle(WorkbenchTheme.quiet)
-                    }.font(.system(size: WorkbenchTheme.Typography.caption))
+                            .textSelection(.enabled)
+                            .fixedSize(horizontal: false, vertical: true)
+                        HStack(spacing: 12) {
+                            Button("重试") { triggerGenerate(force: true) }
+                                .buttonStyle(.borderless)
+                                .fontWeight(.medium)
+                            Button("配置活动叙事与 Recap…") { showSettings = true }
+                                .buttonStyle(.borderless)
+                                .foregroundStyle(WorkbenchTheme.quiet)
+                        }.font(.system(size: WorkbenchTheme.Typography.caption))
+                    }
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("task-overview-failed")
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
                 .background(WorkbenchTheme.Fill.surface,
                             in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous))
-                .accessibilityElement(children: .contain)
-                .accessibilityIdentifier("task-overview-failed")
             } else {
                 emptyCard
             }
@@ -376,34 +378,36 @@ struct TaskSessionOverviewSection: View {
     private var emptyCard: some View {
         VStack(alignment: .leading, spacing: 6) {
             cardTopBar(nil)
-            Text("暂无会话概述")
-                .font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
-                .foregroundStyle(WorkbenchTheme.quiet)
-            Text(snapshot.messages.isEmpty
-                 ? "开始对话并产生进展后，这里会汇总目标、已完成进展、当前状态与下一步。"
-                 : "尚未生成可靠摘要，不会仅用标题或单条消息充当概述。")
-                .font(.system(size: WorkbenchTheme.Typography.caption))
-                .foregroundStyle(WorkbenchTheme.quiet)
-                .fixedSize(horizontal: false, vertical: true)
-            if !snapshot.messages.isEmpty {
-                HStack(spacing: 12) {
-                    Button(configured ? "生成 Recap" : "配置活动叙事与 Recap…") {
-                        if configured { triggerGenerate(force: true) }
-                        else { showSettings = true }
-                    }
-                    .buttonStyle(.borderless)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("暂无会话概述")
                     .font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
-                    .foregroundStyle(WorkbenchTheme.accent)
-                    .disabled(isGenerating || snapshot.busy)
-                }.padding(.top, 2)
+                    .foregroundStyle(WorkbenchTheme.quiet)
+                Text(snapshot.messages.isEmpty
+                     ? "开始对话并产生进展后，这里会汇总目标、已完成进展、当前状态与下一步。"
+                     : "尚未生成可靠摘要，不会仅用标题或单条消息充当概述。")
+                    .font(.system(size: WorkbenchTheme.Typography.caption))
+                    .foregroundStyle(WorkbenchTheme.quiet)
+                    .fixedSize(horizontal: false, vertical: true)
+                if !snapshot.messages.isEmpty {
+                    HStack(spacing: 12) {
+                        Button(configured ? "生成 Recap" : "配置活动叙事与 Recap…") {
+                            if configured { triggerGenerate(force: true) }
+                            else { showSettings = true }
+                        }
+                        .buttonStyle(.borderless)
+                        .font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
+                        .foregroundStyle(WorkbenchTheme.accent)
+                        .disabled(isGenerating || snapshot.busy)
+                    }.padding(.top, 2)
+                }
             }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("task-overview-empty")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
         .background(WorkbenchTheme.Fill.surface,
                     in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous))
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("task-overview-empty")
     }
 
     private func messageProvider() -> (@MainActor () async throws -> [KimiMessage]) {
