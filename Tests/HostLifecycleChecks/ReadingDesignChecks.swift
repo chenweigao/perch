@@ -122,9 +122,9 @@ struct ReadingDesignFixture: View {
         }
         return view
     }
-    func clickHeader(_ view: NSView, height: CGFloat) {
-        let y = view.isFlipped ? view.bounds.minY + height / 2 : view.bounds.maxY - height / 2
-        let point = view.convert(NSPoint(x: view.bounds.midX, y: y), to: nil)
+    func clickHeader(_ identifier: String) {
+        guard let frame = taskPanelControl(window, identifier) else { preconditionFailure("Missing disclosure control: \(identifier)") }
+        let point = NSPoint(x: frame.midX, y: frame.midY)
         for kind in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
             let event = NSEvent.mouseEvent(with: kind, location: point, modifierFlags: [],
                 timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
@@ -150,9 +150,11 @@ struct ReadingDesignFixture: View {
     precondition(chosen?.0 == "edit-1" && chosen?.1 == "edit-step", "Clicking the visible counts routes the exact historical call: \(String(describing: chosen)), frame \(editButton)")
     let thoughtEntry = ConversationTimelineEntry.make(messages).first { $0.messages.contains { $0.id == "thought" } }!
     let foldID = thoughtEntry.id
-    let fold = mounted(foldID)
-    let foldHeaderHeight = fold.bounds.height
-    clickHeader(fold, height: foldHeaderHeight)
+    let thoughtHeader = "thought-disclosure:reading-design:" + foldID
+    clickHeader(thoughtHeader)
+    try await Task.sleep(for: .milliseconds(250))
+    precondition(!readingTextViews(host).contains { $0.string.contains("PRIVATE_PROCESS_MARKER") }, "The user may collapse the initially expanded thought")
+    clickHeader(thoughtHeader)
     try await Task.sleep(for: .milliseconds(400))
     guard let expanded = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { fatalError("No snapshot") }
     host.cacheDisplay(in: host.bounds, to: expanded)
@@ -170,7 +172,7 @@ struct ReadingDesignFixture: View {
     host.rootView = ReadingDesignFixture(messages: messages, running: false)
     try await Task.sleep(for: .milliseconds(200))
     precondition(readingTextViews(host).contains { $0.string.contains("PRIVATE_PROCESS_MARKER") })
-    clickHeader(mounted(foldID), height: foldHeaderHeight)
+    clickHeader(thoughtHeader)
     try await Task.sleep(for: .milliseconds(400))
     precondition(!readingTextViews(host).contains { $0.string.contains("PRIVATE_PROCESS_MARKER") })
     // The reader's body size re-renders mounted native rows: every size of the
