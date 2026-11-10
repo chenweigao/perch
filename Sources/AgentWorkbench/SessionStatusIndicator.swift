@@ -36,7 +36,7 @@ private struct SidebarStatusBadge: View {
 
     init?(_ item: WorkspaceSession) {
         guard item.online else { return nil }
-        if item.turn?.state == .failed { kind = .failed }
+        if item.turn.state == .failed { kind = .failed }
         else if item.section == .attention { kind = .waiting }
         else if item.section == .review { kind = .review }
         else { return nil }

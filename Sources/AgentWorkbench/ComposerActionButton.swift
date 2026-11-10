@@ -157,8 +157,8 @@ struct ComposerDeliveryHint: View {
                 data = try await ProcessRunner.run("/usr/bin/git", ["-C", directory, "rev-parse", "--abbrev-ref", "HEAD"])
             } else {
                 try SSHCommand.validateDestination(host.destination)
-                let remoteCommand = "git -C \(SSHCommand.shellQuote(directory)) rev-parse --abbrev-ref HEAD 2>/dev/null"
-                data = try await ProcessRunner.run("/usr/bin/ssh", SSHCommand.arguments(destination: host.destination, remoteCommand: remoteCommand))
+                let remoteCommand = "git -C \(SSHCommand.quote(directory)) rev-parse --abbrev-ref HEAD 2>/dev/null"
+                data = try await ProcessRunner.run("/usr/bin/ssh", ["-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "--", host.destination, remoteCommand])
             }
             guard !Task.isCancelled else { return }
             let resolved = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)

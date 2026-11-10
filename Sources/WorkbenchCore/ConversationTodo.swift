@@ -1,8 +1,8 @@
 import Foundation
 
 /// The installed Kimi TodoList tool replaces the list only after a successful result.
-public struct ConversationTodo: Identifiable, Equatable {
-    public enum Status: String { case pending, inProgress = "in_progress", done }
+public struct ConversationTodo: Identifiable, Equatable, Sendable {
+    public enum Status: String, Sendable { case pending, inProgress = "in_progress", done }
     public let id: Int
     public let title: String
     public let status: Status
