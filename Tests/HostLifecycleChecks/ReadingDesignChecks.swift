@@ -48,19 +48,29 @@ struct ReadingDesignFixture: View {
     // An expanded process can extend beyond the viewport. Bring the actual
     // control into view before sending mouse events, just as a reader would.
     if let host = window.contentView, let scroll = readingScrollView(host), let document = scroll.documentView {
-        let target = document.convert(frame, from: nil)
-        if !scroll.documentVisibleRect.contains(target) {
-            let y = min(max(0, target.minY - 40), max(0, document.bounds.height - scroll.contentView.bounds.height))
-            scroll.contentView.scroll(to: NSPoint(x: 0, y: y))
-            scroll.reflectScrolledClipView(scroll.contentView)
-            NotificationCenter.default.post(name: NSScrollView.didLiveScrollNotification, object: scroll)
-            try await Task.sleep(for: .milliseconds(150))
+        var ready = false
+        for _ in 0..<20 {
+            let target = document.convert(frame, from: nil)
+            if !scroll.documentVisibleRect.contains(target) {
+                let y = min(max(0, target.minY - 40), max(0, document.bounds.height - scroll.contentView.bounds.height))
+                scroll.contentView.scroll(to: NSPoint(x: 0, y: y))
+                scroll.reflectScrolledClipView(scroll.contentView)
+                NotificationCenter.default.post(name: NSScrollView.didLiveScrollNotification, object: scroll)
+            }
+            try await Task.sleep(for: .milliseconds(50))
             host.layoutSubtreeIfNeeded()
             guard let visible = taskPanelControl(window, identifier) else {
                 preconditionFailure("Disclosure disappeared while scrolling to it: \(identifier)")
             }
+            let stable = abs(visible.minY - frame.minY) < 0.5 && abs(visible.minX - frame.minX) < 0.5
             frame = visible
+            if stable && scroll.documentVisibleRect.contains(document.convert(frame, from: nil)) { ready = true; break }
         }
+        precondition(ready, "Disclosure must be visible and settled before clicking: \(identifier), frame \(frame), viewport \(scroll.documentVisibleRect)")
+    }
+    if ProcessInfo.processInfo.environment["PERCH_READING_CLICK_DEBUG"] == "1" {
+        let point = window.contentView!.convert(NSPoint(x: frame.midX, y: frame.midY), from: nil)
+        print("INFO: mouse click \(identifier), frame \(frame), hit \(String(describing: window.contentView!.hitTest(point)))")
     }
     for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
         window.sendEvent(NSEvent.mouseEvent(with: type, location: NSPoint(x: frame.midX, y: frame.midY),
@@ -578,6 +588,8 @@ private struct ReadingReviewControls: View {
     precondition(taskPanelControl(window, "tool-call:page-tool-24") != nil, "A fresh session also defaults to the full expanded stage")
     try await readingClickControl(window, "activity-phase:" + stage)
     try await settle()
+    precondition(ConversationReadingMemory.shared.expansions["stage-page-B:" + stage + ":expanded"] == false,
+                 "The actual stage button must remember session B's collapse: \(ConversationReadingMemory.shared.expansions.filter { $0.key.hasPrefix("stage-page-B:") })")
     precondition(taskPanelControl(window, "tool-call:page-tool-24") == nil, "The user may collapse that session's stage")
     host.rootView = ReadingDesignFixture(messages: try records(27, done: true), session: "stage-page-A", folds: true)
     try await settle()
