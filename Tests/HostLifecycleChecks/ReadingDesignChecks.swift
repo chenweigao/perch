@@ -70,7 +70,8 @@ struct ReadingDesignFixture: View {
     }
     if ProcessInfo.processInfo.environment["PERCH_READING_CLICK_DEBUG"] == "1" {
         let point = window.contentView!.convert(NSPoint(x: frame.midX, y: frame.midY), from: nil)
-        print("INFO: mouse click \(identifier), frame \(frame), hit \(String(describing: window.contentView!.hitTest(point)))")
+        let trace = "INFO: mouse click \(identifier), frame \(frame), hit \(String(describing: window.contentView!.hitTest(point)))\n"
+        FileHandle.standardError.write(Data(trace.utf8))
     }
     for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
         window.sendEvent(NSEvent.mouseEvent(with: type, location: NSPoint(x: frame.midX, y: frame.midY),
@@ -620,6 +621,15 @@ private struct ReadingReviewControls: View {
                  "The last failed call is present in the continuous stage")
     try await readingClickControl(window, "activity-phase:" + stage)
     try await settle()
-    precondition(taskPanelControl(window, "tool-call:page-tool-25") != nil && taskPanelControl(window, "tool-call:page-tool-24") == nil)
+    precondition(ConversationReadingMemory.shared.expansions["stage-page-C:" + stage + ":expanded"] == false,
+                 "The live failure stage must remember the actual collapse: \(ConversationReadingMemory.shared.expansions.filter { $0.key.hasPrefix("stage-page-C:") })")
+    for _ in 0..<40 where taskPanelControl(window, "tool-call:page-tool-24") != nil {
+        try await Task.sleep(for: .milliseconds(50))
+        host.layoutSubtreeIfNeeded()
+    }
+    let failureVisible = taskPanelControl(window, "tool-call:page-tool-25") != nil
+    let previousVisible = taskPanelControl(window, "tool-call:page-tool-24") != nil
+    precondition(failureVisible && !previousVisible,
+                 "Collapsing the live stage preserves only its last failed call: failure \(failureVisible), previous \(previousVisible)")
     print("PASS: native continuous full stage, default expansion, exact find, failure visibility, collapse/append/completion/session-return continuity")
 }
