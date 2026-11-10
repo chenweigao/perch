@@ -23,6 +23,7 @@ struct ReadingDesignFixture: View {
                         hostID: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!, kind: .claude, sessionID: "reading-design"))
             }
         }.background(Color(nsColor: .windowBackgroundColor))
+            .environment(\.locale, Locale(identifier: "zh-Hans"))
     }
 }
 @MainActor private func readingTextViews(_ view: NSView) -> [NSTextView] {
@@ -602,8 +603,10 @@ private struct ReadingReviewControls: View {
     // Uniform fold: the edit receipt and the failed call sit inside the fold,
     // whose header carries the call count and the thinking's first line.
     precondition(taskPanelControl(window, "edit-step:lifecycle-edit") == nil, "New untouched history folds start closed")
-    precondition(taskPanelLabel(window, "completed-process:activity:tool:lifecycle-edit")?.contains(L("2 个工具")) == true,
-                 "The second fold (edit + check) carries the tool count")
+    let secondFoldLabel = taskPanelLabel(window, "completed-process:activity:tool:lifecycle-edit")
+    let expectedToolCount = L("\(2) 个工具", locale: Locale(identifier: "zh-Hans"))
+    precondition(secondFoldLabel?.contains(expectedToolCount) == true,
+                 "The second fold (edit + check) carries the tool count \(expectedToolCount): \(String(describing: secondFoldLabel))")
     try await readingClickControl(window, "completed-process:activity:tool:lifecycle-edit")
     try await settle()
     precondition(taskPanelControl(window, "edit-step:lifecycle-edit") != nil && taskPanelControl(window, "tool-call:lifecycle-check") != nil)
