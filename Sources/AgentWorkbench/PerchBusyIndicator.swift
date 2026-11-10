@@ -64,7 +64,8 @@ final class ConversationLiveMarkView: NSView {
             for name in [NSWindow.didChangeOcclusionStateNotification, NSWindow.didMiniaturizeNotification,
                          NSWindow.didDeminiaturizeNotification, NSWindow.didResignKeyNotification, NSWindow.didResignMainNotification] {
                 observers.append(NotificationCenter.default.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
-                    self?.refreshMotion()
+                    // Resign notifications precede the final orderOut visibility.
+                    DispatchQueue.main.async { [weak self] in self?.refreshMotion() }
                 })
             }
         }
