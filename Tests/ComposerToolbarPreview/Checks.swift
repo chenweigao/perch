@@ -24,8 +24,17 @@ struct ToolbarButtonProbe: NSViewRepresentable {
 private func views(_ root: NSView) -> [NSView] { [root] + root.subviews.flatMap(views) }
 
 @MainActor
-private func click(_ point: NSPoint, in window: NSWindow) {
+private func focus(_ window: NSWindow) {
+    // A physical click activates its app; a synthetic window event does not.
+    // Never show a dismissed popover just to make an assertion pass.
+    guard window.isVisible else { return }
+    NSApp.activate(ignoringOtherApps: true)
     window.makeKeyAndOrderFront(nil)
+}
+
+@MainActor
+private func click(_ point: NSPoint, in window: NSWindow) {
+    focus(window)
     for kind in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
         let event = NSEvent.mouseEvent(with: kind, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
                                       windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!
@@ -35,7 +44,11 @@ private func click(_ point: NSPoint, in window: NSWindow) {
 
 @MainActor
 private func expect(_ condition: Bool, _ message: String) throws {
-    if !condition { throw NSError(domain: "ToolbarChecks", code: 1, userInfo: [NSLocalizedDescriptionKey: message]) }
+    if !condition {
+        print("Window evidence", "active", NSApp.isActive, "key", NSApp.keyWindow?.windowNumber as Any,
+              "windows", NSApp.windows.map { "\($0.windowNumber):visible=\($0.isVisible):key=\($0.isKeyWindow)" })
+        throw NSError(domain: "ToolbarChecks", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
+    }
 }
 
 @MainActor
@@ -77,7 +90,7 @@ private func expectDismissed(_ panel: NSWindow, _ message: String) async throws 
 
 @MainActor
 private func closePanel(_ panel: NSWindow) async throws {
-    panel.makeKeyAndOrderFront(nil)
+    focus(panel)
     let event = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [],
                                 timestamp: ProcessInfo.processInfo.systemUptime,
                                 windowNumber: panel.windowNumber, context: nil,
@@ -91,11 +104,14 @@ private func closePanel(_ panel: NSWindow) async throws {
 
 @MainActor
 private func chooseModel(_ query: String, in panel: NSWindow) async throws {
+    focus(panel)
     let field = views(panel.contentView!).compactMap { $0 as? NSTextField }.first(where: \.isEditable)!
     field.selectText(nil)
     (field.currentEditor() as! NSTextView).insertText(query, replacementRange: NSRange(location: NSNotFound, length: 0))
     try await pause()
     for (characters, code) in [("\u{f701}", UInt16(125)), ("\r", UInt16(36))] {
+        try expect(panel.isVisible, "The model panel must remain open before a selection key")
+        focus(panel)
         let event = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [],
                                     timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: panel.windowNumber,
                                     context: nil, characters: characters, charactersIgnoringModifiers: characters,
@@ -109,12 +125,18 @@ private func chooseModel(_ query: String, in panel: NSWindow) async throws {
 
 @MainActor
 private func chooseThinking(_ index: Int, in panel: NSWindow) async throws {
+    focus(panel)
     guard let slider = views(panel.contentView!).compactMap({ $0 as? NSSlider }).first else {
         throw NSError(domain: "Missing reasoning slider", code: 1)
     }
     let tick = slider.rectOfTickMark(at: index)
     let bar = (slider.cell as! NSSliderCell).barRect(flipped: slider.isFlipped)
-    let point = slider.convert(NSPoint(x: tick.midX, y: bar.midY), to: nil)
+    // AppKit places endpoint tick centers at x=0 and x=width. A hit on the
+    // boundary can miss the hosted slider after coordinate rounding. Use the
+    // interior of the same endpoint segment, as a reader clicking its label does.
+    let inset = max(1, slider.knobThickness / 2)
+    let x = min(slider.bounds.maxX - inset, max(slider.bounds.minX + inset, tick.midX))
+    let point = slider.convert(NSPoint(x: x, y: bar.midY), to: nil)
     let before = slider.doubleValue
     // Native sliders run a tracking loop on mouse-down; queue the release first.
     let up = NSEvent.mouseEvent(with: .leftMouseUp, location: point, modifierFlags: [],
@@ -158,6 +180,12 @@ func runToolbarChecks() async {
             try await Task.sleep(for: .milliseconds(100))
         }
         guard let main = ToolbarProbe.controls["model"]?.window else { throw NSError(domain: "No preview window", code: 1) }
+        focus(main)
+        for _ in 0..<40 {
+            if NSApp.isActive && main.isKeyWindow { break }
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        try expect(NSApp.isActive && main.isKeyWindow, "The preview must have keyboard focus before testing controls")
         try await pause()
         try checkLayout("wide Chinese")
         let panel = try await openPanel(main)
