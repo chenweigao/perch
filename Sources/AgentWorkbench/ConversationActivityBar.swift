@@ -29,7 +29,7 @@ struct ConversationLiveStatus: View, Equatable {
                 ConversationLiveMark(phase: phase, animated: !reduceMotion)
                     .frame(width: 16, height: 16).accessibilityHidden(true)
                 Text(verbatim: L(key: phase.titleKey))
-                    .font(.system(size: ReplyStyle.secondarySize))
+                    .font(.system(size: WorkbenchTheme.Reading.secondarySize))
                     .foregroundStyle(phase.needsInput ? Color.orange : WorkbenchTheme.quiet)
                     .lineLimit(1)
                     .contentTransition(.opacity)
