@@ -338,10 +338,19 @@ let firstCitationFrame = editor.citationFrames[0].1
 check(editor.activateCitation(at: NSPoint(x: firstCitationFrame.maxX - 8, y: firstCitationFrame.midY)), "The citation remove target is clickable")
 check(editor.citationFrames.count == 1 && editor.draftSelection.location == canonicalCaret - (citationToken as NSString).length,
       "Removal preserves the editing caret and the other citation")
+editor.setSelectedRange(NSRange(location: 2, length: 0))
+let localizedDraft = editor.draftString
+editor.citations = [ComposerCitation(token: citationToken, label: "Quote · 3 lines", missingMessage: "missing citation", load: { citationContent })]
+editor.syncDraft(localizedDraft)
+let localizedAttachment = editor.textStorage!.attribute(.attachment, at: editor.citationFrames[0].0.location, effectiveRange: nil) as! ComposerCitationAttachment
+check(localizedAttachment.attachmentCell?.cellSize().height == 20 &&
+      (localizedAttachment.attachmentCell as! ComposerCitationCell).stringValue == "Quote · 3 lines" &&
+      editor.selectedRange().location == 2 && editor.draftString == localizedDraft,
+      "A language change updates the citation label without moving the caret or replacing the draft")
 editor.syncDraft("")
 check(editor.undoManager?.canUndo == false, "A sent citation cannot be restored into the next draft by Undo")
 editor.citations = []
-print("Citation checks passed: inline attachment, full-context copy, atomic delete/undo/redo, expansion, IME and caret mapping")
+print("Citation checks passed: inline attachment, full-context copy, atomic delete/undo/redo, expansion, IME, localization and caret mapping")
 if let path = ProcessInfo.processInfo.environment["COMPOSER_CHECK_RESULT"] {
     try Data("{\"status\":\"passed\"}\n".utf8).write(to: URL(fileURLWithPath: path), options: .atomic)
 }

@@ -211,7 +211,9 @@ final class DraftTextView: NSTextView {
     var citations: [ComposerCitation] = []
 
     func syncDraft(_ value: String, selection: NSRange? = nil) {
-        guard !hasMarkedText(), draftString != value else { return }
+        guard !hasMarkedText() else { return }
+        refreshCitationLabels()
+        guard draftString != value else { return }
         textStorage?.setAttributedString(renderDraft(value))
         typingAttributes = [.font: font ?? NSFont.systemFont(ofSize: WorkbenchTheme.Reading.bodySize), .foregroundColor: NSColor.labelColor]
         updateCitationWidths()

@@ -10,7 +10,7 @@ struct ComposerCitation {
 }
 
 final class ComposerCitationAttachment: NSTextAttachment {
-    let citation: ComposerCitation
+    var citation: ComposerCitation
     init(_ citation: ComposerCitation) {
         self.citation = citation
         super.init(data: nil, ofType: nil)
@@ -131,6 +131,18 @@ extension DraftTextView {
             guard let cell = attachment.attachmentCell as? ComposerCitationCell, cell.maximumWidth != width else { continue }
             cell.maximumWidth = width
             layoutManager?.invalidateLayout(forCharacterRange: range, actualCharacterRange: nil)
+        }
+    }
+
+    func refreshCitationLabels() {
+        for (attachment, range) in citationRuns {
+            guard let current = citations.first(where: { $0.token == attachment.citation.token }),
+                  let cell = attachment.attachmentCell as? ComposerCitationCell else { continue }
+            attachment.citation = current
+            guard cell.stringValue != current.label else { continue }
+            cell.stringValue = current.label
+            layoutManager?.invalidateLayout(forCharacterRange: range, actualCharacterRange: nil)
+            needsDisplay = true
         }
     }
 
