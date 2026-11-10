@@ -22,7 +22,7 @@ struct ActivityNarrativeHistoryView: View {
     }
 }
 
-/// Process records keep source order inside one compact disclosure. Active and
+/// Process records keep source order inside an initially expanded disclosure. Active and
 /// uncertain tools remain visible even when the stage is collapsed.
 struct KimiActivityView: View {
     @Environment(\.conversationMemoryKey) private var memoryKey
@@ -33,23 +33,9 @@ struct KimiActivityView: View {
     /// locale re-runs them when the language changes.
     @Environment(\.locale) private var locale
     @UILocalization private var L
-    @RememberedExpansion("expanded") private var toolExpanded
-    @RememberedExpansion("thought") private var thoughtExpanded
+    @RememberedExpansion("expanded", initial: true) private var toolExpanded
+    @RememberedExpansion("thought", initial: true) private var thoughtExpanded
     @Environment(\.conversationDisclosureWillChange) private var disclosureWillChange
-    @State private var pageRevision = 0
-    private static let pageSize = 24
-    private var page: ConversationProcessPage {
-        _ = pageRevision
-        return ConversationProcessPage(ids: entry.processPartIDs,
-            anchor: ConversationReadingMemory.shared.processPages[memoryKey + ":stage"], pageSize: Self.pageSize)
-    }
-    private func changePage(_ offset: Int) {
-        let start = page.range.lowerBound + offset * Self.pageSize
-        guard entry.messages.indices.contains(start) else { return }
-        disclosureWillChange()
-        ConversationReadingMemory.shared.processPages[memoryKey + ":stage"] = entry.processPartIDs[start]
-        pageRevision += 1
-    }
     private var expansion: Binding<Bool> {
         entry.messages.first?.content.first?.type == "thinking" ? $thoughtExpanded : $toolExpanded
     }
@@ -63,11 +49,17 @@ struct KimiActivityView: View {
     var planProgress: TurnStatus.Progress? = nil
     var reduceMotionOverride: Bool? = nil
     private var reduceMotion: Bool { reduceMotionOverride ?? (systemReduceMotion || conversationReduceMotion) }
+    private func stageStatus(_ tools: [VisibleTool]) -> VisibleTool.Status {
+        let priorities: [VisibleTool.Status] = [.failed, .running, .awaitingApproval, .disconnected, .missingResult]
+        for state in priorities {
+            if tools.contains(where: { $0.status == state }) { return state }
+        }
+        return .succeeded
+    }
 
     var body: some View {
         let items = entry.messages.flatMap(\.content).compactMap { tools[$0.toolCallId ?? ""] }
         let expanded = expansion.wrappedValue
-        let page = page
         let partIDs = entry.processPartIDs
         #if TRANSCRIPT_CHECKS
         let _ = NavigationRenderMetrics.count("activity_row_body")
@@ -105,7 +97,6 @@ struct KimiActivityView: View {
                 HStack(spacing: 8) {
                     DisclosureGroup(isExpanded: expansion) { EmptyView() } label: {
                         HStack(spacing: 6) {
-                            if isLive { PerchBusyIndicator(size: 11) }
                             // PI tool rows carry the kind's leading glyph; the
                             // name carries the wording.
                             Image(systemName: ToolPresentation.kindIcon(items.first?.name ?? ""))
@@ -115,6 +106,9 @@ struct KimiActivityView: View {
                             Text(verbatim: title)
                                 .lineLimit(1).truncationMode(.middle).fixedSize()
                                 .help(Text(verbatim: title))
+                            if !items.isEmpty {
+                                ProcessStatusDot(status: stageStatus(items))
+                            }
                             if let rowSummary {
                                 Text(verbatim: "·").fixedSize()
                                 Text(verbatim: rowSummary.text)
@@ -134,23 +128,8 @@ struct KimiActivityView: View {
                         .padding(.leading, ReplyStyle.Process.nestedIndent).padding(.top, 4)
                 }
             }
-            WorkbenchDisclosureContent(expanded: expanded && page.count > 1) {
-                HStack(spacing: 12) {
-                    Button("上一页") { changePage(-1) }.disabled(page.number == 1)
-                        .accessibilityIdentifier("stage-previous-page:" + entry.id)
-                    Text(verbatim: L("第 \(page.number) / \(page.count) 页")).monospacedDigit()
-                    Button("下一页") { changePage(1) }.disabled(page.number == page.count)
-                        .accessibilityIdentifier("stage-next-page:" + entry.id)
-                }.buttonStyle(.borderless).font(.system(size: ReplyStyle.captionSize))
-                    .padding(.leading, ReplyStyle.Process.nestedIndent).padding(.top, 4)
-            }
             let mergedRanges = Self.mergedReadRangesByPath(items)
-            ForEach(entry.messages.indices.filter { index in
-                if page.range.contains(index) { return true }
-                guard edit == nil, let id = entry.messages[index].content.first?.toolCallId, let tool = tools[id] else { return false }
-                return ToolPresentation.showsResultOutsideStage(tool, isLive: isLive,
-                    lastPartToolID: entry.messages.last?.content.last?.toolCallId)
-            }.map { (id: partIDs[$0], index: $0) }, id: \.id) { part in
+            ForEach(entry.messages.indices.map { (id: partIDs[$0], index: $0) }, id: \.id) { part in
                 let index = part.index
                 let message = entry.messages[index]
                 if let id = message.content.first?.toolCallId, let tool = tools[id] {
@@ -169,6 +148,7 @@ struct KimiActivityView: View {
                         Group {
                             if message.content.first?.type == "thinking" {
                                 ThoughtOutput(messages: [message], finished: !isLive, embedded: true)
+                                    .environment(\.conversationMemoryKey, memoryKey + ":thought:" + message.id)
                             } else {
                                 KimiMessageView(message: message, tools: tools, api: api, sessionId: sessionId)
                                     .environment(\.conversationMemoryKey, memoryKey + ":part:\(index)")
@@ -333,7 +313,7 @@ struct KimiToolCard: View {
                     Spacer(minLength: 0)
                     // PI's status cluster: spinner while running, a red exit-code
                     // capsule on failure, a quiet green outcome dot once settled.
-                    if tool.status == .running { PerchBusyIndicator(size: 11) }
+                    if tool.status == .running { ProcessStatusDot(status: .running) }
                     if let slowLabel {
                         Text(verbatim: slowLabel)
                             .font(.system(size: ReplyStyle.captionSize, design: .monospaced))
@@ -353,7 +333,7 @@ struct KimiToolCard: View {
                             .help(Text("展开查看失败记录"))
                     } else if tool.status == .succeeded || tool.status == .returned {
                         HStack(spacing: 4) {
-                            Circle().fill(Color(nsColor: .systemGreen)).frame(width: 5, height: 5)
+                            ProcessStatusDot(status: tool.status)
                             Text(L("已完成")).font(.system(size: ReplyStyle.captionSize))
                         }.fixedSize()
                     }

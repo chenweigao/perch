@@ -204,7 +204,7 @@ struct ReadingDesignFixture: View {
     precondition((fallbackHeading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize == 21)
     try await checkPhaseReadingWindow()
     try await checkReadingLifecycleWindow()
-    try await checkReadingStagePages()
+    try await checkReadingStageContinuity()
     try await checkReadingContinuityReview()
     print("PASS: reading design wide/narrow/dark, collapsed thoughts, retained edit steps, expansion continuity, complete code, selectable text and native/fallback heading parity; snapshots /private/tmp/perch-reading-design")
 }
@@ -432,7 +432,10 @@ private struct ReadingReviewControls: View {
         }
     }
     try await settle()
-    precondition(taskPanelControl(window, "live-thinking-summary") != nil, "A public summary is visible before any tool starts")
+    precondition(readingTextViews(host).contains { $0.string.contains("PRIVATE_LIFECYCLE_REASONING") }, "Thinking defaults expanded before any tool starts")
+    click("thought-disclosure:lifecycle-A:thinking:lifecycle-summary:0")
+    try await settle()
+    precondition(taskPanelControl(window, "live-thinking-summary") != nil, "A public summary stays available when the user collapses thinking")
     precondition(!readingTextViews(host).contains { $0.string.contains("PRIVATE_LIFECYCLE_REASONING") })
     click("thought-disclosure:lifecycle-A:thinking:lifecycle-summary:0")
     try await settle()
@@ -454,9 +457,10 @@ private struct ReadingReviewControls: View {
     try snapshot("lifecycle-running")
     host.rootView = ReadingDesignFixture(messages: live, running: false, session: "lifecycle-A", folds: true)
     try await settle()
-    // The unfinished turn folds like any other; open the fold, then the step.
-    click("completed-process:text:lifecycle-progress:0")
+    precondition(taskPanelControl(window, "tool-call:lifecycle-read") != nil, "Completed processes remain expanded by default")
+    click("activity-phase:activity:tool:lifecycle-read")
     try await settle()
+    precondition(taskPanelControl(window, "tool-call:lifecycle-read") == nil, "A user may collapse an individual stage")
     click("activity-phase:activity:tool:lifecycle-read")
     try await settle()
     precondition(taskPanelControl(window, "tool-call:lifecycle-read") != nil,
@@ -471,30 +475,26 @@ private struct ReadingReviewControls: View {
     precondition(taskPanelControl(window, "live-thinking-summary") == nil)
     // Uniform fold: the edit receipt and the failed call sit inside the fold,
     // whose header carries the call count and the thinking's first line.
-    precondition(taskPanelControl(window, "edit-step:lifecycle-edit") == nil)
-    precondition(taskPanelControl(window, "activity-phase:activity:tool:lifecycle-check") == nil)
+    precondition(taskPanelControl(window, "edit-step:lifecycle-edit") != nil)
+    precondition(taskPanelControl(window, "activity-phase:activity:tool:lifecycle-check") != nil)
     precondition(taskPanelLabel(window, "completed-process:activity:tool:lifecycle-edit")?.contains(L("2 个工具")) == true,
                  "The second fold (edit + check) carries the tool count")
     try snapshot("lifecycle-retained")
-    // A fresh reader sees the prompt, the fold and the answer. Session A's
-    // explicit choice cannot leak to B.
+    // A fresh reader sees the expanded process and answer. Explicit thinking
+    // and stage choices remain scoped to their originating session.
     host.rootView = ReadingDesignFixture(messages: done, session: "lifecycle-B", folds: true)
     for (name, width, appearance) in [("lifecycle-completed", 1000.0, NSAppearance.Name.aqua), ("lifecycle-narrow", 540.0, .aqua), ("lifecycle-dark", 1000.0, .darkAqua)] {
         window.setContentSize(NSSize(width: width, height: 760)); window.appearance = NSAppearance(named: appearance)
         try await settle()
-        precondition(taskPanelControl(window, "tool-call:lifecycle-read") == nil)
-        precondition(taskPanelControl(window, "edit-step:lifecycle-edit") == nil && taskPanelControl(window, "activity-phase:activity:tool:lifecycle-check") == nil)
-        precondition(!readingTextViews(host).contains { $0.string.contains("我先检查窗口状态") })
+        precondition(taskPanelControl(window, "tool-call:lifecycle-read") != nil)
+        precondition(taskPanelControl(window, "edit-step:lifecycle-edit") != nil && taskPanelControl(window, "activity-phase:activity:tool:lifecycle-check") != nil)
+        precondition(readingTextViews(host).contains { $0.string.contains("我先检查窗口状态") })
         precondition(readingTextViews(host).contains { $0.string.contains("已修复首次打开文件") })
         try snapshot(name)
     }
     window.appearance = NSAppearance(named: .aqua)
     // The failed call remains reachable inside its expanded fold and stage.
     // (Session B retained nothing, so the whole turn is one fold here.)
-    click("completed-process:text:lifecycle-progress:0")
-    try await settle()
-    click("activity-phase:activity:tool:lifecycle-check")
-    try await settle()
     precondition(taskPanelControl(window, "tool-call:lifecycle-check") != nil, "The failed call remains reachable inside the fold")
     click("completed-process:text:lifecycle-progress:0")
     try await settle()
@@ -510,12 +510,12 @@ private struct ReadingReviewControls: View {
     host.rootView = ReadingDesignFixture(messages: done, session: "lifecycle-A", folds: true)
     try await settle()
     precondition(taskPanelControl(window, "tool-call:lifecycle-read") != nil, "Switching sessions restores the expanded step")
-    print("PASS: native live public summary, two-line bound, default completed folds, preserved edit/error, manual expansion through completion/new turn/session switch")
+    print("PASS: default expanded thinking and completed process, public summary after collapse, edit/error visibility and manual choices through completion/new turn/session switch")
 }
 
-/// A single work stage may span several record pages, without losing pending
-/// states or the reader's selected page when the live turn changes.
-@MainActor private func checkReadingStagePages() async throws {
+/// The full work stage remains continuous through collapse, append, completion,
+/// search and session switches; no record pagination is involved.
+@MainActor private func checkReadingStageContinuity() async throws {
     func records(_ count: Int, done: Bool = false, failedLast: Bool = false) throws -> [KimiMessage] {
         var rows: [[String: Any]] = [["id": "page-user", "role": "user", "created_at": "",
             "content": [["type": "text", "text": "检查连续工作阶段"]]]]
@@ -535,7 +535,7 @@ private struct ReadingReviewControls: View {
     window.contentView = host; window.makeKeyAndOrderFront(nil)
     func settle() async throws { try await Task.sleep(for: .milliseconds(350)); host.layoutSubtreeIfNeeded() }
     func click(_ identifier: String) {
-        guard let frame = taskPanelControl(window, identifier) else { preconditionFailure("Missing page control: \(identifier)") }
+        guard let frame = taskPanelControl(window, identifier) else { preconditionFailure("Missing process control: \(identifier)") }
         for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
             window.sendEvent(NSEvent.mouseEvent(with: type, location: NSPoint(x: frame.midX, y: frame.midY), modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: type == .leftMouseDown ? 1 : 0)!)
         }
@@ -545,41 +545,41 @@ private struct ReadingReviewControls: View {
     precondition(taskPanelLabel(window, "activity-phase:" + stage)?.contains("git show") == true,
                  "The stage header names the latest targets")
     precondition(taskPanelControl(window, "activity-phase:activity:tool:page-tool-24") == nil)
-    click("activity-phase:" + stage)
-    try await settle()
     precondition(taskPanelControl(window, "tool-call:page-tool-0") != nil)
-    precondition(taskPanelControl(window, "tool-call:page-tool-24") == nil, "First page does not mount later records")
-    click("stage-next-page:" + stage)
-    try await settle()
-    precondition(taskPanelControl(window, "tool-call:page-tool-0") == nil)
-    precondition(taskPanelControl(window, "tool-call:page-tool-24") != nil)
+    precondition(taskPanelControl(window, "tool-call:page-tool-24") != nil, "The stage defaults open and includes records after the former page boundary")
+    precondition(taskPanelControl(window, "stage-next-page:" + stage) == nil && taskPanelControl(window, "stage-previous-page:" + stage) == nil,
+                 "The stage has no pagination controls")
     click("activity-phase:" + stage)
     try await settle()
     click("activity-phase:" + stage)
     try await settle()
-    precondition(taskPanelControl(window, "tool-call:page-tool-24") != nil, "Collapsing and reopening preserves the record page")
+    precondition(taskPanelControl(window, "tool-call:page-tool-24") != nil && taskPanelControl(window, "tool-call:page-tool-0") != nil,
+                 "Collapsing and reopening restores the entire stage")
     host.rootView = ReadingDesignFixture(messages: try records(27), running: true, session: "stage-page-A", folds: true)
     try await settle()
-    precondition(taskPanelControl(window, "tool-call:page-tool-26") != nil && taskPanelControl(window, "tool-call:page-tool-0") == nil)
+    precondition(taskPanelControl(window, "tool-call:page-tool-26") != nil && taskPanelControl(window, "tool-call:page-tool-0") != nil)
     host.rootView = ReadingDesignFixture(messages: try records(27, done: true), session: "stage-page-A", folds: true)
     try await settle()
-    precondition(taskPanelControl(window, "tool-call:page-tool-24") != nil, "Completion preserves a manually opened stage and page")
+    precondition(taskPanelControl(window, "tool-call:page-tool-24") != nil, "Completion preserves the visible process")
     host.rootView = ReadingDesignFixture(messages: try records(26), running: true, session: "stage-page-B", folds: true)
     try await settle()
-    precondition(taskPanelControl(window, "tool-call:page-tool-24") == nil, "Another session does not inherit expansion")
+    precondition(taskPanelControl(window, "tool-call:page-tool-24") != nil, "A fresh session also defaults to the full expanded stage")
+    click("activity-phase:" + stage)
+    try await settle()
+    precondition(taskPanelControl(window, "tool-call:page-tool-24") == nil, "The user may collapse that session's stage")
     host.rootView = ReadingDesignFixture(messages: try records(27, done: true), session: "stage-page-A", folds: true)
     try await settle()
-    precondition(taskPanelControl(window, "tool-call:page-tool-24") != nil, "Returning restores the selected page")
-    click("stage-previous-page:" + stage)
+    precondition(taskPanelControl(window, "tool-call:page-tool-24") != nil, "Another session's manual collapse does not change this stage")
+    click("activity-phase:" + stage)
     try await settle()
-    precondition(taskPanelControl(window, "tool-call:page-tool-0") != nil && taskPanelControl(window, "tool-call:page-tool-24") == nil)
+    precondition(taskPanelControl(window, "tool-call:page-tool-0") == nil && taskPanelControl(window, "tool-call:page-tool-24") == nil)
     let searchRecords = try records(27, done: true)
     let hit = ConversationSearch().hits(in: searchRecords, query: "marker-26", running: false).hits.first!
     NotificationCenter.default.post(name: .init("PerchRevealConversationHit"), object: ConversationFindTarget(
         session: "stage-page-A", hit: hit, query: "marker-26"))
     try await settle()
-    precondition(taskPanelControl(window, "tool-call:page-tool-26") != nil && taskPanelControl(window, "tool-call:page-tool-0") == nil,
-                 "Find opens the page containing its exact tool record")
+    precondition(taskPanelControl(window, "tool-call:page-tool-26") != nil && taskPanelControl(window, "tool-call:page-tool-0") != nil,
+                 "Find opens the whole stage and reaches its exact final tool record")
     precondition(readingTextViews(host).contains { $0.string.contains("marker-26") })
     let repeatedHit = ConversationSearch().hits(in: searchRecords, query: "marker-", running: false).hits.first {
         $0.toolID == "page-tool-26" && $0.toolOccurrence == 1
@@ -589,13 +589,13 @@ private struct ReadingReviewControls: View {
     try await settle()
     precondition(readingTextViews(host).contains { text in
         text.string.contains("marker-26") && text.selectedRange() == (text.string as NSString).range(of: "marker-", options: .backwards)
-    }, "A repeated query selects its record-local occurrence on a later page, excluding earlier records")
+    }, "A repeated query selects its record-local occurrence at the end of the full stage")
     host.rootView = ReadingDesignFixture(messages: try records(26, failedLast: true), running: true, session: "stage-page-C")
     try await settle()
     precondition(taskPanelControl(window, "tool-call:page-tool-25") != nil,
-                 "A current failed call on a later page cannot be hidden by pagination")
+                 "The last failed call is present in the continuous stage")
     click("activity-phase:" + stage)
     try await settle()
     precondition(taskPanelControl(window, "tool-call:page-tool-25") != nil && taskPanelControl(window, "tool-call:page-tool-24") == nil)
-    print("PASS: native single-stage pagination, bounded records, find/active failure visibility, collapse/append/completion/session-return continuity")
+    print("PASS: native continuous full stage, default expansion, exact find, failure visibility, collapse/append/completion/session-return continuity")
 }

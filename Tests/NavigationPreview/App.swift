@@ -446,7 +446,14 @@ final class NavigationRunner {
         }) != nil else {
             throw NavigationError("no fold disclosure mounted; fold: \(foldID); bindings: \(ConversationDisclosureFixture.bindings.keys.count)")
         }
-        guard let foldRow = findRow(foldID, in: host) else { throw NavigationError("fold row is not mounted") }
+        guard let initiallyExpandedRow = findRow(foldID, in: host) else { throw NavigationError("fold row is not mounted") }
+        let initiallyExpandedViews = countViews(initiallyExpandedRow)
+        ConversationDisclosureFixture.bindings[key]!.wrappedValue = false
+        guard await flushAndWait(host, until: {
+            guard let row = self.findRow(foldID, in: host) else { return false }
+            return self.countViews(row) < initiallyExpandedViews
+        }) != nil else { throw NavigationError("the user could not collapse the initially expanded process") }
+        guard let foldRow = findRow(foldID, in: host) else { throw NavigationError("collapsed fold row is not mounted") }
         let collapsedHeight = foldRow.frame.height
         let collapsedViews = countViews(foldRow)
         ConversationDisclosureFixture.bindings[key]!.wrappedValue = true
@@ -472,6 +479,8 @@ final class NavigationRunner {
                 && ConversationReadingMemory.shared.expansions["\(target):\($0.entry.id):process-fold"] != true
         }), let inner = other.foldedRows?.first else { throw NavigationError("missing second fold group") }
         let otherKey = "\(target):\(other.entry.id):process-fold"
+        if let binding = ConversationDisclosureFixture.bindings[otherKey] { binding.wrappedValue = false }
+        else { ConversationReadingMemory.shared.expansions[otherKey] = false }
         NotificationCenter.default.post(name: .init("PerchRevealConversationHit"),
             object: ConversationFindTarget(session: target,
                 hit: ConversationSearchHit(entryID: inner.entry.id, occurrence: 0, excerpt: ""), query: "fixture"))

@@ -15,7 +15,6 @@ final class ConversationReadingMemory {
     private(set) var positions: [String: Position] = [:]
     var following: [String: Bool] = [:]
     var expansions: [String: Bool] = [:]
-    var processPages: [String: String] = [:]
     var seenRevision: [String: String] = [:]
     var retainedProcessEntries: Set<String> = []
 
@@ -55,7 +54,6 @@ final class ConversationReadingMemory {
         following.removeValue(forKey: session)
         seenRevision.removeValue(forKey: session)
         expansions = expansions.filter { !$0.key.hasPrefix(session + ":") }
-        processPages = processPages.filter { !$0.key.hasPrefix(session + ":") }
         retainedProcessEntries = retainedProcessEntries.filter { !$0.hasPrefix(session + ":") }
     }
 }

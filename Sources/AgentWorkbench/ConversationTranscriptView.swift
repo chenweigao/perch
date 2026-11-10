@@ -711,7 +711,6 @@ private final class ConversationDocumentView: NSView {
         guard !suspended else { return }
         if let toolID = target.hit.toolID {
             let id = target.hit.entryID, scope = sessionId + ":" + id
-            ConversationReadingMemory.shared.processPages[scope + ":stage"] = "tool:" + toolID
             for name in ["expanded", "thought"] {
                 ConversationReadingMemory.shared.expansions[scope + ":" + name] = true
             }
@@ -784,7 +783,6 @@ private final class ConversationDocumentView: NSView {
             // land on the fold row. The expanded content re-measures on mount.
             let scope = sessionId + ":" + fold
             ConversationReadingMemory.shared.expansions[scope + ":process-fold"] = true
-            ConversationReadingMemory.shared.processPages[scope] = id
             for name in ["thought", "live-thought", "full-thought", "commentary", "expanded", "full-output"] {
                 ConversationReadingMemory.shared.expansions[sessionId + ":" + id + ":" + name] = true
             }
@@ -2257,7 +2255,7 @@ private struct ConversationEntryView: View, Equatable {
     var liveProcessFold = false
     /// Live turn start for the fold header's ticking duration (PI).
     var liveStartedAt: Date? = nil
-    @RememberedExpansion("commentary") private var commentaryExpanded
+    @RememberedExpansion("commentary", initial: true) private var commentaryExpanded
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.entry == rhs.entry && lhs.tools == rhs.tools && lhs.api === rhs.api
             && lhs.sessionId == rhs.sessionId && lhs.memoryKey == rhs.memoryKey
@@ -2351,8 +2349,8 @@ struct ProcessFoldRow: View {
     let sessionId: String
     var completedDuration: TimeInterval? = nil
     var sourceMemoryPrefix: String? = nil
-    /// The running turn's process disclosure (PI: active turns start open and
-    /// settle in place on completion; the row id is stable across the flip).
+    /// The process stays expanded by default through completion. An explicit
+    /// user collapse is remembered for this turn.
     var live = false
     /// Live turn start, so the header's duration ticks while it runs (PI).
     var liveStartedAt: Date? = nil
@@ -2367,22 +2365,10 @@ struct ProcessFoldRow: View {
         self.rows = rows; self.api = api; self.sessionId = sessionId
         self.completedDuration = completedDuration; self.sourceMemoryPrefix = sourceMemoryPrefix
         self.live = live; self.liveStartedAt = liveStartedAt
-        _expanded = RememberedExpansion("process-fold", initial: live)
+        _expanded = RememberedExpansion("process-fold", initial: true)
     }
     @RememberedExpansion("process-fold") private var expanded
     @Environment(\.conversationDisclosureWillChange) private var disclosureWillChange
-    @State private var pageRevision = 0
-    private var page: ConversationProcessPage {
-        _ = pageRevision
-        return ConversationProcessPage(ids: rows.map(\.entry.id), anchor: ConversationReadingMemory.shared.processPages[memoryKey])
-    }
-    private func changePage(_ offset: Int) {
-        let start = page.range.lowerBound + offset * ConversationProcessPage.size
-        guard rows.indices.contains(start) else { return }
-        disclosureWillChange()
-        ConversationReadingMemory.shared.processPages[memoryKey] = rows[start].entry.id
-        pageRevision += 1
-    }
     private var toolCalls: Int {
         rows.reduce(0) { $0 + $1.entry.messages.flatMap(\.content).filter { $0.type == "tool_use" }.count }
     }
@@ -2428,9 +2414,7 @@ struct ProcessFoldRow: View {
                         Image(systemName: "sparkles").font(.system(size: ReplyStyle.captionSize))
                             .foregroundStyle(WorkbenchTheme.quiet).fixedSize()
                         Text(verbatim: live ? liveLabel : L("运行完成")).fixedSize()
-                        if live {
-                            ProcessLivePulse()
-                        }
+                        ProcessStatusDot(status: live ? .running : .succeeded)
                         if live, let liveStartedAt {
                             let isZh = locale.language.languageCode?.identifier.hasPrefix("zh") ?? true
                             TimelineView(.periodic(from: liveStartedAt, by: 1)) { context in
@@ -2489,16 +2473,7 @@ struct ProcessFoldRow: View {
             }
             WorkbenchDisclosureContent(expanded: expanded) {
                 VStack(alignment: .leading, spacing: ReplyStyle.Process.rowSpacing) {
-                    if page.count > 1 {
-                        HStack(spacing: 12) {
-                            Button("上一页") { changePage(-1) }.disabled(page.number == 1)
-                                .accessibilityIdentifier("process-previous-page")
-                            Text(L("第 \(page.number) / \(page.count) 页")).monospacedDigit()
-                            Button("下一页") { changePage(1) }.disabled(page.number == page.count)
-                                .accessibilityIdentifier("process-next-page")
-                        }.buttonStyle(.borderless).font(.system(size: ReplyStyle.Process.labelSize))
-                    }
-                    ForEach(Array(rows[page.range]), id: \.entry.id) { row in
+                    ForEach(rows, id: \.entry.id) { row in
                         foldedRowView(row)
                     }
                 }.padding(.top, ReplyStyle.Process.rowSpacing).padding(.leading, ReplyStyle.Process.nestedIndent)
@@ -2778,11 +2753,14 @@ private struct ThoughtToggle: View {
     /// A looked-up `Text`, so callers pass `Text("…")` rather than a raw string.
     let title: Text
     var summary: String? = nil
+    var status: VisibleTool.Status? = nil
     @Binding var expanded: Bool
     var body: some View {
         DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
             HStack(spacing: 6) {
+                Image(systemName: "sparkles").font(.system(size: 15)).foregroundStyle(WorkbenchTheme.quiet).fixedSize()
                 title.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(.secondary).fixedSize()
+                if let status { ProcessStatusDot(status: status) }
                 if !expanded, let summary, !summary.isEmpty {
                     Text(verbatim: "·")
                         .font(.system(size: ReplyStyle.Process.labelSize))
@@ -2805,11 +2783,12 @@ struct ThoughtDisclosure: View {
     /// collapsed header never surfaces redacted reasoning).
     var publicSummary: String? = nil
     @UILocalization private var L
-    @RememberedExpansion("thought") private var expanded
+    @RememberedExpansion("thought", initial: true) private var expanded
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
             ThoughtToggle(title: Text(verbatim: L("Thoughts")),
                           summary: expanded ? nil : (publicSummary ?? ThoughtTextStyle.latestSummaryLine(text)),
+                          status: .succeeded,
                           expanded: $expanded)
             WorkbenchDisclosureContent(expanded: expanded) { ThoughtText(text: text) }
         }
@@ -2824,12 +2803,9 @@ struct ThoughtOutput: View {
     let finished: Bool
     var embedded = false
     private var fullText: String { messages.flatMap(\.content).compactMap(\.thinking).joined(separator: "\n\n") }
-    @RememberedExpansion("thought") private var expanded
+    @RememberedExpansion("thought", initial: true) private var expanded
     var body: some View {
-        if embedded {
-            ThoughtText(text: fullText)
-        } else {
-            VStack(alignment: .leading, spacing: 9) {
+        VStack(alignment: .leading, spacing: embedded ? 4 : 9) {
                 // A collapsed running thought shows the provider's public summary
                 // first, else its latest meaningful line beside the title (DSH's
                 // streaming summary), so the preview reads without pushing the
@@ -2840,13 +2816,13 @@ struct ThoughtOutput: View {
                 }
                 ThoughtToggle(title: Text(verbatim: finished ? L("Thoughts") : L("Thinking")),
                               summary: expanded ? nil : (publicSummary ?? ThoughtTextStyle.latestSummaryLine(fullText)),
+                              status: finished ? .succeeded : .running,
                               expanded: $expanded)
                     .accessibilityIdentifier("thought-disclosure:" + memoryKey)
                 WorkbenchDisclosureContent(expanded: expanded) { ThoughtText(text: fullText) }
                 if !expanded, !finished, let summary = ConversationThinkingSummary.latest(in: messages) {
                     LiveThinkingSummary(text: summary).padding(.leading, ReplyStyle.Process.nestedIndent)
                 }
-            }
         }
     }
 }
