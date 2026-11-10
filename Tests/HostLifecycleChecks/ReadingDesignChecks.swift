@@ -497,6 +497,12 @@ private struct ReadingReviewControls: View {
     precondition(readingTextViews(host).contains { $0.string.contains("LIFECYCLE_READ_BODY") }, "The operation row opens its actual result")
     try await readingClickControl(window, "tool-call:lifecycle-read")
     try await settle()
+    precondition(ConversationReadingMemory.shared.expansions["lifecycle-A:activity:tool:lifecycle-read:tool:lifecycle-read:expanded"] == false,
+                 "The actual operation button must remember collapsed details")
+    for _ in 0..<40 where readingTextViews(host).contains(where: { $0.string.contains("LIFECYCLE_READ_BODY") }) {
+        try await Task.sleep(for: .milliseconds(50))
+        host.layoutSubtreeIfNeeded()
+    }
     precondition(!readingTextViews(host).contains { $0.string.contains("LIFECYCLE_READ_BODY") }, "Raw details may be collapsed independently")
     precondition(ConversationReadingMemory.shared.retainedEntries(session: "lifecycle-A").contains("activity:tool:lifecycle-read"))
     host.rootView = ReadingDesignFixture(messages: live, running: true, session: "lifecycle-A", folds: true)
