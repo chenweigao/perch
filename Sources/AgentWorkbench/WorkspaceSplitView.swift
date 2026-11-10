@@ -984,7 +984,7 @@ final class WorkbenchSplitController: NSSplitViewController {
         // Align the native toolbar (traffic lights + sidebar toggle) with the main
         // container's unified header vertical center.
         if let window = view.window, let card = detailCardView {
-            let cardFrame = card.convert(card.bounds, to: window)
+            let cardFrame = card.convert(card.bounds, to: nil)
             let headerCenterY = cardFrame.minY + WorkbenchChrome.headerHeight / 2
             let targetMidY = window.frame.height - headerCenterY
             if let container = window.standardWindowButton(.closeButton)?.superview?.superview {
