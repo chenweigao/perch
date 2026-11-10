@@ -296,7 +296,6 @@ final class WorkbenchModel {
                         return try await kimi.recapMessages(for: sessionID)
                     }
                     TaskRecapStore.shared.registerMessages(for: key, provider: provider)
-                    TaskRecapStore.shared.considerAutoGenerate(key: key, messages: provider, settings: .shared)
                 }
             }
         }
@@ -316,7 +315,6 @@ final class WorkbenchModel {
                         return try await native.recapMessages(for: sessionID)
                     }
                     TaskRecapStore.shared.registerMessages(for: key, provider: provider)
-                    TaskRecapStore.shared.considerAutoGenerate(key: key, messages: provider, settings: .shared)
                 }
             }
         }
