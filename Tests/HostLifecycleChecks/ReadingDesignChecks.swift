@@ -42,7 +42,23 @@ struct ReadingDesignFixture: View {
     view.layoutSubtreeIfNeeded()
 }
 @MainActor private func readingClickControl(_ window: NSWindow, _ identifier: String) async throws {
-    guard var frame = taskPanelControl(window, identifier) else {
+    func buttonFrame() -> NSRect? {
+        guard let root = taskPanelElements(window).first(where: { $0.identifier == identifier })?.node else { return nil }
+        func find(_ node: NSObject) -> NSRect? {
+            if node.responds(to: NSSelectorFromString("accessibilityRole")),
+               node.value(forKey: "accessibilityRole") as? String == NSAccessibility.Role.button.rawValue,
+               let value = node.value(forKey: "accessibilityFrame") as? NSValue, !value.rectValue.isEmpty {
+                return window.convertFromScreen(value.rectValue)
+            }
+            guard node.responds(to: NSSelectorFromString("accessibilityChildren")) else { return nil }
+            for child in node.value(forKey: "accessibilityChildren") as? [NSObject] ?? [] {
+                if let frame = find(child) { return frame }
+            }
+            return nil
+        }
+        return find(root)
+    }
+    guard var frame = buttonFrame() else {
         preconditionFailure("Missing disclosure control: \(identifier)")
     }
     // An expanded process can extend beyond the viewport. Bring the actual
@@ -59,7 +75,7 @@ struct ReadingDesignFixture: View {
             }
             try await Task.sleep(for: .milliseconds(50))
             host.layoutSubtreeIfNeeded()
-            guard let visible = taskPanelControl(window, identifier) else {
+            guard let visible = buttonFrame() else {
                 preconditionFailure("Disclosure disappeared while scrolling to it: \(identifier)")
             }
             let stable = abs(visible.minY - frame.minY) < 0.5 && abs(visible.minX - frame.minX) < 0.5
