@@ -57,7 +57,23 @@ struct ReadingDesignFixture: View {
             }
             return nil
         }
-        return find(root)
+        let frame = find(root)
+        if frame == nil {
+            // The disclosure's accessibility wrapper can change after opening.
+            // Report its native tree before failing so a missed click can be
+            // distinguished from missing production content.
+            func describe(_ node: NSObject, depth: Int) {
+                guard depth < 6 else { return }
+                func value(_ key: String) -> Any? {
+                    node.responds(to: NSSelectorFromString(key)) ? node.value(forKey: key) : nil
+                }
+                let line = "INFO: disclosure AX \(identifier), depth \(depth), role \(String(describing: value(\"accessibilityRole\"))), id \(String(describing: value(\"accessibilityIdentifier\"))), frame \(String(describing: value(\"accessibilityFrame\"))), label \(String(describing: value(\"accessibilityLabel\"))), value \(String(describing: value(\"accessibilityValue\")))\n"
+                FileHandle.standardError.write(Data(line.utf8))
+                for child in value("accessibilityChildren") as? [NSObject] ?? [] { describe(child, depth: depth + 1) }
+            }
+            describe(root, depth: 0)
+        }
+        return frame
     }
     guard var frame = buttonFrame() else {
         preconditionFailure("Missing disclosure control: \(identifier)")
