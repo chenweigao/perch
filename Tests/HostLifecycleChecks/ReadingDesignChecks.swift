@@ -67,7 +67,9 @@ struct ReadingDesignFixture: View {
                 func value(_ key: String) -> Any? {
                     node.responds(to: NSSelectorFromString(key)) ? node.value(forKey: key) : nil
                 }
-                let line = "INFO: disclosure AX \(identifier), depth \(depth), role \(String(describing: value(\"accessibilityRole\"))), id \(String(describing: value(\"accessibilityIdentifier\"))), frame \(String(describing: value(\"accessibilityFrame\"))), label \(String(describing: value(\"accessibilityLabel\"))), value \(String(describing: value(\"accessibilityValue\")))\n"
+                let attributes = ["accessibilityRole", "accessibilityIdentifier", "accessibilityFrame", "accessibilityLabel", "accessibilityValue"]
+                    .map { "\($0)=\(String(describing: value($0)))" }.joined(separator: ", ")
+                let line = "INFO: disclosure AX \(identifier), depth \(depth), \(attributes)\n"
                 FileHandle.standardError.write(Data(line.utf8))
                 for child in value("accessibilityChildren") as? [NSObject] ?? [] { describe(child, depth: depth + 1) }
             }
