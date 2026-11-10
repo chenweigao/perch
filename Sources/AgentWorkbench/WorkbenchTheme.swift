@@ -141,6 +141,14 @@ extension WorkbenchTheme {
         static let sliderHeight: CGFloat = 24
         static let motion = 0.2
         static let raised = WorkbenchTheme.color(light: (1, 1, 1), dark: (40/255, 40/255, 40/255))
+        /// PI's radius-2xs: model/source rows and the raised reasoning segment.
+        enum CompactShape {
+            static let cornerRadius: CGFloat = 6
+        }
+        /// PI's radius-xs: the reasoning range track.
+        enum ThinkingTrackShape {
+            static let cornerRadius: CGFloat = 8
+        }
         static func contextLabel(_ tokens: Int) -> String {
             guard tokens > 0 else { return "—" }
             guard tokens >= 1000 else { return String(tokens) }

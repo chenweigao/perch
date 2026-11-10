@@ -22,9 +22,11 @@ struct ComposerThinkingControl: View {
             GeometryReader { geometry in
                 let column = geometry.size.width / CGFloat(model.thinking.count)
                 ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 8).fill(WorkbenchTheme.ink.opacity(0.06))
+                    RoundedRectangle(cornerRadius: WorkbenchTheme.Composer.ThinkingTrackShape.cornerRadius)
+                        .fill(WorkbenchTheme.ink.opacity(0.06))
                     if let selected {
-                        RoundedRectangle(cornerRadius: 6).fill(WorkbenchTheme.Composer.raised)
+                        RoundedRectangle(cornerRadius: WorkbenchTheme.Composer.CompactShape.cornerRadius)
+                            .fill(WorkbenchTheme.Composer.raised)
                             .shadow(color: .black.opacity(0.1), radius: 1, y: 1)
                             .frame(width: max(0, column - 4), height: 20)
                             .offset(x: CGFloat(selected) * column + 2)

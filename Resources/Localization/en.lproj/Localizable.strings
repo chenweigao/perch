@@ -2062,8 +2062,7 @@
 "思考中" = "Thinking";
 "工作过程" = "Work process";
 "运行完成" = "Finished";
-"执行中" = "Running";
-"运行中" = "Running";
+"Process running" = "Running";
 "%lld 个工具" = "%lld tools";
 
 "运行 %@" = "Run %@";
@@ -2073,6 +2072,7 @@
 "%@ 等" = "%@ and more";
 
 "%lld 次失败" = "%lld failed";
+"%@ 失败" = "%@ failed";
 
 "展开查看失败记录" = "Expand to view failed calls";
 

@@ -2413,7 +2413,7 @@ struct ProcessFoldRow: View {
     /// "thinking", anything else as the plain running status.
     private var liveLabel: String {
         if rows.last?.entry.presentation == .thinkingPreview { return L("思考中") }
-        return L("执行中")
+        return L("Process running")
     }
     var body: some View {
         let countLabel = toolCalls > 0 ? L("\(toolCalls) 个工具") : L("\(rows.count) 条记录")

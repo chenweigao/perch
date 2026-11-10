@@ -431,7 +431,8 @@ private struct ComposerModelOptionRow: View {
                     .foregroundStyle(WorkbenchTheme.ink).opacity(selected ? 1 : 0)
                     .frame(width: 13).accessibilityHidden(true)
             }.padding(.horizontal, 8).frame(height: WorkbenchTheme.Composer.rowHeight).contentShape(Rectangle())
-                .background(hovering || highlighted ? WorkbenchTheme.Fill.hover : .clear, in: RoundedRectangle(cornerRadius: 6))
+                .background(hovering || highlighted ? WorkbenchTheme.Fill.hover : .clear,
+                            in: RoundedRectangle(cornerRadius: WorkbenchTheme.Composer.CompactShape.cornerRadius))
         }.buttonStyle(.plain).onHover { hovering = $0 }
             .accessibilityAddTraits(selected ? .isSelected : [])
     }
@@ -456,7 +457,8 @@ private struct ComposerModelRailRow: View {
             }.font(.system(size: WorkbenchTheme.Composer.text, weight: active ? .medium : .regular))
                 .foregroundStyle(active || hovering ? WorkbenchTheme.ink : WorkbenchTheme.quiet)
                 .padding(.horizontal, 8).frame(height: 28).contentShape(Rectangle())
-                .background(hovering ? WorkbenchTheme.Fill.hover : .clear, in: RoundedRectangle(cornerRadius: 6))
+                .background(hovering ? WorkbenchTheme.Fill.hover : .clear,
+                            in: RoundedRectangle(cornerRadius: WorkbenchTheme.Composer.CompactShape.cornerRadius))
                 .opacity(dimmed ? 0.38 : 1)
         }.buttonStyle(.plain).onHover { hovering = $0 }
             .accessibilityAddTraits(active ? .isSelected : [])
