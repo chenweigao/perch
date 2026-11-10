@@ -1,14 +1,14 @@
 import SwiftUI
 import WorkbenchCore
 
-/// The primary action follows runtime state, never the contents of the draft.
-/// A separate queue action preserves composing while the current turn runs.
+/// PI's primary action: a draft sends, an empty running composer stops.
 struct ComposerActionButton: View {
     @UILocalization private var L
     let isRunning: Bool
     let isStopping: Bool
     let canSend: Bool
     let canStop: Bool
+    var hasDraft = false
     /// False while disconnected or waiting for the user, even if the turn is open.
     var showsActivity = true
     /// A localization key ("Queue", "Steer", "Run command").
@@ -17,9 +17,11 @@ struct ComposerActionButton: View {
     let onStop: () -> Void
     var onQueue: (() -> Void)? = nil
 
-    private var active: Bool { isRunning && canStop && showsActivity && !isStopping }
-    private var enabled: Bool { !isStopping && (isRunning ? canStop : canSend) }
-    private var title: String { isStopping ? L("Stopping…") : isRunning ? L("Stop task") : L("Send") }
+    private var showsStop: Bool { isRunning && !hasDraft }
+    private var stopping: Bool { isRunning && isStopping }
+    private var active: Bool { showsStop && canStop && showsActivity && !stopping }
+    private var enabled: Bool { !stopping && (showsStop ? canStop : canSend) }
+    private var title: String { stopping ? L("Stopping…") : showsStop ? L("Stop task") : L("Send") }
     /// The hint does what Return does; its tooltip names that key and ⌘Return.
     private var queuedSendHelp: String {
         switch queuedSendTitle {
@@ -30,11 +32,7 @@ struct ComposerActionButton: View {
     }
     var body: some View {
         HStack(spacing: 8) {
-            if isRunning && canSend && !isStopping {
-                Button(L(key: queuedSendTitle), action: onSend).buttonStyle(.plain)
-                    .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
-                    .accessibilityLabel(queuedSendTitle == "Queue" ? L("Queue message") : L(key: queuedSendTitle))
-                    .help(queuedSendHelp)
+            if isRunning && hasDraft && canSend && !stopping {
                 if let onQueue {
                     // ⌘↩ is text, not a key equivalent: the composer already handles
                     // ⌘Return, and a pop-up button can fire its items' equivalents
@@ -48,25 +46,21 @@ struct ComposerActionButton: View {
                 }
             }
             Button {
-                if isRunning { onStop() } else { onSend() }
+                if showsStop { onStop() } else { onSend() }
             } label: {
                 ZStack {
-                    Circle().fill(enabled ? WorkbenchTheme.accent : Color.gray.opacity(0.3))
-                    if isStopping {
-                        ProgressView().controlSize(.mini).tint(WorkbenchTheme.actionGlyph)
-                    } else {
-                        if active {
-                            PerchBusyIndicator(size: 36, ink: WorkbenchTheme.actionGlyphNS)
-                                .allowsHitTesting(false)
-                        }
-                        Image(systemName: isRunning ? "stop.fill" : "arrow.up")
-                            .font(.system(size: isRunning ? (active ? 8 : 12) : 15, weight: .semibold)).foregroundStyle(WorkbenchTheme.actionGlyph)
-                    }
-                }.frame(width: 36, height: 36)
+                    Circle().fill(showsStop ? WorkbenchTheme.ink.opacity(0.16)
+                                  : enabled ? WorkbenchTheme.accent : WorkbenchTheme.ink.opacity(0.10))
+                    Image(systemName: showsStop ? "stop.fill" : "arrow.up")
+                        .font(.system(size: showsStop ? 14 : 15, weight: .semibold))
+                        .foregroundStyle(showsStop ? WorkbenchTheme.ink
+                                         : enabled ? WorkbenchTheme.actionGlyph : WorkbenchTheme.quiet)
+                        .opacity(showsStop && !enabled ? 0.5 : 1)
+                }.frame(width: 28, height: 28)
             }.buttonStyle(.plain).disabled(!enabled).accessibilityLabel(title)
                 .accessibilityValue(active ? L("Working…") : "")
                 .accessibilityIdentifier("composer-primary-action")
-                .help(active ? L("Working…") + " · " + title : isRunning || isStopping ? title : L("Return to send · Shift Return for a new line"))
+                .help(isRunning && hasDraft ? queuedSendHelp : showsStop || stopping ? title : L("Return to send · Shift Return for a new line"))
         }
     }
 }
@@ -78,7 +72,7 @@ struct ComposerAddButton: View {
     var onChoose: () -> Void = {}
     var body: some View {
         Button(action: onChoose) {
-            Image(systemName: "plus").font(.system(size: 17)).frame(width: 28, height: 28).contentShape(Rectangle())
+            Image(systemName: "plus").font(.system(size: 15)).frame(width: 28, height: 28).contentShape(Rectangle())
         }.buttonStyle(.plain).foregroundStyle(.secondary)
             .disabled(disabled || !supportsFiles)
             .help(supportsFiles ? L("Add images or files") : L("Attachments are not supported by this agent connection"))

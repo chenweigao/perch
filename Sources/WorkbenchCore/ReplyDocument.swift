@@ -67,11 +67,15 @@ public enum ReplyDocument {
         blocks(Document(parsing: ReplyMath.normalizeDelimiters(source)), documentLinks: documentLinks)
     }
 
-    private static func blocks(_ parent: Markup, documentLinks: Bool) -> [ReplyBlock] {
-        parent.children.flatMap { blocks(from: $0, documentLinks: documentLinks) }
+    private static func blocks(_ parent: Markup, documentLinks: Bool, listDepth: Int = 0) -> [ReplyBlock] {
+        parent.children.flatMap { blocks(from: $0, documentLinks: documentLinks, listDepth: listDepth) }
     }
 
     public static func blocks(from node: Markup, documentLinks: Bool = false) -> [ReplyBlock] {
+        blocks(from: node, documentLinks: documentLinks, listDepth: 0)
+    }
+
+    private static func blocks(from node: Markup, documentLinks: Bool, listDepth: Int) -> [ReplyBlock] {
             switch node {
             case let value as Paragraph:
                 let runs = linkBareURLs(inlines(value, documentLinks: documentLinks))
@@ -84,14 +88,16 @@ public enum ReplyDocument {
                 return [.code(language: value.language ?? "", source: code)]
             case let value as OrderedList:
                 return [.list(value.listItems.enumerated().map { index, item in
-                    ReplyListItem(marker: "\(Int(value.startIndex) + index).", blocks: blocks(item, documentLinks: documentLinks))
+                    ReplyListItem(marker: "\(Int(value.startIndex) + index).", blocks: blocks(item, documentLinks: documentLinks, listDepth: listDepth + 1))
                 })]
             case let value as UnorderedList:
+                // Browser UA bullet ladder: disc, circle, then square (DSH keeps it).
+                let bullet = ["•", "◦", "▪"][min(listDepth, 2)]
                 return [.list(value.listItems.map { item in
-                    ReplyListItem(marker: item.checkbox.map { $0 == .checked ? "☑" : "☐" } ?? "•", blocks: blocks(item, documentLinks: documentLinks))
+                    ReplyListItem(marker: item.checkbox.map { $0 == .checked ? "☑" : "☐" } ?? bullet, blocks: blocks(item, documentLinks: documentLinks, listDepth: listDepth + 1))
                 })]
             case let value as BlockQuote:
-                let inner = blocks(value, documentLinks: documentLinks)
+                let inner = blocks(value, documentLinks: documentLinks, listDepth: listDepth)
                 if let (kind, content) = ReplyAlert.rewrite(inner) { return [.alert(kind: kind, content)] }
                 return [.quote(inner)]
             case let value as Markdown.Table:
@@ -101,7 +107,7 @@ public enum ReplyDocument {
                 return [.table(headers: value.head.cells.map { ReplyMath.splitInline(linkBareURLs(inlines($0, documentLinks: documentLinks))) }, rows: value.body.rows.map { $0.cells.map { ReplyMath.splitInline(linkBareURLs(inlines($0, documentLinks: documentLinks))) } }, alignments: alignments)]
             case is ThematicBreak: return [.rule]
             case let value as HTMLBlock: return [.paragraph([ReplyInline(text: value.rawHTML)])]
-            default: return blocks(node, documentLinks: documentLinks)
+            default: return blocks(node, documentLinks: documentLinks, listDepth: listDepth)
             }
     }
 

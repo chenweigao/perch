@@ -54,10 +54,9 @@ enum WorkbenchTheme {
     static let actionGlyphNS = nsColor(light: (1, 1, 1), dark: (0.106, 0.114, 0.141))
     static let actionGlyph = Color(nsColor: actionGlyphNS)
 
-    /// Links in reply text; NSTextView resolves dynamic colors while drawing. The
-    /// dark value trades a little saturation for luminance so underlined links do
-    /// not vibrate against the canvas.
-    static let link = nsColor(light: (0.18, 0.36, 0.55), dark: (0.500, 0.651, 0.910))
+    /// Links in reply text; NSTextView resolves dynamic colors while drawing.
+    /// DSH anchor blue (deepseek-500 light / deepseek-400 dark).
+    static let link = nsColor(light: (65/255, 118/255, 230/255), dark: (122/255, 170/255, 255/255))
 
     /// Diff and hunk ink: in dark, each hue is lifted in lightness and slightly
     /// desaturated, keeping the three roles distinct without neon edges.
@@ -74,8 +73,8 @@ enum WorkbenchTheme {
         Color(nsColor: nsColor(light: light, dark: dark))
     }
 
-    private static func nsColor(light: (Double, Double, Double),
-                                dark: (Double, Double, Double)) -> NSColor {
+    static func nsColor(light: (Double, Double, Double),
+                        dark: (Double, Double, Double)) -> NSColor {
         NSColor(name: nil) { appearance in
             let c = isDark(appearance) ? dark : light
             return NSColor(srgbRed: c.0, green: c.1, blue: c.2, alpha: 1)
@@ -87,6 +86,23 @@ enum WorkbenchTheme {
             isDark(appearance) ? dark : light
         }
     }
+
+    /// Inline-code chip fill in prose (DSH: `--dsw-alias-markdown-inline-code`,
+    /// neutral-50/800, OPAQUE like the web token: an alpha wash over the glass
+    /// backdrop reads as a border-only bubble. Rounded, self-drawn (ReplyTextView).
+    static let inlineCodeTintNS = nsColor(light: (250/255, 250/255, 250/255), dark: (41/255, 41/255, 41/255))
+
+    /// Code/mermaid/tool card surface (DSH `--dsw-alias-markdown-code-block`:
+    /// neutral-bluish-50 / neutral-bluish-900).
+    static let replySurfaceNS = nsColor(light: (249/255, 250/255, 251/255), dark: (27/255, 27/255, 28/255))
+
+    /// Code card banner strip (DSH `--dsw-alias-markdown-code-block-banner`):
+    /// identical to the surface in light, a lighter strip in dark.
+    static let replyBannerNS = nsColor(light: (249/255, 250/255, 251/255), dark: (44/255, 44/255, 46/255))
+
+    /// User message bubble (DSH `--dsw-specific-bubble`: deepseek-50 light,
+    /// neutral-bluish-850 dark) — a blue tint, not a neutral wash.
+    static let userBubbleNS = nsColor(light: (237/255, 243/255, 254/255), dark: (44/255, 44/255, 46/255))
 
     /// A primary-ink wash with independent light/dark alphas. labelColor resolves
     /// inside the requested appearance; applying alpha outside it can freeze the
@@ -114,6 +130,35 @@ extension WorkbenchTheme {
         static let title: CGFloat = body
         static let secondary: CGFloat = body
         static let caption: CGFloat = 12
+    }
+    /// PI composer-menus.css: compact rows, source rail and reasoning track.
+    enum Composer {
+        static let text: CGFloat = 12
+        static let metadata: CGFloat = 11
+        static let rowHeight: CGFloat = 28
+        static let railWidth: CGFloat = 116
+        static let paneMaximum: CGFloat = 264
+        static let sliderHeight: CGFloat = 24
+        static let motion = 0.2
+        static let raised = WorkbenchTheme.color(light: (1, 1, 1), dark: (40/255, 40/255, 40/255))
+        /// PI's radius-2xs: model/source rows and the raised reasoning segment.
+        enum CompactShape {
+            static let cornerRadius: CGFloat = 6
+        }
+        /// PI's radius-xs: the reasoning range track.
+        enum ThinkingTrackShape {
+            static let cornerRadius: CGFloat = 8
+        }
+        static func contextLabel(_ tokens: Int) -> String {
+            guard tokens > 0 else { return "—" }
+            guard tokens >= 1000 else { return String(tokens) }
+            let thousands = Double(tokens) / 1000
+            let millions = (thousands * 10).rounded() / 10 >= 1000
+            var value = String(format: millions ? "%.2f" : "%.1f", millions ? Double(tokens) / 1_000_000 : thousands)
+            while value.hasSuffix("0") { value.removeLast() }
+            if value.hasSuffix(".") { value.removeLast() }
+            return value + (millions ? "M" : "K")
+        }
     }
 }
 
@@ -173,7 +218,7 @@ extension WorkbenchTheme {
         static let row: CGFloat = 10
         static let chip: CGFloat = 5
         static let card: CGFloat = 10
-        /// Shares the user message bubble's 18 pt radius and contains the 36 pt send circle.
+        /// The composer's own radius (the message bubble is 20); contains the 36 pt send circle.
         static let composer: CGFloat = 18
         /// Floating glass controls (return-to-latest, selection bar, bookmarks).
         /// Frame panels use `framePanel(windowCorner:inset:)` instead.
@@ -291,19 +336,34 @@ enum AppAppearance: String, CaseIterable, Identifiable {    case system
     }
 }
 
-/// Reading roles share one primary size (14 pt / 22 pt by default). Thoughts,
-/// code, labels and prose use color, weight and spacing to establish hierarchy.
-/// Captions alone step down to 12 pt; document headings may step up.
+/// Reading roles follow the DSH markdown ladder (deepseek-harness 0.2.2, MIT;
+/// see docs/2026-11-08-perch-dsh-prose/SOURCE-NOTES.md): the body size carries a
+/// constant 10 pt leading (14/24 by default), headings step up through a real
+/// ramp, and a secondary tier one step below the body carries thoughts, process
+/// rows and tables. Line heights are size + constant leading, not a fixed ratio.
 struct ReadingScale: Equatable {
     let body: CGFloat
     var unit: CGFloat { body / ReadingBodySize.standard }
-    var bodyLine: CGFloat { (body * (22.0 / 14.0)).rounded() }
-    var heading1: CGFloat { body + 4 }
-    var heading2: CGFloat { body + 2 }
-    var secondary: CGFloat { body }
-    var secondaryLine: CGFloat { bodyLine }
-    var label: CGFloat { body }
+    /// Body line height: 24 pt at the default size, growing one-for-one with it.
+    var bodyLine: CGFloat { body + 10 }
+    var heading1: CGFloat { body + 7 }
+    var heading2: CGFloat { body + 5 }
+    var heading3: CGFloat { body + 4 }
+    /// Heading line heights keep DSH's constant leading per level.
+    var heading1Line: CGFloat { body + 16 }
+    var heading2Line: CGFloat { body + 14 }
+    var heading3Line: CGFloat { body + 12 }
+    /// Secondary tier: −1 through the default size, then −2 (14→13, 18→16).
+    var secondary: CGFloat { min(body - 1, max(13, body - 2)) }
+    /// Secondary text on a 20 pt line at the default size (13/20).
+    var secondaryLine: CGFloat { secondary + 7 }
+    var label: CGFloat { secondary }
     var caption: CGFloat { max(WorkbenchTheme.Typography.caption, body - 2) }
+    /// Code blocks sit one tier below the body (11 pt by default, DSH's code
+    /// setting default); inline code uses 0.875 em at its surrounding size.
+    var code: CGFloat { max(11, body - 3) }
+    /// Code line pitch: 19 pt at the default size.
+    var codeLine: CGFloat { code + 8 }
     /// Preserve the default vertical rhythm; enlarge it with reading zoom.
     func spacing(_ points: CGFloat) -> CGFloat { (points * unit).rounded() }
 }

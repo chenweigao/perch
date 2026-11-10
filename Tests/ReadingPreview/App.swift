@@ -200,6 +200,23 @@ private struct ReadingPreview: View {
 private final class PreviewDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         checkNativeTextLayout()
+        if CommandLine.arguments.contains("--chip-probe") {
+            NSApp.setActivationPolicy(.accessory)
+            Task { @MainActor in
+                await chipProbe()
+                NSApp.terminate(nil)
+            }
+            return
+        }
+        if let captureIndex = CommandLine.arguments.firstIndex(of: "--capture") {
+            NSApp.setActivationPolicy(.accessory)
+            let directory = CommandLine.arguments[CommandLine.arguments.index(after: captureIndex)]
+            Task { @MainActor in
+                await runCapture(directory: directory)
+                NSApp.terminate(nil)
+            }
+            return
+        }
         if CommandLine.arguments.contains("--check-user-bubbles") {
             NSApp.setActivationPolicy(.accessory)
             Task { @MainActor in
@@ -214,6 +231,51 @@ private final class PreviewDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         !CommandLine.arguments.contains("--check-user-bubbles")
     }
+}
+
+/// Real onscreen window probe for chip rendering: the offscreen --capture path
+/// (layer render) proved the fill paints, but the shipping app showed
+/// border-only chips. This reproduces the real window compositing path.
+@MainActor private func chipProbe() async {
+    let text = "chip 填充本来就是不透明的 `#FAFAFA`，我多此一举用了 alpha。已改成不透明色值（浅 `#FAFAFA` / 深 `#292929`，与 DSH token 一致），`mention` 底色（`@\"…\"` 引用）同样处理。"
+    let host = NSHostingView(rootView: KimiMarkdown(text: text).padding(24).background(Color(nsColor: .textBackgroundColor)))
+    let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 700, height: 200), styleMask: [.titled], backing: .buffered, defer: false)
+    window.isReleasedWhenClosed = false
+    window.appearance = NSAppearance(named: .aqua)
+    window.contentView = host
+    window.orderFront(nil)
+    window.setContentSize(NSSize(width: 700, height: 200))
+    host.layoutSubtreeIfNeeded()
+    try? await Task.sleep(for: .milliseconds(600))
+    host.display()
+    CATransaction.flush()
+    let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds)!
+    host.cacheDisplay(in: host.bounds, to: bitmap)
+    let png = bitmap.representation(using: .png, properties: [:])!
+    try! png.write(to: URL(fileURLWithPath: "/tmp/perch-chip-probe.png"))
+    // Report the fill pixel under the chip's center.
+    let scale = CGFloat(bitmap.pixelsWide) / host.bounds.width
+    let midY = Int(host.bounds.height / 2 * scale)
+    var samples: [String] = []
+    for x in stride(from: 300, to: min(500, bitmap.pixelsWide), by: 20) {
+        let c = bitmap.colorAt(x: x, y: midY)!.usingColorSpace(.deviceRGB)!
+        samples.append(String(format: "%d:%02x%02x%02x", x, Int(c.redComponent * 255), Int(c.greenComponent * 255), Int(c.blueComponent * 255)))
+    }
+    print("CHIP-PROBE midline:", samples.joined(separator: " "))
+    // Dump chip-carrying ranges: any plain-text subrange with a chip is the bug.
+    for view in chipProbeTextViews(host) {
+        guard let storage = view.textStorage else { continue }
+        storage.enumerateAttribute(.replyChip, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+            if value != nil {
+                let text = (storage.string as NSString).substring(with: range)
+                let font = storage.attribute(.font, at: range.location, effectiveRange: nil) as? NSFont
+                print("CHIP-RANGE [\(range.location)+\(range.length)] '\(text)' font=\(font?.pointSize ?? 0)")
+            }
+        }
+    }
+}
+@MainActor private func chipProbeTextViews(_ root: NSView) -> [ReplyTextView] {
+    ([root] + root.subviews.flatMap(chipProbeTextViews)).compactMap { $0 as? ReplyTextView }
 }
 
 /// Regression checks for the sizing boundary used by Grid and scrolling text.
@@ -236,6 +298,156 @@ private final class PreviewDelegate: NSObject, NSApplicationDelegate {
     view.update(NSAttributedString(string: text + "\n追加的一行", attributes: attributes))
     precondition(view.measure(width: 220).height > narrow.height, "Streaming text must invalidate cached height")
 }
+
+/// Offscreen capture matrix for visual review: renders real transcripts at
+/// fixed widths in both appearances and writes 2x PNGs. No hosts, no network.
+@MainActor private func runCapture(directory: String) async {
+    setbuf(stdout, nil)
+    let dir = URL(fileURLWithPath: directory)
+    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    let source = try! String(contentsOf: Bundle.main.url(forResource: "reply-reading", withExtension: "md")!, encoding: .utf8)
+    func message(_ id: String, role: String = "assistant", content: [[String: Any]]) -> KimiMessage {
+        try! KimiWire.decoder().decode(KimiMessage.self, from: JSONSerialization.data(withJSONObject: [
+            "id": id, "role": role, "created_at": id, "content": content]))
+    }
+    let thought = (1...8).map { "第 \($0) 行思考：检查排版 token 与渲染路径，确认增量解析只处理尾部块。" }.joined(separator: "\n")
+    let completed: [KimiMessage] = [
+        message("cap-user", role: "user", content: [["type": "text", "text": "把正文排版调成 DSH 那样的阅读节奏，中文长文要好读，代码和表格别挤。"]]),
+        message("cap-thought", content: [["type": "thinking", "thinking": thought]]),
+        message("cap-tool", content: [["type": "tool_use", "tool_call_id": "cap-read", "tool_name": "read", "input": ["path": "Sources/AgentWorkbench/ReplyMarkdownView.swift"]]]),
+        message("cap-result", role: "tool", content: [["type": "tool_result", "tool_call_id": "cap-read", "is_error": false, "output": "ok"]]),
+        message("cap-answer", content: [["type": "text", "text": source]]),
+    ]
+    let running: [KimiMessage] = [
+        message("run-user", role: "user", content: [["type": "text", "text": "读一下排版改造，再说说结论。"]]),
+        message("run-thought", content: [["type": "thinking", "thinking": thought]]),
+    ]
+    let runningAnswer: [KimiMessage] = [
+        message("runa-user", role: "user", content: [["type": "text", "text": "读一下排版改造，再说说结论。"]]),
+        message("runa-thought", content: [["type": "thinking", "thinking": thought]]),
+        message("runa-answer", content: [["type": "text", "text": "正在检查实现：已确认标题阶梯、列表缩进与代码卡片，\n\n```swift\nlet partial = streaming.tail"]]),
+    ]
+    let runningTool: [KimiMessage] = [
+        message("runt-user", role: "user", content: [["type": "text", "text": "继续，把渲染入口的代码读完。"]]),
+        message("runt-note", content: [["type": "text", "text": "先看渲染入口文件的结构。"]]),
+        message("runt-tool", content: [["type": "tool_use", "tool_call_id": "runt-read", "tool_name": "read", "input": ["path": "Sources/AgentWorkbench/ReplyMarkdownView.swift"]]]),
+    ]
+    let previousTurn: [KimiMessage] = [
+        message("seq-old-user", role: "user", content: [["type": "text", "text": "检查第一轮。"]]),
+        message("seq-old-thought", content: [["type": "thinking", "thinking": "第一轮先读取文件，再记录结论。"]]),
+        message("seq-old-read", content: [["type": "tool_use", "tool_call_id": "seq-old-read", "tool_name": "read", "input": ["path": "a.swift"]]]),
+        message("seq-old-result", role: "tool", content: [["type": "tool_result", "tool_call_id": "seq-old-read", "is_error": false, "output": "ok"]]),
+        message("seq-old-answer", content: [["type": "text", "text": "第一轮已完成。"]]),
+    ]
+    let continuation: [KimiMessage] = previousTurn + [
+        message("seq-user", role: "user", content: [["type": "text", "text": "继续检查，工具之间会插入进展文字。"]]),
+        message("seq-thought", content: [["type": "thinking", "thinking": "本轮检查过程应始终只有一个执行中折叠头。"]]),
+        message("seq-goal", content: [["type": "tool_use", "tool_call_id": "seq-goal", "tool_name": "CreateGoal", "input": [:]]]),
+        message("seq-goal-result", role: "tool", content: [["type": "tool_result", "tool_call_id": "seq-goal", "is_error": false, "output": "ok"]]),
+        message("seq-progress", content: [["type": "text", "text": "目标已记录，接着更新清单并执行检查。"]]),
+        message("seq-todo", content: [["type": "tool_use", "tool_call_id": "seq-todo", "tool_name": "TodoList", "input": [:]]]),
+        message("seq-todo-result", role: "tool", content: [["type": "tool_result", "tool_call_id": "seq-todo", "is_error": false, "output": "ok"]]),
+        message("seq-progress-next", content: [["type": "text", "text": "清单已更新，开始验证。"]]),
+        message("seq-check", content: [["type": "tool_use", "tool_call_id": "seq-check", "tool_name": "bash", "input": ["command": "swift test"]]]),
+    ]
+    struct Scene {
+        let name: String
+        let width: CGFloat
+        let dark: Bool
+        let running: Bool
+        let messages: [KimiMessage]
+    }
+    let scenes: [Scene]
+    if ProcessInfo.processInfo.environment["CHIP_SOLO"] != nil {
+        // Isolate one paragraph: a long inline-code span that wraps.
+        scenes = [Scene(name: "chip-solo", width: 900, dark: false, running: false, messages: [
+            message("solo-user", role: "user", content: [["type": "text", "text": "chip 隔离"]]),
+            message("solo-answer", content: [["type": "text", "text": "跨行长 chip 折行时应该像一条连续的带子，不是两个独立胶囊：`Worktree/Perch/Sources/AgentWorkbench/ConversationTranscriptView.swift 里的 ProcessFoldRow 负责折叠头的状态文案与脉冲点`，折行处不断开。"]]),
+        ])]
+    } else {
+    scenes = [
+        Scene(name: "completed-wide-light", width: 900, dark: false, running: false, messages: completed),
+        Scene(name: "completed-narrow-light", width: 560, dark: false, running: false, messages: completed),
+        Scene(name: "completed-dark", width: 900, dark: true, running: false, messages: completed),
+        Scene(name: "running-light", width: 900, dark: false, running: true, messages: running),
+        Scene(name: "running-dark", width: 900, dark: true, running: true, messages: running),
+        Scene(name: "running-answer-light", width: 900, dark: false, running: true, messages: runningAnswer),
+        Scene(name: "running-tool-light", width: 900, dark: false, running: true, messages: runningTool),
+        Scene(name: "running-continuation-light", width: 900, dark: false, running: true, messages: continuation),
+        Scene(name: "running-continuation-dark", width: 900, dark: true, running: true, messages: continuation),
+        Scene(name: "completed-continuation-light", width: 900, dark: false, running: false,
+              messages: continuation + [message("seq-check-result", role: "tool", content: [["type": "tool_result", "tool_call_id": "seq-check", "is_error": false, "output": "ok"]]),
+                                        message("seq-answer", content: [["type": "text", "text": "第二轮也已完成，折叠头原地变为运行完成。"]])]),
+    ]
+    }
+    for scene in scenes {
+        // Wrap the transcript like ConversationScrollControls does: the 748 pt
+        // reading column plus 24 pt insets, centered in the window.
+        let root = VStack(spacing: 0) {
+            ConversationTranscript(messages: scene.messages, sessionId: "capture-" + scene.name, isRunning: scene.running)
+                .frame(width: min(ReplyStyle.readingWidth, max(1, scene.width - 2 * ReplyStyle.horizontalPadding)), alignment: .leading)
+                .padding(.horizontal, ReplyStyle.horizontalPadding)
+                .frame(width: scene.width, alignment: .center)
+        }
+        let host = NSHostingController(rootView: AnyView(root.fixedSize(horizontal: false, vertical: true)
+            .background(Color(nsColor: .textBackgroundColor))))
+        host.sizingOptions = []
+        host.safeAreaRegions = []
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: scene.width, height: 1200), styleMask: [], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.appearance = NSAppearance(named: scene.dark ? .darkAqua : .aqua)
+        window.contentViewController = host
+        window.orderFront(nil)
+        for _ in 0..<6 {
+            try? await Task.sleep(for: .milliseconds(80))
+            let size = host.sizeThatFits(in: CGSize(width: scene.width, height: 1_000_000))
+            window.setContentSize(NSSize(width: scene.width, height: min(ceil(size.height), 4200)))
+            host.view.layoutSubtreeIfNeeded()
+        }
+        let view = host.view
+        for text in captureDescendants(view).compactMap({ $0 as? ReplyTextView }) {
+            text.layoutManager?.ensureLayout(for: text.textContainer!)
+            text.needsDisplay = true
+            if ProcessInfo.processInfo.environment["CHIP_NO_SPELL"] != nil {
+                text.isContinuousSpellCheckingEnabled = false
+                text.isGrammarCheckingEnabled = false
+            }
+        }
+        if ProcessInfo.processInfo.environment["CHIP_DUMP"] != nil {
+            for text in captureDescendants(view).compactMap({ $0 as? ReplyTextView }) {
+                guard let storage = text.textStorage else { continue }
+                let frame = text.convert(text.bounds, to: nil)
+                storage.enumerateAttribute(.replyChip, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+                    guard value != nil else { return }
+                    let snippet = (storage.string as NSString).substring(with: range)
+                    print("CHIP-RUN [\(scene.name)] frame=\(NSStringFromRect(frame)) range={\(range.location),\(range.length)} «\(snippet.prefix(40))»")
+                }
+            }
+        }
+        window.displayIfNeeded()
+        let scale: CGFloat = 2
+        let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(view.bounds.width * scale), pixelsHigh: Int(view.bounds.height * scale),
+            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+        let context = NSGraphicsContext(bitmapImageRep: bitmap)!.cgContext
+        context.translateBy(x: 0, y: CGFloat(bitmap.pixelsHigh))
+        context.scaleBy(x: scale, y: -scale)
+        view.effectiveAppearance.performAsCurrentDrawingAppearance { view.layer!.render(in: context) }
+        let file = dir.appendingPathComponent(scene.name + ".png")
+        try! bitmap.representation(using: .png, properties: [:])!.write(to: file)
+        let projection = ConversationPresentationModel(key: "capture-" + scene.name)
+            .update(.init(messages: scene.messages, isRunning: scene.running, language: "zh-Hans"))
+            .presented(activity: [:], foldsProcess: true, isRunning: scene.running)
+        let folds = projection.rows.filter { $0.foldedRows != nil }.map { row in
+            ["id": row.entry.id, "live": row.live, "children": row.foldedRows!.map(\.entry.id)] as [String: Any]
+        }
+        try! JSONSerialization.data(withJSONObject: ["folds": folds], options: [.prettyPrinted, .sortedKeys])
+            .write(to: dir.appendingPathComponent(scene.name + ".projection.json"))
+        print("CAPTURE: \(scene.name) \(Int(view.bounds.width))x\(Int(view.bounds.height))")
+        window.close()
+    }
+    print("PASS: capture matrix written to \(directory)")
+}
+@MainActor private func captureDescendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(captureDescendants) }
 
 private enum UserBubbleFixture {
     static let shortText = "Superpowers 太重了，再调研一下"
@@ -335,15 +547,17 @@ private enum UserBubbleFixture {
                     require(text.isSelectable && !text.isEditable, "Native selection must remain available")
                     require(frame.height >= text.measure(width: frame.width).height - 1, "\(message.id) text must not be clipped: frame \(frame), measured \(text.measure(width: frame.width))")
                     if text.enclosingScrollView == nil {
-                        require(frame.minX >= width * 0.15 + 14 - 1 && frame.maxX <= width - 14 + 1, "\(message.id) text must stay inside the 85% bubble and padding: \(frame)")
+                        require(frame.minX >= width * 0.15 + 14 - 1 && frame.maxX <= width - 14 + 1, "\(message.id) text must stay inside the 72% bubble and padding: \(frame)")
                     }
                 }
                 if index == 0 {
                     let text = textViews[0], frame = rect(textViews[0], in: root)
                     let ideal = text.measure(width: nil)
                     require(abs(frame.width - ideal.width) <= 1, "Short messages must use their natural width")
-                    require(abs(frame.maxX - (width - 14)) <= 1, "Bubble must be right aligned")
-                    require(abs(frame.minY - 20) <= 1 && abs(root.bounds.height - frame.maxY - 10) <= 1, "Bubble must have 10 pt vertical padding without extra bottom margin")
+                    require(abs(frame.maxX - (width - UserMessageStyle.horizontalPadding)) <= 1, "Bubble must be right aligned")
+                    require(abs(frame.minY - (UserMessageStyle.topSpacing + UserMessageStyle.topPadding)) <= 1
+                        && abs(root.bounds.height - frame.maxY - UserMessageStyle.bottomPadding) <= 1,
+                        "Bubble must keep its token vertical padding without extra bottom margin: minY \(frame.minY), bottom \(root.bounds.height - frame.maxY)")
                     text.setSelectedRange(NSRange(location: 0, length: (text.string as NSString).length))
                     require((text.string as NSString).substring(with: text.selectedRange()) == UserBubbleFixture.shortText, "Native selection must preserve the complete message")
                     text.setSelectedRange(NSRange(location: 0, length: 0))
@@ -360,7 +574,10 @@ private enum UserBubbleFixture {
                     }
                 }
                 require(lightest - darkest > 0.45, "Native text must be visible in the rendered \(scheme) snapshot")
-                let scanY = Int(24 * scale)
+                // Scan at the text's own midline: near the top edge the rounded
+                // corner (radius 20) clips the first fully-paper pixels by up to
+                // a point per side and the width comparison lies.
+                let scanY = Int(rect(textViews[0], in: root).midY * scale)
                 let paper = bitmap.colorAt(x: bitmap.pixelsWide - Int(7 * scale), y: scanY)!.usingColorSpace(.deviceRGB)!
                 let background = bitmap.colorAt(x: 0, y: scanY)!.usingColorSpace(.deviceRGB)!
                 require(abs(paper.redComponent - background.redComponent) > 0.015, "Bubble background must remain visible")
@@ -371,10 +588,10 @@ private enum UserBubbleFixture {
                         && abs(color.blueComponent - paper.blueComponent) < 0.003
                 }
                 let bubbleWidth = CGFloat(paperPixels.last! - paperPixels.first! + 1) / scale
-                require(bubbleWidth <= width * 0.85 + 1, "Rendered bubble must not exceed 85%: \(bubbleWidth)")
+                require(bubbleWidth <= width * 0.72 + 1, "Rendered bubble must not exceed 72%: \(bubbleWidth)")
                 require(abs(CGFloat(paperPixels.last! + 1) / scale - width) <= 1, "Rendered bubble must be right aligned")
                 if index == 0 {
-                    require(abs(bubbleWidth - textViews[0].measure(width: nil).width - 28) <= 1, "Short bubble must hug its text and padding")
+                    require(abs(bubbleWidth - textViews[0].measure(width: nil).width - UserMessageStyle.horizontalPadding * 2) <= 1, "Short bubble must hug its text and padding: bubble \(bubbleWidth), text \(textViews[0].measure(width: nil).width)")
                 }
                 if index == 3 {
                     var left = bitmap.pixelsWide, right = 0, pixels = 0
@@ -392,13 +609,17 @@ private enum UserBubbleFixture {
                 print("PASS: \(message.id), \(Int(width)) pt, \(scheme), height \(root.bounds.height)")
                 rendered.window.close()
             }
-            let rendered = await render(ConversationTranscript(messages: UserBubbleFixture.firstTurn, sessionId: "bubble-spacing-\(width)-\(scheme)"), width: width, scheme: scheme)
+            let rendered = await render(ConversationTranscript(messages: UserBubbleFixture.firstTurn, sessionId: "bubble-spacing-\(width)-\(scheme)", foldsProcess: false), width: width, scheme: scheme)
             let root = rendered.host.view
             let entries = ConversationTimelineEntry.make(UserBubbleFixture.firstTurn)
             let rows = descendants(root)
             let user = rows.first { $0.identifier?.rawValue == entries[0].id }!
             let process = rows.first { $0.identifier?.rawValue == entries[1].id }!
-            require(abs(rect(process, in: root).minY - rect(user, in: root).maxY - 18) <= 1, "Process records must be 18 pt below the user bubble")
+            // User row (message) to the following process record: exactly the
+            // entry spacing (the historical "+2" inset no longer exists).
+            let measuredGap = rect(process, in: root).minY - rect(user, in: root).maxY
+            let expectedGap = ReplyStyle.entrySpacing
+            require(abs(measuredGap - expectedGap) <= 1, "Process records must be \(Int(expectedGap)) pt below the user bubble (measured \(measuredGap))")
             let answer = rows.compactMap { $0 as? ReplyTextView }.first { $0.string == "我会继续调研更轻量的方案。" }!
             require(abs(rect(answer, in: root).minX) <= 1, "Assistant replies must keep their existing left alignment")
             _ = snapshot(root, name: "bubble-transcript-\(Int(width))-\(scheme)")

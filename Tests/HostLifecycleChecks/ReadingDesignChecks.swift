@@ -97,18 +97,18 @@ struct ReadingDesignFixture: View {
         precondition(views.filter { $0.string.contains("正文清楚呈现") || $0.string.contains("let answer") }.allSatisfy { $0.isSelectable }, "Reply and code text must remain selectable")
         let heading = views.first { $0.string == "让回复成为阅读的主角" }!
         let headingFont = heading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont
-        precondition(headingFont.pointSize == 18, "Native heading uses the shared hierarchy")
+        precondition(headingFont.pointSize == 21, "Native H1 steps seven points up on the DSH ramp")
         let body = views.first { $0.string.contains("正文清楚呈现") }!
         let bodyFont = body.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont
         let paragraph = body.textStorage!.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as! NSParagraphStyle
         let subheading = views.first { $0.string == "本次调整" }!
         let minorHeading = views.first { $0.string == "继续阅读" }!
-        precondition(bodyFont.pointSize == 14 && paragraph.minimumLineHeight == 22,
-                     "Body reads at 14 pt on a 22 pt line in both renderers")
-        precondition((subheading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize == 16,
-                     "H2 steps up two points from the body")
-        precondition((minorHeading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize == bodyFont.pointSize,
-                     "H3 and below keep the body size; hierarchy comes from weight and spacing")
+        precondition(bodyFont.pointSize == 14 && paragraph.minimumLineHeight == 24,
+                     "Body reads at 14 pt on a 24 pt line in both renderers")
+        precondition((subheading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize == 19,
+                     "H2 steps five points up from the body")
+        precondition((minorHeading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize == 18,
+                     "H3 steps four points up; H4 and below keep the body size at semibold")
         guard let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { fatalError("No snapshot bitmap") }
         host.cacheDisplay(in: host.bounds, to: bitmap)
         try bitmap.representation(using: .png, properties: [:])!.write(to: output.appendingPathComponent(label + ".png"))
@@ -162,7 +162,7 @@ struct ReadingDesignFixture: View {
     precondition(!thoughtText.string.contains("`") && !thoughtText.string.contains("\n\n"),
                  "Thoughts format inline code and collapse empty paragraph lines")
     let thoughtFont = thoughtText.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont
-    precondition(thoughtFont.pointSize == 14, "Expanded thoughts remain as readable as the reply")
+    precondition(thoughtFont.pointSize == 13, "Expanded thoughts read one tier below the reply")
     // The same disclosure stays open while the live/settled presentation changes.
     host.rootView = ReadingDesignFixture(messages: Array(messages.prefix(2)), running: true)
     try await Task.sleep(for: .milliseconds(200))
@@ -184,7 +184,7 @@ struct ReadingDesignFixture: View {
               let headingFont = heading.textStorage?.attribute(.font, at: 0, effectiveRange: nil) as? NSFont else { return nil }
         return (font.pointSize, paragraph.minimumLineHeight, headingFont.pointSize)
     }
-    for (size, line, heading) in [(18.0, 28.0, 22.0), (16.0, 25.0, 20.0), (14.0, 22.0, 18.0)] as [(CGFloat, CGFloat, CGFloat)] {
+    for (size, line, heading) in [(18.0, 28.0, 25.0), (16.0, 26.0, 23.0), (14.0, 24.0, 21.0)] as [(CGFloat, CGFloat, CGFloat)] {
         ReadingBodySize.shared.set(size)
         var metrics = bodyMetrics()
         for _ in 0..<40 where metrics.map({ $0.body != size }) ?? true {
@@ -201,7 +201,7 @@ struct ReadingDesignFixture: View {
     window.contentView = fallback
     try await Task.sleep(for: .milliseconds(400))
     let fallbackHeading = readingTextViews(fallback).first { $0.string == "让回复成为阅读的主角" }!
-    precondition((fallbackHeading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize == 18)
+    precondition((fallbackHeading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize == 21)
     try await checkPhaseReadingWindow()
     try await checkReadingLifecycleWindow()
     try await checkReadingStagePages()
@@ -309,8 +309,8 @@ struct ReadingDesignFixture: View {
     try await Task.sleep(for: .milliseconds(300))
     precondition(taskPanelControl(window, "tool-call:phase-shell-0") == nil,
                  "Historical failures do not consume individual rows")
-    precondition(taskPanelLabel(window, "activity-phase:thinking:phase-thought:0")?.contains(L("\(1) 次失败")) == true,
-                 "The collapsed stage explicitly discloses historical failures")
+    precondition(taskPanelLabel(window, "activity-phase:thinking:phase-thought:0")?.contains("Permission denied") == true,
+                 "The collapsed stage header names the failure's first line")
     precondition(taskPanelControl(window, "tool-call:phase-shell-1") == nil,
                  "Successful calls stay inside the collapsed stage")
     try snapshot("phases-failure")
@@ -443,14 +443,24 @@ private struct ReadingReviewControls: View {
                  "A manually opened source remains visible when the preview moves into the tool stage")
     click("thought-disclosure:lifecycle-A:thinking:lifecycle-summary:0")
     try await settle()
-    guard let summaryFrame = taskPanelControl(window, "live-thinking-summary") else { fatalError("Public summary must follow the active phase") }
-    precondition(summaryFrame.height <= 46, "The live summary is bounded to two lines")
+    // The public summary stays visible while the turn runs — on the live fold
+    // header or the thought row, wherever it rides.
+    let labels = taskPanelElements(window).compactMap { element -> String? in
+        guard element.node.responds(to: NSSelectorFromString("accessibilityLabel")) else { return nil }
+        return element.node.perform(NSSelectorFromString("accessibilityLabel"))?.takeUnretainedValue() as? String
+    }
+    precondition(labels.contains { $0.contains("正在核对当前路径") },
+                 "The public summary must stay visible while running: \(labels.filter { $0.contains("正在核对") })")
     try snapshot("lifecycle-running")
     host.rootView = ReadingDesignFixture(messages: live, running: false, session: "lifecycle-A", folds: true)
     try await settle()
+    // The unfinished turn folds like any other; open the fold, then the step.
+    click("completed-process:text:lifecycle-progress:0")
+    try await settle()
     click("activity-phase:activity:tool:lifecycle-read")
     try await settle()
-    precondition(taskPanelControl(window, "tool-call:lifecycle-read") != nil)
+    precondition(taskPanelControl(window, "tool-call:lifecycle-read") != nil,
+                 "read tool card after phase click; ids: " + taskPanelIdentifiers(window).joined(separator: ", "))
     precondition(ConversationReadingMemory.shared.retainedEntries(session: "lifecycle-A").contains("activity:tool:lifecycle-read"))
     host.rootView = ReadingDesignFixture(messages: live, running: true, session: "lifecycle-A", folds: true)
     try await settle()
@@ -459,29 +469,36 @@ private struct ReadingReviewControls: View {
     try await settle()
     precondition(taskPanelControl(window, "tool-call:lifecycle-read") != nil, "Completion cannot close a process the reader opened")
     precondition(taskPanelControl(window, "live-thinking-summary") == nil)
-    precondition(taskPanelControl(window, "edit-step:lifecycle-edit") != nil)
-    precondition(taskPanelControl(window, "tool-call:lifecycle-check") == nil)
-    precondition(taskPanelLabel(window, "activity-phase:activity:tool:lifecycle-check")?.contains(L("\(1) 次失败")) == true)
+    // Uniform fold: the edit receipt and the failed call sit inside the fold,
+    // whose header carries the call count and the thinking's first line.
+    precondition(taskPanelControl(window, "edit-step:lifecycle-edit") == nil)
+    precondition(taskPanelControl(window, "activity-phase:activity:tool:lifecycle-check") == nil)
+    precondition(taskPanelLabel(window, "completed-process:activity:tool:lifecycle-edit")?.contains(L("2 个工具")) == true,
+                 "The second fold (edit + check) carries the tool count")
     try snapshot("lifecycle-retained")
-    // A fresh reader sees only the result, edit receipt, failure summary and
-    // compact process entry. Session A's explicit choice cannot leak to B.
+    // A fresh reader sees the prompt, the fold and the answer. Session A's
+    // explicit choice cannot leak to B.
     host.rootView = ReadingDesignFixture(messages: done, session: "lifecycle-B", folds: true)
     for (name, width, appearance) in [("lifecycle-completed", 1000.0, NSAppearance.Name.aqua), ("lifecycle-narrow", 540.0, .aqua), ("lifecycle-dark", 1000.0, .darkAqua)] {
         window.setContentSize(NSSize(width: width, height: 760)); window.appearance = NSAppearance(named: appearance)
         try await settle()
         precondition(taskPanelControl(window, "tool-call:lifecycle-read") == nil)
-        precondition(taskPanelControl(window, "edit-step:lifecycle-edit") != nil && taskPanelControl(window, "tool-call:lifecycle-check") == nil)
-        precondition(taskPanelLabel(window, "activity-phase:activity:tool:lifecycle-check")?.contains(L("\(1) 次失败")) == true)
+        precondition(taskPanelControl(window, "edit-step:lifecycle-edit") == nil && taskPanelControl(window, "activity-phase:activity:tool:lifecycle-check") == nil)
         precondition(!readingTextViews(host).contains { $0.string.contains("我先检查窗口状态") })
         precondition(readingTextViews(host).contains { $0.string.contains("已修复首次打开文件") })
         try snapshot(name)
     }
     window.appearance = NSAppearance(named: .aqua)
+    // The failed call remains reachable inside its expanded fold and stage.
+    // (Session B retained nothing, so the whole turn is one fold here.)
+    click("completed-process:text:lifecycle-progress:0")
+    try await settle()
     click("activity-phase:activity:tool:lifecycle-check")
     try await settle()
-    precondition(taskPanelControl(window, "tool-call:lifecycle-check") != nil, "The failed call remains reachable from its explicit summary")
-    click("activity-phase:activity:tool:lifecycle-check")
+    precondition(taskPanelControl(window, "tool-call:lifecycle-check") != nil, "The failed call remains reachable inside the fold")
+    click("completed-process:text:lifecycle-progress:0")
     try await settle()
+    precondition(!readingTextViews(host).contains { $0.string.contains("我先检查窗口状态") }, "Re-collapsing the fold hides the process again")
     click("completed-process:text:lifecycle-progress:0")
     try await settle()
     precondition(readingTextViews(host).contains { $0.string.contains("我先检查窗口状态") }, "Completed process remains reachable")
@@ -525,7 +542,8 @@ private struct ReadingReviewControls: View {
     }
     let stage = "activity:tool:page-tool-0"
     try await settle()
-    precondition(taskPanelLabel(window, "activity-phase:" + stage)?.contains(L("\(26) 次调用")) == true)
+    precondition(taskPanelLabel(window, "activity-phase:" + stage)?.contains("git show") == true,
+                 "The stage header names the latest targets")
     precondition(taskPanelControl(window, "activity-phase:activity:tool:page-tool-24") == nil)
     click("activity-phase:" + stage)
     try await settle()

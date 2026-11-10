@@ -1,6 +1,145 @@
 import SwiftUI
 import WorkbenchCore
 
+/// PI's equal-width reasoning segments. The native range owns pointer, keyboard
+/// and accessibility; the pill and raw level labels share its stop centers.
+struct ComposerThinkingControl: View {
+    let model: AgentModel
+    let current: ThinkingLevel?
+    let disabled: Bool
+    let onSelect: (ThinkingLevel) -> Void
+    @UILocalization private var L
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var preview: Int? = nil
+    @State private var dragging = false
+
+    private var confirmed: Int? { model.resolve(current).flatMap { model.thinking.firstIndex(of: $0) } }
+    private var selected: Int? { preview ?? confirmed }
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(L("推理")).font(.system(size: WorkbenchTheme.Composer.metadata))
+                .foregroundStyle(WorkbenchTheme.quiet).fixedSize()
+            GeometryReader { geometry in
+                let column = geometry.size.width / CGFloat(model.thinking.count)
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: WorkbenchTheme.Composer.ThinkingTrackShape.cornerRadius)
+                        .fill(WorkbenchTheme.ink.opacity(0.06))
+                    if let selected {
+                        RoundedRectangle(cornerRadius: WorkbenchTheme.Composer.CompactShape.cornerRadius)
+                            .fill(WorkbenchTheme.Composer.raised)
+                            .shadow(color: .black.opacity(0.1), radius: 1, y: 1)
+                            .frame(width: max(0, column - 4), height: 20)
+                            .offset(x: CGFloat(selected) * column + 2)
+                            .animation(reduceMotion || dragging ? nil : .easeOut(duration: WorkbenchTheme.Composer.motion), value: selected)
+                    }
+                    HStack(spacing: 0) {
+                        ForEach(Array(model.thinking.enumerated()), id: \.element) { index, level in
+                            Text(verbatim: level.rawValue)
+                                .font(.system(size: WorkbenchTheme.Composer.metadata, weight: index == selected ? .medium : .regular))
+                                .foregroundStyle(index == selected ? WorkbenchTheme.ink : WorkbenchTheme.quiet)
+                                .lineLimit(1).truncationMode(.tail)
+                                .frame(width: column, height: 24)
+                        }
+                    }.accessibilityHidden(true)
+                    ComposerThinkingRange(levels: model.thinking, index: selected ?? 0,
+                                          label: L("思考强度"), valueLabel: selected.map { model.thinking[$0].rawValue } ?? L("模型默认"),
+                                          disabled: disabled,
+                                          preview: { preview = $0; dragging = true },
+                                          commit: { index in
+                                              dragging = false
+                                              guard !disabled else { preview = nil; return }
+                                              guard model.thinking.indices.contains(index), index != confirmed else { preview = nil; return }
+                                              preview = index
+                                              onSelect(model.thinking[index])
+                                          })
+                        .padding(.horizontal, max(0, column / 2 - 7))
+                }
+            }.frame(height: WorkbenchTheme.Composer.sliderHeight)
+        }
+        .padding(.leading, 14).padding(.trailing, 8).padding(.vertical, 8)
+        .onChange(of: current) { _, _ in preview = nil }
+        .onChange(of: disabled) { _, value in if !value { preview = nil } }
+    }
+}
+
+private struct ComposerThinkingRange: NSViewRepresentable {
+    let levels: [ThinkingLevel]
+    let index: Int
+    let label: String
+    let valueLabel: String
+    let disabled: Bool
+    let preview: (Int) -> Void
+    let commit: (Int) -> Void
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+    func makeNSView(context: Context) -> ComposerThinkingNSSlider {
+        let slider = ComposerThinkingNSSlider()
+        slider.cell = ComposerThinkingSliderCell()
+        slider.controlSize = .small
+        slider.isVertical = false
+        slider.sliderType = .linear
+        slider.isContinuous = true
+        slider.target = context.coordinator
+        slider.action = #selector(Coordinator.changed(_:))
+        slider.finished = { [weak slider, weak coordinator = context.coordinator] in
+            if let slider { coordinator?.parent.commit(Int(slider.doubleValue.rounded())) }
+        }
+        slider.setAccessibilityIdentifier("thinking-slider")
+        return slider
+    }
+    func updateNSView(_ slider: ComposerThinkingNSSlider, context: Context) {
+        context.coordinator.parent = self
+        slider.minValue = 0; slider.maxValue = Double(max(0, levels.count - 1))
+        slider.numberOfTickMarks = levels.count
+        slider.allowsTickMarkValuesOnly = true
+        slider.doubleValue = Double(index)
+        slider.isEnabled = !disabled
+        slider.setAccessibilityLabel(label)
+        slider.setAccessibilityValueDescription(valueLabel)
+    }
+    final class Coordinator: NSObject {
+        var parent: ComposerThinkingRange
+        init(_ parent: ComposerThinkingRange) { self.parent = parent }
+        @objc func changed(_ slider: ComposerThinkingNSSlider) {
+            let index = Int(slider.doubleValue.rounded())
+            parent.preview(index)
+            if !slider.trackingSelection { parent.commit(index) }
+        }
+    }
+}
+
+private final class ComposerThinkingNSSlider: NSSlider {
+    var trackingSelection = false
+    var finished: (() -> Void)?
+    override func mouseDown(with event: NSEvent) {
+        guard isEnabled else { return }
+        trackingSelection = true
+        super.mouseDown(with: event)
+        trackingSelection = false
+        finished?()
+    }
+    override func keyDown(with event: NSEvent) {
+        guard isEnabled else { return }
+        let next: Double
+        switch event.keyCode {
+        case 123, 125, 121: next = doubleValue - 1
+        case 124, 126, 116: next = doubleValue + 1
+        case 115: next = minValue
+        case 119: next = maxValue
+        default: super.keyDown(with: event); return
+        }
+        doubleValue = min(maxValue, max(minValue, next.rounded()))
+        sendAction(action, to: target)
+    }
+}
+
+private final class ComposerThinkingSliderCell: NSSliderCell {
+    // Keep NSSliderCell's layout/tracking pass; suppress only its paint.
+    override func drawBar(inside rect: NSRect, flipped: Bool) {}
+    override func drawKnob(_ knobRect: NSRect) {}
+    override func drawKnob() {}
+    override func drawTickMarks() {}
+}
+
 struct ThinkingPicker: View {
     @UILocalization private var L
     let model: AgentModel?
@@ -57,36 +196,40 @@ struct ContextMeter: View {
     private var summary: String {
         if isStale { return L("上下文用量未同步") }
         guard let budget else { return L("上下文用量未知") }
-        let percent = "\(budget.remainingPercent)%"
+        let percent = "\(displayedPercent ?? budget.remainingPercent)%"
         return L("上下文剩余约 \(percent)")
     }
     private var tint: Color {
         guard !isStale, let budget else { return .secondary }
-        switch budget.pressure {
-        case .comfortable: return .secondary
-        case .tight: return .orange
-        case .critical: return .red
-        }
+        let percent = displayedPercent ?? budget.remainingPercent
+        return percent <= 10 ? .red : percent <= 25 ? .orange : .secondary
     }
+    private var displayedPercent: Int? { budget.map { 100 - Int(($0.usedFraction * 100).rounded()) } }
     var body: some View {
         Button { presented.toggle() } label: {
-            HStack(spacing: 5) {
+            HStack(spacing: 6) {
                 ZStack {
-                    Circle().stroke(Color.secondary.opacity(0.2), lineWidth: 2)
+                    Circle().stroke(WorkbenchTheme.ink.opacity(0.14), lineWidth: 17 * 2.5 / 24)
+                        .frame(width: 17 * 18 / 24, height: 17 * 18 / 24)
                     if let budget, !isStale {
-                        Circle().trim(from: 0, to: budget.usedFraction)
-                            .stroke(tint, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                        Circle().trim(from: 0, to: 1 - budget.usedFraction)
+                            .stroke(tint, style: StrokeStyle(lineWidth: 17 * 2.5 / 24, lineCap: .round))
+                            .frame(width: 17 * 18 / 24, height: 17 * 18 / 24)
                             .rotationEffect(.degrees(-90))
                     } else {
                         Text(isStale ? "–" : "?").font(.system(size: 9, weight: .medium))
                     }
-                }.frame(width: 14, height: 14)
-                if isStale {
-                    Text(L("未同步")).font(.system(size: WorkbenchTheme.Typography.caption))
-                } else if let budget, budget.pressure != .comfortable {
-                    Text(L("上下文将满")).font(.system(size: WorkbenchTheme.Typography.caption))
+                }.frame(width: 17, height: 17)
+                // PI's contract: the remaining percent rides beside the ring at all
+                // times; pressure only changes the ink.
+                if let budget, !isStale {
+                    Text("\(displayedPercent ?? budget.remainingPercent)%")
+                        .font(.system(size: WorkbenchTheme.Typography.caption - 1, weight: .semibold))
+                        .monospacedDigit()
                 }
-            }.foregroundStyle(tint).frame(minWidth: 28, minHeight: 28).contentShape(Rectangle())
+            }.foregroundStyle(tint)
+                .padding(.leading, 5).padding(.trailing, 8).padding(.vertical, 3).frame(minHeight: 24)
+                .contentShape(Rectangle())
         }.buttonStyle(.plain).fixedSize()
             .help(summary).accessibilityLabel(summary)
             .popover(isPresented: $presented) {

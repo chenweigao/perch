@@ -342,6 +342,7 @@
 "工具" = "Tool";
 "已完成" = "Completed";
 "失败" = "Failed";
+"退码 %lld · 失败" = "exit %lld · failed";
 "已取消" = "Cancelled";
 "排队中" = "Queued";
 "执行中" = "Working";
@@ -2029,7 +2030,6 @@
 "%lld 分钟没有新输出" = "No output for %lld min";
 "Command" = "Command";
 "… 其余 %lld 行已折叠" = "… %lld more lines folded";
-"⋯ 代码草稿 · %lld 行" = "⋯ Code draft · %lld lines";
 "读了 %lld 个文件" = "%lld files read";
 "搜索 %lld 次" = "%lld searches";
 "查找 %lld 次" = "%lld file lookups";
@@ -2061,6 +2061,9 @@
 "检查条件" = "Check condition";
 "思考中" = "Thinking";
 "工作过程" = "Work process";
+"运行完成" = "Finished";
+"Process running" = "Running";
+"%lld 个工具" = "%lld tools";
 
 "运行 %@" = "Run %@";
 
@@ -2069,7 +2072,14 @@
 "%@ 等" = "%@ and more";
 
 "%lld 次失败" = "%lld failed";
+"%@ 失败" = "%@ failed";
 
 "展开查看失败记录" = "Expand to view failed calls";
 
 "等待 Agent 新输出…" = "Waiting for new agent output…";
+
+"搜索模型" = "Search models";
+
+"推理" = "Reasoning";
+
+"视觉" = "Vision";

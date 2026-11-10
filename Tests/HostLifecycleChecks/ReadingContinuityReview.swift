@@ -54,8 +54,14 @@ import WorkbenchCore
         session: session, hit: .init(entryID: "text:latest-answer:0", occurrence: 0, excerpt: "阅读锚点 2："), query: "阅读锚点 2："))
     try await settle()
     guard let rect = anchorRect(in: scroll.documentView) else { preconditionFailure("Long history must mount the chosen glyphs") }
-    let location = rect.minY
-    clip.scroll(to: NSPoint(x: 0, y: location - 140)); scroll.reflectScrolledClipView(clip)
+    // Scroll the answer row itself to just below the viewport top, so the saved
+    // reading row is the answer entry on any typography. Anchoring by the glyph
+    // leaves a process row sliver intersecting the top edge; a pin on that row
+    // goes through the completion fold remap (fold top, offset discarded), which
+    // is approximate by design and not what this check measures.
+    let answerRow = descendants(scroll.documentView!).first { $0.identifier?.rawValue == "text:latest-answer:0" }
+    let location = answerRow.map { $0.convert($0.bounds, to: scroll.documentView).minY - 12 } ?? rect.minY - 140
+    clip.scroll(to: NSPoint(x: 0, y: location)); scroll.reflectScrolledClipView(clip)
     try await settle()
     let before = anchorY()!
     let output = URL(fileURLWithPath: "/private/tmp/perch-reading-design")

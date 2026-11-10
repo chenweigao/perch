@@ -194,7 +194,7 @@ private struct KimiComposerView: View {
                                             onUseSessionModel: {
                                                 connection.modelChoices[sessionID] = ""
                                                 connection.thinkingChoices[sessionID] = connection.activeModel(for: sessionID)?.resolve(connection.thinkingChoices[sessionID])
-                                            }, scope: L("下一条消息生效"), onSelectModel: { model in
+                                            }, layout: .combined, scope: L("下一条消息生效"), onSelectModel: { model in
                                                 connection.modelChoices[sessionID] = model.id
                                                 connection.thinkingChoices[sessionID] = model.resolve(connection.thinkingChoices[sessionID])
                                             }, onSelectThinking: { connection.thinkingChoices[sessionID] = $0 })
@@ -221,6 +221,8 @@ private struct KimiComposerView: View {
                         }
                     ComposerActionButton(isRunning: isRunning,
                                          isStopping: connection.isStopping, canSend: canSend, canStop: connection.canStop,
+                                         hasDraft: !(connection.drafts[sessionID] ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                             || !(connection.attachments[sessionID] ?? []).isEmpty,
                                          showsActivity: connection.online && connection.snapshotReady
                                              && connection.conversation?.snapshot.pendingApprovals.isEmpty == true
                                              && connection.conversation?.snapshot.pendingQuestions.isEmpty == true,

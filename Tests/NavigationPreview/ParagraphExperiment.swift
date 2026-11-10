@@ -225,11 +225,15 @@ extension NavigationRunner {
                             view.layoutSubtreeIfNeeded()
                         }
                         if isNative && !assistant {
+                            // The bubble carries the DSH blue tint (deepseek-50 light,
+                            // neutral-bluish-850 dark), not a neutral wash: blue leads red.
+                            let expectedRed: CGFloat = dark ? 44 / 255 : 237 / 255
                             guard let background = native.subviews.first(where: { $0.identifier?.rawValue == "native-user-bubble-background" }),
                                   let cgColor = background.layer?.backgroundColor,
                                   let color = NSColor(cgColor: cgColor)?.usingColorSpace(.deviceRGB),
                                   color.alphaComponent >= 0.03,
-                                  abs(color.redComponent - (dark ? 1 : 0)) <= 0.05,
+                                  abs(color.redComponent - expectedRed) <= 0.05,
+                                  color.blueComponent > color.redComponent,
                                   background.frame.width > 0, background.frame.height > 0 else {
                                 throw NavigationError("Native user bubble background is not visibly rendered")
                             }
@@ -630,27 +634,29 @@ extension NavigationRunner {
         try await settle()
         ownChange = board.changeCount
         guard board.string(forType: .string) == codeSourceText else { throw NavigationError("Code copy button did not copy the code source") }
-        // Reuse the mounted block across multi/single-line changes. Compact cards
-        // keep a visible copy target outside their horizontal scrolling viewport.
-        for singleLine in ["pwd", longLine] {
-            host.rootView = root([try message("前文段落。\n\n```sh\n" + singleLine + "\n```")])
+        // DSH keeps the banner on every card, including single lines and fences
+        // without a language. Reusing a mounted block must preserve that layout.
+        for (language, singleLine) in [("sh", "pwd"), ("sh", longLine), ("", "pwd")] {
+            host.rootView = root([try message("前文段落。\n\n```" + language + "\n" + singleLine + "\n```")])
             try await settle()
             guard let row = nativeRows().first,
-                  let compactCopy = descendants(row).compactMap({ $0 as? NSHostingView<ReplyCopyButton> }).first(where: { $0 !== actions }),
-                  let card = compactCopy.superview,
-                  let scroll = descendants(card).compactMap({ $0 as? NSScrollView }).first else {
-                throw NavigationError("Compact code card lost its copy control or viewport")
+                  let singleCopy = descendants(row).compactMap({ $0 as? NSHostingView<ReplyCopyButton> }).first(where: { $0 !== actions }),
+                  let card = singleCopy.superview,
+                  let scroll = descendants(card).compactMap({ $0 as? NSScrollView }).first,
+                  let languageLabel = descendants(card).compactMap({ $0 as? NSTextField }).first else {
+                throw NavigationError("Single-line code card lost its banner, copy control or viewport")
             }
-            guard descendants(card).compactMap({ $0 as? NSTextField }).allSatisfy(\.isHidden),
-                  scroll.frame.minY == 0, !scroll.frame.intersects(compactCopy.frame),
-                  compactCopy.frame.minY >= 0 && compactCopy.frame.maxY <= card.bounds.height else {
-                throw NavigationError("Compact code header remained visible or copy overlaps the viewport")
+            guard languageLabel.isHidden == language.isEmpty, languageLabel.stringValue == language,
+                  scroll.frame.minY == ReplyStyle.Code.headerHeight,
+                  !scroll.frame.intersects(singleCopy.frame),
+                  singleCopy.frame.minY >= 0 && singleCopy.frame.maxY <= ReplyStyle.Code.headerHeight else {
+                throw NavigationError("Single-line code banner, language slot or copy target diverged from the full card")
             }
-            try click(compactCopy)
+            try click(singleCopy)
             try await settle()
             ownChange = board.changeCount
             guard board.string(forType: .string) == singleLine else {
-                throw NavigationError("Compact code copy lost the complete source")
+                throw NavigationError("Single-line code copy lost the complete source")
             }
         }
         for excluded in [try message(source, metadata: ["origin": ["kind": "compaction_summary"]]),

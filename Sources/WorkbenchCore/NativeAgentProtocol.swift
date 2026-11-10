@@ -78,6 +78,9 @@ public struct NativeAgentSnapshot: Decodable {
     public let permission: PermissionCapability?
     public let thinking: String?
     public let context: ContextUsage?
+    /// Terminal evidence can arrive in the selected snapshot before the catalog.
+    public let turnId: String?
+    public let turnState: String?
     /// Absent for runtimes that never announce commands, which is different from a
     /// runtime that announced an empty list.
     public let commands: [AgentCommand]?

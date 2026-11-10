@@ -40,6 +40,7 @@ public struct AgentModel: Identifiable, Equatable, Sendable {
     public let defaultThinking: ThinkingLevel?
     /// Reasoning ability is separate from whether the catalog declares adjustable effort levels.
     public let hasThinkingCapability: Bool?
+    public let hasVisionCapability: Bool?
     /// The runtime that can route this model. `provider` is the model's own vendor
     /// and says nothing about that, so a combined catalog needs this to avoid
     /// offering a dsh route to OMP. Nil means the catalog did not say.
@@ -47,12 +48,14 @@ public struct AgentModel: Identifiable, Equatable, Sendable {
 
     public init(id: String, provider: String, name: String, contextWindow: Int? = nil,
                 thinking: [ThinkingLevel] = [], defaultThinking: ThinkingLevel? = nil,
-                agent: SessionKind? = nil, hasThinkingCapability: Bool? = nil) {
+                agent: SessionKind? = nil, hasThinkingCapability: Bool? = nil,
+                hasVisionCapability: Bool? = nil) {
         self.id = id; self.provider = provider; self.name = name
         self.contextWindow = contextWindow; self.thinking = thinking
         self.defaultThinking = thinking.contains(where: { $0 == defaultThinking }) ? defaultThinking : nil
         self.agent = agent
         self.hasThinkingCapability = thinking.isEmpty ? hasThinkingCapability : true
+        self.hasVisionCapability = hasVisionCapability
     }
 
     public var supportsThinking: Bool { !thinking.isEmpty }
@@ -85,7 +88,9 @@ public enum ModelSelectionCatalog {
                               thinking: levels,
                               defaultThinking: ThinkingLevel.parse(item["defaultThinking"].string),
                               agent: SessionKind(rawValue: item["agent"].string ?? ""),
-                              hasThinkingCapability: item["reasoning"] == .null ? nil : item["reasoning"] == .bool(true))
+                              hasThinkingCapability: item["reasoning"] == .null ? nil : item["reasoning"] == .bool(true),
+                              hasVisionCapability: item["input"] == .null ? nil
+                                : item["input"].array.contains { $0.string == "image" })
         }
     }
 
@@ -112,7 +117,9 @@ public enum ModelSelectionCatalog {
                               thinking: levels,
                               defaultThinking: ThinkingLevel.parse(item["default_effort"].string),
                               hasThinkingCapability: item["capabilities"].array.isEmpty ? nil
-                                : item["capabilities"].array.contains { ["thinking", "always_thinking"].contains($0.string ?? "") })
+                                : item["capabilities"].array.contains { ["thinking", "always_thinking"].contains($0.string ?? "") },
+                              hasVisionCapability: item["capabilities"] == .null ? nil
+                                : item["capabilities"].array.contains { ["image", "vision"].contains($0.string ?? "") })
         }
     }
 

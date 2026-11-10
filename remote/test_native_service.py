@@ -14,6 +14,20 @@ def setUpModule():
 def tearDownModule():
     folder.cleanup()
 
+class OmpModelMetadataTests(unittest.TestCase):
+    def test_catalog_keeps_declared_vision_and_reasoning_metadata(self):
+        payload = {'models':[{'id':'reasoner','provider':'fixture','name':'Reasoner',
+                              'contextWindow':272000,'thinking':['low','high'],
+                              'defaultThinking':'high','reasoning':True,'input':['text','image'],
+                              'headers':{'Authorization':'fixture-private-header'}}]}
+        result = subprocess.CompletedProcess([], 0, stdout=json.dumps(payload), stderr='')
+        with patch.object(broker, 'MODELS', None), patch.object(broker.subprocess, 'run', return_value=result):
+            models = broker.model_catalog()
+        self.assertEqual(models[0]['input'], ['text','image'])
+        self.assertTrue(models[0]['reasoning'])
+        self.assertEqual(models[0]['defaultThinking'], 'high')
+        self.assertNotIn('headers', models[0])
+
 class ProxySpawnEnvironmentTests(unittest.TestCase):
     def test_local_symlinked_codex_can_find_bundled_tool_helpers(self):
         with tempfile.TemporaryDirectory() as root:

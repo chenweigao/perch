@@ -269,6 +269,8 @@ private struct NativeComposerView: View {
                         }
                     ComposerActionButton(isRunning: s.busy, isStopping: connection.isStopping,
                                          canSend: canSend(s), canStop: connection.canStop,
+                                         hasDraft: !(connection.drafts[s.id] ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                             || !(connection.attachments[s.id] ?? []).isEmpty,
                                          showsActivity: connection.online && s.interactions.isEmpty,
                                          queuedSendTitle: defaultMode(s) == .steer ? "Steer" : "Queue",
                                          onSend: { send(defaultMode(s)) },
@@ -391,7 +393,7 @@ struct NativeModelControls: View {
                             unavailableReason: editable ? nil : L("此 Agent 暂不支持模型与思考设置。"),
                             catalogError: connection.modelsError,
                             onRefreshCatalog: { await connection.loadModels() },
-                            layout: .split,
+                            layout: .combined,
                             usesDefaultModel: currentModel.isEmpty,
                             onUseDefaultModel: defaultModelAction,
                             scope: L("下一轮生效"),

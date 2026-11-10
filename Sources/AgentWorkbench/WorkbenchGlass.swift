@@ -36,16 +36,33 @@ struct WorkbenchDisclosureStyle: DisclosureGroupStyle {
     /// Extends the hover wash past the header's leading edge without moving the
     /// header: padding inside the wash, the same negative padding outside it.
     var leadingWashOutset: CGFloat = 0
+    /// PI/DSH process rows carry the caret on the trailing edge, after the status.
+    var trailingChevron = false
+    /// PI's turn-process header: the caret closes the status cluster itself,
+    /// following the last label instead of either edge.
+    var caretFollowsContent = false
 
     func makeBody(configuration: Configuration) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Button { configuration.isExpanded.toggle() } label: {
                 HStack(spacing: 8) {
-                    Image(systemName: configuration.isExpanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
-                        .frame(width: 12).accessibilityHidden(true)
+                    if !trailingChevron && !caretFollowsContent {
+                        Image(systemName: configuration.isExpanded ? "chevron.down" : "chevron.right")
+                            .font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
+                            .frame(width: 12).accessibilityHidden(true)
+                    }
                     configuration.label
+                    if caretFollowsContent {
+                        Image(systemName: configuration.isExpanded ? "chevron.down" : "chevron.right")
+                            .font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
+                            .accessibilityHidden(true)
+                    }
                     Spacer(minLength: 0)
+                    if trailingChevron && !caretFollowsContent {
+                        Image(systemName: configuration.isExpanded ? "chevron.down" : "chevron.right")
+                            .font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
+                            .accessibilityHidden(true)
+                    }
                 }.padding(.horizontal, horizontalPadding)
                     .padding(.leading, leadingWashOutset)
                     .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .leading)

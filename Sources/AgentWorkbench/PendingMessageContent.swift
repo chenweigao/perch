@@ -42,7 +42,7 @@ struct PendingMessageContent<Controls: View>: View {
                         .padding(.top, UserMessageStyle.topPadding)
                         .padding(.bottom, UserMessageStyle.bottomPadding)
                         // The sent bubble's fill, without a stroke.
-                        .background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: UserMessageStyle.cornerRadius))
+                        .background(Color(nsColor: WorkbenchTheme.userBubbleNS), in: RoundedRectangle(cornerRadius: UserMessageStyle.cornerRadius))
                 }
             }
             HStack(spacing: UserMessageStyle.Pending.detailItemSpacing) {

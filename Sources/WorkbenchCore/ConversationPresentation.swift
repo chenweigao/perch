@@ -62,9 +62,13 @@ public final class ConversationPresentationModel {
         public let activity: ActivityNarrativeRow?
         /// Rows collapsed behind a process fold; non-nil only on fold rows.
         public let foldedRows: [Row]?
+        /// The running turn's process disclosure (PI: active turns auto-open):
+        /// the fold row exists while the turn is live, then settles in place.
+        public let live: Bool
         public init(entry: ConversationTimelineEntry, tools: [String: VisibleTool],
-                    activity: ActivityNarrativeRow?, foldedRows: [Row]? = nil) {
+                    activity: ActivityNarrativeRow?, foldedRows: [Row]? = nil, live: Bool = false) {
             self.entry = entry; self.tools = tools; self.activity = activity; self.foldedRows = foldedRows
+            self.live = live
         }
     }
     /// One earlier turn's rows, kept while the tool chunk it was built from is
@@ -174,7 +178,7 @@ public final class ConversationPresentationModel {
         public let foldParents: [String: String]
 
         init(displayed: [Row], foldsProcess: Bool, isRunning: Bool) {
-            rows = foldsProcess ? ConversationProcessFold.fold(rows: displayed, isRunning: isRunning, preservesSteps: true) : displayed
+            rows = foldsProcess ? ConversationProcessFold.fold(rows: displayed, isRunning: isRunning) : displayed
             foldParents = Self.parents(of: rows)
         }
         init(rows: [Row], foldParents: [String: String]) { self.rows = rows; self.foldParents = foldParents }
@@ -185,13 +189,15 @@ public final class ConversationPresentationModel {
             guard !ids.isEmpty else { return self }
             var result: [Row] = []
             for row in rows {
-                guard let children = row.foldedRows, children.contains(where: { ids.contains($0.entry.id) }) else {
+                // An opened child stays inside the running turn's disclosure.
+                // Lifting it out would manufacture two sibling "running" heads.
+                guard !row.live, let children = row.foldedRows, children.contains(where: { ids.contains($0.entry.id) }) else {
                     result.append(row); continue
                 }
                 var pending: [Row] = []
                 func flush() {
                     guard let first = pending.first else { return }
-                    result.append(Row(entry: .processFold(firstEntry: first.entry), tools: [:], activity: nil, foldedRows: pending))
+                    result.append(Row(entry: .processFold(firstEntry: first.entry), tools: [:], activity: nil, foldedRows: pending, live: row.live))
                     pending = []
                 }
                 for child in children {
@@ -265,7 +271,7 @@ public final class ConversationPresentationModel {
                !(first.presentation == .message && first.messages.first?.isUserPrompt == true) { return whole() }
             if foldsProcess, latest.isEmpty { return whole() }
             let earlier = history.presented(activity: activity, foldsProcess: foldsProcess)
-            let rows = foldsProcess ? ConversationProcessFold.fold(rows: latest, isRunning: isRunning, preservesSteps: true) : latest
+            let rows = foldsProcess ? ConversationProcessFold.fold(rows: latest, isRunning: isRunning) : latest
             return Presentation(rows: earlier.rows + rows, foldParents: Presentation.parents(of: rows, into: earlier.foldParents))
         }
 

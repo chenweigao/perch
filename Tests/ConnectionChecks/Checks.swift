@@ -555,6 +555,30 @@ struct ConnectionChecks {
         try await connection.refresh()
         precondition(connection.stops.phase(for: a) == .idle && connection.canStop)
 
+        // The detail stream can report termination before the next catalog poll.
+        // That evidence must clear the composer immediately, without a click,
+        // a session switch or waiting for the stop timeout.
+        let snapshotFixture = TransportFixture()
+        snapshotFixture.sessions["a"]?["busy"] = true
+        snapshotFixture.sessions["a"]?["turnId"] = "snapshot-stop"
+        snapshotFixture.sessions["a"]?["turnState"] = "running"
+        let snapshotClient = NativeAgentConnection(host: SSHHost(name: "Snapshot stop", destination: "fixture"), transport: snapshotFixture.request)
+        try await snapshotClient.refresh(); snapshotClient.select("a")
+        await settle { snapshotClient.snapshot?.id == "a" }
+        let snapshotReference = snapshotClient.reference("a")!
+        snapshotClient.stop()
+        await settle { snapshotClient.stops.phase(for: snapshotReference) == .stopping }
+        snapshotFixture.sessions["a"]?["busy"] = false
+        snapshotFixture.sessions["a"]?["turnState"] = "completed"
+        snapshotFixture.sessions["a"]?["revision"] = 2
+        try await snapshotClient.poll(now: Date())
+        precondition(snapshotClient.snapshot?.busy == false)
+        precondition(snapshotClient.sessions.first { $0.id == "a" }?.busy == true,
+                     "This regression exercises snapshot evidence before a catalog update")
+        precondition(!snapshotClient.isStopping && snapshotClient.stops.phase(for: snapshotReference) == .completedBeforeStop,
+                     "A terminal detail snapshot must release the stopping composer")
+        snapshotClient.disconnect()
+
         // A lost response is reconciled by receipt, never automatically replayed.
         let lost = TransportFixture(); lost.losePromptResponse = true
         let client = NativeAgentConnection(host: SSHHost(name: "Lost", destination: "fixture"), transport: lost.request)

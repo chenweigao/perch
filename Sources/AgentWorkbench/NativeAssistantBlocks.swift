@@ -7,7 +7,8 @@ import WorkbenchCore
 /// attachments and nested content outside this set keep the SwiftUI renderer.
 enum NativeAssistantBlock: Equatable {
     case paragraphs(NSAttributedString)
-    case heading(NSAttributedString)
+    /// Attributed text plus the Markdown level, which sets the spacing above it.
+    case heading(level: Int, NSAttributedString)
     case code(language: String, source: String, text: NSAttributedString)
     case rule
     case quote([NSAttributedString])
@@ -67,9 +68,9 @@ enum NativeAssistantContent {
             case .heading(let level, let runs):
                 guard allowsRichBlocks else { return nil }
                 flush()
-                result.append(.heading(ReplyTextAttributes.paragraphs([runs],
+                result.append(.heading(level: level, ReplyTextAttributes.paragraphs([runs],
                     size: ReplyStyle.headingSize(level),
-                    weight: .semibold, lineHeight: ReplyStyle.headingLineHeight(level))))
+                    weight: ReplyStyle.headingWeight(level), lineHeight: ReplyStyle.headingLineHeight(level))))
             case .code(let language, let code):
                 // Mermaid renders asynchronously as a rasterized image; the
                 // message keeps the SwiftUI renderer, as tables and math do.
@@ -142,7 +143,10 @@ enum NativeAssistantContent {
 
     /// The SwiftUI renderer's rhythm (`ReplyStyle.blockSpacing`), applied above each block.
     static func spacing(before block: NativeAssistantBlock, after previous: NativeAssistantBlock?, compact: Bool) -> CGFloat {
-        ReplyStyle.blockSpacing(before: ReplyStyle.BlockKind(block),
+        if case .heading(let level, _) = block, previous != nil {
+            return ReplyStyle.headingTopSpacing(level, compact: compact)
+        }
+        return ReplyStyle.blockSpacing(before: ReplyStyle.BlockKind(block),
                                 after: previous.map { ReplyStyle.BlockKind($0) }, compact: compact)
     }
 }
@@ -195,7 +199,7 @@ private final class NativeTextBlockView: NativeAssistantBlockView {
     override func update(_ block: NativeAssistantBlock) {
         let value: NSAttributedString
         switch block { case .paragraphs(let attributed): value = attributed
-        case .heading(let attributed): value = attributed
+        case .heading(_, let attributed): value = attributed
         default: return }
         let text = self.text ?? {
             let view = SelectableReplyText.acquire(delegate: links)
@@ -223,9 +227,9 @@ private final class NativeTextBlockView: NativeAssistantBlockView {
 }
 
 private final class NativeRuleBlockView: NativeAssistantBlockView {
-    override func contentHeight(width: CGFloat) -> CGFloat { 1 }
+    override func contentHeight(width: CGFloat) -> CGFloat { ReplyStyle.Rule.height }
     override func draw(_ dirtyRect: NSRect) {
-        NSColor.labelColor.withAlphaComponent(0.09).setFill()
+        NSColor.labelColor.withAlphaComponent(ReplyStyle.Rule.opacity).setFill()
         dirtyRect.intersection(bounds).fill()
     }
 }
@@ -233,7 +237,6 @@ private final class NativeRuleBlockView: NativeAssistantBlockView {
 private final class NativeCodeCardView: NativeAssistantBlockView {
     private let label = NSTextField(labelWithString: "")
     private let copy: NSHostingView<ReplyCopyButton>
-    private let separator = NSView()
     private let scroll = NSScrollView()
     private let document = NSView()
     /// Masks the viewport while the code overflows, like the SwiftUI card's
@@ -242,17 +245,17 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
     private var codeText: ReplyTextView?
     private var gutter: ReplyTextView?
     private var source = ""
-    private var compact = true
 
     override init(links: SelectableReplyText.Coordinator) {
         copy = NSHostingView(rootView: ReplyCopyButton(text: "", label: "复制代码"))
         super.init(links: links)
-        label.font = .systemFont(ofSize: ReplyStyle.Code.labelSize, weight: .medium)
-        label.textColor = WorkbenchTheme.quietNS
+        // DSH banner: the language label is monospace 11 in primary ink.
+        label.font = .monospacedSystemFont(ofSize: ReplyStyle.Code.labelSize, weight: .regular)
+        // DSH's infostring reads at full label strength.
+        label.textColor = .labelColor
         label.lineBreakMode = .byTruncatingTail
         copy.sizingOptions = []
         copy.safeAreaRegions = []
-        separator.wantsLayer = true
         scroll.hasVerticalScroller = false
         scroll.hasHorizontalScroller = true
         scroll.scrollerStyle = .overlay
@@ -265,22 +268,24 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
         fade.startPoint = CGPoint(x: 0, y: 0.5)
         fade.endPoint = CGPoint(x: 1, y: 0.5)
         fade.colors = [NSColor.black.cgColor, NSColor.black.cgColor, NSColor.clear.cgColor]
-        for view in [label, copy, separator, scroll] { addSubview(view) }
+        for view in [label, copy, scroll] { addSubview(view) }
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     override func update(_ block: NativeAssistantBlock) {
         guard case .code(let language, let source, let text) = block else { return }
-        // The SwiftUI card's label, including a fresh card whose block has no language.
-        let title = language.isEmpty ? L("代码") : language
+        // The SwiftUI card's label: DSH leaves the slot empty when the fence
+        // carries no language.
+        let title = language
         if label.stringValue != title { label.stringValue = title }
+        label.isHidden = title.isEmpty
         // Pooled cards outlive a body-size change.
         if label.font?.pointSize != ReplyStyle.Code.labelSize {
-            label.font = .systemFont(ofSize: ReplyStyle.Code.labelSize, weight: .medium)
+            label.font = .monospacedSystemFont(ofSize: ReplyStyle.Code.labelSize, weight: .regular)
         }
         if source != self.source {
             self.source = source
-            copy.rootView = ReplyCopyButton(text: source, label: "复制代码")
+            copy.rootView = ReplyCopyButton(text: source, label: "复制代码", prominent: true)
         }
         let codeText = self.codeText ?? {
             let view = SelectableReplyText.acquire(delegate: links)
@@ -293,7 +298,6 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
         codeText.update(text)
         codeText.highlightCode(language: language)
         let lineCount = CodeLineNumbers.count(in: source)
-        compact = lineCount == 1
         if lineCount > 1 {
             let gutter = self.gutter ?? {
                 let view = SelectableReplyText.acquire(delegate: links)
@@ -315,7 +319,7 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
     private func textSize() -> CGSize { codeText?.measure(width: nil) ?? .zero }
     private func gutterSize() -> CGSize { gutter?.measure(width: nil) ?? .zero }
     override func contentHeight(width: CGFloat) -> CGFloat {
-        (compact ? 0 : ReplyStyle.Code.headerHeight + 1) + textSize().height + ReplyStyle.Code.inset * 2
+        ReplyStyle.Code.headerHeight + textSize().height + ReplyStyle.Code.inset * 2
     }
     override func placeContent(width: CGFloat) {
         typealias Card = ReplyStyle.Code
@@ -330,18 +334,12 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
                                 width: min(labelSize.width, max(0, width - Card.headerHorizontalPadding * 2 - Card.copyButtonSize - 8)),
                                 height: labelSize.height)
         if label.frame != labelFrame { label.frame = labelFrame }
-        label.isHidden = compact
-        separator.isHidden = compact
-        let copyY = compact ? (text.height + Card.inset * 2 - Card.copyButtonSize) / 2 : Card.headerVerticalPadding
+        let copyY = Card.headerVerticalPadding
         let copyFrame = CGRect(x: width - Card.headerHorizontalPadding - Card.copyButtonSize, y: copyY,
                                width: Card.copyButtonSize, height: Card.copyButtonSize)
         if copy.frame != copyFrame { copy.frame = copyFrame }
-        let separatorFrame = CGRect(x: 0, y: Card.headerHeight, width: width, height: 1)
-        if separator.frame != separatorFrame { separator.frame = separatorFrame }
-        separator.layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.055).cgColor
-        let scrollFrame = CGRect(x: 0, y: compact ? 0 : Card.headerHeight + 1,
-                                 width: compact ? width - Card.copyButtonSize - Card.inset : width,
-                                 height: text.height + Card.inset * 2)
+        let scrollFrame = CGRect(x: 0, y: Card.headerHeight,
+                                 width: width, height: text.height + Card.inset * 2)
         if scroll.frame != scrollFrame { scroll.frame = scrollFrame }
         let documentFrame = CGRect(x: 0, y: 0, width: codeX + text.width + Card.inset, height: text.height + Card.inset * 2)
         if document.frame != documentFrame { document.frame = documentFrame }
@@ -388,10 +386,16 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
     override func textViews() -> [ReplyTextView] { codeText.map { [$0] } ?? [] }
     override func draw(_ dirtyRect: NSRect) {
         let radius = ReplyStyle.Code.cornerRadius
-        NSColor.labelColor.withAlphaComponent(0.035).setFill()
-        NSBezierPath(roundedRect: bounds, xRadius: radius, yRadius: radius).fill()
-        NSColor.labelColor.withAlphaComponent(0.055).setStroke()
-        NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: radius, yRadius: radius).stroke()
+        let card = NSBezierPath(roundedRect: bounds, xRadius: radius, yRadius: radius)
+        WorkbenchTheme.replySurfaceNS.setFill()
+        card.fill()
+        // DSH banner strip: the card's own surface in light, a lighter
+        // strip in dark; clipped to the card's rounded corners.
+        NSGraphicsContext.saveGraphicsState()
+        card.setClip()
+        WorkbenchTheme.replyBannerNS.setFill()
+        NSBezierPath.fill(CGRect(x: 0, y: 0, width: bounds.width, height: ReplyStyle.Code.headerHeight))
+        NSGraphicsContext.restoreGraphicsState()
     }
 }
 
@@ -435,7 +439,7 @@ private final class NativeQuoteBlockView: NativeAssistantBlockView {
     }
     override func textViews() -> [ReplyTextView] { texts }
     override func draw(_ dirtyRect: NSRect) {
-        NSColor.labelColor.withAlphaComponent(0.16).setFill()
+        NSColor.labelColor.withAlphaComponent(ReplyStyle.Quote.barOpacity).setFill()
         NSBezierPath(roundedRect: CGRect(x: 0, y: 0, width: ReplyStyle.Quote.barWidth, height: bounds.height),
                      xRadius: 1, yRadius: 1).fill()
     }
@@ -448,7 +452,7 @@ private final class NativeListBlockView: NativeAssistantBlockView {
         init(links: SelectableReplyText.Coordinator) {
             content = NativeAssistantStackView(compact: true, links: links)
             marker.font = nativeMarkerMetrics().font
-            marker.textColor = ReplyStyle.nativeInk
+            marker.textColor = ReplyStyle.quietInk
             marker.alignment = .right
             marker.lineBreakMode = .byClipping
         }
@@ -486,7 +490,7 @@ private final class NativeListBlockView: NativeAssistantBlockView {
         let rows = rows(width: width)
         var height: CGFloat = 0
         for (index, row) in rows.enumerated() {
-            if index > 0 { height += ReplyStyle.ListLayout.rowGap(between: rows[index - 1], and: row) }
+            if index > 0 { height += ReplyStyle.ListLayout.itemSpacing }
             height += row
         }
         return height
@@ -497,7 +501,7 @@ private final class NativeListBlockView: NativeAssistantBlockView {
         let rows = rows(width: width)
         var y: CGFloat = 0
         for (index, item) in items.enumerated() {
-            if index > 0 { y += ReplyStyle.ListLayout.rowGap(between: rows[index - 1], and: rows[index]) }
+            if index > 0 { y += ReplyStyle.ListLayout.itemSpacing }
             let metrics = nativeMarkerMetrics()
             let markerOffset = metrics.firstBaseline - ceil(metrics.font.ascender)
             let markerSize = item.marker.fittingSize

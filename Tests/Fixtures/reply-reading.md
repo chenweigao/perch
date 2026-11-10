@@ -1,3 +1,5 @@
+# 回复阅读节奏
+
 这次调整已经完成。**先看结论，再按需查看细节**：正文、执行过程和代码各自有清晰的阅读层次。
 
 这是一段较长的中文回复，用来检查连续阅读时的行距和换行。界面应该让注意力停留在内容上，重要信息有适度强调，普通说明保持安静。Kimi、OMP 和 Qoder 共用相同的排版，切换 Agent 后不需要重新适应。
@@ -57,6 +59,99 @@ printf '%s\n' '这是一行很长的代码，用来确认横向滚动不会撑�
 
 参阅 [Swift Markdown 项目](https://github.com/swiftlang/swift-markdown)。链接使用克制的颜色，粗体只表达必要强调。
 
+#### 更深的层级
+
+H4 与正文同号，靠字重和留白分段；`inline_code()` 在标题里保持等宽。
+
+## 数学与图示
+
+行内公式 $E=mc^2$ 与正文同排不错位，价格 $5 和 $10 不触发渲染。
+
+$$\frac{1}{2}\sum_{i=1}^{n} x_i^2 + \sqrt{\alpha^2 + \beta^2}$$
+
+```mermaid
+flowchart LR
+    A[用户提问] --> B(思考)
+    B --> C{需要工具?}
+    C -->|是| D[工具调用]
+    D --> B
+    C -->|否| E[正文回复]
+```
+
+## 宽表：六列对比
+
+六列及以上的宽表在自己的区域内横向滚动，正文列宽保持不变。
+
+| 项目 | Alpha | Beta | Gamma | Delta | Epsilon |
+| :--- | ---: | ---: | ---: | ---: | ---: |
+| 吞吐量 tokens/s | 1,024 | 2,048 | 512 | 768 | 1,536 |
+| 延迟 p99 ms | 120 | 240 | 90 | 180 | 300 |
+| 一段较长的中文说明，用来检查单元格在自己的列宽内自然折行 | 3 | 1 | 4 | 1 | 5 |
+
+## 长代码阅读
+
+```python
+def render_reply(document, width, theme):
+    """一段足够长的 Python 代码，用来确认行号、缩进和横向滚动都保持可用。"""
+    blocks = parse(document)
+    for block in blocks:
+        if block.kind == "table" and block.columns >= 4:
+            yield table_scroll_region(block, width=width, theme=theme, note="宽表独立横滚，不撑宽正文")
+        else:
+            yield paragraph_region(block, width=width, theme=theme)
+```
+
 ---
 
 一段回复结束后，可以复制完整的 Markdown 原文，代码块也可以单独复制。
+
+## 代码块边界形态
+
+单行代码块也带语言栏与复制：
+
+```bash
+git status --short
+```
+
+无语言标注的块退化为纯文本卡：
+
+```
+plain output, no language tag — 纯文本也保持等宽与卡片形态
+```
+
+列表里的代码块跟随列表缩进，不越界：
+
+- 先构建夹具：
+
+  ```sh
+  ./scripts/build-reading-preview.sh   # 构建截图夹具
+  ```
+
+引用里的代码块保持卡片完整：
+
+> 一段说明：
+>
+> ```python
+> print("引用内的代码块")  # 引用内的代码块保持卡片
+> ```
+
+长中文注释行的等宽折行与横滚二选一，看实现：
+
+```text
+// 这是一段故意写得很长的注释，用来确认代码块在横向滚动时不会把内容裁掉，渐隐只出现在真正溢出的场景。
+let answer = 42
+```
+
+## 连续行内代码与标点
+
+chip 填充本来就是不透明的 `#FAFAFA`，我多此一举用了 alpha。已改成不透明色值（浅 `#FAFAFA` / 深 `#292929`，与 DSH token 一致），`mention` 底色（`@"…"` 引用）同样处理。
+
+## 行内代码的边界形态
+
+跨行长 chip 折行时应该像一条连续的带子，不是两个独立胶囊：`Worktree/Perch/Sources/AgentWorkbench/ConversationTranscriptView.swift 里的 ProcessFoldRow 负责折叠头的状态文案与脉冲点`，折行处不断开。
+
+行首 chip 开头：`README.md` 在行首，标点在外的 `token`，行尾收尾 `View.swift`。
+
+连续 chip 之间：`a.swift`、`b.swift`、`c.swift` 三个紧邻，`x = 1` 和 `y = 2` 之间只有空格。
+
+加粗里的 **重点 `code` 混合**，链接里的 [`linked`](https://example.com) 与 code 相邻 `chip`。

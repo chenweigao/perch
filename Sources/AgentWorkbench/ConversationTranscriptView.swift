@@ -24,7 +24,7 @@ enum NavigationRenderMetrics {
 }
 #endif
 
-private let kimiPaper = Color.primary.opacity(0.035)
+private let kimiPaper = Color(nsColor: WorkbenchTheme.userBubbleNS)
 
 /// Compaction marks a context boundary, not a message: a slim divider row with
 /// the agent's handoff notes folded behind it.
@@ -205,7 +205,7 @@ struct KimiMessageView: View {
                                      preparation: markdownPreparation)
                             .environment(\.isConversationBodyText, true)
                     }
-                case "thinking": ThoughtDisclosure(text: part.thinking ?? "")
+                case "thinking": ThoughtDisclosure(text: part.thinking ?? "", publicSummary: ConversationThinkingSummary.publicSummary(of: part))
                 case "tool_use":
                     if let tool = tools[part.toolCallId ?? ""] { KimiToolCard(tool: tool) }
                 case "image", "file", "video":
@@ -364,9 +364,10 @@ struct ConversationTranscript: View {
             return ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
                 memoryKey: key + ":" + row.entry.id, activityNarrative: row.activity, foldedRows: row.foldedRows,
                 isLive: isLiveActivity, preservesExpandedProcess: row.entry.presentation != .processFold,
-                liveThinkingSummary: isLiveActivity ? ConversationThinkingSummary.current(snapshot.narrative.current) : nil,
+                liveThinkingSummary: (isLiveActivity || row.live) ? ConversationThinkingSummary.current(snapshot.narrative.current) : nil,
                 planProgress: isLiveActivity ? planProgress : nil,
-                completedDuration: foldDuration)
+                completedDuration: foldDuration, liveProcessFold: row.live,
+                liveStartedAt: row.live ? timing?.startedAt : nil)
         }
         let _ = PerfDiagnostics.end("snapshot_projection", projectionProbe,
                                     detail: "messages=\(messages.count) rows=\(contents.count)")
@@ -2252,6 +2253,10 @@ private struct ConversationEntryView: View, Equatable {
     var planProgress: TurnStatus.Progress? = nil
     /// Static duration of a settled turn for its process fold header (>= 5s).
     var completedDuration: TimeInterval? = nil
+    /// The running turn's process fold: auto-opens and settles in place (PI).
+    var liveProcessFold = false
+    /// Live turn start for the fold header's ticking duration (PI).
+    var liveStartedAt: Date? = nil
     @RememberedExpansion("commentary") private var commentaryExpanded
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.entry == rhs.entry && lhs.tools == rhs.tools && lhs.api === rhs.api
@@ -2264,6 +2269,8 @@ private struct ConversationEntryView: View, Equatable {
             && lhs.liveThinkingSummary == rhs.liveThinkingSummary
             && lhs.planProgress == rhs.planProgress
             && lhs.completedDuration == rhs.completedDuration
+            && lhs.liveProcessFold == rhs.liveProcessFold
+            && lhs.liveStartedAt == rhs.liveStartedAt
     }
     /// Ordinary provider progress prose needs the same rhythm as narrative anchors.
     var isStageNote: Bool { isProgressNote || entry.presentation == .progress }
@@ -2304,7 +2311,8 @@ private struct ConversationEntryView: View, Equatable {
                     if let foldedRows {
                         ProcessFoldRow(rows: foldedRows, api: api, sessionId: sessionId,
                                        completedDuration: completedDuration,
-                                       sourceMemoryPrefix: String(memoryKey.dropLast(entry.id.count + 1)))
+                                       sourceMemoryPrefix: String(memoryKey.dropLast(entry.id.count + 1)),
+                                       live: liveProcessFold, liveStartedAt: liveStartedAt)
                     }
                 default:
                     if entry.presentation == .record {
@@ -2343,10 +2351,24 @@ struct ProcessFoldRow: View {
     let sessionId: String
     var completedDuration: TimeInterval? = nil
     var sourceMemoryPrefix: String? = nil
+    /// The running turn's process disclosure (PI: active turns start open and
+    /// settle in place on completion; the row id is stable across the flip).
+    var live = false
+    /// Live turn start, so the header's duration ticks while it runs (PI).
+    var liveStartedAt: Date? = nil
     @UILocalization private var L
     @Environment(\.locale) private var locale
     @Environment(\.conversationMemoryKey) private var memoryKey
     @Environment(\.conversationActionContext) private var actionContext
+
+    init(rows: [ConversationPresentationModel.Row], api: KimiAPI?, sessionId: String,
+         completedDuration: TimeInterval? = nil, sourceMemoryPrefix: String? = nil,
+         live: Bool = false, liveStartedAt: Date? = nil) {
+        self.rows = rows; self.api = api; self.sessionId = sessionId
+        self.completedDuration = completedDuration; self.sourceMemoryPrefix = sourceMemoryPrefix
+        self.live = live; self.liveStartedAt = liveStartedAt
+        _expanded = RememberedExpansion("process-fold", initial: live)
+    }
     @RememberedExpansion("process-fold") private var expanded
     @Environment(\.conversationDisclosureWillChange) private var disclosureWillChange
     @State private var pageRevision = 0
@@ -2364,8 +2386,19 @@ struct ProcessFoldRow: View {
     private var toolCalls: Int {
         rows.reduce(0) { $0 + $1.entry.messages.flatMap(\.content).filter { $0.type == "tool_use" }.count }
     }
-    /// Uncertain or user-pending tools the fold conceals; the header keeps the signal.
-    private var attention: Int { ConversationProcessFold.unresolvedCount(rows) }
+    /// First line of the folded thinking, DSH's completed-reasoning summary.
+    /// A provider-declared public summary wins; raw reasoning is only the
+    /// fallback, matching the collapsed thought header.
+    private var thinkingSummary: String? {
+        let parts = rows.flatMap { $0.entry.messages }.flatMap(\.content).filter { $0.thinking != nil }
+        for part in parts {
+            if let summary = ConversationThinkingSummary.publicSummary(of: part) { return summary }
+        }
+        for part in parts {
+            if let thinking = part.thinking, let line = ThoughtTextStyle.firstSummaryLine(thinking) { return line }
+        }
+        return nil
+    }
     /// Line churn from the folded rows' own edit-class tool calls (session-sourced,
     /// not git): nil when nothing resolved a file, so the header stays quiet.
     private var editStat: (files: Int, additions: Int, deletions: Int)? {
@@ -2376,31 +2409,56 @@ struct ProcessFoldRow: View {
     private var externalHeadline: String? {
         rows.lazy.compactMap { $0.activity?.narrative }.last { $0.source == .external && !$0.headline.isEmpty }?.headline
     }
+    /// Live wording follows PI: a streaming thought at the tail reads as
+    /// "thinking", anything else as the plain running status.
+    private var liveLabel: String {
+        if rows.last?.entry.presentation == .thinkingPreview { return L("思考中") }
+        return L("Process running")
+    }
     var body: some View {
-        let countLabel = toolCalls > 0 ? L("\(toolCalls) 次调用") : L("\(rows.count) 条记录")
+        let countLabel = toolCalls > 0 ? L("\(toolCalls) 个工具") : L("\(rows.count) 条记录")
         VStack(alignment: .leading, spacing: 2) {
             HStack(alignment: .center, spacing: 8) {
                 DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
                     HStack(spacing: 6) {
-                        Text("工作过程").fixedSize()
-                        Text(verbatim: "· " + countLabel).fixedSize()
-                        if let completedDuration, completedDuration >= 5 {
+                        // PI's process disclosure: one sparkles glyph for every
+                        // state, then status, a live pulse dot, duration and the
+                        // tool count; the thinking summary rides last (DSH's
+                        // completed reasoning row).
+                        Image(systemName: "sparkles").font(.system(size: ReplyStyle.captionSize))
+                            .foregroundStyle(WorkbenchTheme.quiet).fixedSize()
+                        Text(verbatim: live ? liveLabel : L("运行完成")).fixedSize()
+                        if live {
+                            ProcessLivePulse()
+                        }
+                        if live, let liveStartedAt {
+                            let isZh = locale.language.languageCode?.identifier.hasPrefix("zh") ?? true
+                            TimelineView(.periodic(from: liveStartedAt, by: 1)) { context in
+                                Text(verbatim: "· " + ConversationTiming.duration(
+                                    max(0, context.date.timeIntervalSince(liveStartedAt)).rounded(), chinese: isZh))
+                                    .monospacedDigit()
+                            }.fixedSize()
+                        } else if !live, let completedDuration, completedDuration >= 5 {
                             let isZh = locale.language.languageCode?.identifier.hasPrefix("zh") ?? true
                             Text(verbatim: "· " + ConversationTiming.duration(completedDuration, chinese: isZh))
                                 .monospacedDigit().fixedSize()
                         }
+                        Text(verbatim: "· " + countLabel).fixedSize()
                         if let editStat, actionContext == nil {
                             Text(L("· \(editStat.files) 个文件 +\(editStat.additions) −\(editStat.deletions)"))
                                 .monospacedDigit().fixedSize()
                         }
-                        if attention > 0 {
-                            Text(L("· \(attention) 项需关注")).foregroundStyle(.orange).fixedSize()
+                        if live || !expanded, externalHeadline == nil, let summary = thinkingSummary {
+                            Text(verbatim: "· " + summary)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                                .layoutPriority(-1)
                         }
                     }
                     .font(.system(size: externalHeadline != nil ? ReplyStyle.captionSize : ReplyStyle.Process.labelSize))
                     .foregroundStyle(externalHeadline != nil ? WorkbenchTheme.quiet : Color.secondary)
                 }
-                .disclosureGroupStyle(ProcessDisclosureStyle())
+                .disclosureGroupStyle(ProcessDisclosureStyle(caretFollowsContent: true))
                 .accessibilityValue(Text(expanded ? "已展开" : "已收起"))
                 .accessibilityIdentifier("completed-process:" + rows[0].entry.id)
                 if let editStat, let actionContext {
@@ -2441,11 +2499,7 @@ struct ProcessFoldRow: View {
                         }.buttonStyle(.borderless).font(.system(size: ReplyStyle.Process.labelSize))
                     }
                     ForEach(Array(rows[page.range]), id: \.entry.id) { row in
-                        ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
-                                              memoryKey: (sourceMemoryPrefix ?? sessionId) + ":" + row.entry.id, activityNarrative: row.activity)
-                            .environment(\.conversationMemoryKey, (sourceMemoryPrefix ?? sessionId) + ":" + row.entry.id)
-                            .environment(\.isConversationBodyText, true)
-                            .background(ProcessFindAnchor(id: row.entry.id))
+                        foldedRowView(row)
                     }
                 }.padding(.top, ReplyStyle.Process.rowSpacing).padding(.leading, ReplyStyle.Process.nestedIndent)
                     .overlay(alignment: .leading) {
@@ -2453,6 +2507,16 @@ struct ProcessFoldRow: View {
                     }
             }
         }
+    }
+    /// Only the tail child is live; earlier stages in the same turn have settled.
+    private func foldedRowView(_ row: ConversationPresentationModel.Row) -> some View {
+        return ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
+                                     memoryKey: (sourceMemoryPrefix ?? sessionId) + ":" + row.entry.id, activityNarrative: row.activity,
+                                     isLive: live && row.entry.id == rows.last?.entry.id,
+                                     preservesExpandedProcess: true)
+            .environment(\.conversationMemoryKey, (sourceMemoryPrefix ?? sessionId) + ":" + row.entry.id)
+            .environment(\.isConversationBodyText, true)
+            .background(ProcessFindAnchor(id: row.entry.id))
     }
     private func editStatBadge(_ editStat: (files: Int, additions: Int, deletions: Int)) -> some View {
         HStack(spacing: 5) {
@@ -2471,7 +2535,13 @@ struct ProcessFoldRow: View {
         let prompt = rows.lastIndex { $0.entry.presentation == .message && $0.entry.messages.first?.isUserPrompt == true }
         let start = prompt.map { $0 + 1 } ?? 0
         guard start < rows.count else { return nil }
-        guard let last = rows.last, last.entry.presentation == .activity else { return nil }
+        guard let last = rows.last else { return nil }
+        // The live disclosure wraps the turn's process: the live activity is its
+        // last activity child.
+        if last.entry.presentation == .processFold, let children = last.foldedRows {
+            return children.last { $0.entry.presentation == .activity }?.entry.id
+        }
+        guard last.entry.presentation == .activity else { return nil }
         return last.entry.id
     }
     static func lastFoldOfLatestTurn(_ rows: [ConversationPresentationModel.Row]) -> String? {
@@ -2511,12 +2581,6 @@ private enum ThoughtTextStyle {
         [.font: NSFont.systemFont(ofSize: size, weight: .regular), .foregroundColor: ink,
          .paragraphStyle: paragraphStyle(lineHeight: lineHeight)]
     }
-    static func attributed(_ source: String) -> NSAttributedString {
-        attributed(source, elideCodeBlocks: false)
-    }
-    static func previewAttributed(_ source: String) -> NSAttributedString {
-        attributed(source, elideCodeBlocks: true)
-    }
     private static func isCommentSentinel(_ trimmed: String) -> Bool {
         if trimmed.hasPrefix("<!--") && trimmed.hasSuffix("-->") { // l10n-ignore
             let body = trimmed.dropFirst(4).dropLast(3).trimmingCharacters(in: .whitespaces)
@@ -2524,35 +2588,47 @@ private enum ThoughtTextStyle {
         }
         return trimmed == "<!--" // l10n-ignore
     }
+    /// One cleaned prose line from thinking text: skips blanks, code fences and
+    /// comment sentinels, strips heading/list markers and emphasis/backticks.
+    private static func cleanedLine(_ rawLine: String, inCodeBlock: inout Bool) -> String? {
+        let trimmed = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.hasPrefix("```") { // l10n-ignore
+            inCodeBlock.toggle()
+            return nil
+        }
+        if inCodeBlock || trimmed.isEmpty || isCommentSentinel(trimmed) { return nil }
+        var clean = trimmed
+        for prefix in ["#### ", "### ", "## ", "# ", "- ", "* "] where clean.hasPrefix(prefix) { // l10n-ignore
+            clean = String(clean.dropFirst(prefix.count))
+            break
+        }
+        clean = clean.replacingOccurrences(of: "**", with: "")
+            .replacingOccurrences(of: "`", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return clean.isEmpty || clean == "..." || clean == "…" ? nil : clean
+    }
     /// Latest meaningful prose line for collapsed thought headers (ZCode / Oh My Pi style).
     static func latestSummaryLine(_ source: String) -> String? {
         guard !source.isEmpty else { return nil }
         var inCodeBlock = false
         var latest: String?
         for rawLine in source.components(separatedBy: "\n") {
-            let trimmed = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
-            if trimmed.hasPrefix("```") { // l10n-ignore
-                inCodeBlock.toggle()
-                continue
-            }
-            if inCodeBlock || trimmed.isEmpty || isCommentSentinel(trimmed) { continue }
-            var clean = trimmed
-            for prefix in ["#### ", "### ", "## ", "# ", "- ", "* "] where clean.hasPrefix(prefix) { // l10n-ignore
-                clean = String(clean.dropFirst(prefix.count))
-                break
-            }
-            clean = clean.replacingOccurrences(of: "**", with: "")
-                .replacingOccurrences(of: "`", with: "")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            if !clean.isEmpty && clean != "..." && clean != "…" {
-                latest = clean
-            }
+            if let clean = cleanedLine(rawLine, inCodeBlock: &inCodeBlock) { latest = clean }
         }
         return latest
     }
-    static func attributed(_ source: String, elideCodeBlocks: Bool) -> NSAttributedString {
+    /// First meaningful prose line — the completed fold header's summary, DSH-style.
+    static func firstSummaryLine(_ source: String) -> String? {
+        guard !source.isEmpty else { return nil }
+        var inCodeBlock = false
+        for rawLine in source.components(separatedBy: "\n") {
+            if let clean = cleanedLine(rawLine, inCodeBlock: &inCodeBlock) { return clean }
+        }
+        return nil
+    }
+    static func attributed(_ source: String) -> NSAttributedString {
         guard !source.isEmpty else { return NSAttributedString(string: "", attributes: attributes) }
-        if !elideCodeBlocks && !source.contains("`") && !source.contains("*") && !source.contains("#")
+        if !source.contains("`") && !source.contains("*") && !source.contains("#")
             && !source.contains("<!--") && !source.contains("\n\n")
             && !source.hasPrefix("- ") && !source.contains("\n- ") && !source.contains("\n* ") {
             return NSAttributedString(string: source, attributes: attributes)
@@ -2568,27 +2644,9 @@ private enum ThoughtTextStyle {
         let result = NSMutableAttributedString()
         var lastLineRange: NSRange?
         var inCodeBlock = false
-        var elidedCodeLines = 0
-        func flushElidedCodeBlock() {
-            guard elidedCodeLines > 0 else { return }
-            if result.length > 0 {
-                var newlineAttributes = result.attributes(at: result.length - 1, effectiveRange: nil)
-                newlineAttributes.removeValue(forKey: .backgroundColor)
-                result.append(NSAttributedString(string: "\n", attributes: newlineAttributes))
-            }
-            let start = result.length
-            let placeholder = L("⋯ 代码草稿 · \(elidedCodeLines) 行")
-            result.append(NSAttributedString(string: placeholder, attributes: [
-                .font: codeFont, .foregroundColor: ink,
-                .backgroundColor: codeTint, .paragraphStyle: tightParagraph
-            ]))
-            lastLineRange = NSRange(location: start, length: result.length - start)
-            elidedCodeLines = 0
-        }
         for rawLine in source.components(separatedBy: "\n") {
             let trimmed = rawLine.trimmingCharacters(in: .whitespaces)
             if trimmed.hasPrefix("```") { // l10n-ignore
-                if inCodeBlock && elideCodeBlocks { flushElidedCodeBlock() }
                 inCodeBlock.toggle()
                 continue
             }
@@ -2596,18 +2654,13 @@ private enum ThoughtTextStyle {
             if trimmed.isEmpty {
                 if !inCodeBlock, let range = lastLineRange {
                     result.addAttribute(.paragraphStyle, value: separatedParagraph, range: range)
-                } else if inCodeBlock && elideCodeBlocks {
-                    elidedCodeLines += 1
                 }
-                continue
-            }
-            if inCodeBlock && elideCodeBlocks {
-                elidedCodeLines += 1
                 continue
             }
             if result.length > 0 {
                 var newlineAttributes = result.attributes(at: result.length - 1, effectiveRange: nil)
                 newlineAttributes.removeValue(forKey: .backgroundColor)
+                newlineAttributes.removeValue(forKey: .replyChip)
                 result.append(NSAttributedString(string: "\n", attributes: newlineAttributes))
             }
             let start = result.length
@@ -2635,7 +2688,6 @@ private enum ThoughtTextStyle {
             }
             lastLineRange = NSRange(location: start, length: result.length - start)
         }
-        if inCodeBlock && elideCodeBlocks { flushElidedCodeBlock() }
         return result.length > 0 ? result : NSAttributedString(string: source, attributes: attributes)
     }
     private static func appendInline(_ line: String, into result: NSMutableAttributedString,
@@ -2658,7 +2710,7 @@ private enum ThoughtTextStyle {
                     let codeText = String(line[contentStart..<close])
                     result.append(NSAttributedString(string: codeText, attributes: [
                         .font: codeFont, .foregroundColor: emphasisInk,
-                        .backgroundColor: codeTint, .paragraphStyle: paragraph
+                        .replyChip: codeTint, .paragraphStyle: paragraph
                     ]))
                     index = line.index(after: close)
                     plainStart = index
@@ -2711,18 +2763,6 @@ private struct ThoughtRail<Content: View>: View {
     }
 }
 
-private struct ThoughtTopFade: View {
-    let active: Bool
-    var body: some View {
-        VStack(spacing: 0) {
-            LinearGradient(colors: [active ? Color.clear : Color.black, Color.black],
-                           startPoint: .top, endPoint: .bottom)
-                .frame(height: ReplyStyle.Process.thoughtTopFadeHeight)
-            Rectangle().fill(Color.black)
-        }
-    }
-}
-
 /// Expanded thoughts sit under their toggle's label, like every nested process row.
 private struct ThoughtText: View {
     let text: String
@@ -2749,7 +2789,7 @@ private struct ThoughtToggle: View {
                         .foregroundStyle(WorkbenchTheme.quiet)
                         .fixedSize()
                     Text(verbatim: summary)
-                        .font(.system(size: ReplyStyle.captionSize))
+                        .font(.system(size: ReplyStyle.secondarySize))
                         .foregroundStyle(WorkbenchTheme.quiet)
                         .lineLimit(1)
                         .truncationMode(.head)
@@ -2761,11 +2801,15 @@ private struct ThoughtToggle: View {
 
 struct ThoughtDisclosure: View {
     let text: String
+    /// A provider-declared public summary wins over the raw rolling line (the
+    /// collapsed header never surfaces redacted reasoning).
+    var publicSummary: String? = nil
+    @UILocalization private var L
     @RememberedExpansion("thought") private var expanded
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
-            ThoughtToggle(title: Text("Thoughts"),
-                          summary: expanded ? nil : ThoughtTextStyle.latestSummaryLine(text),
+            ThoughtToggle(title: Text(verbatim: L("Thoughts")),
+                          summary: expanded ? nil : (publicSummary ?? ThoughtTextStyle.latestSummaryLine(text)),
                           expanded: $expanded)
             WorkbenchDisclosureContent(expanded: expanded) { ThoughtText(text: text) }
         }
@@ -2775,6 +2819,7 @@ struct ThoughtDisclosure: View {
 /// One stable disclosure through live and settled thought phases.
 struct ThoughtOutput: View {
     @Environment(\.conversationMemoryKey) private var memoryKey
+    @UILocalization private var L
     let messages: [KimiMessage]
     let finished: Bool
     var embedded = false
@@ -2785,8 +2830,17 @@ struct ThoughtOutput: View {
             ThoughtText(text: fullText)
         } else {
             VStack(alignment: .leading, spacing: 9) {
-                ThoughtToggle(title: finished ? Text("Thoughts") : Text("Thinking"),
-                              summary: nil, expanded: $expanded)
+                // A collapsed running thought shows the provider's public summary
+                // first, else its latest meaningful line beside the title (DSH's
+                // streaming summary), so the preview reads without pushing the
+                // reply down.
+                let publicSummary = messages.flatMap(\.content).compactMap { ConversationThinkingSummary.publicSummary(of: $0) }.first
+                if ProcessInfo.processInfo.environment["THOUGHT_DEBUG"] != nil {
+                    let _ = print("THOUGHT \(memoryKey) expanded=\(expanded) finished=\(finished) public=\(String(describing: publicSummary)) latest=\(String(describing: ThoughtTextStyle.latestSummaryLine(fullText)))")
+                }
+                ThoughtToggle(title: Text(verbatim: finished ? L("Thoughts") : L("Thinking")),
+                              summary: expanded ? nil : (publicSummary ?? ThoughtTextStyle.latestSummaryLine(fullText)),
+                              expanded: $expanded)
                     .accessibilityIdentifier("thought-disclosure:" + memoryKey)
                 WorkbenchDisclosureContent(expanded: expanded) { ThoughtText(text: fullText) }
                 if !expanded, !finished, let summary = ConversationThinkingSummary.latest(in: messages) {
@@ -2797,91 +2851,7 @@ struct ThoughtOutput: View {
     }
 }
 
-/// TextKit keeps wrapped layout for existing text while a reasoning stream appends.
-/// Reuse TextKit layout to fit short thoughts and cap a growing preview at six lines.
-private struct ThinkingTextViewport: NSViewRepresentable {
-    let text: String
-    @Binding var overflows: Bool
-    final class Coordinator {
-        var previous = ""
-    }
-    func makeCoordinator() -> Coordinator { Coordinator() }
-    func makeNSView(context: Context) -> FollowingThoughtScrollView {
-        let scroll = FollowingThoughtScrollView()
-        scroll.drawsBackground = false
-        // The preview follows the stream; wheel gestures scroll the conversation.
-        scroll.hasVerticalScroller = false
-        scroll.autohidesScrollers = true
-        let view = NSTextView(frame: NSRect(x: 0, y: 0, width: 760, height: ReplyStyle.Process.thoughtPreviewHeight))
-        view.isEditable = false
-        view.enabledTextCheckingTypes = 0
-        view.isSelectable = true
-        view.drawsBackground = false
-        view.textContainerInset = .zero
-        view.textContainer?.lineFragmentPadding = 0
-        view.textContainer?.containerSize = NSSize(width: 760, height: CGFloat.greatestFiniteMagnitude)
-        view.textContainer?.widthTracksTextView = true
-        view.isHorizontallyResizable = false
-        view.isVerticallyResizable = true
-        view.minSize = .zero
-        view.autoresizingMask = [.width]
-        view.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
-        scroll.documentView = view
-        return scroll
-    }
-    func updateNSView(_ scroll: FollowingThoughtScrollView, context: Context) {
-        scroll.overflowChanged = { if overflows != $0 { overflows = $0 } }
-        guard context.coordinator.previous != text,
-              let view = scroll.documentView as? NSTextView, let storage = view.textStorage else { return }
-        storage.setAttributedString(ThoughtTextStyle.previewAttributed(text))
-        context.coordinator.previous = text
-        scroll.scheduleFollow()
-    }
-    func sizeThatFits(_ proposal: ProposedViewSize, nsView: FollowingThoughtScrollView, context: Context) -> CGSize? {
-        let width = proposal.width ?? 760
-        return CGSize(width: width, height: min(ReplyStyle.Process.thoughtPreviewHeight, nsView.textHeight(width: width)))
-    }
-}
+/// The live thought preview retired with the phase-aware transcript (ce591b2):
+/// running thoughts surface through the disclosure header's rolling summary and
+/// provider-declared summaries, not a second scrolling text surface.
 
-/// A live preview, not a second reading surface. Full thoughts have their own popover.
-private final class FollowingThoughtScrollView: NSScrollView {
-    var overflowChanged: (Bool) -> Void = { _ in }
-
-    func textHeight(width: CGFloat) -> CGFloat {
-        guard let text = documentView as? NSTextView, let container = text.textContainer,
-              let layout = text.layoutManager else { return 0 }
-        text.setFrameSize(NSSize(width: width, height: text.frame.height))
-        layout.ensureLayout(for: container)
-        text.sizeToFit()
-        return text.frame.height
-    }
-    private var followScheduled = false
-
-    override func scrollWheel(with event: NSEvent) {
-        // A nested NSScrollView otherwise consumes the wheel while only a few
-        // thought lines move. Keep transcript navigation consistent under text.
-        enclosingScrollView?.scrollWheel(with: event)
-    }
-
-    override func setFrameSize(_ newSize: NSSize) {
-        let changed = frame.size != newSize
-        super.setFrameSize(newSize)
-        if changed { scheduleFollow() }
-    }
-    func scheduleFollow() {
-        guard !followScheduled else { return }
-        followScheduled = true
-        DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            self.followScheduled = false
-            guard let text = self.documentView as? NSTextView else { return }
-            self.layoutSubtreeIfNeeded()
-            if let container = text.textContainer { text.layoutManager?.ensureLayout(for: container) }
-            text.sizeToFit()
-            self.overflowChanged(text.bounds.height > self.contentView.bounds.height + 0.5)
-            let bottom = max(0, text.bounds.maxY - self.contentView.bounds.height)
-            self.contentView.scroll(to: NSPoint(x: 0, y: bottom))
-            self.reflectScrolledClipView(self.contentView)
-        }
-    }
-}

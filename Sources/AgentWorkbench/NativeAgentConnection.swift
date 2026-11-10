@@ -569,6 +569,10 @@ final class NativeAgentConnection {
             nextCatalogRefresh = .distantPast
         }
         snapshot = next
+        if next.turnId != nil {
+            reconcileStop(id: next.id, provider: next.provider, turn: next.turnId,
+                          state: next.turnState, busy: next.busy, error: next.error, clearChangedTurn: false)
+        }
         if let roster = next.subagents { subagents.reconcileStops(roster, session: id, readAt: issuedAt) }
         purgeRecordedReceipts()
         return true
@@ -1106,21 +1110,25 @@ final class NativeAgentConnection {
     }
     private func reconcileStops() {
         for session in sessions {
-            let reference = SessionReference(hostID: host.id, terminalID: session.id, kind: session.provider)
-            guard let attempt = stops.attempt(for: reference) else { continue }
-            guard attempt.turn == session.turnId else {
-                stops.clear(reference); continue
-            }
-            if attempt.phase == .stopped || attempt.phase == .completedBeforeStop { continue }
-            if !session.busy {
-                switch session.turnState {
-                case "stopped": stops.resolve(reference, turn: session.turnId, evidence: .runtimeAborted)
-                case "completed": stops.resolve(reference, turn: session.turnId, evidence: .completedBeforeStop)
-                case "failed", "unknown":
-                    if !attempt.phase.isSettled { stops.timedOut(attempt.requestID, session.error ?? L("终止结果未知，请核对会话")) }
-                default: break
-                }
-            }
+            reconcileStop(id: session.id, provider: session.provider, turn: session.turnId,
+                          state: session.turnState, busy: session.busy, error: session.error, clearChangedTurn: true)
+        }
+    }
+    private func reconcileStop(id: String, provider: SessionKind, turn: String?,
+                               state: String?, busy: Bool, error: String?, clearChangedTurn: Bool) {
+        let reference = SessionReference(hostID: host.id, terminalID: id, kind: provider)
+        guard let attempt = stops.attempt(for: reference) else { return }
+        guard attempt.turn == turn else {
+            if clearChangedTurn { stops.clear(reference) }
+            return
+        }
+        guard !busy, attempt.phase != .stopped, attempt.phase != .completedBeforeStop else { return }
+        switch state {
+        case "stopped": stops.resolve(reference, turn: turn, evidence: .runtimeAborted)
+        case "completed": stops.resolve(reference, turn: turn, evidence: .completedBeforeStop)
+        case "failed", "unknown":
+            if !attempt.phase.isSettled { stops.timedOut(attempt.requestID, error ?? L("终止结果未知，请核对会话")) }
+        default: break
         }
     }
     func perform(_ action: String, body: [String: JSONValue] = [:]) {

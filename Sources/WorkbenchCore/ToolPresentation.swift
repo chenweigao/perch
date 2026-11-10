@@ -79,6 +79,23 @@ public enum ToolPresentation {
         ["agent", "task", "agent/spawnagent"].contains(name.lowercased())
     }
 
+    /// The row's leading glyph per tool kind (PI-Desktop's ToolActionIcon ladder):
+    /// the icon carries the verb family, the name carries the wording.
+    public static func kindIcon(_ name: String) -> String {
+        switch name.lowercased() {
+        case "read", "read_file", "readfile", "cat": return "doc.text"
+        case "grep", "search", "rg", "find": return "magnifyingglass"
+        case "glob", "find_files", "ls", "list": return "folder"
+        case "edit", "edit_file", "editfile", "apply_patch", "filechange": return "pencil"
+        case "write", "write_file", "writefile": return "square.and.pencil"
+        case "bash", "shell", "run", "exec", "python", "python3", "node", "terminal": return "terminal"
+        case "fetch", "web", "webfetch", "web_fetch", "browser": return "globe"
+        case "todo", "todowrite": return "checklist"
+        case "git": return "arrow.triangle.branch"
+        default: return "wrench"
+        }
+    }
+
     public static func action(_ name: String) -> String {
         if isSubagentCall(name: name) { return L("子 Agent") }
         switch name.lowercased() {
@@ -128,10 +145,26 @@ public enum ToolPresentation {
         return target(tool)
     }
 
+    /// The detail slot is independent of the tool's title. PI renders it only
+    /// when there is an argument to summarize; a bare call needs no second name.
+    public static func rowSummary(_ tool: VisibleTool) -> String {
+        if let command = ShellActivity.command(tool), !command.isEmpty { return command }
+        if let path = path(tool), !path.isEmpty { return path }
+        for key in ["description", "pattern", "query", "url", "objective", "title", "prompt", "cmd"] {
+            if let value = tool.input?[key].string?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !value.isEmpty, value != tool.name { return value }
+        }
+        return ""
+    }
+
     public static func recentTargets(_ tools: [VisibleTool]) -> String {
         var seen = Set<String>(), labels: [String] = []
         for tool in tools.reversed() where !tool.staysVisible {
-            let label = compactTarget(tool)
+            let detail = rowSummary(tool)
+            guard !detail.isEmpty else { continue }
+            // A stage summarizes several calls; a tool row shows its full argument.
+            let compact = compactTarget(tool)
+            let label = compact == tool.name || compact.isEmpty ? detail : compact
             if seen.insert(label).inserted { labels.append(label) }
             if labels.count == 2 { break }
         }

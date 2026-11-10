@@ -69,8 +69,8 @@ import WorkbenchCore
     // Exercise the first row click in an active window. Otherwise AppKit can
     // consume that event to activate the fixture instead of opening the task.
     NSApp.activate(ignoringOtherApps: true)
-    for _ in 0..<100 where !window.isKeyWindow { try await Task.sleep(for: .milliseconds(20)) }
-    precondition(window.isKeyWindow, "Task detail fixture must be key before its first click")
+    for _ in 0..<100 where !NSApp.isActive || !window.isKeyWindow { try await Task.sleep(for: .milliseconds(20)) }
+    precondition(NSApp.isActive && window.isKeyWindow, "Task detail fixture must be active and key before its first click")
 
     @discardableResult func control(_ identifier: String, present: Bool = true, seconds: Double = 3) async throws -> NSRect? {
         let deadline = Date().addingTimeInterval(seconds)
@@ -82,6 +82,11 @@ import WorkbenchCore
         preconditionFailure("\(identifier) must \(present ? "appear" : "disappear") in the task panel; identifiers: \(taskPanelIdentifiers(window))")
     }
     func press(_ identifier: String) async throws {
+        precondition(window.isVisible, "The task panel must be visible before clicking a control")
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
+        for _ in 0..<100 where !NSApp.isActive || !window.isKeyWindow { try await Task.sleep(for: .milliseconds(20)) }
+        precondition(NSApp.isActive && window.isKeyWindow, "The task panel must own the click")
         let frame = try await control(identifier)!
         for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
             window.sendEvent(NSEvent.mouseEvent(with: type, location: NSPoint(x: frame.midX, y: frame.midY), modifierFlags: [],
@@ -96,9 +101,11 @@ import WorkbenchCore
     try await control("task-context-row-research", seconds: 5)
     captureTaskPanel(window.contentView, "task-list")
     try await press("task-context-row-research")
+    // Wait for the rendered detail, rather than assuming a 150ms click pause
+    // covers the observation/layout handoff under a full-suite load.
+    try await control("task-context-back")
     precondition(model.taskContextWindow.detail == research && model.selectedReference == b,
                  "The whole row opens the task without selecting its session")
-    try await control("task-context-back")
     try await control("task-context-result", present: false)
     try await control("task-context-open-session")
     try await control("task-context-transcript", present: false)
@@ -202,7 +209,7 @@ import WorkbenchCore
 
 /// The window's accessibility elements, depth first. SwiftUI virtual elements
 /// expose AX selectors without necessarily declaring the complete protocol.
-@MainActor private func taskPanelElements(_ window: NSWindow) -> [(identifier: String?, node: NSObject)] {
+@MainActor func taskPanelElements(_ window: NSWindow) -> [(identifier: String?, node: NSObject)] {
     var visited = Set<ObjectIdentifier>()
     var elements: [(identifier: String?, node: NSObject)] = []
     func visit(_ value: Any) {
@@ -218,7 +225,7 @@ import WorkbenchCore
     return elements
 }
 
-@MainActor private func taskPanelIdentifiers(_ window: NSWindow) -> [String] {
+@MainActor func taskPanelIdentifiers(_ window: NSWindow) -> [String] {
     taskPanelElements(window).compactMap(\.identifier).filter { !$0.isEmpty }
 }
 

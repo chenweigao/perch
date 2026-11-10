@@ -23,6 +23,8 @@ func checkModelSelection() throws {
     precondition(mini.id == "gpt-5.4-mini" && mini.provider == "openai-codex")
     precondition(!mini.id.contains("/"))
     precondition(mini.contextWindow == 272000)
+    precondition(mini.hasVisionCapability == true && ompModels[1].hasVisionCapability == false)
+    precondition(ompModels[2].hasVisionCapability == nil)
     precondition(mini.thinking == [.low, .medium, .high, .xhigh])
     // OMP declares no default effort, so none is invented.
     precondition(mini.defaultThinking == nil)
@@ -56,6 +58,7 @@ func checkModelSelection() throws {
     let k3 = kimiModels[0]
     precondition(k3.id == "bailian/kimi-k3" && k3.contextWindow == 1048576)
     precondition(k3.thinking == [.low, .high, .max] && k3.defaultThinking == .max)
+    precondition(k3.hasVisionCapability == false)
     // No support_efforts means no effort control, not a silent default.
     let flash = kimiModels[1]
     precondition(!flash.supportsThinking && flash.defaultThinking == nil)

@@ -25,21 +25,37 @@ extension ReplyStyle {
         /// would slant only the Latin glyphs, because PingFang has no italic.
         static var thoughtSize: CGFloat { ReplyStyle.secondarySize }
         static var thoughtLineHeight: CGFloat { ReplyStyle.scale.secondaryLine }
-        /// The streaming preview shows at most six thought lines before offering in-place expansion.
-        static var thoughtPreviewHeight: CGFloat { thoughtLineHeight * 6 }
         /// Leading rail under a thought disclosure's chevron.
         static let thoughtRailWidth: CGFloat = 2
         static let thoughtRailLeading: CGFloat = 5
-        static let thoughtTopFadeHeight: CGFloat = 14
+    }
+}
+
+/// PI's activity-marker: a 4 pt dot pulsing beside the live status label.
+struct ProcessLivePulse: View {
+    @State private var pulsing = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    var body: some View {
+        Circle().fill(WorkbenchTheme.quiet).frame(width: 4, height: 4)
+            .opacity(pulsing ? 1 : 0.35)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.5).repeatForever(autoreverses: true),
+                       value: pulsing)
+            .onAppear { pulsing = true }
+            .accessibilityHidden(true)
     }
 }
 
 /// The disclosure every process row uses: `WorkbenchDisclosureStyle`'s full-width
 /// header and content mechanics, at the `ReplyStyle.Process` inset.
 struct ProcessDisclosureStyle: DisclosureGroupStyle {
+    /// The turn fold's header closes its status cluster with the caret (PI's
+    /// turn-process header); leaf rows keep the caret on the trailing edge.
+    var caretFollowsContent = false
     func makeBody(configuration: Configuration) -> some View {
+        // Process rows carry the caret on the trailing edge (PI/DSH form).
         WorkbenchDisclosureStyle(horizontalPadding: ReplyStyle.Process.leadingInset,
-                                 leadingWashOutset: ReplyStyle.Process.washOutset)
+                                 leadingWashOutset: ReplyStyle.Process.washOutset,
+                                 trailingChevron: true, caretFollowsContent: caretFollowsContent)
             .makeBody(configuration: configuration)
     }
 }

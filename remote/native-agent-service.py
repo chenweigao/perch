@@ -105,7 +105,7 @@ def model_catalog():
             if out.returncode!=0: raise ValueError('读取 omp 模型列表失败：'+(out.stderr or '').strip()[:200])
             payload=json.loads(out.stdout)
             items=payload['models'] if isinstance(payload,dict) else payload
-            MODELS=[{k:m[k] for k in ('id','provider','name','contextWindow','thinking') if k in m} for m in items]
+            MODELS=[{k:m[k] for k in ('id','provider','name','contextWindow','thinking','defaultThinking','reasoning','input') if k in m} for m in items]
         return MODELS
 
 def qoder_public_model(entry):

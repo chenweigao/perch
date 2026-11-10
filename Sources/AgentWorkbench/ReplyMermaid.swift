@@ -436,14 +436,12 @@ struct ReplyMermaid: View {
                 .buttonStyle(.plain).foregroundStyle(.secondary)
                 .help(showsSource ? "查看图表" : "查看源码")
                 .accessibilityLabel(showsSource ? "查看图表" : "查看源码")
-                ReplyCopyButton(text: source, label: "复制代码")
+                ReplyCopyButton(text: source, label: "复制代码", prominent: true)
             }
             .padding(.horizontal, ReplyStyle.Code.headerHorizontalPadding)
             .padding(.vertical, ReplyStyle.Code.headerVerticalPadding)
-            Rectangle().fill(.primary.opacity(0.055)).frame(height: 1)
             content()
         }
         .background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius))
-        .overlay(RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius).strokeBorder(.primary.opacity(0.055)))
     }
 }

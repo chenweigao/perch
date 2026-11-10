@@ -342,8 +342,11 @@ private struct ActivityBarCheckFixture: View {
     precondition(glints(inlineHost).isEmpty, "The compact process header stays still while its status indicates progress")
     precondition(!busyIndicators(inlineHost).contains { $0.bounds.width == 13 && $0.bounds.height == 13 },
                  "A completed stage must not retain a generic waiting indicator")
-    precondition(busyIndicators(inlineHost).contains { $0.bounds.size == CGSize(width: 36, height: 36) },
-                 "The running turn remains visible in the composer stop control")
+    precondition(!busyIndicators(inlineHost).contains { $0.bounds.size == CGSize(width: 28, height: 28) },
+                 "PI's composer stop control has no activity arc")
+    // The toolbar interaction suite measures the action's native frame through
+    // running, waiting, offline, stopping and completion. Its AX wrapper here
+    // is not the native 28pt layout box.
 
     let sqlNoteText = """
     规划已完成，开始派发：新计划有约 55.05 万项待算，已完成 189 项。旧结果已通过库存核对复用。
@@ -415,7 +418,7 @@ private struct ActivityBarCheckFixture: View {
                 to: URL(fileURLWithPath: "/private/tmp/perch-live-tail-\(suffix).png"))
         }
     }
-    precondition(busyIndicators(liveTailHost).contains { $0.bounds.size == CGSize(width: 13, height: 13) },
-                 "An actually executing tool keeps its factual inline activity indicator")
+    precondition(busyIndicators(liveTailHost).contains { $0.bounds.size == CGSize(width: 11, height: 11) },
+                 "An actually executing tool keeps its factual inline activity indicator in the row header")
     print("PASS: activity bar state transitions, pending/reconnect actions, composer turn feedback, factual tool activity and Recap target")
 }
