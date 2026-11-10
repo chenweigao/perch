@@ -60,12 +60,17 @@ struct TaskSessionOverviewSection: View {
         model.turnContext(item.reference, busy: snapshot.busy)
     }
 
+    private var overviewKey: String? {
+        snapshot.taskOverviewRevision.map { "\(sessionScope):\($0)" }
+    }
+
     private var currentKey: String? {
-        context?.recapKey ?? snapshot.taskOverviewRevision.map { "\(sessionScope):\($0)" }
+        overviewKey ?? context?.recapKey
     }
 
     private var exactEntry: TaskRecapCache.Entry? {
-        currentKey.flatMap { recapStore.entry(for: $0) }
+        overviewKey.flatMap { recapStore.entry(for: $0) }
+            ?? context?.recapKey.flatMap { recapStore.entry(for: $0) }
     }
 
     private var retainedEntry: TaskRecapCache.Entry? {
@@ -73,7 +78,7 @@ struct TaskSessionOverviewSection: View {
     }
 
     private var isGenerating: Bool {
-        recapStore.isLoading(for: currentKey)
+        recapStore.isLoading(for: overviewKey) || recapStore.isLoading(for: context?.recapKey)
     }
 
     private var configured: Bool {
@@ -81,8 +86,9 @@ struct TaskSessionOverviewSection: View {
     }
 
     private var failureMessage: String? {
-        guard let currentKey, case .failed(let message) = recapStore.state(for: currentKey) else { return nil }
-        return message
+        if let overviewKey, case .failed(let message) = recapStore.state(for: overviewKey) { return message }
+        if let recapKey = context?.recapKey, case .failed(let message) = recapStore.state(for: recapKey) { return message }
+        return nil
     }
 
     private var overview: SessionOverview? {
