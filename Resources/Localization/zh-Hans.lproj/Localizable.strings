@@ -2079,3 +2079,11 @@
 "Waiting for your confirmation" = "等待你确认";
 "Waiting for your answer" = "等待你回答";
 "Stopping" = "正在停止";
+
+/* Live composer phase wording */
+"正在思考" = "正在思考";
+"正在处理" = "正在处理";
+"正在执行" = "正在执行";
+"等待你确认" = "等待你确认";
+"等待你回答" = "等待你回答";
+"正在停止" = "正在停止";

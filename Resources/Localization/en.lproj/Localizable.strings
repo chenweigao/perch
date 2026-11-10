@@ -2121,3 +2121,11 @@
 "Waiting for your confirmation" = "Waiting for your confirmation";
 "Waiting for your answer" = "Waiting for your answer";
 "Stopping" = "Stopping";
+
+/* Live composer phase wording */
+"正在思考" = "Thinking";
+"正在处理" = "Working";
+"正在执行" = "Executing";
+"等待你确认" = "Waiting for your confirmation";
+"等待你回答" = "Waiting for your answer";
+"正在停止" = "Stopping";
