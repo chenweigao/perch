@@ -43,7 +43,10 @@ struct ReadingDesignFixture: View {
 }
 @MainActor private func readingClickControl(_ window: NSWindow, _ identifier: String) async throws {
     func buttonFrame() -> NSRect? {
-        guard let root = taskPanelElements(window).first(where: { $0.identifier == identifier })?.node else { return nil }
+        // SwiftUI propagates a DisclosureGroup identifier to raw-detail text
+        // after opening it. Search every matching wrapper for the real button.
+        let roots = taskPanelElements(window).filter { $0.identifier == identifier }.map(\.node)
+        guard !roots.isEmpty else { return nil }
         func find(_ node: NSObject) -> NSRect? {
             let role = node.responds(to: NSSelectorFromString("accessibilityRole"))
                 ? node.value(forKey: "accessibilityRole") as? String : nil
@@ -57,8 +60,10 @@ struct ReadingDesignFixture: View {
             }
             return nil
         }
-        let frame = find(root)
-        if frame == nil {
+        for root in roots {
+            if let frame = find(root) { return frame }
+        }
+        do {
             // The disclosure's accessibility wrapper can change after opening.
             // Report its native tree before failing so a missed click can be
             // distinguished from missing production content.
@@ -73,9 +78,9 @@ struct ReadingDesignFixture: View {
                 FileHandle.standardError.write(Data(line.utf8))
                 for child in value("accessibilityChildren") as? [NSObject] ?? [] { describe(child, depth: depth + 1) }
             }
-            describe(root, depth: 0)
+            for root in roots.prefix(10) { describe(root, depth: 0) }
         }
-        return frame
+        return nil
     }
     guard var frame = buttonFrame() else {
         preconditionFailure("Missing disclosure control: \(identifier)")
@@ -281,6 +286,7 @@ struct ReadingDesignFixture: View {
     let fallbackHeading = readingTextViews(fallback).first { $0.string == "让回复成为阅读的主角" }!
     precondition((fallbackHeading.textStorage!.attribute(.font, at: 0, effectiveRange: nil) as! NSFont).pointSize == 21)
     try await checkPhaseReadingWindow()
+    try await checkSingleOperationNarratives()
     try await checkReadingLifecycleWindow()
     try await checkReadingStageContinuity()
     try await checkReadingContinuityReview()
@@ -464,6 +470,46 @@ private struct ReadingReviewControls: View {
     }
 }
 
+@MainActor private func checkSingleOperationNarratives() async throws {
+    let data = try JSONSerialization.data(withJSONObject: [["id": "dedup-read", "role": "assistant", "created_at": "1", "content": [
+        ["type": "tool_use", "tool_call_id": "dedup-read", "tool_name": "read", "input": ["path": "DocumentReader.swift"]]]]])
+    let messages = try KimiWire.decoder().decode([KimiMessage].self, from: data)
+    let entry = ConversationTimelineEntry.make(messages)[0]
+    let tool = VisibleTool(id: "dedup-read", name: "read", input: .object(["path": .string("DocumentReader.swift")]),
+                           output: .string("DEDUP_RAW_RESULT"), status: .succeeded)
+    let window = NSWindow(contentRect: NSRect(x: 100, y: 100, width: 1000, height: 350), styleMask: [.titled], backing: .buffered, defer: false)
+    defer { window.orderOut(nil) }
+    let host = NSHostingView(rootView: AnyView(EmptyView()))
+    window.contentView = host; window.makeKeyAndOrderFront(nil)
+    for (name, width, appearance) in [("dedup-wide", 1000.0, NSAppearance.Name.aqua), ("dedup-narrow", 540.0, .aqua), ("dedup-dark", 1000.0, .darkAqua)] {
+        window.setContentSize(NSSize(width: width, height: 350)); window.appearance = NSAppearance(named: appearance)
+        for source in [ActivityNarrativeSource.local, .provider, .commentary, .external] {
+            let headline = source == .local ? "探索 DocumentReader.swift" : "NARRATIVE_" + source.rawValue
+            let narrative = ActivityNarrative(turnID: "dedup", stageID: entry.id, phase: .exploring,
+                headline: headline, detail: "NARRATIVE_DETAIL", source: source, lifecycle: .final)
+            host.rootView = AnyView(KimiActivityView(entry: entry, tools: [tool.id: tool], api: nil, sessionId: "dedup", narrative: narrative)
+                .environment(\.conversationMemoryKey, "dedup:" + name + ":" + source.rawValue)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading))
+            try await Task.sleep(for: .milliseconds(150))
+            host.layoutSubtreeIfNeeded()
+            let contents = readingTextViews(host).map(\.string).joined(separator: "\n")
+            precondition(taskPanelControl(window, "tool-call:dedup-read") != nil && taskPanelControl(window, "activity-phase:" + entry.id) == nil,
+                         "A single read has one visible operation, without a duplicate phase")
+            precondition(!contents.contains("DEDUP_RAW_RESULT"), "Raw details remain closed independently of the narrative")
+            if source == .local {
+                precondition(!contents.contains(headline) && !contents.contains("NARRATIVE_DETAIL"), "Local inference must not repeat the operation")
+                let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds)!
+                host.cacheDisplay(in: host.bounds, to: bitmap)
+                try bitmap.representation(using: .png, properties: [:])!.write(
+                    to: URL(fileURLWithPath: "/private/tmp/perch-reading-design/" + name + ".png"))
+            } else {
+                precondition(contents.contains(headline) && contents.contains("NARRATIVE_DETAIL"), "Provider, commentary and external narrative contents remain available")
+            }
+        }
+    }
+    print("PASS: single operation without local repetition; provider/commentary/external narratives retained in wide/narrow/dark")
+}
+
 @MainActor private func checkReadingLifecycleWindow() async throws {
     func record(_ id: String, _ parts: [[String: Any]], role: String = "assistant") -> [String: Any] {
         ["id": id, "role": role, "created_at": "1", "content": parts]
@@ -644,7 +690,7 @@ private struct ReadingReviewControls: View {
     host.rootView = ReadingDesignFixture(messages: try records(27, done: true), session: "stage-page-A", folds: true)
     try await settle()
     precondition(taskPanelControl(window, "tool-call:page-tool-24") != nil, "Completion preserves the visible process")
-    host.rootView = ReadingDesignFixture(messages: try records(26), running: true, session: "stage-page-B", folds: true)
+    host.rootView = ReadingDesignFixture(messages: try records(26, done: true), session: "stage-page-B", folds: true)
     try await settle()
     precondition(taskPanelControl(window, "tool-call:page-tool-24") == nil, "A fresh completed session defaults collapsed")
     try await readingClickControl(window, "completed-process:" + stage)
