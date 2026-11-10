@@ -138,7 +138,10 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         coordinator.inspectorHost?.setFrameSize(
             NSSize(width: WorkspaceLayoutMetrics.inspectorDefaultWidth, height: 620))
 
-        let detailController = WorkbenchDetailController(content: coordinator.contentHost)
+        let detailController = WorkbenchDetailController(
+            content: coordinator.contentHost,
+            header: coordinator.headerHost,
+            actions: coordinator.actionsHost)
         let contentItem = NSSplitViewItem(viewController: detailController)
         // The canvas holds the conversation card plus the frame margins on both sides.
         contentItem.minimumThickness = WorkspaceLayoutMetrics.contentMinimumWidth + 2 * WorkspaceLayoutMetrics.frameInset
@@ -155,17 +158,14 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             controller.installCommandLineIsland(commandLineHost, visible: commandLineVisible)
         }
 
-        // Retire the saved trailing spacer: actions belong at the window edge.
-        let toolbar = NSToolbar(identifier: "WorkbenchToolbar.v3")
+        // Session title and actions now live in the main container's unified top bar;
+        // the window toolbar keeps navigation controls on the leading glass.
+        let toolbar = NSToolbar(identifier: "WorkbenchToolbar.v4")
         toolbar.delegate = coordinator
         toolbar.displayMode = .iconOnly
         toolbar.allowsUserCustomization = true
         toolbar.autosavesConfiguration = true
         controller.workspaceToolbar = toolbar
-        controller.didInstallToolbar = { [weak coordinator] in coordinator?.mountToolbarViews() }
-        controller.alignToolbar = { [weak coordinator] leading in
-            coordinator?.alignToolbar(leading: leading)
-        }
         return controller
     }
 
@@ -230,15 +230,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         private let forwardID = NSToolbarItem.Identifier("WorkbenchForward")
         private let toggleID = NSToolbarItem.Identifier("WorkbenchSidebarToggle")
         private let composeID = NSToolbarItem.Identifier("WorkbenchCompose")
-        private let titleID = NSToolbarItem.Identifier("WorkbenchTitle")
-        private let actionsID = NSToolbarItem.Identifier("WorkbenchActions")
-        private let leadingID = NSToolbarItem.Identifier("WorkbenchLeadingAlignment")
-        private var leadingWidth: NSLayoutConstraint?
-        private var titleLeading: CGFloat = 0
-        private var alignmentScheduled = false
         private let toolbarItems = NSHashTable<NSToolbarItem>.weakObjects()
-        private weak var titleItem: NSToolbarItem?
-        private weak var actionsItem: NSToolbarItem?
 
         init(_ view: WorkspaceSplitView) {
             sidebarHost = NSHostingView(rootView: WorkspaceFloatingPanelRoot(
@@ -260,13 +252,18 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             sidebarHost.sizingOptions = []
             sidebarHost.safeAreaRegions = []
             contentHost.sizingOptions = []
+            headerHost.sizingOptions = [.intrinsicContentSize]
+            headerHost.safeAreaRegions = []
+            actionsHost.sizingOptions = [.intrinsicContentSize]
+            actionsHost.safeAreaRegions = []
             inspectorHost?.sizingOptions = []
             inspectorHost?.safeAreaRegions = []
             commandLineHost?.sizingOptions = []
             commandLineHost?.safeAreaRegions = []
             headerHost.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             headerHost.setContentHuggingPriority(.defaultLow, for: .horizontal)
-            headerHost.didLayout = { [weak self] in self?.scheduleTitleAlignment() }
+            actionsHost.setContentCompressionResistancePriority(.required, for: .horizontal)
+            actionsHost.setContentHuggingPriority(.required, for: .horizontal)
         }
 
         func setInspectorVisible(_ visible: Bool) {
@@ -278,27 +275,14 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         }
 
         func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-            [toggleID, leadingID, titleID, .flexibleSpace, actionsID]
+            [toggleID]
         }
         func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-            toolbarDefaultItemIdentifiers(toolbar) + [composeID, backID, forwardID]
+            [toggleID, composeID, backID, forwardID, .flexibleSpace]
         }
         func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier id: NSToolbarItem.Identifier,
                      willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
             let L = LocalizedUIStrings(locale: locale)
-            if id == leadingID {
-                let item = NSToolbarItem(itemIdentifier: id)
-                toolbarItems.add(item)
-                let spacer = NSView()
-                spacer.translatesAutoresizingMaskIntoConstraints = false
-                let width = spacer.widthAnchor.constraint(equalToConstant: 1)
-                NSLayoutConstraint.activate([width, spacer.heightAnchor.constraint(equalToConstant: 1)])
-                item.view = spacer
-                item.isBordered = false
-                item.visibilityPriority = .high
-                leadingWidth = width
-                return item
-            }
             if id == backID || id == forwardID {
                 let direction = id == backID ? -1 : 1
                 let item = WorkbenchNavigationToolbarItem(itemIdentifier: id)
@@ -331,62 +315,13 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
                 item.target = self
                 item.action = #selector(compose)
                 item.isBordered = false
-            } else if id == titleID {
-                item.label = L("当前会话")
-                if flag { titleItem = item; prepareHostedView(in: item) }
-                else { item.view = NSTextField(labelWithString: item.label) }
-                item.isBordered = false
-                item.visibilityPriority = .high
-            } else if id == actionsID {
-                item.label = L("会话操作")
-                if flag { actionsItem = item; prepareHostedView(in: item) }
-                else { item.view = NSTextField(labelWithString: item.label) }
-                item.isBordered = false
-                item.visibilityPriority = .user
             }
             if id == toggleID || id == composeID {
                 item.view = navigationButton(for: item)
             }
             return item
         }
-        private func prepareHostedView(in item: NSToolbarItem) {
-            // A run-loop delay alone is insufficient: AppKit can drain it while
-            // expanding placeholders. Mount only after setToolbar has returned.
-            item.view = NSView(frame: .zero)
-            DispatchQueue.main.async { [weak self] in
-                guard let self, self.controller?.workspaceToolbarInstalled == true else { return }
-                self.mountToolbarViews()
-            }
-        }
-        func mountToolbarViews() {
-            if let titleItem, titleItem.view !== headerHost { titleItem.view = headerHost }
-            if let actionsItem, actionsItem.view !== actionsHost { actionsItem.view = actionsHost }
-        }
 
-        /// Only the title follows the pane. The system keeps actions at the
-        /// window's trailing edge, independent of inspector visibility.
-        func alignToolbar(leading: CGFloat) {
-            titleLeading = leading
-            guard let controller, headerHost.window != nil, let leadingWidth,
-                  let spacer = leadingWidth.firstItem as? NSView else { return }
-            let titleX = headerHost.convert(headerHost.bounds, to: controller.view).minX
-            // Measure both values from the same rendered layout. The constraint
-            // may already contain a correction that AppKit has not applied yet.
-            let width = max(1, spacer.bounds.width + leading - titleX)
-            if abs(width - leadingWidth.constant) > 0.5 { leadingWidth.constant = width }
-        }
-
-        private func scheduleTitleAlignment() {
-            guard !alignmentScheduled else { return }
-            alignmentScheduled = true
-            // Toolbar intrinsic-size changes can finish after the workspace's
-            // layout pass, for example when a restored session supplies its title.
-            DispatchQueue.main.async { [weak self] in
-                guard let self else { return }
-                self.alignmentScheduled = false
-                self.alignToolbar(leading: self.titleLeading)
-            }
-        }
         func updateToolbarLanguage() {
             // Reading items while AppKit is materializing toolbar placeholders
             // can reenter the delegate through hosted SwiftUI updates.
@@ -399,8 +334,6 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
                 case forwardID: item.label = L("Forward"); item.toolTip = item.label + " · ⌘]"
                 case toggleID: item.label = L("切换侧栏"); item.toolTip = L("显示或隐藏侧栏")
                 case composeID: item.label = L("新建会话"); item.toolTip = L("新建会话 · ⌘N")
-                case titleID: item.label = L("当前会话")
-                case actionsID: item.label = L("会话操作")
                 default: break
                 }
                 if let button = item.view as? NSButton {
@@ -466,6 +399,8 @@ private final class WorkbenchNavigationToolbarItem: NSToolbarItem {
 /// conversation card. The card carries the content surface and its rounded edge.
 final class WorkbenchDetailController: NSViewController {
     let content: NSViewController
+    let header: NSView
+    let actions: NSView
     private var cardLeadingConstraint: NSLayoutConstraint?
     private var cardTrailingConstraint: NSLayoutConstraint?
     private var readingTrailingConstraint: NSLayoutConstraint?
@@ -474,6 +409,7 @@ final class WorkbenchDetailController: NSViewController {
     private(set) var contentTrailingInset: CGFloat = 0
     private var card: WorkbenchContentCardView?
     private var cardShadow: WorkbenchPanelShadowView?
+    private var headerBar: NSView?
     private var islandCard: WorkbenchContentCardView?
     private var islandShadow: WorkbenchPanelShadowView?
     private var islandHeightConstraint: NSLayoutConstraint?
@@ -481,9 +417,14 @@ final class WorkbenchDetailController: NSViewController {
     private var cardBottomToIsland: NSLayoutConstraint?
     private(set) var isIslandVisible = false
     var cardView: NSView? { card }
+    var headerBarView: NSView? { headerBar }
+    var headerTitleView: NSView? { header }
+    var headerActionsView: NSView? { actions }
 
-    init(content: NSViewController) {
+    init(content: NSViewController, header: NSView, actions: NSView) {
         self.content = content
+        self.header = header
+        self.actions = actions
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -502,6 +443,18 @@ final class WorkbenchDetailController: NSViewController {
         detail.translatesAutoresizingMaskIntoConstraints = false
         detail.clipsToBounds = true
         card.addSubview(detail)
+        let headerBar = NSView()
+        headerBar.translatesAutoresizingMaskIntoConstraints = false
+        card.addSubview(headerBar)
+        self.headerBar = headerBar
+        header.translatesAutoresizingMaskIntoConstraints = false
+        actions.translatesAutoresizingMaskIntoConstraints = false
+        headerBar.addSubview(header)
+        headerBar.addSubview(actions)
+        let headerDivider = NSBox()
+        headerDivider.boxType = .separator
+        headerDivider.translatesAutoresizingMaskIntoConstraints = false
+        headerBar.addSubview(headerDivider)
         let inset = WorkspaceLayoutMetrics.frameInset
         let leading = card.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: inset)
         let trailing = card.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -inset)
@@ -514,7 +467,20 @@ final class WorkbenchDetailController: NSViewController {
             leading,
             trailing,
             cardBottom,
-            detail.topAnchor.constraint(equalTo: card.topAnchor),
+            headerBar.topAnchor.constraint(equalTo: card.topAnchor),
+            headerBar.leadingAnchor.constraint(equalTo: card.leadingAnchor),
+            headerBar.trailingAnchor.constraint(equalTo: card.trailingAnchor),
+            headerBar.heightAnchor.constraint(equalToConstant: WorkbenchChrome.headerHeight),
+            header.leadingAnchor.constraint(equalTo: headerBar.leadingAnchor, constant: WorkbenchTheme.Reading.inset),
+            header.centerYAnchor.constraint(equalTo: headerBar.centerYAnchor),
+            header.trailingAnchor.constraint(lessThanOrEqualTo: actions.leadingAnchor, constant: -12),
+            actions.trailingAnchor.constraint(equalTo: headerBar.trailingAnchor, constant: -12),
+            actions.centerYAnchor.constraint(equalTo: headerBar.centerYAnchor),
+            headerDivider.leadingAnchor.constraint(equalTo: headerBar.leadingAnchor),
+            headerDivider.trailingAnchor.constraint(equalTo: headerBar.trailingAnchor),
+            headerDivider.bottomAnchor.constraint(equalTo: headerBar.bottomAnchor),
+            headerDivider.heightAnchor.constraint(equalToConstant: 1),
+            detail.topAnchor.constraint(equalTo: headerBar.bottomAnchor),
             detail.leadingAnchor.constraint(equalTo: card.leadingAnchor),
             detail.bottomAnchor.constraint(equalTo: card.bottomAnchor),
         ])
@@ -545,7 +511,11 @@ final class WorkbenchDetailController: NSViewController {
         let sheet = card!
         let panel = NSView()
         panel.translatesAutoresizingMaskIntoConstraints = false
-        sheet.addSubview(panel)
+        if let headerBar {
+            sheet.addSubview(panel, positioned: .below, relativeTo: headerBar)
+        } else {
+            sheet.addSubview(panel)
+        }
         inspector.translatesAutoresizingMaskIntoConstraints = false
         panel.addSubview(inspector)
         let divider = NSBox()
@@ -558,12 +528,12 @@ final class WorkbenchDetailController: NSViewController {
             panel.bottomAnchor.constraint(equalTo: sheet.bottomAnchor),
             panel.trailingAnchor.constraint(equalTo: sheet.trailingAnchor),
             width,
-            inspector.topAnchor.constraint(equalTo: panel.topAnchor),
+            inspector.topAnchor.constraint(equalTo: panel.topAnchor, constant: WorkbenchChrome.headerHeight),
             inspector.bottomAnchor.constraint(equalTo: panel.bottomAnchor),
             inspector.leadingAnchor.constraint(equalTo: panel.leadingAnchor, constant: 1),
             inspector.trailingAnchor.constraint(equalTo: panel.trailingAnchor),
             divider.leadingAnchor.constraint(equalTo: panel.leadingAnchor),
-            divider.topAnchor.constraint(equalTo: panel.topAnchor),
+            divider.topAnchor.constraint(equalTo: panel.topAnchor, constant: WorkbenchChrome.headerHeight),
             divider.bottomAnchor.constraint(equalTo: panel.bottomAnchor),
             divider.widthAnchor.constraint(equalToConstant: 1),
         ])
@@ -861,6 +831,9 @@ final class WorkbenchSplitController: NSSplitViewController {
     var detailCanvasView: NSView? { detailController?.view }
     var detailCardView: NSView? { detailController?.cardView }
     var detailContentView: NSView? { detailController?.content.view }
+    var headerBarView: NSView? { detailController?.headerBarView }
+    var headerTitleView: NSView? { detailController?.headerTitleView }
+    var headerActionsView: NSView? { detailController?.headerActionsView }
     var detailContentLeadingInset: CGFloat { detailController?.contentLeadingInset ?? 0 }
     var detailContentTrailingInset: CGFloat { detailController?.contentTrailingInset ?? 0 }
 
@@ -980,7 +953,7 @@ final class WorkbenchSplitController: NSSplitViewController {
         NSLayoutConstraint.activate([
             handle.centerXAnchor.constraint(equalTo: panel.leadingAnchor),
             handle.widthAnchor.constraint(equalToConstant: 10),
-            handle.topAnchor.constraint(equalTo: panel.topAnchor),
+            handle.topAnchor.constraint(equalTo: panel.topAnchor, constant: WorkbenchChrome.headerHeight),
             handle.bottomAnchor.constraint(equalTo: panel.bottomAnchor),
         ])
         floatingInspectorView = panel

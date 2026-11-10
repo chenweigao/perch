@@ -280,6 +280,7 @@ enum TaskRecapState: Equatable {
     private var cache: TaskRecapCache
     private let file: TaskRecapFile
     private var tasks: [String: Task<Void, Never>] = [:]
+    private var autoAttempted: [String: Int] = [:]
     private var messageProviders: [String: @MainActor () async throws -> [KimiMessage]] = [:]
     private var providerOrder: [String] = []
     typealias Summarizer = (ActivitySummaryConfiguration, String, TaskRecapInput, String) async throws -> TaskRecapResult
@@ -310,6 +311,31 @@ enum TaskRecapState: Equatable {
 
     func state(for key: String) -> TaskRecapState {
         states[key] ?? cache.result(for: key).map(TaskRecapState.result) ?? .idle
+    }
+
+    func entry(for key: String) -> TaskRecapCache.Entry? {
+        cache.entry(for: key)
+    }
+
+    func latestEntry(forSession sessionScope: String) -> TaskRecapCache.Entry? {
+        cache.latestEntry(forSession: sessionScope)
+    }
+
+    func isLoading(for key: String?) -> Bool {
+        guard let key else { return false }
+        if case .loading = states[key] { return true }
+        return tasks[key] != nil
+    }
+
+    func considerAutoGenerate(key: String,
+                              messages: @escaping @MainActor () async throws -> [KimiMessage],
+                              settings: ActivitySummarySettings) {
+        let configuration = settings.configuration
+        guard configuration.enabled, configuration.isValid else { return }
+        guard cache.result(for: key) == nil, tasks[key] == nil,
+              autoAttempted[key] != settings.revision else { return }
+        autoAttempted[key] = settings.revision
+        generate(key: key, force: false, messages: messages, settings: settings)
     }
 
     func warning(for key: String) -> String? { warnings[key] }

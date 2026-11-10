@@ -245,7 +245,6 @@ private struct NativeComposerView: View {
                     ComposerAddButton(supportsFiles: supportsAttachments, disabled: connection.sending) { chooseFiles = true }
                     NativeModelControls(connection: connection, snapshot: s)
                     HStack(spacing: 6) {
-                        ComposerEnvironmentMenu(host: connection.host, provider: s.provider.label, directory: s.cwd)
                         PermissionPicker(
                             provider: s.provider,
                             capability: connection.sessions.first { $0.id == s.id }?.permission
@@ -261,12 +260,7 @@ private struct NativeComposerView: View {
                             connection.drafts[s.id] = existing.isEmpty ? template : existing + "\n\n" + template
                             NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil)
                         }
-                        ContextMeter(budget: s.provider == .codex && s.context?.reportedAt == nil ? nil : s.budget,
-                                     reportedAt: s.context?.reportedAt, isStale: !connection.online)
-                    }.foregroundStyle(.secondary).padding(.leading, 10)
-                        .overlay(alignment: .leading) {
-                            Rectangle().fill(WorkbenchTheme.Stroke.hairline).frame(width: 1, height: 16)
-                        }
+                    }.foregroundStyle(.secondary)
                     ComposerActionButton(isRunning: s.busy, isStopping: connection.isStopping,
                                          canSend: canSend(s), canStop: connection.canStop,
                                          hasDraft: !(connection.drafts[s.id] ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -278,8 +272,11 @@ private struct NativeComposerView: View {
                                          onQueue: nextTurnSend)
                 }
             }.padding(ReplyStyle.composerInset).workbenchComposerSurface()
-            ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError,
-                                 draftLength: (connection.drafts[s.id] ?? "").count)
+            ComposerEnvironmentBar(host: connection.host, provider: s.provider.label, directory: s.cwd,
+                                   budget: s.provider == .codex && s.context?.reportedAt == nil ? nil : s.budget,
+                                   reportedAt: s.context?.reportedAt, isStale: !connection.online,
+                                   sending: connection.sending, saveError: connection.draftSaveError,
+                                   draftLength: (connection.drafts[s.id] ?? "").count)
         }.frame(maxWidth: ReplyStyle.composerWidth).padding(.horizontal, ReplyStyle.composerPadding).frame(maxWidth: .infinity, alignment: .center).padding(.bottom, 16)
         .fileImporter(isPresented: $chooseFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
             do { addAttachments(try result.get()) } catch { connection.actionError = error.localizedDescription }

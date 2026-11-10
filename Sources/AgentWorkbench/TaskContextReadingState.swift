@@ -6,6 +6,7 @@ import SwiftUI
 @MainActor @Observable
 final class TaskContextReadingState {
     @ObservationIgnored var overviewOffset: CGFloat = 0
+    var overviewExpanded = false
     var allFiles = false
     var completedTasks = false
     let files = FileWorkspaceState(defaults: nil)

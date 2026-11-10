@@ -93,8 +93,12 @@ struct ProjectMessageComposer: View {
                     }
                     Text("↑↓ 选择 · Return / Tab 引用 · Esc 关闭，不会发送消息")
                         .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
-                }.padding(8).background(WorkbenchTheme.Fill.surface,
-                                         in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
+                }.padding(10)
+                    .background(Color(nsColor: .controlBackgroundColor),
+                                in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous)
+                        .strokeBorder(WorkbenchTheme.Stroke.hairline))
+                    .shadow(color: .black.opacity(0.12), radius: 10, y: 3)
             }
             let references = ProjectFileReference.references(in: text)
             if !references.isEmpty {
@@ -225,6 +229,7 @@ private struct PastePreviewButton: View {
                     .font(.system(size: WorkbenchTheme.Typography.caption, design: .monospaced))
                     .textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading).padding(12)
             }.frame(width: 420, height: 260)
+                .onExitCommand { previewing = false }
         }
     }
 }

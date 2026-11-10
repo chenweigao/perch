@@ -12,13 +12,23 @@ struct EditRecordInspectorView: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
+            HStack(spacing: 6) {
+                Button { model.taskContextWindow.showPage(.task, model: model) } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                        Text("任务面板")
+                    }.font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
+                        .foregroundStyle(WorkbenchTheme.quiet)
+                        .padding(.horizontal, 6).frame(height: 24).contentShape(Rectangle())
+                }.buttonStyle(WorkbenchDisclosureButtonStyle())
+                    .help("返回任务列表").accessibilityLabel("返回任务列表")
+                    .accessibilityIdentifier("edit-record-back")
                 Text("编辑记录").accessibilityIdentifier("edit-record-title").font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold))
                 Spacer()
                 Button { model.taskContextWindow.embeddedVisible = false } label: {
-                    Image(systemName: "xmark").frame(width: 32, height: 32)
+                    Image(systemName: "xmark").frame(width: 28, height: 28)
                 }.buttonStyle(.borderless).help("收起面板").accessibilityLabel("收起面板")
-            }.padding(.horizontal, 20).padding(.top, 12)
+            }.padding(.horizontal, 16).padding(.top, 12)
             if let record {
                 Picker("记录范围", selection: $wholeTurn) {
                     Text("本步编辑记录").tag(false)

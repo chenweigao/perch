@@ -42,8 +42,7 @@ struct WorkbenchHeaderActions: View {
     var body: some View {
         HStack(spacing: WorkbenchChrome.controlSpacing) {
             if !model.showDashboard {
-                // One glass capsule holds the conversation's controls.
-                HStack(spacing: 0) {
+                HStack(spacing: 2) {
                     if model.selectedHost != nil {
                         ChangesButton(model: model)
                         Button { model.toggleFileViewer() } label: {
@@ -68,11 +67,9 @@ struct WorkbenchHeaderActions: View {
                     } label: { WorkbenchToolbarSymbol(name: "ellipsis") }
                         .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
                         .frame(width: WorkbenchChrome.controlSize, height: WorkbenchChrome.controlSize).help("会话操作").accessibilityLabel("会话操作")
-                }.padding(.horizontal, 4).workbenchControlSurface()
+                }
             } else {
-                // The same single glass capsule as the conversation's controls.
-                // Both sidebar and toolbar enter the same scoped workbench.
-                HStack(spacing: 0) {
+                HStack(spacing: 2) {
                     if showsScope {
                         Menu {
                             Picker("任务组", selection: groupScope) {
@@ -117,7 +114,7 @@ struct WorkbenchHeaderActions: View {
                             .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
                             .frame(width: WorkbenchChrome.controlSize, height: WorkbenchChrome.controlSize).help("工作台操作").accessibilityLabel("工作台操作")
                     }
-                }.padding(.horizontal, 4).workbenchControlSurface()
+                }
             }
         }.fixedSize(horizontal: true, vertical: false)
     }

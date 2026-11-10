@@ -224,20 +224,21 @@ import WorkbenchCore
     let divider = horizontalRule(in: window.contentView!, from: draftTop - 110, to: draftTop - 20,
                                  xRange: (cardFrame.minX + 30)...(cardFrame.maxX - 30))
     precondition(divider == nil, "The composer bar must not draw a divider across the reading card: y=\(String(describing: divider)), composer top=\(draftTop)")
-    let title = window.toolbar!.items.first { $0.itemIdentifier.rawValue == "WorkbenchTitle" }!.view!
+    let title = split.headerTitleView!
     let titleX = title.convert(title.bounds, to: window.contentView).minX
-    precondition(abs(titleX - cardFrame.minX - WorkbenchTheme.Reading.inset) < 2,
-                 "The toolbar title stays anchored to the pane while the reading column centers")
-    let toolbarActions = window.toolbar!.items.first { $0.itemIdentifier.rawValue == "WorkbenchActions" }!.view!
+    precondition(title.isDescendant(of: card) && abs(titleX - cardFrame.minX - WorkbenchTheme.Reading.inset) < 2,
+                 "The unified header title lives inside the main container and stays anchored to the pane")
+    let toolbarActions = split.headerActionsView!
     let actionsRight = toolbarActions.convert(toolbarActions.bounds, to: window.contentView).maxX
-    precondition(window.contentView!.bounds.maxX - actionsRight < 40 && actionsRight > inspectorFrame.maxX - 40,
-                 "Toolbar actions belong at the window edge, above the inspector")
+    precondition(toolbarActions.isDescendant(of: card) &&
+                 window.contentView!.bounds.maxX - actionsRight < 40 && actionsRight > inspectorFrame.maxX - 40,
+                 "Header actions belong at the main container's trailing edge, above the inspector")
     for changedTitle in ["短标题", "恢复后的长会话标题：检查工具栏对齐和右侧悬浮面板开合时的位置"] {
         model.rename(first, title: changedTitle)
         try await Task.sleep(for: .milliseconds(200))
         window.contentView!.layoutSubtreeIfNeeded()
         precondition(abs(title.convert(title.bounds, to: window.contentView).minX - titleX) < 2,
-                     "A changing session title must not move the toolbar's left alignment")
+                     "A changing session title must not move the header's left alignment")
     }
     model.rename(first, title: first.title)
     try await Task.sleep(for: .milliseconds(200))
@@ -245,17 +246,16 @@ import WorkbenchCore
     precondition(abs(draftFrame.midX - readingCenterX) < 2 &&
                  abs(replyX - (readingCenterX - ReplyStyle.readingWidth / 2)) < 2,
                  "Reply and editor must center in the space remaining beside the inspector")
-    // Exercise the sidebar toolbar action, including multiple changes before
-    // AppKit has applied the preceding spacer constraint.
     let sidebarToggle = window.toolbar!.items.first { $0.itemIdentifier.rawValue == "WorkbenchSidebarToggle" }!.view!
     for cycle in 0..<3 {
         split.toggleSidebar(nil)
         try await Task.sleep(for: .milliseconds(200))
         window.contentView!.layoutSubtreeIfNeeded()
+        let collapsedCard = card.convert(card.bounds, to: window.contentView)
         let collapsedTitle = title.convert(title.bounds, to: window.contentView)
-        let toggleFrame = sidebarToggle.convert(sidebarToggle.bounds, to: window.contentView)
-        precondition(collapsedTitle.minX >= toggleFrame.maxX && collapsedTitle.minX < titleX - 100,
-                     "Collapsed sidebar must place the title after window controls: cycle=\(cycle), title=\(collapsedTitle), toggle=\(toggleFrame)")
+        precondition(abs(collapsedTitle.minX - (collapsedCard.minX + WorkbenchTheme.Reading.inset)) < 2 &&
+                     collapsedTitle.minX < titleX - 100,
+                     "Collapsed sidebar must keep the title anchored to the expanded main container: cycle=\(cycle), title=\(collapsedTitle), card=\(collapsedCard)")
         split.toggleSidebar(nil)
         try await Task.sleep(for: .milliseconds(200))
         window.contentView!.layoutSubtreeIfNeeded()
@@ -270,7 +270,7 @@ import WorkbenchCore
     precondition(abs(title.convert(title.bounds, to: window.contentView).minX - titleX) < 2 &&
                  abs(toolbarActions.convert(toolbarActions.bounds, to: window.contentView).maxX - actionsRight) < 2,
                  "Rapid sidebar toggles must not drift the title or trailing actions")
-    print("PASS: sidebar close/reopen and rapid toggles preserve toolbar alignment")
+    print("PASS: sidebar close/reopen and rapid toggles preserve unified header alignment")
     let savedDraft = draft.string
     model.taskContextWindow.embeddedVisible = false
     try await Task.sleep(for: .milliseconds(300))
@@ -279,7 +279,7 @@ import WorkbenchCore
     let closedDraftFrame = draft.convert(draft.bounds, to: window.contentView)
     precondition(abs(toolbarActions.convert(toolbarActions.bounds, to: window.contentView).maxX - actionsRight) < 2 &&
                  abs(title.convert(title.bounds, to: window.contentView).minX - titleX) < 2,
-                 "Inspector toggles must not shift the toolbar title or actions")
+                 "Inspector toggles must not shift the unified header title or actions")
     let closedReply = descendants(window.contentView!).compactMap { $0 as? ReplyTextView }.first { $0.string.contains("初步发现") }!
     let closedReplyFrame = closedReply.convert(closedReply.bounds, to: window.contentView)
     precondition(abs(closedCardFrame.width - cardFrame.width) < 1 &&
@@ -332,10 +332,12 @@ import WorkbenchCore
                  abs(liveCardFrame.minY - WorkspaceLayoutMetrics.frameInset) < 1,
                  "The reading sheet must start at 44 pt with a clear toolbar and a balanced bottom gutter")
     let closeFrame = fromTop(window.standardWindowButton(.closeButton))
-    for control in [title, toolbarActions, toggle].compactMap({ $0 }) {
-        precondition(abs((fromTop(control)["midY"] ?? 0) - (closeFrame["midY"] ?? 0)) < 2,
-                     "Title, sidebar toggle and actions must share the window controls' vertical center")
+    if let toggle {
+        precondition(abs((fromTop(toggle)["midY"] ?? 0) - (closeFrame["midY"] ?? 0)) < 2,
+                     "Sidebar toggle must share the window controls' vertical center")
     }
+    precondition(abs((fromTop(title)["midY"] ?? 0) - (fromTop(toolbarActions)["midY"] ?? 0)) < 2,
+                 "Unified header title and actions must share the same vertical center inside the main container")
     print("Native window chrome: \(chrome)")
     if let folder = ProcessInfo.processInfo.environment["PERCH_DESIGN_CAPTURES"] {
         func rectangle(_ rect: NSRect) -> [String: Double] {

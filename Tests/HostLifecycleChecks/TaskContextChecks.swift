@@ -181,7 +181,18 @@ import WorkbenchCore
     precondition((reportScroll(window.contentView!)?.contentView.bounds.origin.y ?? 0) > 500,
                  "Reopening the inline artifact must restore the file's actual native scroll position")
     try await pressFileControl("task-context-file-back")
-    print("PASS: native task artifact row, locked source file reading and inline return")
+    precondition(taskPanelControl(window, "task-overview-compact") != nil,
+                 "Session overview must start in its compact 3-5 line mode at the top of the right panel")
+    try await pressFileControl("task-overview-toggle")
+    precondition(model.taskContextWindow.readingState(for: a).overviewExpanded &&
+                 !model.taskContextWindow.readingState(for: b).overviewExpanded &&
+                 taskPanelControl(window, "task-overview-expanded") != nil,
+                 "Expanding the session overview must persist per session and reveal the full overview")
+    try await pressFileControl("task-overview-toggle")
+    precondition(!model.taskContextWindow.readingState(for: a).overviewExpanded &&
+                 taskPanelControl(window, "task-overview-compact") != nil,
+                 "Collapsing the session overview must return to compact mode")
+    print("PASS: native task artifact row, session overview toggle/isolation, locked source file reading and inline return")
     click(window.contentView!.bounds.width - 26, 26)
     try await Task.sleep(for: .milliseconds(150))
     precondition(model.taskContextWindow.locked == nil, "The native pin control resumes following")

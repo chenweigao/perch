@@ -2083,3 +2083,24 @@
 "推理" = "Reasoning";
 
 "视觉" = "Vision";
+
+"会话概述" = "Session overview";
+"会话概述生成失败" = "Failed to generate session overview";
+"先处理待确认或异常阻塞项" = "Resolve pending approvals or blockers first";
+"审阅工作区改动或继续下一步指示" = "Review working tree changes or send the next instruction";
+"尚未生成可靠摘要，不会仅用标题或单条消息充当概述。" = "No reliable summary yet; the title or a single message is not used as a stand-in.";
+"展开" = "Expand";
+"已修改 %lld 个文件（+%lld −%lld）" = "Modified %lld files (+%lld −%lld)";
+"已完成 %lld 轮对话交互" = "Completed %lld conversation turns";
+"已更新文件：%@" = "Updated files: %@";
+"开始对话并产生进展后，这里会汇总目标、已完成进展、当前状态与下一步。" = "Once the conversation progresses, this section summarizes the goal, completed work, current status, and next steps.";
+"暂无会话概述" = "No session overview yet";
+"暂无已完成项" = "No completed items yet";
+"更新会话概述" = "Refresh session overview";
+"有未读结果" = "Unread result";
+"正在执行当前回合" = "Running current turn";
+"正在更新…" = "Updating…";
+"正在生成会话概述…" = "Generating session overview…";
+"环境与详情" = "Environment & details";
+"运行出错" = "Error";
+"阻塞" = "Blocked";

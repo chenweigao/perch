@@ -46,14 +46,14 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                     .accessibilityLabel("搜索项目与会话")
                     .accessibilityIdentifier("sidebar.search")
             }.font(.system(size: SidebarMetrics.navigationSize))
-                .padding(.horizontal, 10).padding(.top, 0).padding(.bottom, 4)
+                .padding(.horizontal, 10).padding(.top, 0).padding(.bottom, 2)
             if scrollRows {
             ScrollViewReader { proxy in
             ScrollView {
                 // Project rows are bounded until explicitly expanded. Keep stable
                 // eager layout when selection and catalog order change together.
-                VStack(alignment: .leading, spacing: 2) { rows }
-                    .padding(.horizontal, 10).padding(.bottom, 10)
+                VStack(alignment: .leading, spacing: 1) { rows }
+                    .padding(.horizontal, 10).padding(.bottom, 8)
             }.scrollIndicators(.hidden)
                 // Rows fade out at the edges instead of being cut off mid-line.
                 .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])

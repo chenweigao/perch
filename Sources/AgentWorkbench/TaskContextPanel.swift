@@ -269,6 +269,9 @@ struct TaskContextView: View {
     @ViewBuilder private func sections(_ value: TaskContextSnapshot, item: WorkspaceSession) -> some View {
         @Bindable var reading = model.taskContextWindow.readingState(for: item.reference)
         let online = item.online && state.error == nil
+        // 1. 会话概述
+        TaskSessionOverviewSection(model: model, item: item, snapshot: value, reading: reading)
+        // 2. 需要处理（无内容时不占位）
         if !value.requests.isEmpty || value.failure != nil {
             VStack(alignment: .leading, spacing: 8) {
                 sectionTitle("需要你处理", icon: "bubble.left", count: value.requests.count + (value.failure == nil ? 0 : 1))
@@ -301,7 +304,7 @@ struct TaskContextView: View {
                 ForEach(uncertain) { tool in toolRow(tool) }
             }
         }
-        TaskPlanSection(controller: model.taskContextWindow, source: item.reference, todos: value.todos)
+        // 3. 产出（文档、文件及其他可打开成果）
         if !value.files.isEmpty {
             VStack(alignment: .leading, spacing: 4) {
                 sectionTitle("文档与产物", icon: "doc.text", count: value.files.count)
@@ -345,6 +348,9 @@ struct TaskContextView: View {
             }
         }
         TaskTurnSection(model: model, item: item, snapshot: value)
+        // 4. 环境与详情入口（主机、目录、分支，以及改动、文件、运行详情）
+        TaskEnvironmentDetailsSection(model: model, item: item, snapshot: value)
+        TaskPlanSection(controller: model.taskContextWindow, source: item.reference, todos: value.todos)
         if !value.tasks.isEmpty || value.taskError != nil {
             VStack(alignment: .leading, spacing: 8) {
                 sectionTitle("后台任务与子 Agent", icon: "square.stack.3d.up", count: value.tasks.count)
@@ -365,10 +371,6 @@ struct TaskContextView: View {
                 "\($0.id)|\($0.status)|\($0.stoppable == true)|\(model.native.subagents.stopping.contains($0.id))"
             }))
             #endif
-        }
-        if value.files.isEmpty && value.tasks.isEmpty && uncertain.isEmpty &&
-            value.requests.isEmpty && value.failure == nil && value.todos.isEmpty && value.edits == nil {
-            emptyState("tray", "此任务暂时没有计划、改动或文件。")
         }
     }
     private func emptyState(_ icon: String, _ text: LocalizedStringKey) -> some View {

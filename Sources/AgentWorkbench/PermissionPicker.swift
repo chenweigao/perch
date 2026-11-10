@@ -124,6 +124,7 @@ struct PermissionPicker: View {
                         Text(detail)
                         Text(capability.scope.label).foregroundStyle(.secondary)
                     }.font(.callout).padding(16).frame(width: 280, alignment: .leading)
+                        .onExitCommand { showingDetails = false }
                 }
         }
     }
