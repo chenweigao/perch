@@ -327,6 +327,24 @@ enum TaskRecapState: Equatable {
         return tasks[key] != nil
     }
 
+    func setStateForTesting(_ state: TaskRecapState?, for key: String) {
+        states[key] = state
+    }
+
+    func storeCachedForTesting(_ result: TaskRecapResult, for key: String, at date: Date = Date()) {
+        cache.store(result, for: key, at: date)
+        states[key] = .result(result)
+    }
+
+    func clearForTesting() {
+        tasks.values.forEach { $0.cancel() }
+        tasks.removeAll()
+        states.removeAll()
+        warnings.removeAll()
+        autoAttempted.removeAll()
+        cache = TaskRecapCache()
+    }
+
     func considerAutoGenerate(key: String,
                               messages: @escaping @MainActor () async throws -> [KimiMessage],
                               settings: ActivitySummarySettings) {

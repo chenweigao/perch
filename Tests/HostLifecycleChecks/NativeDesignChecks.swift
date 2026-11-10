@@ -445,6 +445,29 @@ import WorkbenchCore
     window.setFrame(wideFrame, display: true)
     try await Task.sleep(for: .milliseconds(300))
     window.contentView!.layoutSubtreeIfNeeded()
+    model.taskContextWindow.embeddedVisible = false
+    try await Task.sleep(for: .milliseconds(250))
+    try await capture("native-inspector-closed-light")
+    // Exercise multiple pinned sessions, multi-line draft with @reference + attachment, and the task overview in the right column.
+    let savedStarred = model.workspace.starred
+    for item in model.allSessions.prefix(4) where !model.workspace.starred.contains(item.reference) {
+        model.toggleStar(item.reference)
+    }
+    let sampleAttachment = root.appendingPathComponent("SessionState.swift")
+    connection.attachments["design-0"] = [sampleAttachment]
+    connection.drafts["design-0"] = "核对 @\"\(sampleAttachment.path)\" 的状态恢复边界：\n1. 右栏展开/收起保留草稿与阅读位置\n2. 顶部会话概述区分已完成、进行中与计划"
+    model.taskContextWindow.showPage(.task, model: model)
+    try await Task.sleep(for: .milliseconds(400))
+    try await capture("native-task-overview-light")
+    model.taskContextWindow.readingState(for: first.reference).overviewExpanded = true
+    try await Task.sleep(for: .milliseconds(250))
+    try await capture("native-task-overview-expanded-light")
+    model.taskContextWindow.readingState(for: first.reference).overviewExpanded = false
+    connection.attachments["design-0"] = nil
+    connection.drafts["design-0"] = ""
+    model.workspace.starred = savedStarred
+    model.taskContextWindow.showPage(.changes, model: model)
+    try await Task.sleep(for: .milliseconds(250))
     print("PASS: production workspace, aligned reply/composer, integrated full-height inspector, native light and dark")
     let files = model.inspectorFiles
     func waitForFile(_ ready: () -> Bool) async throws {

@@ -181,6 +181,14 @@ import WorkbenchCore
     precondition((reportScroll(window.contentView!)?.contentView.bounds.origin.y ?? 0) > 500,
                  "Reopening the inline artifact must restore the file's actual native scroll position")
     try await pressFileControl("task-context-file-back")
+    func savePanelCapture(_ name: String) throws {
+        guard let directory = ProcessInfo.processInfo.environment["PERCH_TASK_PANEL_CAPTURES"],
+              let view = window.contentView, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
+        window.displayIfNeeded()
+        view.cacheDisplay(in: view.bounds, to: bitmap)
+        try bitmap.representation(using: .png, properties: [:])?.write(to:
+            URL(fileURLWithPath: directory).appendingPathComponent(name))
+    }
     precondition(taskPanelControl(window, "task-overview-compact") != nil,
                  "Session overview must start in its compact 3-5 line mode at the top of the right panel")
     try await pressFileControl("task-overview-toggle")
@@ -188,14 +196,84 @@ import WorkbenchCore
                  !model.taskContextWindow.readingState(for: b).overviewExpanded &&
                  taskPanelControl(window, "task-overview-expanded") != nil,
                  "Expanding the session overview must persist per session and reveal the full overview")
+    try savePanelCapture("overview-expanded.png")
     try await pressFileControl("task-overview-toggle")
     precondition(!model.taskContextWindow.readingState(for: a).overviewExpanded &&
                  taskPanelControl(window, "task-overview-compact") != nil,
                  "Collapsing the session overview must return to compact mode")
-    print("PASS: native task artifact row, session overview toggle/isolation, locked source file reading and inline return")
+
+    // Verify updating state (retains previous recap while marking as updating) on session A.
+    let scopeA = "\(a.hostID):native:\(a.terminalID)"
+    let keyA = "\(scopeA):\(read.taskOverviewRevision!)"
+    TaskRecapStore.shared.storeCachedForTesting(
+        TaskRecapResult(outcome: "已完成项目方案初稿整理，正在核对参考资料范围。",
+                        changes: ["产出 Report.md 方案初稿"],
+                        validation: ["校验文档章节结构"],
+                        remaining: ["补充时间范围说明"],
+                        nextSteps: ["确认报告时间范围后定稿"]),
+        for: "\(scopeA):previous-turn",
+        at: Date()
+    )
+    TaskRecapStore.shared.setStateForTesting(.loading, for: keyA)
+    try await Task.sleep(for: .milliseconds(200))
+    precondition(taskPanelControl(window, "task-overview-updating") != nil &&
+                 taskPanelControl(window, "task-overview-compact") != nil,
+                 "Updating overview must retain the previous version while showing the updating badge")
+    try savePanelCapture("overview-updating.png")
+    TaskRecapStore.shared.storeCachedForTesting(
+        TaskRecapResult(outcome: "已完成项目方案整理与参考资料核对。",
+                        changes: ["更新 Report.md 方案文档", "梳理 6 份参考资料索引"],
+                        validation: ["章节与链接核验通过"],
+                        remaining: ["等待确认报告时间范围"],
+                        nextSteps: ["按确认的时间范围完成最终归档"]),
+        for: keyA,
+        at: Date()
+    )
+    try await Task.sleep(for: .milliseconds(200))
+    precondition(taskPanelControl(window, "task-overview-updating") == nil &&
+                 taskPanelControl(window, "task-overview-compact") != nil)
+    try savePanelCapture("overview-initial.png")
+
     click(window.contentView!.bounds.width - 26, 26)
-    try await Task.sleep(for: .milliseconds(150))
+    try await Task.sleep(for: .milliseconds(250))
     precondition(model.taskContextWindow.locked == nil, "The native pin control resumes following")
+    // Session B has only a single assistant message without structured progress or model recap -> explicit empty state.
+    for _ in 0..<40 where taskPanelControl(window, "task-overview-empty") == nil {
+        try await Task.sleep(for: .milliseconds(25))
+    }
+    precondition(taskPanelControl(window, "task-overview-empty") != nil &&
+                 taskPanelControl(window, "task-overview-compact") == nil,
+                 "Switching to a session without a reliable summary must show the explicit empty state and never leak the previous session's overview")
+    try savePanelCapture("overview-empty.png")
+
+    // Verify failure state on session B when recap generation fails.
+    let readB = try await model.readTaskContext(b)
+    let scopeB = "\(b.hostID):native:\(b.terminalID)"
+    let keyB = "\(scopeB):\(readB.taskOverviewRevision!)"
+    TaskRecapStore.shared.setStateForTesting(.failed("摘要服务连接超时（HTTP 504），请检查网络或配置后重试。"), for: keyB)
+    try await Task.sleep(for: .milliseconds(200))
+    precondition(taskPanelControl(window, "task-overview-failed") != nil,
+                 "A failed overview generation without a prior version must show the explicit failure state")
+    try savePanelCapture("overview-failed.png")
+
+    // Verify session switch with B's own generated overview.
+    TaskRecapStore.shared.storeCachedForTesting(
+        TaskRecapResult(outcome: "完成调研报告参考资料汇总，整理出 6 份核心文档入口。",
+                        changes: ["汇总 Report / References / Notes 等 6 份文档链接"],
+                        validation: ["文档链接可达性检查通过"],
+                        remaining: [],
+                        nextSteps: ["按需在右侧面板审阅各章节文档"]),
+        for: keyB,
+        at: Date()
+    )
+    try await Task.sleep(for: .milliseconds(200))
+    precondition(taskPanelControl(window, "task-overview-compact") != nil &&
+                 taskPanelControl(window, "task-overview-failed") == nil,
+                 "Session B must display its own overview after generation succeeds")
+    try savePanelCapture("overview-session-switch.png")
+    TaskRecapStore.shared.clearForTesting()
+    print("PASS: native task artifact row, session overview initial/updating/empty/failed/switch states, locked source file reading and inline return")
+
     click(window.contentView!.bounds.width - 26, 26)
     try await Task.sleep(for: .milliseconds(150))
     precondition(model.taskContextWindow.locked == b, "The native pin control captures the current task")
