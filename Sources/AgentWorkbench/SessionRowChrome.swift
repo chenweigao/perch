@@ -51,23 +51,23 @@ struct SessionRowChrome<Indicator: View>: View {
     }
 
     /// Compact single-line rows prioritize the title and essential status;
-    /// time is de-emphasized and host/directory/Agent details appear on hover.
+    /// time and host/directory/Agent details appear only on hover.
     private var conversationRow: some View {
         Button(action: onOpen) {
-            HStack(alignment: .center, spacing: SidebarMetrics.labelSpacing) {
-                indicator.frame(width: SidebarMetrics.iconWidth, height: 18)
-                    .accessibilityHidden(true)
+            HStack(alignment: .center, spacing: 6) {
                 Text(title).font(.system(size: SidebarMetrics.titleSize, weight: unread ? .semibold : .regular))
                     .lineLimit(1).truncationMode(.tail)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                HStack(spacing: 5) {
-                    if running {
-                        ConversationBusyIndicator().help("运行中").accessibilityIdentifier("sidebar.running")
-                    } else if offline {
-                        Image(systemName: "wifi.slash").font(.system(size: WorkbenchTheme.Typography.caption))
-                            .foregroundStyle(WorkbenchTheme.quiet).help("离线 · 状态未同步")
-                            .accessibilityHidden(true)
-                    } else {
+                if running {
+                    ConversationBusyIndicator().help("运行中").accessibilityIdentifier("sidebar.running")
+                        .frame(width: 18, height: 18)
+                } else if offline {
+                    Image(systemName: "wifi.slash").font(.system(size: WorkbenchTheme.Typography.caption))
+                        .foregroundStyle(WorkbenchTheme.quiet).help("离线 · 状态未同步")
+                        .accessibilityHidden(true)
+                        .frame(width: 18, height: 18)
+                } else {
+                    HStack(spacing: 4) {
                         if failed {
                             Image(systemName: "exclamationmark.circle.fill")
                                 .font(.system(size: 11))
@@ -83,11 +83,8 @@ struct SessionRowChrome<Indicator: View>: View {
                                 .help("有未读结果")
                                 .accessibilityHidden(true)
                         }
-                        if updatedAt > 0 {
-                            SessionTimeText(updatedAt: updatedAt, tone: .tertiary)
-                        }
                     }
-                }.frame(minWidth: 28, minHeight: 18, maxHeight: 18, alignment: .trailing)
+                }
             }.padding(.horizontal, SidebarMetrics.rowInset)
                 .frame(maxWidth: .infinity, minHeight: SidebarMetrics.rowHeight, maxHeight: SidebarMetrics.rowHeight, alignment: .leading)
                 .contentShape(Rectangle())

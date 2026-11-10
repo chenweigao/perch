@@ -981,6 +981,21 @@ final class WorkbenchSplitController: NSSplitViewController {
     override func viewDidLayout() {
         super.viewDidLayout()
         updateWorkspaceLayout()
+        // Align the native toolbar (traffic lights + sidebar toggle) with the main
+        // container's unified header vertical center.
+        if let window = view.window, let card = detailCardView {
+            let cardFrame = card.convert(card.bounds, to: window)
+            let headerCenterY = cardFrame.minY + WorkbenchChrome.headerHeight / 2
+            let targetMidY = window.frame.height - headerCenterY
+            if let container = window.standardWindowButton(.closeButton)?.superview?.superview {
+                var frame = container.frame
+                let delta = targetMidY - frame.midY
+                if abs(delta) > 1 {
+                    frame.origin.y += delta
+                    container.frame = frame
+                }
+            }
+        }
     }
 
     override func viewDidAppear() {
@@ -1137,14 +1152,6 @@ final class WorkbenchSplitController: NSSplitViewController {
             headerLeading = WorkbenchTheme.Reading.inset
         }
         detailController?.setHeaderLeadingInset(headerLeading)
-        if let titlebarContainer = view.window?.standardWindowButton(.closeButton)?.superview?.superview {
-            var frame = titlebarContainer.frame
-            let maxToolbarWidth = min(view.bounds.width, 196)
-            if abs(frame.width - maxToolbarWidth) > 0.5 {
-                frame.size.width = maxToolbarWidth
-                titlebarContainer.frame = frame
-            }
-        }
         sidebarOverlayBackdrop?.isHidden = !isSidebarOverlayingContent
         sidebarOverlayShadow?.isHidden = !isSidebarOverlayingContent
         isInspectorOverlayingContent = false

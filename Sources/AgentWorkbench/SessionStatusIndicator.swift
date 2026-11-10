@@ -73,11 +73,15 @@ struct SessionStatusIndicator: View {
             case .running:
                 ConversationBusyIndicator()
             case .attention:
-                Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.orange)
+                if item.turn.state == .failed {
+                    Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.red)
+                } else {
+                    Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.orange)
+                }
             case .review:
                 Circle().fill(.blue).frame(width: 6, height: 6)
             case .other:
-                AgentMark(kind: item.reference.kind, size: 12)
+                EmptyView()
             }
         }
     }
