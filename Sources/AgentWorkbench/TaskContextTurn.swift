@@ -122,6 +122,7 @@ struct TaskSessionOverviewSection: View {
                 .padding(14)
                 .background(WorkbenchTheme.Fill.surface,
                             in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous))
+                .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("task-overview-loading")
             } else if let failureMessage {
                 VStack(alignment: .leading, spacing: 8) {
@@ -147,6 +148,7 @@ struct TaskSessionOverviewSection: View {
                 .padding(14)
                 .background(WorkbenchTheme.Fill.surface,
                             in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous))
+                .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("task-overview-failed")
             } else {
                 emptyCard
@@ -225,17 +227,21 @@ struct TaskSessionOverviewSection: View {
     private func overviewCard(_ overview: SessionOverview) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             cardTopBar(overview)
-            if reading.overviewExpanded {
-                expandedBody(overview)
-            } else {
-                compactBody(overview)
+            Group {
+                if reading.overviewExpanded {
+                    expandedBody(overview)
+                } else {
+                    compactBody(overview)
+                }
             }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier(reading.overviewExpanded ? "task-overview-expanded" : "task-overview-compact")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
         .background(WorkbenchTheme.Fill.surface,
                     in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous))
-        .accessibilityIdentifier(reading.overviewExpanded ? "task-overview-expanded" : "task-overview-compact")
+        .accessibilityElement(children: .contain)
     }
 
     /// Default 3–5 line summary covering goal, completed progress, current status/next step, and blockers.
@@ -396,6 +402,7 @@ struct TaskSessionOverviewSection: View {
         .padding(14)
         .background(WorkbenchTheme.Fill.surface,
                     in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous))
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("task-overview-empty")
     }
 
