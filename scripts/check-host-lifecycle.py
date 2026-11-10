@@ -53,6 +53,9 @@ with tempfile.TemporaryDirectory(prefix="perch-host-check-", dir=ROOT / ".build"
         "CFBundleExecutable": executable.name, "CFBundlePackageType": "APPL", "LSUIElement": True,
     }))
     subprocess.run([str(ROOT / "scripts/prepare-highlight.sh"), str(app / "Contents/Resources")], check=True)
+    # Dynamic phase labels use the same catalogs as the production app.
+    for locale in (ROOT / "Resources/Localization").glob("*.lproj"):
+        shutil.copytree(locale, app / "Contents/Resources" / locale.name, dirs_exist_ok=True)
     compiled = work / "compiled"
     started = time.monotonic()
     print("Compiling host lifecycle fixture", flush=True)
