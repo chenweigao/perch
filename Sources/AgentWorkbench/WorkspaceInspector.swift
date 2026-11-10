@@ -8,6 +8,7 @@ struct WorkspaceInspector: View {
 
     var body: some View {
         let controller = model.taskContextWindow
+        let cardShape = RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous)
         VStack(spacing: 0) {
             switch controller.page {
             case .task:
@@ -22,6 +23,13 @@ struct WorkspaceInspector: View {
                 FilesInspectorView(model: model, close: { controller.embeddedVisible = false })
             }
         }
+        .background(WorkbenchTheme.inspectorCard, in: cardShape)
+        .overlay(cardShape.strokeBorder(WorkbenchTheme.Stroke.hairline, lineWidth: 1))
+        .shadow(color: .black.opacity(0.045), radius: 8, y: 2)
+        .padding(.top, 2)
+        .padding(.bottom, 12)
+        .padding(.trailing, 12)
+        .padding(.leading, 4)
     }
 }
 
