@@ -119,7 +119,9 @@ struct KimiWorkspaceView: View {
                 stopping: connection.isStopping, request: request?.kind,
                 hasRunningTools: conversation.live?.runningTools.isEmpty == false,
                 thinking: conversation.live?.thinkingText.isEmpty == false && conversation.live?.assistantText.isEmpty != false))
-                .equatable().id("live-status:" + sessionID)
+                .equatable()
+                .frame(maxWidth: ReplyStyle.composerWidth).padding(.horizontal, ReplyStyle.composerPadding)
+                .frame(maxWidth: .infinity, alignment: .center).id("live-status:" + sessionID)
             KimiComposerView(connection: connection, sessionID: sessionID, onInput: onInput)
                 .id(sessionID)
         }
