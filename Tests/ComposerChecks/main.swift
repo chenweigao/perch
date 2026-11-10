@@ -307,6 +307,10 @@ editor.setSelectedRange(NSRange(location: citationIndex, length: 1))
 plainBoard.clearContents()
 check(editor.writeSelection(to: plainBoard, type: .string) && plainBoard.string(forType: .string) == citationContent,
       "Copy exports full context instead of the attachment character or a storage ID")
+plainBoard.clearContents()
+check(editor.writeSelection(to: plainBoard, types: editor.writablePasteboardTypes) &&
+      plainBoard.string(forType: .string) == citationContent && plainBoard.data(forType: .rtf) == nil,
+      "Native Copy negotiation exports plain context to rich-text applications without an opaque attachment")
 editor.setSelectedRange(NSRange(location: citationIndex + 1, length: 0))
 editor.deleteBackward(nil); editor.breakUndoCoalescing()
 check(!editor.draftString.contains(citationToken) && draft == editor.draftString && editor.string.contains("后续问题"),

@@ -312,6 +312,7 @@ final class DraftTextView: NSTextView {
         guard isEditable, onFiles != nil else { return [.string] }
         return [.fileURL, .png, .tiff, .string]
     }
+    override var writablePasteboardTypes: [NSPasteboard.PasteboardType] { [.string] }
     override func writeSelection(to board: NSPasteboard, type: NSPasteboard.PasteboardType) -> Bool {
         if type == .string { return board.setString(citationSelectionText(), forType: .string) }
         return super.writeSelection(to: board, type: type)
