@@ -248,13 +248,12 @@ struct ChangesInspectorView: View {
             case .clean:
                 notice(L("所选工作树干净，没有未提交的改动。"), symbol: "checkmark.circle")
             case .changes:
-                VStack(spacing: 0) {
+                VStack(spacing: 4) {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 1) {
                             ForEach(entries) { entry in row(entry) }
                         }.padding(.horizontal, 8).padding(.vertical, 8)
                     }.frame(height: CGFloat(min(entries.count, 5)) * Self.fileRowHeight + 16)
-                    Divider().padding(.horizontal, 20)
                     diffPane
                 }
             }

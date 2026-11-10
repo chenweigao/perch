@@ -270,18 +270,25 @@ struct TaskSessionOverviewSection: View {
     }
 
     private func compactParagraph(_ overview: SessionOverview) -> String {
-        var sentences: [String] = [overview.goal]
+        func trimSentence(_ text: String) -> String {
+            var trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            while trimmed.hasSuffix("。") || trimmed.hasSuffix(".") || trimmed.hasSuffix("；") || trimmed.hasSuffix(";") {
+                trimmed.removeLast()
+            }
+            return trimmed
+        }
+        var sentences: [String] = [trimSentence(overview.goal)]
         if !overview.completed.isEmpty {
-            sentences.append("\(L("已完成"))：\(overview.completed.joined(separator: "；"))")
+            sentences.append("\(L("已完成"))：\(overview.completed.map(trimSentence).joined(separator: "；"))")
         }
         if !overview.inProgress.isEmpty {
-            sentences.append("\(L("进行中"))：\(overview.inProgress.joined(separator: "；"))")
+            sentences.append("\(L("进行中"))：\(overview.inProgress.map(trimSentence).joined(separator: "；"))")
         } else if !overview.planned.isEmpty {
-            sentences.append("\(L("计划"))：\(overview.planned.joined(separator: "；"))")
+            sentences.append("\(L("计划"))：\(overview.planned.map(trimSentence).joined(separator: "；"))")
         } else if !overview.nextSteps.isEmpty {
-            sentences.append("\(L("下一步"))：\(overview.nextSteps.joined(separator: "；"))")
+            sentences.append("\(L("下一步"))：\(overview.nextSteps.map(trimSentence).joined(separator: "；"))")
         }
-        return sentences.joined(separator: "。")
+        return sentences.filter { !$0.isEmpty }.joined(separator: "。") + "。"
     }
 
     @ViewBuilder private func expandedBody(_ overview: SessionOverview) -> some View {
