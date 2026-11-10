@@ -564,6 +564,18 @@ private struct ReadingReviewControls: View {
     window.contentView = host; window.makeKeyAndOrderFront(nil)
     func settle() async throws { try await Task.sleep(for: .milliseconds(350)); host.layoutSubtreeIfNeeded() }
     let stage = "activity:tool:page-tool-0"
+    func waitForHidden(_ identifier: String) async throws {
+        for _ in 0..<40 where taskPanelControl(window, identifier) != nil {
+            try await Task.sleep(for: .milliseconds(50))
+            host.layoutSubtreeIfNeeded()
+        }
+    }
+    func captureCollapseFailure(_ name: String) throws {
+        let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds)!
+        host.cacheDisplay(in: host.bounds, to: bitmap)
+        try bitmap.representation(using: .png, properties: [:])!.write(
+            to: URL(fileURLWithPath: "/private/tmp/perch-reading-design/" + name + ".png"))
+    }
     try await settle()
     precondition(taskPanelLabel(window, "activity-phase:" + stage)?.contains("git show") == true,
                  "The stage header names the latest targets")
@@ -591,6 +603,8 @@ private struct ReadingReviewControls: View {
     try await settle()
     precondition(ConversationReadingMemory.shared.expansions["stage-page-B:" + stage + ":expanded"] == false,
                  "The actual stage button must remember session B's collapse: \(ConversationReadingMemory.shared.expansions.filter { $0.key.hasPrefix("stage-page-B:") })")
+    try await waitForHidden("tool-call:page-tool-24")
+    if taskPanelControl(window, "tool-call:page-tool-24") != nil { try captureCollapseFailure("stage-B-collapse-failure") }
     precondition(taskPanelControl(window, "tool-call:page-tool-24") == nil, "The user may collapse that session's stage")
     host.rootView = ReadingDesignFixture(messages: try records(27, done: true), session: "stage-page-A", folds: true)
     try await settle()
@@ -623,12 +637,10 @@ private struct ReadingReviewControls: View {
     try await settle()
     precondition(ConversationReadingMemory.shared.expansions["stage-page-C:" + stage + ":expanded"] == false,
                  "The live failure stage must remember the actual collapse: \(ConversationReadingMemory.shared.expansions.filter { $0.key.hasPrefix("stage-page-C:") })")
-    for _ in 0..<40 where taskPanelControl(window, "tool-call:page-tool-24") != nil {
-        try await Task.sleep(for: .milliseconds(50))
-        host.layoutSubtreeIfNeeded()
-    }
+    try await waitForHidden("tool-call:page-tool-24")
     let failureVisible = taskPanelControl(window, "tool-call:page-tool-25") != nil
     let previousVisible = taskPanelControl(window, "tool-call:page-tool-24") != nil
+    if !failureVisible || previousVisible { try captureCollapseFailure("stage-C-collapse-failure") }
     precondition(failureVisible && !previousVisible,
                  "Collapsing the live stage preserves only its last failed call: failure \(failureVisible), previous \(previousVisible)")
     print("PASS: native continuous full stage, default expansion, exact find, failure visibility, collapse/append/completion/session-return continuity")
