@@ -288,6 +288,15 @@ final class WorkbenchModel {
                 let session = conversation.snapshot.session
                 self.considerNaming(reference: SessionReference(hostID: kimi.host.id, terminalID: session.id, kind: .kimi),
                                     remoteTitle: session.title, messages: conversation.messages, hasOlder: conversation.hasOlder)
+                if let revision = conversation.taskRecapRevision {
+                    let key = "\(kimi.host.id):kimi:\(session.id):\(revision)"
+                    let sessionID = session.id
+                    let provider: @MainActor () async throws -> [KimiMessage] = { [weak kimi] in
+                        guard let kimi else { throw CancellationError() }
+                        return try await kimi.recapMessages(for: sessionID)
+                    }
+                    TaskRecapStore.shared.registerMessages(for: key, provider: provider)
+                }
             }
         }
         kimi.onConversationChanged?(kimi.conversation)
@@ -296,6 +305,17 @@ final class WorkbenchModel {
                 guard let self, let native, let snapshot else { return }
                 self.considerNaming(reference: SessionReference(hostID: native.host.id, terminalID: snapshot.id, kind: snapshot.provider),
                                     remoteTitle: snapshot.title, messages: snapshot.messages, hasOlder: snapshot.hasOlder)
+                if let revision = snapshot.taskRecapRevision {
+                    let key = "\(native.host.id):native:\(snapshot.id):\(revision)"
+                    let sessionID = snapshot.id
+                    let provider: @MainActor () async throws -> [KimiMessage] = { [weak native] in
+                        guard let native, native.selectedID == sessionID, native.snapshot?.id == sessionID else {
+                            throw CancellationError()
+                        }
+                        return try await native.recapMessages(for: sessionID)
+                    }
+                    TaskRecapStore.shared.registerMessages(for: key, provider: provider)
+                }
             }
         }
         native.onSnapshotChanged?(native.snapshot)

@@ -17,6 +17,8 @@ struct SessionRowChrome<Indicator: View>: View {
     var updatedAt: Double = 0
     var compact = false
     var running = false
+    var waiting = false
+    var failed = false
     /// Unread results set the title a weight heavier, as in Mail; the agent mark's dot
     /// alone is easy to miss.
     var unread = false
@@ -48,37 +50,46 @@ struct SessionRowChrome<Indicator: View>: View {
         .help(Text(verbatim: tooltip))
     }
 
-    /// Titles own the space. The status column holds a stable 28 pt minimum and
-    /// grows for wider labels instead of truncating.
+    /// Compact single-line rows prioritize the title and essential status;
+    /// time is de-emphasized and host/directory/Agent details appear on hover.
     private var conversationRow: some View {
         Button(action: onOpen) {
-            HStack(alignment: .top, spacing: SidebarMetrics.labelSpacing) {
-                indicator.frame(width: SidebarMetrics.iconWidth, height: 18).padding(.top, 1)
+            HStack(alignment: .center, spacing: SidebarMetrics.labelSpacing) {
+                indicator.frame(width: SidebarMetrics.iconWidth, height: 18)
                     .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title).font(.system(size: SidebarMetrics.titleSize, weight: unread ? .semibold : .regular))
-                        .lineLimit(2).lineSpacing(2).fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    if let subtitle {
-                        Text(subtitle).font(.system(size: SidebarMetrics.detailSize)).foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-                }
-                Group {
+                Text(title).font(.system(size: SidebarMetrics.titleSize, weight: unread ? .semibold : .regular))
+                    .lineLimit(1).truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(spacing: 5) {
                     if running {
                         ConversationBusyIndicator().help("运行中").accessibilityIdentifier("sidebar.running")
                     } else if offline {
                         Image(systemName: "wifi.slash").font(.system(size: WorkbenchTheme.Typography.caption))
                             .foregroundStyle(WorkbenchTheme.quiet).help("离线 · 状态未同步")
                             .accessibilityHidden(true)
-                    } else if updatedAt > 0 {
-                        // Labels such as "14:32" or "2:32 PM" exceed a 28 pt slot;
-                        // the slot widens instead of collapsing to an ellipsis.
-                        SessionTimeText(updatedAt: updatedAt)
+                    } else {
+                        if failed {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.red)
+                                .help(detail ?? L("运行出错"))
+                                .accessibilityHidden(true)
+                        } else if waiting {
+                            Circle().fill(Color.orange).frame(width: 6, height: 6)
+                                .help(detail ?? L("等你处理"))
+                                .accessibilityHidden(true)
+                        } else if unread {
+                            Circle().fill(Color.blue).frame(width: 6, height: 6)
+                                .help("有未读结果")
+                                .accessibilityHidden(true)
+                        }
+                        if updatedAt > 0 {
+                            SessionTimeText(updatedAt: updatedAt, tone: .tertiary)
+                        }
                     }
-                }.frame(minWidth: 28, minHeight: 18, maxHeight: 18, alignment: .trailing).padding(.top, 1)
-            }.padding(.horizontal, SidebarMetrics.rowInset).padding(.vertical, SidebarMetrics.sessionVerticalPadding)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                }.frame(minWidth: 28, minHeight: 18, maxHeight: 18, alignment: .trailing)
+            }.padding(.horizontal, SidebarMetrics.rowInset)
+                .frame(maxWidth: .infinity, minHeight: SidebarMetrics.rowHeight, maxHeight: SidebarMetrics.rowHeight, alignment: .leading)
                 .contentShape(Rectangle())
         }.buttonStyle(.plain).disabled(!canOpen)
             .accessibilityLabel(title)
@@ -138,10 +149,14 @@ struct SessionRowChrome<Indicator: View>: View {
         }.padding(.trailing, 5).frame(height: rowHeight)
     }
 
-    /// Full title, with host and directory on a second line when present.
+    /// Full title, with host, directory and Agent/status detail on demand.
     private var tooltip: String {
-        let extra = [hostName, directory].compactMap { $0 }.joined(separator: " · ")
-        return extra.isEmpty ? title : title + "\n" + extra
+        var lines = [title]
+        let location = [hostName, directory].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
+        if !location.isEmpty { lines.append(location) }
+        let meta = ([detail].compactMap { $0 }.filter { !$0.isEmpty } + groups).joined(separator: " · ")
+        if !meta.isEmpty { lines.append(meta) }
+        return lines.joined(separator: "\n")
     }
 
 }

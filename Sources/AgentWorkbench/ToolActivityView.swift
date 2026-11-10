@@ -47,6 +47,7 @@ struct KimiActivityView: View {
     var liveThinkingSummary: String? = nil
     var planProgress: TurnStatus.Progress? = nil
     var reduceMotionOverride: Bool? = nil
+    @State private var showPlanPopover = false
     init(entry: ConversationTimelineEntry, tools: [String: VisibleTool], api: KimiAPI?, sessionId: String,
          narrative: ActivityNarrative? = nil, isLive: Bool = false, liveThinkingSummary: String? = nil,
          planProgress: TurnStatus.Progress? = nil, reduceMotionOverride: Bool? = nil) {
@@ -205,8 +206,11 @@ struct KimiActivityView: View {
     private func trailingMetadata(planProgress: TurnStatus.Progress) -> some View {
         HStack(spacing: 8) {
             Group {
-                if let actionContext {
-                    Button { actionContext.post(.showTurnDetails) } label: {
+                if !planProgress.steps.isEmpty || actionContext != nil {
+                    Button {
+                        if !planProgress.steps.isEmpty { showPlanPopover.toggle() }
+                        else { actionContext?.post(.showTurnDetails) }
+                    } label: {
                         HStack(spacing: 3) {
                             Text(verbatim: "\(planProgress.done) / \(planProgress.total)")
                             Image(systemName: "chevron.right").font(.system(size: ReplyStyle.captionSize - 2, weight: .semibold))
@@ -215,6 +219,11 @@ struct KimiActivityView: View {
                         .help(Text("在任务面板查看本轮详情"))
                         .accessibilityLabel(Text("本轮状态"))
                         .accessibilityValue(Text(verbatim: L("\(planProgress.done)/\(planProgress.total) 步")))
+                        .popover(isPresented: $showPlanPopover, arrowEdge: .bottom) {
+                            PlanStepsPopover(progress: planProgress, onOpenPanel: actionContext.map { context in
+                                { showPlanPopover = false; context.post(.showTurnDetails) }
+                            }) { showPlanPopover = false }
+                        }
                 } else {
                     Text(verbatim: "\(planProgress.done) / \(planProgress.total)")
                 }
@@ -224,6 +233,52 @@ struct KimiActivityView: View {
         .foregroundStyle(WorkbenchTheme.quiet)
         .monospacedDigit()
         .fixedSize()
+    }
+}
+
+private struct PlanStepsPopover: View {
+    @UILocalization private var L
+    let progress: TurnStatus.Progress
+    var onOpenPanel: (() -> Void)? = nil
+    let dismiss: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Text("计划").font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold))
+                    .foregroundStyle(WorkbenchTheme.ink)
+                Text(verbatim: "\(progress.done) / \(progress.total)")
+                    .font(.system(size: WorkbenchTheme.Typography.caption))
+                    .monospacedDigit().foregroundStyle(WorkbenchTheme.quiet)
+                Spacer(minLength: 4)
+                if let onOpenPanel {
+                    Button("任务面板", action: onOpenPanel)
+                        .font(.system(size: WorkbenchTheme.Typography.caption))
+                        .buttonStyle(.borderless)
+                        .foregroundStyle(WorkbenchTheme.quiet)
+                }
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(progress.steps) { todo in
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: todo.status == .done ? "checkmark.circle"
+                              : todo.status == .inProgress ? "circle.inset.filled" : "circle")
+                            .font(.system(size: WorkbenchTheme.Typography.caption))
+                            .foregroundStyle(todo.status == .inProgress ? WorkbenchTheme.accent : WorkbenchTheme.quiet)
+                            .padding(.top, 2)
+                            .accessibilityHidden(true)
+                        Text(todo.title)
+                            .font(.system(size: WorkbenchTheme.Typography.body, weight: todo.status == .inProgress ? .medium : .regular))
+                            .foregroundStyle(todo.status == .done ? WorkbenchTheme.quiet : WorkbenchTheme.ink)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 0)
+                    }.padding(.horizontal, 8).padding(.vertical, 5)
+                        .background(todo.status == .inProgress ? WorkbenchTheme.Fill.surface : Color.clear,
+                                    in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row, style: .continuous))
+                }
+            }
+        }.padding(14).frame(width: 300, alignment: .leading)
+            .onExitCommand(perform: dismiss)
     }
 }
 

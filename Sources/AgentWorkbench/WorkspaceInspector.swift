@@ -8,6 +8,7 @@ struct WorkspaceInspector: View {
 
     var body: some View {
         let controller = model.taskContextWindow
+        let cardShape = RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous)
         VStack(spacing: 0) {
             switch controller.page {
             case .task:
@@ -22,6 +23,13 @@ struct WorkspaceInspector: View {
                 FilesInspectorView(model: model, close: { controller.embeddedVisible = false })
             }
         }
+        .background(WorkbenchTheme.inspectorCard, in: cardShape)
+        .overlay(cardShape.strokeBorder(WorkbenchTheme.Stroke.hairline, lineWidth: 1))
+        .shadow(color: .black.opacity(0.045), radius: 8, y: 2)
+        .padding(.top, 2)
+        .padding(.bottom, 12)
+        .padding(.trailing, 12)
+        .padding(.leading, 4)
     }
 }
 
@@ -53,7 +61,15 @@ struct FilesInspectorView: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 0) {
-                HStack(spacing: 4) {
+                HStack(spacing: 6) {
+                    Button { model.taskContextWindow.showPage(.task, model: model) } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: WorkbenchTheme.Typography.caption, weight: .semibold))
+                            .foregroundStyle(WorkbenchTheme.quiet)
+                            .frame(width: 24, height: 24).contentShape(Rectangle())
+                    }.buttonStyle(WorkbenchDisclosureButtonStyle())
+                        .help("返回任务列表").accessibilityLabel("返回任务列表")
+                        .accessibilityIdentifier("files-inspector-back")
                     Text("文件").font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold))
                     Spacer(minLength: 4)
                     Menu {
@@ -68,10 +84,9 @@ struct FilesInspectorView: View {
                     }.help("展开阅读").accessibilityLabel("展开阅读")
                         .disabled(browser.path.isEmpty || browser.loading || item == nil || !matchesLocation)
                     Button(action: close) {
-                        Image(systemName: "xmark").frame(width: 32, height: 32)
-                            .background(WorkbenchTheme.Fill.surface, in: Circle())
+                        Image(systemName: "xmark").frame(width: 28, height: 28)
                     }.help("收起面板").accessibilityLabel("收起面板")
-                }.buttonStyle(.borderless).padding(.horizontal, 20).padding(.vertical, 16)
+                }.buttonStyle(.borderless).padding(.horizontal, 16).padding(.vertical, 12)
                 if item != nil && matchesLocation {
                     HStack(spacing: 8) {
                         Button { browser.openParent() } label: { Image(systemName: "chevron.left") }
@@ -172,6 +187,9 @@ struct ChangesInspectorView: View {
         return entries.filter { turnPaths.contains($0.path) } + entries.filter { !turnPaths.contains($0.path) }
     }
     private func refreshTurnPaths() {
+        if let item, let branch = browser.gitStatus?.worktrees.first(where: \.current)?.branchName {
+            ComposerGitBranchCache.shared.record(hostID: item.reference.hostID, directory: item.directory, branch: branch)
+        }
         guard let item, let root = browser.gitStatus?.root, let edits = model.latestTurnEdits(item.reference) else {
             if !turnPaths.isEmpty { turnPaths = [] }
             return
@@ -181,10 +199,20 @@ struct ChangesInspectorView: View {
     }
 
     private var header: some View {
-        HStack(spacing: 4) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
+        HStack(spacing: 6) {
+            Button { model.taskContextWindow.showPage(.task, model: model) } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: WorkbenchTheme.Typography.caption, weight: .semibold))
+                    .foregroundStyle(WorkbenchTheme.quiet)
+                    .frame(width: 24, height: 24).contentShape(Rectangle())
+            }.buttonStyle(WorkbenchDisclosureButtonStyle())
+                .help("返回任务列表").accessibilityLabel("返回任务列表")
+                .accessibilityIdentifier("changes-inspector-back")
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text("当前工作区净差异").font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold)).foregroundStyle(WorkbenchTheme.ink)
+                    .lineLimit(1)
                 Text(summary).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet)
+                    .lineLimit(1)
             }
             Spacer(minLength: 4)
             Menu {
@@ -194,12 +222,11 @@ struct ChangesInspectorView: View {
                 .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
                 .help("改动操作").accessibilityLabel("改动操作")
             Button(action: close) {
-                Image(systemName: "xmark").foregroundStyle(.secondary).frame(width: 32, height: 32)
-                    .background(WorkbenchTheme.Fill.surface, in: Circle())
+                Image(systemName: "xmark").foregroundStyle(.secondary).frame(width: 28, height: 28)
             }
                 .help("收起面板").accessibilityLabel("收起面板")
         }.font(.system(size: WorkbenchTheme.Typography.body)).buttonStyle(.borderless)
-            .padding(.horizontal, 20).padding(.vertical, 16)
+            .padding(.horizontal, 16).padding(.vertical, 12)
     }
 
     private var summary: String {
@@ -229,13 +256,12 @@ struct ChangesInspectorView: View {
             case .clean:
                 notice(L("所选工作树干净，没有未提交的改动。"), symbol: "checkmark.circle")
             case .changes:
-                VStack(spacing: 0) {
+                VStack(spacing: 4) {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 1) {
                             ForEach(entries) { entry in row(entry) }
                         }.padding(.horizontal, 8).padding(.vertical, 8)
                     }.frame(height: CGFloat(min(entries.count, 5)) * Self.fileRowHeight + 16)
-                    Divider().padding(.horizontal, 20)
                     diffPane
                 }
             }

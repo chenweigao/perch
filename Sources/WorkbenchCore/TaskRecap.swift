@@ -293,10 +293,172 @@ public struct TaskRecapCache: Codable, Equatable, Sendable {
         entries.last { $0.key == key }?.result
     }
 
+    public func entry(for key: String) -> Entry? {
+        entries.last { $0.key == key }
+    }
+
+    /// Most recent cached entry belonging to a session (`"<hostID>:<kind>:<sessionID>:"`),
+    /// used to retain the previous summary while a newer turn or summary is updating.
+    public func latestEntry(forSession sessionScope: String) -> Entry? {
+        let prefix = sessionScope + ":"
+        return entries.last { $0.key == sessionScope || $0.key.hasPrefix(prefix) }
+    }
+
     public mutating func store(_ result: TaskRecapResult, for key: String, at date: Date = Date(), capacity: Int = 128) {
         entries.removeAll { $0.key == key }
         entries.append(Entry(key: key, result: result, createdAt: date))
         if entries.count > capacity { entries.removeFirst(entries.count - capacity) }
+    }
+}
+
+extension TaskContextSnapshot {
+    /// Stable revision for the session's settled state in the inspector. Returns nil
+    /// while a turn is actively running so streaming tokens never trigger model calls.
+    public var taskOverviewRevision: String? {
+        guard !busy, !messages.isEmpty else { return nil }
+        let lastID = messages.last?.id ?? ""
+        let todoDone = sessionTodos.filter { $0.status == .done }.count
+        let requestIDs = requests.map(\.id).joined(separator: ",")
+        let failTag = failure != nil ? "err" : "ok"
+        return "overview:\(messages.count):\(lastID):\(todoDone)/\(sessionTodos.count):\(requestIDs):\(failTag)"
+    }
+}
+
+/// Session-wide overview for the right inspector's top section.
+/// Strictly separates completed outcomes from in-progress work, pending plans, and blockers.
+public struct SessionOverview: Equatable, Sendable {
+    public let goal: String
+    public let completed: [String]
+    public let validation: [String]
+    public let inProgress: [String]
+    public let planned: [String]
+    public let blockers: [String]
+    public let nextSteps: [String]
+    public let updatedAt: Date?
+    public let isUpdating: Bool
+    public let isModelGenerated: Bool
+
+    public init(goal: String, completed: [String] = [], validation: [String] = [],
+                inProgress: [String] = [], planned: [String] = [], blockers: [String] = [],
+                nextSteps: [String] = [], updatedAt: Date? = nil,
+                isUpdating: Bool = false, isModelGenerated: Bool = false) {
+        self.goal = goal
+        self.completed = completed
+        self.validation = validation
+        self.inProgress = inProgress
+        self.planned = planned
+        self.blockers = blockers
+        self.nextSteps = nextSteps
+        self.updatedAt = updatedAt
+        self.isUpdating = isUpdating
+        self.isModelGenerated = isModelGenerated
+    }
+
+    public static func derive(snapshot: TaskContextSnapshot,
+                              recapEntry: TaskRecapCache.Entry? = nil,
+                              isGeneratingRecap: Bool = false,
+                              updatedAtFallback: Date? = nil) -> Self? {
+        var blockers: [String] = snapshot.requests.map(\.title).filter { !$0.isEmpty }
+        if let failure = snapshot.failure?.trimmingCharacters(in: .whitespacesAndNewlines), !failure.isEmpty {
+            blockers.append(failure)
+        }
+        for tool in snapshot.tools where tool.staysVisible && tool.status != .running {
+            let target = ToolPresentation.compactTarget(tool)
+            let status = ConversationActivity.status(of: tool)
+            let item = "\(target)（\(status)）"
+            if !blockers.contains(item) { blockers.append(item) }
+        }
+        let todos = snapshot.sessionTodos.isEmpty ? snapshot.todos : snapshot.sessionTodos
+        let doneTodos = todos.filter { $0.status == .done }.map(\.title)
+        let activeTodos = todos.filter { $0.status == .inProgress }.map(\.title)
+        let pendingTodos = todos.filter { $0.status == .pending }.map(\.title)
+        let runningTasks = snapshot.tasks.filter(\.isRunning).map(\.displayTitle)
+
+        if let entry = recapEntry {
+            let result = entry.result
+            var inProgress = activeTodos + runningTasks
+            if snapshot.busy && inProgress.isEmpty {
+                inProgress = [L("正在执行当前回合")]
+            }
+            var planned = pendingTodos
+            for item in result.remaining where !planned.contains(item) && !doneTodos.contains(item) {
+                planned.append(item)
+            }
+            return Self(
+                goal: result.outcome,
+                completed: result.changes,
+                validation: result.validation,
+                inProgress: Array(inProgress.prefix(4)),
+                planned: Array(planned.prefix(6)),
+                blockers: Array(blockers.prefix(4)),
+                nextSteps: result.nextSteps,
+                updatedAt: entry.createdAt,
+                isUpdating: isGeneratingRecap || snapshot.busy,
+                isModelGenerated: true
+            )
+        }
+
+        // Without a model recap, only synthesize an overview when real multi-step
+        // or structured evidence exists across the session. A title or a single
+        // plain message alone is never treated as a completed session summary.
+        let input = TaskRecapInput.make(messages: snapshot.messages)
+        let writtenFiles = snapshot.files.filter(\.written).map(\.name)
+        let editedCount = snapshot.edits?.perFile.count ?? 0
+        let succeededTools = (input?.evidence ?? []).filter { $0.status == "succeeded" || $0.exitCode == 0 }
+        let hasStructuredEvidence = !todos.isEmpty || !writtenFiles.isEmpty || editedCount > 0
+            || !succeededTools.isEmpty || !blockers.isEmpty || (input?.turns.count ?? 0) >= 2
+        guard hasStructuredEvidence else { return nil }
+
+        let rawGoal = input?.turns.first?.request.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let goalLine = rawGoal.split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .first { !$0.isEmpty && !$0.hasPrefix("---") } ?? ""
+        let goal = goalLine.isEmpty ? snapshot.title : String(goalLine.prefix(200))
+        guard !goal.isEmpty else { return nil }
+
+        var completed: [String] = doneTodos
+        if editedCount > 0, let total = snapshot.edits?.total {
+            completed.append(L("已修改 \(editedCount) 个文件（+\(total.additions) −\(total.deletions)）"))
+        } else if !writtenFiles.isEmpty {
+            let names = writtenFiles.prefix(3).joined(separator: ", ")
+            completed.append(L("已更新文件：\(names)"))
+        }
+        var validation: [String] = []
+        for evidence in succeededTools where evidence.tool.lowercased() == "bash" && !evidence.target.isEmpty {
+            let line = "\(evidence.tool): \(evidence.target)"
+            if !validation.contains(line) { validation.append(line) }
+        }
+        if completed.isEmpty, (input?.turns.count ?? 0) >= 2 {
+            let turnCount = (input?.turns.count ?? 1) - (snapshot.busy ? 1 : 0)
+            completed.append(L("已完成 \(turnCount) 轮对话交互"))
+        }
+
+        var inProgress = activeTodos + runningTasks
+        if snapshot.busy && inProgress.isEmpty {
+            inProgress = [L("正在执行当前回合")]
+        }
+        let planned = pendingTodos
+        var nextSteps: [String] = []
+        if !blockers.isEmpty {
+            nextSteps.append(L("先处理待确认或异常阻塞项"))
+        } else if let next = pendingTodos.first {
+            nextSteps.append(next)
+        } else if !snapshot.busy, editedCount > 0 {
+            nextSteps.append(L("审阅工作区改动或继续下一步指示"))
+        }
+
+        return Self(
+            goal: goal,
+            completed: Array(completed.prefix(6)),
+            validation: Array(validation.prefix(4)),
+            inProgress: Array(inProgress.prefix(4)),
+            planned: Array(planned.prefix(6)),
+            blockers: Array(blockers.prefix(4)),
+            nextSteps: Array(nextSteps.prefix(4)),
+            updatedAt: updatedAtFallback,
+            isUpdating: isGeneratingRecap || snapshot.busy,
+            isModelGenerated: false
+        )
     }
 }
 

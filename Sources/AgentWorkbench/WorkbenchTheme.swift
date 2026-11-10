@@ -34,6 +34,15 @@ enum WorkbenchTheme {
     static let contentBackgroundNS = nsColor(
         light: (1, 1, 1), dark: (0.122, 0.133, 0.161))
     static let contentBackground = Color(nsColor: contentBackgroundNS)
+    /// Integrated right-column floating card surface: a calm cool-neutral off-white
+    /// in light (#F7F8FA) and an elevated slate in dark (#262932), distinct from
+    /// the main conversation canvas so the inspector reads as one cohesive floating card.
+    static let inspectorCard = color(
+        light: (0.969, 0.973, 0.980), dark: (0.149, 0.161, 0.196))
+    /// Raised module card inside the inspector (such as the top Session Overview card):
+    /// crisp white in light, one step lighter in dark.
+    static let overviewCard = color(
+        light: (1.0, 1.0, 1.0), dark: (0.180, 0.196, 0.235))
     /// Selected sidebar rows: a small light card on the window glass. Translucent,
     /// so the desktop tint still reads through it.
     static let rowCard = Color(nsColor: nsColor(light: NSColor(white: 1, alpha: 0.92),

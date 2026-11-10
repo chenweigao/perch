@@ -11,19 +11,18 @@ import SwiftUI
 /// A project's sessions start under the project's icon, so their titles align
 /// with the project title. Section headers start at the icon column.
 enum SidebarMetrics {
-    static let rowHeight: CGFloat = 36
-    static let navigationHeight: CGFloat = 32
+    static let rowHeight: CGFloat = 30
+    static let navigationHeight: CGFloat = 28
     static let navigationSize: CGFloat = 13
-    /// Session rows that carry a status line (offline, waiting for input).
-    static let subtitleRowHeight: CGFloat = 50
-    /// Conversation rows grow with their title (up to two lines) and keep the same
-    /// space above and below it, so one- and two-line rows read evenly.
-    static let sessionVerticalPadding: CGFloat = 10
+    /// Session rows that carry a status line in diagnostic height-change checks.
+    static let subtitleRowHeight: CGFloat = 44
+    /// Compact vertical padding for single-line session rows.
+    static let sessionVerticalPadding: CGFloat = 5
     /// Inside the shell's 10 pt list padding.
     static let rowInset: CGFloat = 8
     static let iconWidth: CGFloat = 18
     static let iconSize: CGFloat = 14
-    static let labelSpacing: CGFloat = 10
+    static let labelSpacing: CGFloat = 8
     static let titleSize: CGFloat = WorkbenchTheme.Typography.body
     static let detailSize: CGFloat = WorkbenchTheme.Typography.caption
     /// Keyboard shortcut hints after a row title (⌘K, ⌘,): one size everywhere.
@@ -42,17 +41,17 @@ enum SidebarMetrics {
     /// headers such as 置顶 never read as disabled.
     static let sectionTitleSize: CGFloat = WorkbenchTheme.Typography.caption
     static let sectionTitleOpacity: Double = 0.62
-    static let sectionHeaderHeight: CGFloat = 24
+    static let sectionHeaderHeight: CGFloat = 22
     /// Trailing actions of headers and project rows (+, filter, retry): one quiet
     /// glyph size and one hit target.
     static let actionSize: CGFloat = 24
     static let actionGlyphSize: CGFloat = 12
-    static let sectionTopSpacing: CGFloat = 12
-    static let sectionBottomSpacing: CGFloat = 2
+    static let sectionTopSpacing: CGFloat = 8
+    static let sectionBottomSpacing: CGFloat = 1
     /// "显示全部", "更多会话" and the pin invitation: quieter than a session row.
-    static let auxiliaryRowHeight: CGFloat = 26
+    static let auxiliaryRowHeight: CGFloat = 24
     /// The first header sits closer to the navigation block than the later ones.
-    static let pinnedHeaderTopSpacing: CGFloat = 6
+    static let pinnedHeaderTopSpacing: CGFloat = 2
     static let sectionHeight: CGFloat = sectionTopSpacing + sectionHeaderHeight + sectionBottomSpacing
 
     /// Compact status badge past the agent mark's bottom-trailing corner: symbol
