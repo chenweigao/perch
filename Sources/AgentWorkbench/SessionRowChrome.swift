@@ -120,7 +120,7 @@ struct SessionRowChrome<Indicator: View>: View {
                 .opacity(hovered ? 1 : 0)
                 .allowsHitTesting(hovered)
                 .accessibilityLabel("会话操作")
-                .accessibilityIdentifier("sidebar.row.actions")
+                .accessibilityIdentifier(hovered ? "sidebar.row.actions" : "sidebar.row.actions.hidden")
                 .onHover { inside in if inside { showPreview = false } }
             }
         }
