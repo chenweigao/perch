@@ -124,7 +124,7 @@ struct SessionRowChrome<Indicator: View>: View {
                 .onHover { inside in if inside { showPreview = false } }
             }
         }
-        .onHover(perform: updateHover)
+        .background(SessionHoverTracking(onChange: updateHover))
     }
 
     private var standardRow: some View {
@@ -226,4 +226,35 @@ private struct SessionRowPreview: View {
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("sidebar.row.preview")
     }
+}
+
+private struct SessionHoverTracking: NSViewRepresentable {
+    let onChange: (Bool) -> Void
+
+    func makeNSView(context: Context) -> SessionHoverTrackingView {
+        let view = SessionHoverTrackingView()
+        view.onChange = onChange
+        return view
+    }
+
+    func updateNSView(_ view: SessionHoverTrackingView, context: Context) {
+        view.onChange = onChange
+    }
+}
+
+private final class SessionHoverTrackingView: NSView {
+    var onChange: ((Bool) -> Void)?
+    private var area: NSTrackingArea?
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let area { removeTrackingArea(area) }
+        let next = NSTrackingArea(rect: bounds,
+            options: [.mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect], owner: self, userInfo: nil)
+        addTrackingArea(next)
+        area = next
+    }
+
+    override func mouseEntered(with event: NSEvent) { onChange?(true) }
+    override func mouseExited(with event: NSEvent) { onChange?(false) }
 }
