@@ -256,6 +256,8 @@ private final class SessionHoverTrackingView: NSView {
         area = next
     }
 
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
     override func mouseEntered(with event: NSEvent) { onChange?(true) }
     override func mouseExited(with event: NSEvent) { onChange?(false) }
 }
