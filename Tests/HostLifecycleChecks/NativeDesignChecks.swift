@@ -682,6 +682,8 @@ import WorkbenchCore
         guard let previewWindow = visibleWindow(with: "sidebar.row.preview") else {
             preconditionFailure("Hovering a session row must open the styled preview after its delay")
         }
+        precondition(previewWindow.contentView?.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .aqua,
+                     "Session previews must follow the workspace's light appearance")
         if let folder = ProcessInfo.processInfo.environment["PERCH_DESIGN_CAPTURES"],
            let view = previewWindow.contentView,
            let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
@@ -707,6 +709,8 @@ import WorkbenchCore
         guard let menuWindow = visibleWindow(with: "sidebar.actions.menu") else {
             preconditionFailure("The ellipsis action must open the same session actions as the context menu")
         }
+        precondition(menuWindow.contentView?.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .aqua,
+                     "Session actions must follow the workspace's light appearance")
         let actionLabels = taskPanelElements(menuWindow).compactMap { element -> String? in
             for name in ["accessibilityLabel", "accessibilityValue"] {
                 let selector = NSSelectorFromString(name)

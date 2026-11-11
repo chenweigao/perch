@@ -28,6 +28,7 @@ struct SessionRowChrome<Indicator: View>: View {
     @State private var showActionsMenu = false
     @State private var previewTask: Task<Void, Never>?
     @Environment(\.locale) private var locale
+    @Environment(\.colorScheme) private var colorScheme
 
     private var trailingWidth: CGFloat { compact ? (running ? 0 : 36) : (hostName == nil ? 0 : 28) }
     private var rowHeight: CGFloat {
@@ -45,6 +46,7 @@ struct SessionRowChrome<Indicator: View>: View {
         .contentShape(Rectangle())
         .popover(isPresented: $showPreview, arrowEdge: .trailing) {
             SessionRowPreview(title: title, detail: tooltip)
+                .preferredColorScheme(colorScheme)
         }
     }
 
@@ -135,6 +137,7 @@ struct SessionRowChrome<Indicator: View>: View {
                 .accessibilityIdentifier("sidebar.row.actions")
                 .popover(isPresented: $showActionsMenu, arrowEdge: .trailing) {
                     actions
+                        .preferredColorScheme(colorScheme)
                         .environment(\.sessionActionPresentation, .popover)
                         .buttonStyle(SessionActionButtonStyle())
                         .menuStyle(.borderlessButton)

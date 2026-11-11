@@ -1018,11 +1018,15 @@ final class WorkbenchSplitController: NSSplitViewController {
     }
 
     private func applyAppearance() {
+        let appearance: NSAppearance?
         switch appAppearance {
-        case .system: view.window?.appearance = nil
-        case .light: view.window?.appearance = NSAppearance(named: .aqua)
-        case .dark: view.window?.appearance = NSAppearance(named: .darkAqua)
+        case .system: appearance = nil
+        case .light: appearance = NSAppearance(named: .aqua)
+        case .dark: appearance = NSAppearance(named: .darkAqua)
         }
+        // Native popovers inherit the application's appearance, not only the source window's.
+        NSApp.appearance = appearance
+        view.window?.appearance = appearance
     }
 
     func configureSplitPersistence() {
