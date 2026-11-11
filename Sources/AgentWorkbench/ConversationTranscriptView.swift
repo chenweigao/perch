@@ -1677,10 +1677,13 @@ private final class ConversationEntryController: NSViewController {
     private var textReveal: StreamingReplyState?
     private var streamSnapshot: ReplyStreamSnapshot?
     private var streamSnapshotSource: String?
+    private var streamSnapshotRevision = 0
+    private var streamStableBlockCount = 0
     private var streamParser = ReplyStreamParser()
     private var pendingStreamSource: String?
     private var pendingStreamReceivedAt: TimeInterval?
-    private var streamPreparation: (blocks: [ReplyBlock], size: CGFloat, rich: Bool, value: NativeAssistantContent.Preparation)?
+    private var streamPreparation: (blocks: [ReplyBlock], size: CGFloat, rich: Bool,
+                                    revision: Int, visibleUTF16: Int, value: NativeAssistantContent.Preparation)?
     private var revealIdentity: String?
     private var revealClock: ReplyFrameClock?
     private var revealFlushPending = false
@@ -1939,6 +1942,8 @@ private final class ConversationEntryController: NSViewController {
             let parseStart = CACurrentMediaTime()
             #endif
             streamSnapshot = ReplyStreamSnapshot(blocks: streamParser.update(source))
+            streamStableBlockCount = streamParser.stableBlockCount
+            streamSnapshotRevision += 1
             streamSnapshotSource = source
             PerfDiagnostics.end("streaming_markdown_parse", parseProbe)
             #if TRANSCRIPT_CHECKS
@@ -2025,8 +2030,10 @@ private final class ConversationEntryController: NSViewController {
         #if TRANSCRIPT_CHECKS
         if ProcessInfo.processInfo.environment["NAVIGATION_NATIVE_ASSISTANT_ROWS"] == "0" { return nil }
         let allowsRichBlocks = ProcessInfo.processInfo.environment["NAVIGATION_NATIVE_ASSISTANT_BLOCKS"] != "0"
+        let incrementalRendering = ProcessInfo.processInfo.environment["NAVIGATION_NATIVE_BODY_INCREMENTAL"] != "0"
         #else
         let allowsRichBlocks = true
+        let incrementalRendering = true
         #endif
         guard appearance.layoutDirection == .leftToRight, !content.isProgressNote,
               content.entry.presentation == .message || content.entry.presentation == .progress,
@@ -2036,13 +2043,25 @@ private final class ConversationEntryController: NSViewController {
               part.type == "text", !part.isRuntimeContext, part.skillContextSplit == nil,
               let rawSource = part.text else { return nil }
         if let streamSnapshot, let textReveal {
-            let blocks = streamSnapshot.prefix(utf16Length: textReveal.text.utf16.count)
-            if streamPreparation?.blocks != blocks || streamPreparation?.size != appearance.bodySize
-                || streamPreparation?.rich != allowsRichBlocks {
-                streamPreparation = (blocks, appearance.bodySize, allowsRichBlocks,
-                    NativeAssistantContent.prepare(blocks: blocks, allowsRichBlocks: allowsRichBlocks))
+            let visibleUTF16 = textReveal.text.utf16.count
+            if let prepared = streamPreparation, prepared.revision == streamSnapshotRevision,
+               prepared.visibleUTF16 == visibleUTF16, prepared.size == appearance.bodySize,
+               prepared.rich == allowsRichBlocks {
+                return (message.id, rawSource, prepared.value)
             }
-            return (message.id, rawSource, streamPreparation!.value)
+            let blocks = streamSnapshot.prefix(utf16Length: visibleUTF16)
+            let value: NativeAssistantContent.Preparation
+            if incrementalRendering, let previous = streamPreparation, previous.size == appearance.bodySize,
+               previous.rich == allowsRichBlocks, !previous.blocks.isEmpty {
+                let stable = min(streamStableBlockCount, previous.blocks.count - 1)
+                value = NativeAssistantContent.prepare(blocks: blocks, allowsRichBlocks: allowsRichBlocks,
+                                                       reusing: previous.value, stableBlockCount: stable)
+            } else {
+                value = NativeAssistantContent.prepare(blocks: blocks, allowsRichBlocks: allowsRichBlocks)
+            }
+            streamPreparation = (blocks, appearance.bodySize, allowsRichBlocks,
+                                 streamSnapshotRevision, visibleUTF16, value)
+            return (message.id, rawSource, value)
         }
         let source = rawSource
         let preparation = nativeRowPreparations.assistant(session: content.sessionId, messageID: message.id,
@@ -2161,7 +2180,8 @@ private final class ConversationEntryController: NSViewController {
                     nativeAssistant!.update(blocks, source: assistant.source,
                                             dark: appearance.colorScheme == .dark, enabled: appearance.isEnabled,
                                             actionContext: appearance.actionContext, messageID: assistant.messageID,
-                                            showsActions: content.entry.presentation == .message)
+                                            showsActions: content.entry.presentation == .message,
+                                            unchangedPrefix: assistant.value.reusedBlockCount)
                     #if TRANSCRIPT_CHECKS
                     NavigationRenderMetrics.record("native_assistant_update", since: CACurrentMediaTime())
                     #endif
