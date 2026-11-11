@@ -471,10 +471,12 @@ final class WorkbenchDetailController: NSViewController {
             headerBar.trailingAnchor.constraint(equalTo: card.trailingAnchor),
             headerBar.heightAnchor.constraint(equalToConstant: WorkbenchChrome.headerHeight),
             headerLeading,
-            header.centerYAnchor.constraint(equalTo: headerBar.centerYAnchor),
+            header.centerYAnchor.constraint(equalTo: headerBar.topAnchor,
+                constant: WorkbenchChrome.headerHeight / 2 - WorkspaceLayoutMetrics.frameInset),
             header.trailingAnchor.constraint(lessThanOrEqualTo: actions.leadingAnchor, constant: -12),
             actions.trailingAnchor.constraint(equalTo: headerBar.trailingAnchor, constant: -12),
-            actions.centerYAnchor.constraint(equalTo: headerBar.centerYAnchor),
+            actions.centerYAnchor.constraint(equalTo: headerBar.topAnchor,
+                constant: WorkbenchChrome.headerHeight / 2 - WorkspaceLayoutMetrics.frameInset),
             detail.topAnchor.constraint(equalTo: headerBar.bottomAnchor),
             detail.leadingAnchor.constraint(equalTo: card.leadingAnchor),
             detail.bottomAnchor.constraint(equalTo: card.bottomAnchor),
@@ -972,25 +974,6 @@ final class WorkbenchSplitController: NSSplitViewController {
     override func viewDidLayout() {
         super.viewDidLayout()
         updateWorkspaceLayout()
-        // Align the native toolbar (traffic lights + sidebar toggle) with the main
-        // container's unified header vertical center.
-        if let window = view.window, let card = detailCardView {
-            let cardFrame = card.convert(card.bounds, to: nil)
-            // Window coordinates: card top is measured from the window's bottom edge.
-            // The native toolbar (traffic lights + sidebar toggle) must share the
-            // same vertical center as the unified header inside the main container.
-            let headerCenterY = cardFrame.minY + WorkbenchChrome.headerHeight / 2
-            if let container = window.standardWindowButton(.closeButton)?.superview?.superview {
-                var frame = container.frame
-                let delta = headerCenterY - frame.midY
-                if abs(delta) > 0.5 {
-                    print("TOOLBAR-ALIGN: container=\(type(of: container)) before=\(frame) delta=\(delta)")
-                    frame.origin.y += delta
-                    container.frame = frame
-                    print("TOOLBAR-ALIGN: after=\(container.frame) close=\(window.standardWindowButton(.closeButton)!.frame)")
-                }
-            }
-        }
     }
 
     override func viewDidAppear() {
