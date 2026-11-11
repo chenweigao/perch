@@ -633,8 +633,10 @@ import WorkbenchCore
             try? bitmap.representation(using: .png, properties: [:])?
                 .write(to: URL(fileURLWithPath: folder).appendingPathComponent("sidebar-hover-preview.png"))
         }
+        let actionPoint = CGPoint(x: actionsFrame.midX, y: actionsFrame.midY)
+        moveMouse(to: actionPoint)
         for type in [CGEventType.leftMouseDown, .leftMouseUp] {
-            postMouse(type, at: CGPoint(x: actionsFrame.midX, y: actionsFrame.midY))
+            postMouse(type, at: actionPoint)
         }
         try await Task.sleep(for: .milliseconds(250))
         guard let menuWindow = NSApp.windows.first(where: { taskPanelLabel($0, "重命名…") != nil }) else {
