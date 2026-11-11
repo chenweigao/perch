@@ -640,6 +640,9 @@ import WorkbenchCore
             postMouse(type, at: actionPoint)
         }
         try await Task.sleep(for: .milliseconds(250))
+        let localAction = window.convertFromScreen(NSRect(x: actionPoint.x, y: actionPoint.y, width: 1, height: 1)).origin
+        let actionMouse = window.mouseLocationOutsideOfEventStream
+        FileHandle.standardError.write(Data("ACTION-DIAG: point=\(actionPoint), localAction=\(localAction), localMouse=\(actionMouse), hit=\(String(describing: window.contentView?.hitTest(actionMouse))), windows=\(NSApp.windows.map { String(describing: $0) })\n".utf8))
         guard let menuWindow = NSApp.windows.first(where: { taskPanelLabel($0, "重命名…") != nil }) else {
             preconditionFailure("The ellipsis action must open the same session actions as the context menu")
         }
