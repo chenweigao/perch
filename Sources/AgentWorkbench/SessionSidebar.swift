@@ -593,6 +593,7 @@ private struct SessionSidebarRow: View {
                          failed: item.online && !item.archived && item.turn.state == .failed,
                          unread: item.online && !item.archived && item.section == .review,
                          offline: compact && !item.online && !item.archived,
+                         actions: AnyView(SessionActionsMenu(model: model, item: item)),
                          selected: selected,
                          canOpen: item.online && !item.archived, onOpen: onOpen) {
             SessionStatusIndicator(item: item)
@@ -618,6 +619,7 @@ private struct SessionSidebarRow: View {
 
 struct SessionActionsMenu: View {
     @UILocalization private var L
+    @Environment(\.sessionActionPresentation) private var presentation
     @Bindable var model: WorkbenchModel
     let item: WorkspaceSession
     private var busy: Bool { model.managing.contains(item.id) }
@@ -628,7 +630,7 @@ struct SessionActionsMenu: View {
                 Label(model.workspace.starred.contains(item.reference) ? "取消置顶" : "置顶会话", systemImage: "pin")
             }
         }
-        Menu("移动到项目") {
+        Menu {
             ForEach(model.sidebarProjection(filter: .all).projects) { project in
                 if let location = project.location {
                     Button(project.disambiguate ? "\(project.title) · \(project.detail ?? "")" : project.title) {
@@ -638,7 +640,12 @@ struct SessionActionsMenu: View {
             }
             Divider()
             Button("按所属仓库归组") { model.moveSidebarSession(item, to: nil) }
+        } label: {
+            Label(L(presentation == .popover ? "移动到项目  ›" : "移动到项目"), systemImage: "folder")
+                .frame(maxWidth: .infinity, minHeight: presentation == .popover ? 28 : nil, alignment: .leading)
+                .padding(.horizontal, presentation == .popover ? 10 : 0)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         Button { model.groupingSession = item } label: { Label("管理任务组归属…", systemImage: "square.stack.3d.up") }
         Button { model.toggleTaskNotifications(item.id) } label: {
             Label(model.mutedTasks.contains(item.id) ? L("恢复任务通知") : L("静音任务通知"),
@@ -662,6 +669,7 @@ struct SessionActionsMenu: View {
         Button(role: .destructive) { model.pendingDeletion = item } label: {
             Label(L("删除会话…"), systemImage: "trash")
         }.disabled(busy || !item.online || !model.canArchive(item))
+        .accessibilityIdentifier("sidebar.actions.menu")
     }
 }
 

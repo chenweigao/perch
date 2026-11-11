@@ -2,9 +2,6 @@ import AppKit
 import SwiftUI
 import WorkbenchCore
 
-/// The trailing space holds host identity or the session's age. Rows carry no
-/// hover buttons: pin and archive live only in the row's context menu, so nothing
-/// covers or squeezes the title when the pointer passes over it.
 struct SessionRowChrome<Indicator: View>: View {
     @UILocalization private var L
     let title: String
@@ -19,18 +16,17 @@ struct SessionRowChrome<Indicator: View>: View {
     var running = false
     var waiting = false
     var failed = false
-    /// Unread results set the title a weight heavier, as in Mail; the agent mark's dot
-    /// alone is easy to miss.
     var unread = false
-    /// The session cannot be reached. Compact rows say so with a quiet trailing symbol
-    /// on a dimmed row, not a status line, so the row keeps its height when a machine
-    /// drops off. Orange stays reserved for sessions that need the reader.
     var offline = false
+    var actions: AnyView? = nil
     let selected: Bool
     let canOpen: Bool
     let onOpen: () -> Void
     @ViewBuilder let indicator: Indicator
     @State private var hovered = false
+    @State private var showPreview = false
+    @State private var showActionsMenu = false
+    @State private var previewTask: Task<Void, Never>?
     @Environment(\.locale) private var locale
 
     private var trailingWidth: CGFloat { compact ? (running ? 0 : 36) : (hostName == nil ? 0 : 28) }
@@ -46,53 +42,106 @@ struct SessionRowChrome<Indicator: View>: View {
             else { standardRow }
         }
         .background { SidebarHighlight(selected: selected, hovered: hovered) }
-        .contentShape(Rectangle()).onHover { hovered = $0 }
-        .help(Text(verbatim: tooltip))
+        .contentShape(Rectangle())
+        .popover(isPresented: $showPreview, arrowEdge: .trailing) {
+            SessionRowPreview(title: title, detail: tooltip)
+        }
+    }
+
+    private func updateHover(_ inside: Bool) {
+        hovered = inside
+        previewTask?.cancel()
+        guard inside else {
+            showPreview = false
+            return
+        }
+        previewTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled, hovered else { return }
+            showPreview = true
+        }
     }
 
     /// Compact single-line rows prioritize the title and essential status;
-    /// time and host/directory/Agent details appear only on hover.
+    /// the trailing menu and full preview appear only while hovered.
     private var conversationRow: some View {
-        Button(action: onOpen) {
-            HStack(alignment: .center, spacing: 6) {
-                Text(title).font(.system(size: SidebarMetrics.titleSize, weight: unread ? .semibold : .regular))
-                    .lineLimit(1).truncationMode(.tail)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                if running {
-                    ConversationBusyIndicator().help("运行中").accessibilityIdentifier("sidebar.running")
-                        .frame(width: 18, height: 18)
-                } else if offline {
-                    Image(systemName: "wifi.slash").font(.system(size: WorkbenchTheme.Typography.caption))
-                        .foregroundStyle(WorkbenchTheme.quiet).help("离线 · 状态未同步")
-                        .accessibilityHidden(true)
-                        .frame(width: 18, height: 18)
-                } else {
-                    HStack(spacing: 4) {
-                        if failed {
-                            Image(systemName: "exclamationmark.circle.fill")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.red)
-                                .help(detail ?? L("运行出错"))
-                                .accessibilityHidden(true)
-                        } else if waiting {
-                            Circle().fill(Color.orange).frame(width: 6, height: 6)
-                                .help(detail ?? L("等你处理"))
-                                .accessibilityHidden(true)
-                        } else if unread {
-                            Circle().fill(Color.blue).frame(width: 6, height: 6)
-                                .help("有未读结果")
-                                .accessibilityHidden(true)
+        HStack(spacing: 0) {
+            Button {
+                showPreview = false
+                onOpen()
+            } label: {
+                HStack(alignment: .center, spacing: 6) {
+                    Text(title).font(.system(size: SidebarMetrics.titleSize, weight: unread ? .semibold : .regular))
+                        .lineLimit(1).truncationMode(.tail)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if running {
+                        ConversationBusyIndicator().accessibilityIdentifier("sidebar.running")
+                            .frame(width: 18, height: 18)
+                    } else if offline {
+                        Image(systemName: "wifi.slash").font(.system(size: WorkbenchTheme.Typography.caption))
+                            .foregroundStyle(WorkbenchTheme.quiet)
+                            .accessibilityHidden(true)
+                            .frame(width: 18, height: 18)
+                    } else {
+                        HStack(spacing: 4) {
+                            if failed {
+                                Image(systemName: "exclamationmark.circle.fill")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.red)
+                                    .accessibilityHidden(true)
+                            } else if waiting {
+                                Circle().fill(Color.orange).frame(width: 6, height: 6)
+                                    .accessibilityHidden(true)
+                            } else if unread {
+                                Circle().fill(Color.blue).frame(width: 6, height: 6)
+                                    .accessibilityHidden(true)
+                            }
                         }
                     }
+                }.padding(.horizontal, SidebarMetrics.rowInset)
+                    .frame(maxWidth: .infinity, minHeight: SidebarMetrics.rowHeight, maxHeight: SidebarMetrics.rowHeight, alignment: .leading)
+                    .contentShape(Rectangle())
+            }.buttonStyle(.plain).disabled(!canOpen)
+                .accessibilityIdentifier("sidebar.row")
+                .accessibilityLabel(title)
+                .accessibilityValue(([offline ? L("离线 · 状态未同步") : nil, hostName, directory, detail,
+                                      updatedAt > 0 ? SessionTime.label(since: updatedAt, waiting: false) : nil].compactMap { $0 } + groups).joined(separator: " · "))
+            if let actions {
+                Button {
+                    showPreview = false
+                    showActionsMenu = true
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(WorkbenchTheme.quiet)
+                        .frame(width: 24, height: 24)
+                        .background(WorkbenchTheme.Fill.surface,
+                                    in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.chip, style: .continuous))
+                        .contentShape(Rectangle())
                 }
-            }.padding(.horizontal, SidebarMetrics.rowInset)
-                .frame(maxWidth: .infinity, minHeight: SidebarMetrics.rowHeight, maxHeight: SidebarMetrics.rowHeight, alignment: .leading)
-                .contentShape(Rectangle())
-        }.buttonStyle(.plain).disabled(!canOpen)
-            .help(Text(verbatim: tooltip))
-            .accessibilityLabel(title)
-            .accessibilityValue(([offline ? L("离线 · 状态未同步") : nil, hostName, directory, detail,
-                                  updatedAt > 0 ? SessionTime.label(since: updatedAt, waiting: false) : nil].compactMap { $0 } + groups).joined(separator: " · "))
+                .buttonStyle(.plain)
+                .opacity(hovered || showActionsMenu ? 1 : 0)
+                .allowsHitTesting(hovered)
+                .onHover { inside in
+                    if inside {
+                        previewTask?.cancel()
+                        showPreview = false
+                    }
+                }
+                .accessibilityLabel("会话操作")
+                .accessibilityIdentifier("sidebar.row.actions")
+                .popover(isPresented: $showActionsMenu, arrowEdge: .trailing) {
+                    actions
+                        .environment(\.sessionActionPresentation, .popover)
+                        .buttonStyle(SessionActionButtonStyle())
+                        .menuStyle(.borderlessButton)
+                        .menuIndicator(.hidden)
+                        .frame(width: 208)
+                        .padding(6)
+                }
+            }
+        }
+        .overlay(SessionHoverTracking(onChange: updateHover))
     }
 
     private var standardRow: some View {
@@ -161,4 +210,115 @@ struct SessionRowChrome<Indicator: View>: View {
         return lines.joined(separator: "\n")
     }
 
+}
+
+private struct SessionRowPreview: View {
+    let title: String
+    let detail: String
+    private var lines: [String] {
+        detail.split(separator: "\n", omittingEmptySubsequences: true).map(String.init)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold))
+                .foregroundStyle(WorkbenchTheme.ink)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("sidebar.row.preview.title")
+            ForEach(lines.dropFirst(), id: \.self) { line in
+                Text(line)
+                    .font(.system(size: WorkbenchTheme.Typography.caption))
+                    .foregroundStyle(WorkbenchTheme.quiet)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(width: 308, alignment: .leading)
+        .background(Color(nsColor: .controlBackgroundColor),
+                    in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous)
+            .strokeBorder(WorkbenchTheme.Stroke.hairline.opacity(0.55), lineWidth: 0.5))
+        .shadow(color: .black.opacity(0.08), radius: 12, y: 4)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("sidebar.row.preview")
+    }
+}
+
+private struct SessionHoverTracking: NSViewRepresentable {
+    let onChange: (Bool) -> Void
+
+    func makeNSView(context: Context) -> SessionHoverTrackingView {
+        let view = SessionHoverTrackingView()
+        view.onChange = onChange
+        return view
+    }
+
+    func updateNSView(_ view: SessionHoverTrackingView, context: Context) {
+        view.onChange = onChange
+    }
+}
+
+private final class SessionHoverTrackingView: NSView {
+    var onChange: ((Bool) -> Void)?
+    private var area: NSTrackingArea?
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let area { removeTrackingArea(area) }
+        let next = NSTrackingArea(rect: bounds,
+            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self, userInfo: nil)
+        addTrackingArea(next)
+        area = next
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    override func mouseEntered(with event: NSEvent) { onChange?(true) }
+    override func mouseExited(with event: NSEvent) { onChange?(false) }
+}
+
+enum SessionActionPresentation {
+    case contextMenu
+    case popover
+}
+
+private struct SessionActionPresentationKey: EnvironmentKey {
+    static let defaultValue = SessionActionPresentation.contextMenu
+}
+
+extension EnvironmentValues {
+    var sessionActionPresentation: SessionActionPresentation {
+        get { self[SessionActionPresentationKey.self] }
+        set { self[SessionActionPresentationKey.self] = newValue }
+    }
+}
+
+private struct SessionActionButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Row(configuration: configuration)
+    }
+
+    private struct Row: View {
+        let configuration: Configuration
+        @Environment(\.isEnabled) private var isEnabled
+        @State private var hovered = false
+
+        var body: some View {
+            configuration.label
+                .font(.system(size: 12))
+                .foregroundStyle(configuration.role == .destructive ? Color.red : WorkbenchTheme.ink)
+                .opacity(isEnabled ? 1 : 0.4)
+                .padding(.horizontal, 10)
+                .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading)
+                .background {
+                    RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.chip, style: .continuous)
+                        .fill(configuration.isPressed ? WorkbenchTheme.Fill.pressed : WorkbenchTheme.Fill.hover)
+                        .opacity(hovered || configuration.isPressed ? 1 : 0)
+                }
+                .contentShape(Rectangle())
+                .onHover { hovered = $0 }
+        }
+    }
 }
