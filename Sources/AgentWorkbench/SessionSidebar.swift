@@ -641,17 +641,9 @@ struct SessionActionsMenu: View {
             Divider()
             Button("按所属仓库归组") { model.moveSidebarSession(item, to: nil) }
         } label: {
-            HStack {
-                Label("移动到项目", systemImage: "folder")
-                if presentation == .popover {
-                    Spacer(minLength: 12)
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(WorkbenchTheme.quiet)
-                }
-            }
-            .frame(maxWidth: .infinity, minHeight: presentation == .popover ? 28 : nil, alignment: .leading)
-            .padding(.horizontal, presentation == .popover ? 10 : 0)
+            Label(presentation == .popover ? "移动到项目  ›" : "移动到项目", systemImage: "folder")
+                .frame(maxWidth: .infinity, minHeight: presentation == .popover ? 28 : nil, alignment: .leading)
+                .padding(.horizontal, presentation == .popover ? 10 : 0)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         Button { model.groupingSession = item } label: { Label("管理任务组归属…", systemImage: "square.stack.3d.up") }
