@@ -40,6 +40,8 @@ private final class TaskSummaryProtocol: URLProtocol {
 @MainActor func checkTaskSummary() async throws {
     UserDefaults.standard.removePersistentDomain(forName: Bundle.main.bundleIdentifier!)
     AppLanguage.applyToSystem(.zhHans)
+    NSApp.setActivationPolicy(.accessory)
+    NSApp.activate(ignoringOtherApps: true)
     AXUIElementSetAttributeValue(AXUIElementCreateApplication(getpid()), "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)
     let configuration = URLSessionConfiguration.ephemeral
     configuration.protocolClasses = [TaskSummaryProtocol.self]
