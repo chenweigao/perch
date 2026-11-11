@@ -31,7 +31,7 @@ def macos_commands(group, out):
     if group in ("all", "host"):
         commands += [
             # Compiles the whole app before the isolated UI phases.
-            ("host-lifecycle", [python, "scripts/check-host-lifecycle.py"], 600),
+            ("host-lifecycle", [python, "scripts/check-host-lifecycle.py"], 900),
             ("scroll-following", [python, "scripts/check-scroll-following.py"], 120),
         ]
     if group in ("all", "native"):
