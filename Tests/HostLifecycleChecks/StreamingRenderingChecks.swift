@@ -15,6 +15,9 @@ private struct StreamingFixtureView: View {
         ScrollView {
             ConversationTranscript(messages: model.messages, sessionId: "streaming-rendering-fixture", isRunning: model.running)
         }.frame(width: 720, height: 500)
+            // Normal-motion checks must not inherit a runner's accessibility
+            // preference. The controlled flag below covers Reduce Motion.
+            .environment(\.accessibilityReduceMotion, false)
             .environment(\.conversationReduceMotion, model.reduceMotion)
     }
 }
@@ -39,6 +42,7 @@ private struct StreamingFixtureView: View {
 }
 
 @MainActor func checkProductionStreamingRendering() async throws {
+    NSApp.setActivationPolicy(.accessory)
     let model = StreamingFixture()
     func messages(_ text: String) throws -> [KimiMessage] {
         let json: [[String: Any]] = [
@@ -71,6 +75,8 @@ private struct StreamingFixtureView: View {
     let host = NSHostingView(rootView: StreamingFixtureView(model: model))
     window.contentView = host
     window.makeKeyAndOrderFront(nil)
+    NSApp.activate(ignoringOtherApps: true)
+    precondition(window.isVisible, "Native release checks require a visible fixture window")
 
     guard await waitForStreaming(host, { nativeRows(host).count == 1 && renderedText(host).contains("Paragraph 8") }) else {
         preconditionFailure("An admitted live reply must mount its native row")

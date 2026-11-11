@@ -1677,7 +1677,8 @@ extension NavigationRunner {
                 throw NavigationError("Disclosure target was not mounted before toggling")
             }
             for iteration in 0..<6 {
-                guard let control = fullSource.flatMap({ ConversationDisclosureFixture.fullBindings[$0] }) ?? binding(for: kind) else { throw NavigationError("lost disclosure") }
+                let outputControl = full && kind == "Bash" ? fullSource.flatMap({ ConversationDisclosureFixture.fullBindings[$0] }) : nil
+                guard let control = outputControl ?? binding(for: kind) else { throw NavigationError("lost disclosure") }
                 NavigationRenderMetrics.stages = [:]
                 let headerY = rows().first?.convert(.zero, to: host).y ?? 0
                 let start = CACurrentMediaTime()
