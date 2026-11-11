@@ -984,8 +984,10 @@ final class WorkbenchSplitController: NSSplitViewController {
                 var frame = container.frame
                 let delta = headerCenterY - frame.midY
                 if abs(delta) > 0.5 {
+                    print("TOOLBAR-ALIGN: container=\(type(of: container)) before=\(frame) delta=\(delta)")
                     frame.origin.y += delta
                     container.frame = frame
+                    print("TOOLBAR-ALIGN: after=\(container.frame) close=\(window.standardWindowButton(.closeButton)!.frame)")
                 }
             }
         }
