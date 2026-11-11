@@ -420,11 +420,19 @@ struct SmoothReplyMarkdown: View {
     let sessionID: String?
     let messageID: String?
     let preparation: ReplyMarkdownPreparation?
+    // A reference box so the incremental parser survives body evaluations;
+    // updating it is an idempotent cache write, not observable state.
+    @State private var parser = ParserBox()
+
+    private final class ParserBox {
+        private var value = ReplyStreamParser()
+        func blocks(_ source: String) -> [ReplyBlock] { value.update(source) }
+    }
 
     private var blocks: [ReplyBlock] {
         if case .reuse(let session, let message, let expected, let blocks)? = preparation,
            session == sessionID, message == messageID, expected == source { return blocks }
-        return ReplyDocument.parse(source)
+        return parser.blocks(source)
     }
     var body: some View {
         if streaming && source.utf16.count <= StreamingTextReveal.maximumLength {
