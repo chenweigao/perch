@@ -663,6 +663,7 @@ struct SessionActionsMenu: View {
         Button(role: .destructive) { model.pendingDeletion = item } label: {
             Label(L("删除会话…"), systemImage: "trash")
         }.disabled(busy || !item.online || !model.canArchive(item))
+        .accessibilityIdentifier("sidebar.actions.menu")
     }
 }
 

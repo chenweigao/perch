@@ -655,7 +655,7 @@ import WorkbenchCore
             }
         }
         FileHandle.standardError.write(Data("ACTION-LABELS: \(NSApp.windows.map { accessibilityLabels($0) })\n".utf8))
-        guard let menuWindow = NSApp.windows.last(where: { $0.isVisible && $0 !== window }) else {
+        guard let menuWindow = NSApp.windows.first(where: { taskPanelControl($0, "sidebar.actions.menu") != nil }) else {
             preconditionFailure("The ellipsis action must open the same session actions as the context menu")
         }
         if let folder = ProcessInfo.processInfo.environment["PERCH_DESIGN_CAPTURES"],
