@@ -42,12 +42,12 @@ private struct CompactionSummaryRow: View {
                         Text("上下文已压缩").font(.system(size: ReplyStyle.captionSize))
                         Image(systemName: expanded ? "chevron.down" : "chevron.right")
                             .font(.system(size: 9, weight: .medium))
-                    }.foregroundStyle(.secondary).fixedSize()
+                    }.foregroundStyle(WorkbenchTheme.quiet).fixedSize()
                     divider
                 }.contentShape(Rectangle())
             }.buttonStyle(WorkbenchDisclosureButtonStyle())
                 .accessibilityValue(Text(expanded ? "已展开" : "已收起"))
-            if expanded {
+            WorkbenchDisclosureContent(expanded: expanded) {
                 KimiMarkdown(text: CompactionSummaryDisplay.humanText(text))
                     .environment(\.replyTone, .quiet)
                     .padding(.horizontal, ReplyStyle.Process.nestedIndent)
@@ -55,7 +55,7 @@ private struct CompactionSummaryRow: View {
         }
     }
     private var divider: some View {
-        Color.primary.opacity(0.12).frame(height: 1)
+        WorkbenchTheme.Stroke.hairline.frame(height: 1)
     }
 }
 
@@ -84,21 +84,21 @@ private struct CronFireRow: View {
                         }
                         Image(systemName: expanded ? "chevron.down" : "chevron.right")
                             .font(.system(size: 9, weight: .medium))
-                    }.foregroundStyle(.secondary)
+                    }.foregroundStyle(WorkbenchTheme.quiet)
                     divider
                 }.contentShape(Rectangle())
             }.buttonStyle(WorkbenchDisclosureButtonStyle())
                 .accessibilityLabel("定时任务触发")
                 .accessibilityValue(Text(expanded ? "已展开" : "已收起"))
-            if expanded {
+            WorkbenchDisclosureContent(expanded: expanded) {
                 Text(raw).font(.system(size: ReplyStyle.captionSize, design: .monospaced))
-                    .foregroundStyle(.secondary).textSelection(.enabled)
+                    .foregroundStyle(WorkbenchTheme.quiet).textSelection(.enabled)
                     .padding(.horizontal, ReplyStyle.Process.nestedIndent)
             }
         }
     }
     private var divider: some View {
-        Color.primary.opacity(0.12).frame(height: 1)
+        WorkbenchTheme.Stroke.hairline.frame(height: 1)
     }
 }
 
@@ -108,14 +108,25 @@ struct LongUserPrompt<Content: View>: View {
     @State private var naturalHeight: CGFloat = 0
     private var folds: Bool { naturalHeight > UserMessageStyle.foldThreshold }
     var body: some View {
+        let isCollapsed = folds && !expanded
         VStack(alignment: .leading, spacing: 6) {
             content.fixedSize(horizontal: false, vertical: true)
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { naturalHeight = $0 }
-                .frame(maxHeight: folds && !expanded ? UserMessageStyle.collapsedHeight : nil, alignment: .top)
+                .frame(maxHeight: isCollapsed ? UserMessageStyle.collapsedHeight : nil, alignment: .top)
                 .clipped()
+                .mask {
+                    if isCollapsed {
+                        LinearGradient(stops: [.init(color: .black, location: 0),
+                                               .init(color: .black, location: 0.84),
+                                               .init(color: .clear, location: 1)],
+                                       startPoint: .top, endPoint: .bottom)
+                    } else {
+                        Color.black
+                    }
+                }
             if folds {
                 Button(expanded ? "收起问题" : "展开完整问题") { expanded.toggle() }
-                    .buttonStyle(.plain).font(.system(size: ReplyStyle.labelSize)).foregroundStyle(.secondary)
+                    .buttonStyle(.plain).font(.system(size: ReplyStyle.labelSize)).foregroundStyle(WorkbenchTheme.quiet)
                     .frame(height: 24, alignment: .leading)
                     .accessibilityIdentifier("user-prompt-toggle")
             }
@@ -148,7 +159,7 @@ struct KimiMessageView: View {
             KimiMarkdown(text: text).environment(\.replyTone, .quiet)
                 .padding(.leading, ReplyStyle.Process.nestedIndent)
         } label: {
-            Text("运行上下文").font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(.secondary)
+            Text("运行上下文").font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(WorkbenchTheme.quiet)
         }.disclosureGroupStyle(ProcessDisclosureStyle())
     }
     private func compactionSummary(_ text: String) -> some View {
@@ -2298,13 +2309,13 @@ private struct AssistantEntryActions: View {
                 Button { context.post(.quote(text)) } label: {
                     Image(systemName: "quote.opening").font(.system(size: ReplyStyle.captionSize))
                         .frame(width: 24, height: 24).contentShape(Rectangle())
-                }.buttonStyle(.plain).foregroundStyle(.secondary).help("引用到输入框")
+                }.buttonStyle(WorkbenchDisclosureButtonStyle()).foregroundStyle(WorkbenchTheme.quiet).help("引用到输入框")
                     .accessibilityLabel("引用到输入框")
                 if !messageID.isEmpty {
                     Button { context.post(.regenerate(before: messageID)) } label: {
                         Image(systemName: "arrow.clockwise").font(.system(size: ReplyStyle.captionSize))
                             .frame(width: 24, height: 24).contentShape(Rectangle())
-                    }.buttonStyle(.plain).foregroundStyle(.secondary).help("重新生成（重发上一条提问）")
+                    }.buttonStyle(WorkbenchDisclosureButtonStyle()).foregroundStyle(WorkbenchTheme.quiet).help("重新生成（重发上一条提问）")
                         .accessibilityLabel("重新生成")
                     if let recapKey = context.recapKey, context.recapMessageID == messageID {
                         RecapActionButton(key: recapKey)
@@ -2494,12 +2505,12 @@ private struct ConversationEntryView: View, Equatable {
                             }
                         }.padding(.top, 10).padding(.leading, ReplyStyle.Process.nestedIndent) }
                     }.disclosureGroupStyle(ProcessDisclosureStyle())
-                        .font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(.secondary)
+                        .font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(WorkbenchTheme.quiet)
                 case .thinkingDetails, .thinkingPreview, .thinkingRecord:
                     ThoughtOutput(messages: entry.messages, finished: entry.presentation != .thinkingPreview)
                 case .emptyOutput:
                     Text("本轮未返回文字回复，可展开工具记录查看结果。")
-                        .font(.system(size: ReplyStyle.labelSize)).foregroundStyle(.secondary)
+                        .font(.system(size: ReplyStyle.labelSize)).foregroundStyle(WorkbenchTheme.quiet)
                 case .processFold:
                     if let foldedRows {
                         ProcessFoldRow(rows: foldedRows, api: api, sessionId: sessionId,
@@ -2510,7 +2521,7 @@ private struct ConversationEntryView: View, Equatable {
                     }
                 default:
                     if entry.presentation == .record {
-                        Text("过程记录 · 未返回最终回复").font(.system(size: ReplyStyle.captionSize)).foregroundStyle(.secondary)
+                        Text("过程记录 · 未返回最终回复").font(.system(size: ReplyStyle.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
                     }
                     ForEach(entry.messages) { message in
                         KimiMessageView(message: message, tools: tools, api: api, sessionId: sessionId,
@@ -2595,11 +2606,9 @@ struct ProcessFoldRow: View {
     private var externalHeadline: String? {
         rows.lazy.compactMap { $0.activity?.narrative }.last { $0.source == .external && !$0.headline.isEmpty }?.headline
     }
-    /// Live wording follows PI: a streaming thought at the tail reads as
-    /// "thinking", anything else as the plain running status.
     private var liveLabel: String {
         if rows.last?.entry.presentation == .thinkingPreview { return L("思考中") }
-        return L("Process running")
+        return L("工作过程")
     }
     var body: some View {
         let countLabel = toolCalls > 0 ? L("\(toolCalls) 个工具") : L("\(rows.count) 条记录")
@@ -2608,27 +2617,18 @@ struct ProcessFoldRow: View {
             HStack(alignment: .center, spacing: 8) {
                 DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
                     HStack(spacing: 6) {
-                        // PI's process disclosure: one sparkles glyph for every
-                        // state, then status, a live pulse dot, duration and the
-                        // tool count; the thinking summary rides last (DSH's
-                        // completed reasoning row).
                         Image(systemName: "sparkles").font(.system(size: ReplyStyle.captionSize))
                             .foregroundStyle(WorkbenchTheme.quiet).fixedSize()
-                        Text(verbatim: live ? liveLabel : L("运行完成")).fixedSize()
-                        ProcessStatusDot(status: live ? .running : .succeeded)
-                        if live, let liveStartedAt {
-                            let isZh = locale.language.languageCode?.identifier.hasPrefix("zh") ?? true
-                            TimelineView(.periodic(from: liveStartedAt, by: 1)) { context in
-                                Text(verbatim: "· " + ConversationTiming.duration(
-                                    max(0, context.date.timeIntervalSince(liveStartedAt)).rounded(), chinese: isZh))
-                                    .monospacedDigit()
-                            }.fixedSize()
-                        } else if !live, let completedDuration, completedDuration >= 5 {
+                        Text(verbatim: live ? liveLabel : L("工作过程")).fixedSize()
+                        if live {
+                            ProcessStatusDot(status: .running)
+                        }
+                        Text(verbatim: "· " + countLabel).fixedSize()
+                        if !live, let completedDuration, completedDuration >= 5 {
                             let isZh = locale.language.languageCode?.identifier.hasPrefix("zh") ?? true
                             Text(verbatim: "· " + ConversationTiming.duration(completedDuration, chinese: isZh))
                                 .monospacedDigit().fixedSize()
                         }
-                        Text(verbatim: "· " + countLabel).fixedSize()
                         if let editStat, actionContext == nil {
                             Text(L("· \(editStat.files) 个文件 +\(editStat.additions) −\(editStat.deletions)"))
                                 .monospacedDigit().fixedSize()
@@ -2641,7 +2641,7 @@ struct ProcessFoldRow: View {
                         }
                     }
                     .font(.system(size: headline != nil ? ReplyStyle.captionSize : ReplyStyle.Process.labelSize))
-                    .foregroundStyle(headline != nil ? WorkbenchTheme.quiet : Color.secondary)
+                    .foregroundStyle(WorkbenchTheme.quiet)
                 }
                 .disclosureGroupStyle(ProcessDisclosureStyle(caretFollowsContent: true))
                 .accessibilityValue(Text(expanded ? "已展开" : "已收起"))
@@ -2679,7 +2679,9 @@ struct ProcessFoldRow: View {
                     }
                 }.padding(.top, ReplyStyle.Process.rowSpacing).padding(.leading, ReplyStyle.Process.nestedIndent)
                     .overlay(alignment: .leading) {
-                        Rectangle().fill(.primary.opacity(0.12)).frame(width: 1).padding(.top, ReplyStyle.Process.rowSpacing)
+                        Capsule().fill(WorkbenchTheme.Stroke.hairline).frame(width: 1.5)
+                            .padding(.leading, ReplyStyle.Process.thoughtRailLeading)
+                            .padding(.top, ReplyStyle.Process.rowSpacing)
                     }
             }
         }
@@ -2966,9 +2968,8 @@ private struct ThoughtToggle: View {
     var body: some View {
         DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
             HStack(spacing: 6) {
-                Image(systemName: "sparkles").font(.system(size: 15)).foregroundStyle(WorkbenchTheme.quiet).fixedSize()
-                title.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(.secondary).fixedSize()
-                if let status { ProcessStatusDot(status: status) }
+                title.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(WorkbenchTheme.quiet).fixedSize()
+                if status == .running { ProcessStatusDot(status: .running) }
                 if !expanded, let summary, !summary.isEmpty {
                     Text(verbatim: "·")
                         .font(.system(size: ReplyStyle.Process.labelSize))

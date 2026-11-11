@@ -88,9 +88,10 @@ public enum ToolPresentation {
         case "glob", "find_files", "ls", "list": return "folder"
         case "edit", "edit_file", "editfile", "apply_patch", "filechange": return "pencil"
         case "write", "write_file", "writefile": return "square.and.pencil"
-        case "bash", "shell", "run", "exec", "python", "python3", "node", "terminal": return "terminal"
-        case "fetch", "web", "webfetch", "web_fetch", "browser": return "globe"
-        case "todo", "todowrite": return "checklist"
+        case "bash", "shell", "run", "exec", "exec_command", "run_command", "python", "python3", "node", "terminal": return "terminal"
+        case "fetch", "web", "webfetch", "web_fetch", "fetchurl", "browser": return "globe"
+        case "todo", "todowrite", "todolist", "update_plan": return "checklist"
+        case "skill": return "sparkles"
         case "git": return "arrow.triangle.branch"
         default: return "wrench"
         }
@@ -104,6 +105,10 @@ public enum ToolPresentation {
         case "glob", "find_files": return L("查找文件")
         case "edit", "edit_file", "editfile", "apply_patch", "filechange": return L("编辑")
         case "write", "write_file", "writefile": return L("写入")
+        case "bash", "shell", "exec_command", "run_command": return L("命令")
+        case "todo", "todowrite", "todolist", "update_plan": return L("更新计划")
+        case "fetch", "webfetch", "web_fetch", "fetchurl": return L("读取网页")
+        case "skill": return L("技能")
         default: return name
         }
     }
@@ -150,6 +155,14 @@ public enum ToolPresentation {
     public static func rowSummary(_ tool: VisibleTool) -> String {
         if let command = ShellActivity.command(tool), !command.isEmpty { return command }
         if let path = path(tool), !path.isEmpty { return path }
+        let items = tool.input?["todos"].array ?? []
+        if !items.isEmpty {
+            let done = items.filter { $0["status"].string == "done" || $0["status"].string == "completed" }.count
+            let active = items.first { $0["status"].string == "in_progress" }?["title"].string?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if let active, !active.isEmpty { return "\(done)/\(items.count) · \(active)" }
+            return L("\(done)/\(items.count) 项已完成")
+        }
         for key in ["description", "pattern", "query", "url", "objective", "title", "prompt", "cmd"] {
             if let value = tool.input?[key].string?.trimmingCharacters(in: .whitespacesAndNewlines),
                !value.isEmpty, value != tool.name { return value }

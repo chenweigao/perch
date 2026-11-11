@@ -424,8 +424,8 @@ struct ReplyMermaid: View {
                                      @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("mermaid").font(.system(size: ReplyStyle.Code.labelSize, weight: .medium)) // l10n-ignore
-                    .foregroundStyle(.secondary)
+                Text("mermaid").font(.system(size: ReplyStyle.Code.labelSize, design: .monospaced)) // l10n-ignore
+                    .foregroundStyle(.primary)
                 Spacer()
                 Button { self.showsSource = !showsSource } label: {
                     Image(systemName: showsSource ? "flowchart" : "chevron.left.forwardslash.chevron.right")
@@ -433,15 +433,21 @@ struct ReplyMermaid: View {
                         .frame(width: 24, height: 24)
                         .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain).foregroundStyle(.secondary)
+                .buttonStyle(ReplyActionButtonStyle()).foregroundStyle(WorkbenchTheme.quiet)
                 .help(showsSource ? "查看图表" : "查看源码")
                 .accessibilityLabel(showsSource ? "查看图表" : "查看源码")
                 ReplyCopyButton(text: source, label: "复制代码", prominent: true)
             }
             .padding(.horizontal, ReplyStyle.Code.headerHorizontalPadding)
             .padding(.vertical, ReplyStyle.Code.headerVerticalPadding)
+            .background(Color(nsColor: WorkbenchTheme.replyBannerNS),
+                        in: UnevenRoundedRectangle(topLeadingRadius: ReplyStyle.Code.cornerRadius, topTrailingRadius: ReplyStyle.Code.cornerRadius))
+            .overlay(alignment: .bottom) {
+                Color(nsColor: WorkbenchTheme.codeHeaderDividerNS).frame(height: 0.5)
+            }
             content()
         }
         .background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius))
+        .overlay(RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius).strokeBorder(WorkbenchTheme.Stroke.hairline, lineWidth: 1))
     }
 }

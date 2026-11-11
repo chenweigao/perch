@@ -73,6 +73,13 @@ enum WorkbenchTheme {
     static let diffAdded = nsColor(light: (0.12, 0.45, 0.29), dark: (0.357, 0.749, 0.529))
     static let diffRemoved = nsColor(light: (0.64, 0.22, 0.24), dark: (0.898, 0.518, 0.541))
 
+    /// Inline process & live-work indicators: tuned amber and emerald that stay
+    /// crisp on white paper (where systemYellow washes out) and calm on graphite.
+    static let statusMarkNS = nsColor(light: (0.25, 0.28, 0.35), dark: (0.730, 0.755, 0.815))
+    static let statusRunningNS = nsColor(light: (0.85, 0.56, 0.05), dark: (0.950, 0.720, 0.220))
+    static let statusSuccessNS = nsColor(light: (0.14, 0.62, 0.36), dark: (0.300, 0.780, 0.500))
+    static let codeHeaderDividerNS = washNS(light: 0.055, dark: 0.09)
+
     private static func isDark(_ appearance: NSAppearance) -> Bool {
         appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
     }

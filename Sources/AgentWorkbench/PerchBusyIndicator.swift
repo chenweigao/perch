@@ -18,8 +18,10 @@ struct ConversationWorkIndicator: NSViewRepresentable {
 }
 
 final class ConversationWorkIndicatorView: NSView {
-    private let track = CAShapeLayer()
     private let arc = CAShapeLayer()
+    private let core = CAShapeLayer()
+    private static let chase = PerchLineMark.chaseKeyframes()
+    private static let cycle: CFTimeInterval = 1.65
     private var phase: ConversationRunPhase = .running
     private var animated = false
     private var playing = false
@@ -35,16 +37,15 @@ final class ConversationWorkIndicatorView: NSView {
         wantsLayer = true
         identifier = NSUserInterfaceItemIdentifier("conversation-work-indicator")
         setAccessibilityElement(false)
-        for shape in [track, arc] {
-            shape.fillColor = nil; shape.lineCap = .round; shape.lineWidth = 1.35
-            layer?.addSublayer(shape)
-        }
-        arc.strokeEnd = 0.72
+        arc.fillColor = nil; arc.lineCap = .round; arc.lineWidth = 1.4
+        core.strokeColor = nil
+        layer?.addSublayer(arc)
+        layer?.addSublayer(core)
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     func update(phase: ConversationRunPhase, animated: Bool) {
         self.phase = phase; self.animated = animated
-        render(); refreshMotion()
+        refreshMotion(); render()
     }
     override func layout() { super.layout(); render(); refreshMotion() }
     override func viewDidChangeEffectiveAppearance() { super.viewDidChangeEffectiveAppearance(); render() }
@@ -65,16 +66,44 @@ final class ConversationWorkIndicatorView: NSView {
     }
     private func render() {
         guard bounds.width > 0, bounds.height > 0 else { return }
-        var ink = phase.needsInput ? NSColor.systemOrange : WorkbenchTheme.quietNS
-        effectiveAppearance.performAsCurrentDrawingAppearance { ink = ink.usingColorSpace(.sRGB) ?? ink }
-        let radius = max(1, min(bounds.width, bounds.height) / 2 - 1.25)
-        let path = CGPath(ellipseIn: CGRect(x: bounds.midX-radius, y: bounds.midY-radius, width: radius*2, height: radius*2), transform: nil)
-        CATransaction.begin(); CATransaction.setDisableActions(true)
-        for shape in [track, arc] {
-            shape.frame = bounds; shape.path = path; shape.contentsScale = window?.backingScaleFactor ?? 2
+        var markInk = WorkbenchTheme.statusMarkNS
+        var runningDot = WorkbenchTheme.statusRunningNS
+        var orange = NSColor.systemOrange
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            markInk = markInk.usingColorSpace(.sRGB) ?? markInk
+            runningDot = runningDot.usingColorSpace(.sRGB) ?? runningDot
+            orange = orange.usingColorSpace(.sRGB) ?? orange
         }
-        track.strokeColor = ink.withAlphaComponent(0.16).cgColor
-        arc.strokeColor = ink.cgColor
+        let radius = max(1.5, min(bounds.width, bounds.height) / 2 - 1.2)
+        let center = CGPoint(x: bounds.midX, y: bounds.midY)
+        let ringPath = CGMutablePath()
+        let start = PerchLineMark.ringStart * .pi / 180
+        ringPath.addArc(center: center, radius: radius, startAngle: start, endAngle: start + 2 * .pi, clockwise: false)
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        let scale = window?.backingScaleFactor ?? 2
+        arc.bounds = bounds; arc.position = center; arc.path = ringPath; arc.contentsScale = scale
+        core.bounds = bounds; core.position = center; core.contentsScale = scale
+        if phase.needsInput {
+            arc.strokeColor = orange.withAlphaComponent(0.34).cgColor
+            arc.strokeStart = 0; arc.strokeEnd = 1
+            let dotR: CGFloat = 2.2
+            core.path = CGPath(ellipseIn: CGRect(x: center.x - dotR, y: center.y - dotR, width: dotR * 2, height: dotR * 2), transform: nil)
+            core.fillColor = orange.cgColor; core.opacity = 1
+        } else if phase == .stopping {
+            arc.strokeColor = markInk.withAlphaComponent(0.30).cgColor
+            arc.strokeStart = 0; arc.strokeEnd = 1
+            let side: CGFloat = 4.2
+            core.path = CGPath(roundedRect: CGRect(x: center.x - side / 2, y: center.y - side / 2, width: side, height: side),
+                               cornerWidth: 1, cornerHeight: 1, transform: nil)
+            core.fillColor = markInk.withAlphaComponent(0.85).cgColor; core.opacity = 1
+        } else {
+            arc.strokeColor = markInk.cgColor
+            if !playing { arc.strokeStart = 0; arc.strokeEnd = PerchLineMark.stillArc }
+            let dotR: CGFloat = 1.35
+            core.path = CGPath(ellipseIn: CGRect(x: center.x - dotR, y: center.y - dotR, width: dotR * 2, height: dotR * 2), transform: nil)
+            core.fillColor = runningDot.cgColor
+            if !playing { core.opacity = 0.85 }
+        }
         CATransaction.commit()
     }
     private func refreshMotion() {
@@ -89,18 +118,32 @@ final class ConversationWorkIndicatorView: NSView {
         guard shouldPlay != playing else { return }
         playing = shouldPlay
         CATransaction.begin(); CATransaction.setDisableActions(true)
-        arc.removeAllAnimations(); arc.transform = CATransform3DIdentity
+        arc.removeAllAnimations(); core.removeAllAnimations(); arc.transform = CATransform3DIdentity
         if shouldPlay {
+            let chase = Self.chase
+            for (key, values) in [("strokeStart", chase.start), ("strokeEnd", chase.end)] {
+                let run = CAKeyframeAnimation(keyPath: key)
+                run.values = values; run.calculationMode = .linear
+                run.duration = Self.cycle; run.repeatCount = .infinity
+                arc.add(run, forKey: key)
+            }
             let rotation = CABasicAnimation(keyPath: "transform.rotation.z")
             rotation.fromValue = 0; rotation.toValue = 2 * CGFloat.pi
-            rotation.duration = 1.05; rotation.repeatCount = .infinity
+            rotation.duration = Self.cycle; rotation.repeatCount = .infinity
             rotation.timingFunction = CAMediaTimingFunction(name: .linear)
             arc.add(rotation, forKey: "work-rotation")
+            let pulse = CABasicAnimation(keyPath: "opacity")
+            pulse.fromValue = 0.35; pulse.toValue = 0.95
+            pulse.duration = Self.cycle / 2; pulse.autoreverses = true; pulse.repeatCount = .infinity
+            pulse.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            core.add(pulse, forKey: "core-pulse")
+        } else {
+            render()
         }
         CATransaction.commit()
     }
     func stop() {
-        visibilityChanged = nil; arc.removeAllAnimations(); playing = false
+        visibilityChanged = nil; arc.removeAllAnimations(); core.removeAllAnimations(); playing = false
         for observer in observers { NotificationCenter.default.removeObserver(observer) }
         observers.removeAll()
     }

@@ -186,7 +186,8 @@ struct NativeAgentView: View {
             let phase = ConversationRunPhase(turn: turn, online: connection.online && isCurrent(s),
                 stopping: connection.isStopping, request: TurnRequest.native(s.interactions)?.kind,
                 hasRunningTools: activeToolID != nil,
-                thinking: tail?.type == "thinking" && tail?.source?["kind"].string != "activity_summary")
+                thinking: tail?.type == "thinking" && tail?.source?["kind"].string != "activity_summary",
+                responding: s.messages.last?.role == "assistant" && tail?.type == "text")
             if phase != nil {
                 ConversationLiveStatus(phase: phase,
                     summary: ConversationWorkSummary.current(messages: s.messages, running: runningTools),

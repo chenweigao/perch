@@ -1377,13 +1377,13 @@ private struct NativeAssistantActions: View {
                 Button { context.post(.quote(source)) } label: {
                     Image(systemName: "quote.opening").font(.system(size: ReplyStyle.captionSize))
                         .frame(width: 24, height: 24).contentShape(Rectangle())
-                }.buttonStyle(.plain).foregroundStyle(.secondary).help("引用到输入框")
+                }.buttonStyle(ReplyActionButtonStyle()).foregroundStyle(WorkbenchTheme.quiet).help("引用到输入框")
                     .accessibilityLabel("引用到输入框")
                 if let messageID = configuration.messageID, !messageID.isEmpty {
                     Button { context.post(.regenerate(before: messageID)) } label: {
                         Image(systemName: "arrow.clockwise").font(.system(size: ReplyStyle.captionSize))
                             .frame(width: 24, height: 24).contentShape(Rectangle())
-                    }.buttonStyle(.plain).foregroundStyle(.secondary).help("重新生成（重发上一条提问）")
+                    }.buttonStyle(ReplyActionButtonStyle()).foregroundStyle(WorkbenchTheme.quiet).help("重新生成（重发上一条提问）")
                         .accessibilityLabel("重新生成")
                     if let recapKey = context.recapKey, context.recapMessageID == messageID,
                        let makeRecap = NativeAssistantMessageView.makeRecapButton {
@@ -1511,7 +1511,7 @@ final class ReplyTextView: NSTextView {
                       let font = storage.attribute(.font, at: run.range.location, effectiveRange: nil) as? NSFont else { continue }
                 layout.enumerateTextSegments(in: range, type: .standard, options: [.rangeNotRequired]) { _, segment, baseline, _ in
                     let rect = CGRect(x: segment.minX + self.textContainerOrigin.x,
-                                      y: baseline - font.ascender + self.textContainerOrigin.y,
+                                      y: segment.minY + baseline - font.ascender + self.textContainerOrigin.y,
                                       width: segment.width, height: font.ascender - font.descender)
                     self.paintChip(rect, color: run.color)
                     return true
@@ -1929,6 +1929,17 @@ private struct LongOutputViewport: NSViewRepresentable {
     }
 }
 
+struct ReplyActionButtonStyle: ButtonStyle {
+    @State private var hovered = false
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(
+                (configuration.isPressed ? WorkbenchTheme.Fill.pressed : hovered ? WorkbenchTheme.Fill.hover : Color.clear),
+                in: RoundedRectangle(cornerRadius: WorkbenchTheme.Composer.CompactShape.cornerRadius, style: .continuous))
+            .onHover { hovered = $0 }
+    }
+}
+
 struct ReplyCopyButton: View {
     let text: String
     var label: LocalizedStringKey = "复制回复"
@@ -1941,9 +1952,12 @@ struct ReplyCopyButton: View {
             NSPasteboard.general.setString(text, forType: .string)
             copied = true
         } label: {
-            Image(systemName: copied ? "checkmark" : "doc.on.doc").font(.system(size: ReplyStyle.captionSize))
+            Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                .font(.system(size: ReplyStyle.captionSize, weight: copied ? .semibold : .regular))
                 .frame(width: 24, height: 24).contentShape(Rectangle())
-        }.buttonStyle(.plain).foregroundStyle(prominent ? .primary : .secondary).help(copied ? "已复制" : label)
+        }.buttonStyle(ReplyActionButtonStyle())
+            .foregroundStyle(copied ? Color(nsColor: WorkbenchTheme.statusSuccessNS) : (prominent ? Color.primary.opacity(0.84) : WorkbenchTheme.quiet))
+            .help(copied ? "已复制" : label)
             .accessibilityLabel(copied ? "已复制" : label)
             .task(id: copied) {
                 if copied { try? await Task.sleep(for: .seconds(2)); copied = false }
@@ -1994,6 +2008,9 @@ struct ReplyCode: View {
                 // DSH banner strip: the card's surface in light, lighter in dark.
                 .background(Color(nsColor: WorkbenchTheme.replyBannerNS),
                             in: UnevenRoundedRectangle(topLeadingRadius: ReplyStyle.Code.cornerRadius, topTrailingRadius: ReplyStyle.Code.cornerRadius))
+                .overlay(alignment: .bottom) {
+                    Color(nsColor: WorkbenchTheme.codeHeaderDividerNS).frame(height: 0.5)
+                }
             ReplyCodeBody(source: source, language: language)
                 .overlay(alignment: .bottomTrailing) {
                     if hovered && lineCount > 8 {
@@ -2003,6 +2020,7 @@ struct ReplyCode: View {
                     }
                 }
         }.background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius))
+            .overlay(RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius).strokeBorder(WorkbenchTheme.Stroke.hairline, lineWidth: 1))
             .onHover { hovered = $0 }
     }
 }
