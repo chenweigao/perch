@@ -593,6 +593,7 @@ private struct SessionSidebarRow: View {
                          failed: item.online && !item.archived && item.turn.state == .failed,
                          unread: item.online && !item.archived && item.section == .review,
                          offline: compact && !item.online && !item.archived,
+                         actions: AnyView(SessionActionsMenu(model: model, item: item)),
                          selected: selected,
                          canOpen: item.online && !item.archived, onOpen: onOpen) {
             SessionStatusIndicator(item: item)

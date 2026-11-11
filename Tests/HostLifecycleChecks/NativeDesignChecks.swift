@@ -578,6 +578,62 @@ import WorkbenchCore
         try await connection.poll()
         precondition(connection.snapshot?.thinking == "medium" && selectedEfforts[0] == "medium")
         print("PASS: model and effort changes reach the fixture runtime and return in the selected session")
+
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        var rowPoint: CGPoint?
+        let sidebarMaxX = split.floatingSidebarView!.convert(split.floatingSidebarView!.bounds, to: nil).maxX
+        for element in taskPanelElements(window) {
+            let node = element.node
+            func attribute(_ name: String) -> Any? {
+                let selector = NSSelectorFromString(name)
+                return node.responds(to: selector) ? node.perform(selector)?.takeUnretainedValue() : nil
+            }
+            guard attribute("accessibilityLabel") as? String == first.title,
+                  let frame = (attribute("accessibilityFrame") as? NSValue)?.rectValue,
+                  frame.minX < sidebarMaxX, frame.height >= 20, frame.height <= 40 else { continue }
+            rowPoint = CGPoint(x: frame.midX, y: frame.midY)
+            break
+        }
+        guard let rowPoint else { preconditionFailure("Sidebar session row must expose a native hover target") }
+        func postMouse(_ type: CGEventType, at point: CGPoint) {
+            let event = CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: point, mouseButton: .left)!
+            event.post(tap: .cghidEventTap)
+        }
+        postMouse(.mouseMoved, at: rowPoint)
+        try await Task.sleep(for: .milliseconds(700))
+        guard let actionsFrame = taskPanelControl(window, "sidebar.row.actions") else {
+            preconditionFailure("Hovering a session row must reveal its ellipsis action")
+        }
+        guard let previewWindow = NSApp.windows.first(where: { taskPanelControl($0, "sidebar.row.preview") != nil }) else {
+            preconditionFailure("Hovering a session row must open the styled preview after its delay")
+        }
+        if let folder = ProcessInfo.processInfo.environment["PERCH_DESIGN_CAPTURES"],
+           let view = previewWindow.contentView,
+           let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
+            view.cacheDisplay(in: view.bounds, to: bitmap)
+            try? bitmap.representation(using: .png, properties: [:])?
+                .write(to: URL(fileURLWithPath: folder).appendingPathComponent("sidebar-hover-preview.png"))
+        }
+        for type in [CGEventType.leftMouseDown, .leftMouseUp] {
+            postMouse(type, at: CGPoint(x: actionsFrame.midX, y: actionsFrame.midY))
+        }
+        try await Task.sleep(for: .milliseconds(250))
+        guard let menuWindow = NSApp.windows.first(where: { taskPanelLabel($0, "重命名…") != nil }) else {
+            preconditionFailure("The ellipsis action must open the same session actions as the context menu")
+        }
+        if let folder = ProcessInfo.processInfo.environment["PERCH_DESIGN_CAPTURES"],
+           let view = menuWindow.contentView,
+           let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
+            view.cacheDisplay(in: view.bounds, to: bitmap)
+            try? bitmap.representation(using: .png, properties: [:])?
+                .write(to: URL(fileURLWithPath: folder).appendingPathComponent("sidebar-actions-menu.png"))
+        }
+        previewWindow.close()
+        menuWindow.close()
+        let center = card.convert(card.bounds, to: nil)
+        postMouse(.mouseMoved, at: CGPoint(x: center.midX, y: center.midY))
+        print("PASS: sidebar delayed styled preview, hover ellipsis and native session actions menu")
     }
 }
 
