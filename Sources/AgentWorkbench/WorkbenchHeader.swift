@@ -1,7 +1,7 @@
 import SwiftUI
 import WorkbenchCore
 
-/// A quiet, text-only title follows selection independently of streaming state.
+/// The Agent mark, title and session menu form one group beside the page actions.
 struct WorkbenchHeader: View {
     @UILocalization private var L
     @Bindable var model: WorkbenchModel

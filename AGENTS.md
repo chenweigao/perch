@@ -17,8 +17,8 @@ to light.
   appearances. The sidebar has no separate glass card, outline, or shadow in the
   wide layout; its selection is a light row card.
 - The opaque workspace sheet floats below the toolbar. The full-height inspector
-  is an internal auxiliary lane separated by a hairline, without its own rounded
-  card or shadow; opening it resizes the reader and composer together. Keep the
+  is an internal auxiliary lane separated by whitespace, without its own rounded
+  card, vertical divider or shadow; opening it resizes the reader and composer together. Keep the
   outer sheet concentric with the window corner (`WorkbenchTheme.Radius.framePanel`)
   and its elevation light. Sidebar width remains user-adjustable and persisted;
   navigation uses compact, secondary controls. Preserve native Liquid Glass on the

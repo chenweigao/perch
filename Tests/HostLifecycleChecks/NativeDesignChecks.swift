@@ -602,31 +602,36 @@ import WorkbenchCore
             }
             preconditionFailure("Sidebar session row must expose a native hover target: \(identifiers)")
         }
-        func postMouse(_ type: CGEventType, at point: CGPoint) {
-            let screenHeight = NSScreen.screens.first?.frame.height ?? 1080
-            let event = CGEvent(mouseEventSource: nil, mouseType: type,
-                mouseCursorPosition: CGPoint(x: point.x, y: screenHeight - point.y), mouseButton: .left)!
-            event.setIntegerValueField(.mouseEventClickState, value: 1)
-            event.setDoubleValueField(.mouseEventPressure, value: 1)
-            event.post(tap: .cghidEventTap)
-        }
         func moveMouse(to point: CGPoint) {
             let screenHeight = NSScreen.screens.first?.frame.height ?? 1080
             CGWarpMouseCursorPosition(CGPoint(x: point.x, y: screenHeight - point.y))
-            let event = CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: point, mouseButton: .left)!
-            event.post(tap: .cghidEventTap)
+            let location = window.convertFromScreen(NSRect(origin: point, size: .zero)).origin
+            let event = NSEvent.mouseEvent(with: .mouseMoved, location: location, modifierFlags: [],
+                timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
+                context: nil, eventNumber: 0, clickCount: 0, pressure: 0)!
+            window.sendEvent(event)
+        }
+        func visibleWindow(with identifier: String) -> NSWindow? {
+            let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
+            let visibleIDs = Set(list.compactMap { $0[kCGWindowNumber as String] as? Int })
+            return NSApp.windows.first { visibleIDs.contains($0.windowNumber) && taskPanelControl($0, identifier) != nil }
         }
         moveMouse(to: CGPoint(x: 600, y: 500))
         try await Task.sleep(for: .milliseconds(100))
         moveMouse(to: rowPoint)
-        try await Task.sleep(for: .milliseconds(700))
-        let localMouse = window.mouseLocationOutsideOfEventStream
-        let localRow = window.convertFromScreen(NSRect(x: rowPoint.x, y: rowPoint.y, width: 1, height: 1)).origin
-        FileHandle.standardError.write(Data("HOVER-DIAG: rowPoint=\(rowPoint), localRow=\(localRow), localMouse=\(localMouse), hit=\(String(describing: window.contentView?.hitTest(localMouse))), window=\(window.frame), mouse=\(NSEvent.mouseLocation), active=\(NSApp.isActive), key=\(window.isKeyWindow), ids=\(taskPanelIdentifiers(window))\n".utf8))
-        guard let actionsFrame = taskPanelControl(window, "sidebar.row.actions") else {
+        try await Task.sleep(for: .milliseconds(150))
+        precondition(visibleWindow(with: "sidebar.row.preview") == nil,
+                     "A brief pass over a session row must not show a preview")
+        moveMouse(to: CGPoint(x: 600, y: 500))
+        try await Task.sleep(for: .milliseconds(450))
+        precondition(visibleWindow(with: "sidebar.row.preview") == nil,
+                     "Leaving a row must cancel its pending preview")
+        moveMouse(to: rowPoint)
+        try await Task.sleep(for: .milliseconds(550))
+        guard taskPanelControl(window, "sidebar.row.actions") != nil else {
             preconditionFailure("Hovering a session row must reveal its ellipsis action")
         }
-        guard let previewWindow = NSApp.windows.first(where: { taskPanelControl($0, "sidebar.row.preview") != nil }) else {
+        guard let previewWindow = visibleWindow(with: "sidebar.row.preview") else {
             preconditionFailure("Hovering a session row must open the styled preview after its delay")
         }
         if let folder = ProcessInfo.processInfo.environment["PERCH_DESIGN_CAPTURES"],
@@ -637,24 +642,36 @@ import WorkbenchCore
                 .write(to: URL(fileURLWithPath: folder).appendingPathComponent("sidebar-hover-preview.png"))
         }
         previewWindow.close()
-        let actionPoint = CGPoint(x: actionsFrame.midX, y: actionsFrame.midY)
-        moveMouse(to: actionPoint)
-        postMouse(.leftMouseDown, at: actionPoint)
-        try await Task.sleep(for: .milliseconds(250))
-        let localAction = window.convertFromScreen(NSRect(x: actionPoint.x, y: actionPoint.y, width: 1, height: 1)).origin
-        let actionMouse = window.mouseLocationOutsideOfEventStream
-        FileHandle.standardError.write(Data("ACTION-DIAG: point=\(actionPoint), localAction=\(localAction), localMouse=\(actionMouse), hit=\(String(describing: window.contentView?.hitTest(actionMouse))), windows=\(NSApp.windows.map { String(describing: $0) })\n".utf8))
-        func accessibilityLabels(_ target: NSWindow) -> [String] {
-            taskPanelElements(target).compactMap { element in
-                let node = element.node
-                let selector = NSSelectorFromString("accessibilityLabel")
-                guard node.responds(to: selector) else { return nil }
-                return node.perform(selector)?.takeUnretainedValue() as? String
+        func pressAction(in element: AXUIElement) -> Bool {
+            var identifier: CFTypeRef?
+            AXUIElementCopyAttributeValue(element, "AXIdentifier" as CFString, &identifier)
+            if identifier as? String == "sidebar.row.actions" {
+                return AXUIElementPerformAction(element, kAXPressAction as CFString) == .success
             }
+            var value: CFTypeRef?
+            AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &value)
+            for child in value as? [AXUIElement] ?? [] where pressAction(in: child) { return true }
+            return false
         }
-        FileHandle.standardError.write(Data("ACTION-LABELS: \(NSApp.windows.map { accessibilityLabels($0) })\n".utf8))
-        guard let menuWindow = NSApp.windows.first(where: { taskPanelControl($0, "sidebar.actions.menu") != nil }) else {
+        precondition(pressAction(in: AXUIElementCreateApplication(getpid())),
+                     "The ellipsis action must support AXPress")
+        try await Task.sleep(for: .milliseconds(500))
+        guard let menuWindow = visibleWindow(with: "sidebar.actions.menu") else {
             preconditionFailure("The ellipsis action must open the same session actions as the context menu")
+        }
+        let actionLabels = taskPanelElements(menuWindow).compactMap { element -> String? in
+            for name in ["accessibilityLabel", "accessibilityValue"] {
+                let selector = NSSelectorFromString(name)
+                if element.node.responds(to: selector),
+                   let text = element.node.perform(selector)?.takeUnretainedValue() as? String {
+                    return text
+                }
+            }
+            return nil
+        }
+        let actionsText = actionLabels.joined(separator: "\n")
+        for label in ["重命名", "置顶", "移动到项目", "归档会话", "删除会话"] {
+            precondition(actionsText.contains(label), "The session actions must include \(label): \(actionLabels)")
         }
         if let folder = ProcessInfo.processInfo.environment["PERCH_DESIGN_CAPTURES"],
            let view = menuWindow.contentView,

@@ -49,7 +49,6 @@ struct SessionRowChrome<Indicator: View>: View {
     }
 
     private func updateHover(_ inside: Bool) {
-        FileHandle.standardError.write(Data("ROW-HOVER: \(inside)\n".utf8))
         hovered = inside
         previewTask?.cancel()
         guard inside else {
@@ -121,12 +120,24 @@ struct SessionRowChrome<Indicator: View>: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .opacity(hovered ? 1 : 0)
+                .opacity(hovered || showActionsMenu ? 1 : 0)
                 .allowsHitTesting(hovered)
+                .onHover { inside in
+                    if inside {
+                        previewTask?.cancel()
+                        showPreview = false
+                    }
+                }
                 .accessibilityLabel("会话操作")
                 .accessibilityIdentifier("sidebar.row.actions")
                 .popover(isPresented: $showActionsMenu, arrowEdge: .trailing) {
                     actions
+                        .environment(\.sessionActionPresentation, .popover)
+                        .buttonStyle(SessionActionButtonStyle())
+                        .menuStyle(.borderlessButton)
+                        .menuIndicator(.hidden)
+                        .frame(width: 208)
+                        .padding(6)
                 }
             }
         }
@@ -222,13 +233,14 @@ private struct SessionRowPreview: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(14)
-        .frame(width: 300, alignment: .leading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(width: 308, alignment: .leading)
         .background(Color(nsColor: .controlBackgroundColor),
                     in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous)
-            .strokeBorder(WorkbenchTheme.Stroke.hairline, lineWidth: 1))
-        .shadow(color: .black.opacity(0.12), radius: 12, y: 4)
+            .strokeBorder(WorkbenchTheme.Stroke.hairline.opacity(0.55), lineWidth: 0.5))
+        .shadow(color: .black.opacity(0.08), radius: 12, y: 4)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("sidebar.row.preview")
     }
@@ -256,7 +268,7 @@ private final class SessionHoverTrackingView: NSView {
         super.updateTrackingAreas()
         if let area { removeTrackingArea(area) }
         let next = NSTrackingArea(rect: bounds,
-            options: [.mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect], owner: self, userInfo: nil)
+            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self, userInfo: nil)
         addTrackingArea(next)
         area = next
     }
@@ -265,4 +277,48 @@ private final class SessionHoverTrackingView: NSView {
 
     override func mouseEntered(with event: NSEvent) { onChange?(true) }
     override func mouseExited(with event: NSEvent) { onChange?(false) }
+}
+
+enum SessionActionPresentation {
+    case contextMenu
+    case popover
+}
+
+private struct SessionActionPresentationKey: EnvironmentKey {
+    static let defaultValue = SessionActionPresentation.contextMenu
+}
+
+extension EnvironmentValues {
+    var sessionActionPresentation: SessionActionPresentation {
+        get { self[SessionActionPresentationKey.self] }
+        set { self[SessionActionPresentationKey.self] = newValue }
+    }
+}
+
+private struct SessionActionButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Row(configuration: configuration)
+    }
+
+    private struct Row: View {
+        let configuration: Configuration
+        @Environment(\.isEnabled) private var isEnabled
+        @State private var hovered = false
+
+        var body: some View {
+            configuration.label
+                .font(.system(size: 12))
+                .foregroundStyle(configuration.role == .destructive ? Color.red : WorkbenchTheme.ink)
+                .opacity(isEnabled ? 1 : 0.4)
+                .padding(.horizontal, 10)
+                .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading)
+                .background {
+                    RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.chip, style: .continuous)
+                        .fill(configuration.isPressed ? WorkbenchTheme.Fill.pressed : WorkbenchTheme.Fill.hover)
+                        .opacity(hovered || configuration.isPressed ? 1 : 0)
+                }
+                .contentShape(Rectangle())
+                .onHover { hovered = $0 }
+        }
+    }
 }

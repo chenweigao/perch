@@ -619,6 +619,7 @@ private struct SessionSidebarRow: View {
 
 struct SessionActionsMenu: View {
     @UILocalization private var L
+    @Environment(\.sessionActionPresentation) private var presentation
     @Bindable var model: WorkbenchModel
     let item: WorkspaceSession
     private var busy: Bool { model.managing.contains(item.id) }
@@ -629,7 +630,7 @@ struct SessionActionsMenu: View {
                 Label(model.workspace.starred.contains(item.reference) ? "取消置顶" : "置顶会话", systemImage: "pin")
             }
         }
-        Menu("移动到项目") {
+        Menu {
             ForEach(model.sidebarProjection(filter: .all).projects) { project in
                 if let location = project.location {
                     Button(project.disambiguate ? "\(project.title) · \(project.detail ?? "")" : project.title) {
@@ -639,7 +640,20 @@ struct SessionActionsMenu: View {
             }
             Divider()
             Button("按所属仓库归组") { model.moveSidebarSession(item, to: nil) }
+        } label: {
+            HStack {
+                Label("移动到项目", systemImage: "folder")
+                if presentation == .popover {
+                    Spacer(minLength: 12)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(WorkbenchTheme.quiet)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: presentation == .popover ? 28 : nil, alignment: .leading)
+            .padding(.horizontal, presentation == .popover ? 10 : 0)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         Button { model.groupingSession = item } label: { Label("管理任务组归属…", systemImage: "square.stack.3d.up") }
         Button { model.toggleTaskNotifications(item.id) } label: {
             Label(model.mutedTasks.contains(item.id) ? L("恢复任务通知") : L("静音任务通知"),

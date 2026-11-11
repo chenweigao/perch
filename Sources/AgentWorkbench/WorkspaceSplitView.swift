@@ -939,7 +939,7 @@ final class WorkbenchSplitController: NSSplitViewController {
         updateWorkspaceLayout()
     }
 
-    /// The inspector is an internal lane of the conversation sheet, with one separator.
+    /// The inspector is an internal lane of the conversation sheet, separated by whitespace.
     func installFloatingInspector(_ inspector: NSView, visible: Bool) {
         let (panel, width) = detailController!.installInspector(inspector)
         let handle = WorkspaceSidebarResizeHandle()
