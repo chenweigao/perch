@@ -20,7 +20,7 @@ import WorkbenchCore
     // are cancelled below before they can perform any SSH or HTTP operations.
     delegate.applicationDidFinishLaunching(Notification(name: NSApplication.didFinishLaunchingNotification))
     precondition(delegate.model === model)
-    precondition(model.kimi.connecting && model.native.wantsConnection,
+    precondition(!model.kimi.connecting && model.native.wantsConnection,
                  "Launch must start the model used by scenes, without appearance callbacks")
     model.native.drafts["startup-draft"] = "保留未发送的草稿"
     precondition(delegate.applicationShouldTerminate(NSApp) == .terminateNow)

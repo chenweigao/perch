@@ -58,6 +58,17 @@ public struct ReplyInline: Equatable, Hashable, Sendable {
     public var link: URL?
     /// Inline TeX ($…$ / \(…\)); the text carries the object replacement char.
     public var math: String? = nil
+
+    public init(text: String, strong: Bool = false, emphasis: Bool = false, code: Bool = false,
+                strikethrough: Bool = false, link: URL? = nil, math: String? = nil) {
+        self.text = text
+        self.strong = strong
+        self.emphasis = emphasis
+        self.code = code
+        self.strikethrough = strikethrough
+        self.link = link
+        self.math = math
+    }
 }
 
 public enum ReplyDocument {

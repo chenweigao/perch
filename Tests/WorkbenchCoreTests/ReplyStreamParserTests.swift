@@ -8,22 +8,23 @@ func checkReplyStreamParser() {
     func stream(_ document: String, chunk: Int, documentLinks: Bool = false) {
         var parser = ReplyStreamParser(documentLinks: documentLinks)
         var end = document.startIndex
-        var certifiedBlocks: [ReplyBlock] = []
-        var certifiedCount = 0
+        var previousBlocks: [ReplyBlock] = []
         while end < document.endIndex {
             end = document.index(end, offsetBy: chunk, limitedBy: document.endIndex) ?? document.endIndex
             let prefix = String(document[..<end])
             let incremental = parser.update(prefix)
             let full = ReplyDocument.parse(prefix, documentLinks: documentLinks)
             require(incremental == full, "incremental parse diverged at \(prefix.utf8.count) bytes: …\(prefix.suffix(40))")
-            require(Array(incremental.prefix(certifiedCount)) == certifiedBlocks,
+            require(parser.stableBlockCount <= min(previousBlocks.count, incremental.count),
+                    "stableBlockCount exceeded previous/current block count at \(prefix.utf8.count) bytes")
+            require(Array(incremental.prefix(parser.stableBlockCount)) == Array(previousBlocks.prefix(parser.stableBlockCount)),
                     "a certified stable prefix changed at \(prefix.utf8.count) bytes")
-            certifiedCount = min(parser.stableBlockCount, incremental.count)
-            certifiedBlocks = Array(incremental.prefix(certifiedCount))
+            previousBlocks = incremental
         }
         let final = parser.update(document)
         require(final == ReplyDocument.parse(document, documentLinks: documentLinks), "final update diverged")
-        require(Array(final.prefix(certifiedCount)) == certifiedBlocks, "the final append changed its certified prefix")
+        require(Array(final.prefix(parser.stableBlockCount)) == Array(previousBlocks.prefix(parser.stableBlockCount)),
+                "the final append changed its certified prefix")
         require(parser.stableBlockCount == final.count, "an unchanged replay must certify every block")
     }
 

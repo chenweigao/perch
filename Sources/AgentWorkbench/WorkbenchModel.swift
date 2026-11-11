@@ -342,7 +342,8 @@ final class WorkbenchModel {
               !(nativeEnvironments[reference.hostID]?.sessions.contains { $0.id == reference.terminalID } ?? false) else {
             return false
         }
-        return kimi.sessions.contains { $0.id == reference.terminalID }
+        return kimi.online
+            || kimi.sessions.contains { $0.id == reference.terminalID }
             || kimi.conversation?.snapshot.session.id == reference.terminalID
     }
     func isNativeSession(_ reference: SessionReference) -> Bool {
