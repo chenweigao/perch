@@ -115,12 +115,8 @@ struct KimiActivityView: View {
                 HStack(spacing: 8) {
                     DisclosureGroup(isExpanded: expansion) { EmptyView() } label: {
                         HStack(spacing: 6) {
-                            // PI tool rows carry the kind's leading glyph; the
-                            // name carries the wording.
-                            Image(systemName: ToolPresentation.kindIcon(items.first?.name ?? ""))
-                                .font(.system(size: ReplyStyle.captionSize))
-                                .foregroundStyle(WorkbenchTheme.quiet)
-                                .fixedSize()
+                            // The boxed caret leads the row and the name carries
+                            // the wording; tool rows inside keep their kind glyphs.
                             Text(verbatim: title)
                                 .lineLimit(1).truncationMode(.middle).fixedSize()
                                 .help(Text(verbatim: title))

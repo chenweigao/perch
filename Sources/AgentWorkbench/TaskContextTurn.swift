@@ -477,7 +477,7 @@ struct TaskEnvironmentDetailsSection: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Text("环境与详情")
-                    .font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
+                    .font(.system(size: TaskContextIconTile.headerSize))
                     .foregroundStyle(WorkbenchTheme.quiet)
                 Spacer(minLength: 0)
             }.padding(.bottom, 2)

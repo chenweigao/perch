@@ -1168,7 +1168,13 @@
 
 "在此项目新建会话" = "New Session in This Project";
 
+"今天" = "Today";
+
 "昨天" = "Yesterday";
+
+"最近 7 天" = "Previous 7 Days";
+
+"更早" = "Earlier";
 
 "正在识别项目…" = "Identifying projects…";
 

@@ -209,7 +209,9 @@ struct ConversationScrollView<Content: View, Bar: View>: View {
             }.scrollIndicators(showsScrollIndicator ? .automatic : .hidden, axes: .vertical)
                 .scrollEdgeEffectHidden(true, for: .top)
                 .background(ConversationViewportView(viewport: conversationViewport, onPauseFollowing: { onScroll(false) }, onNearTop: onNearTop))
-                .overlay(alignment: .leading) {
+                // Qoder keeps the turn rail on the reader's trailing edge, beside
+                // the inspector, so the leading margin stays clear for the text.
+                .overlay(alignment: .trailing) {
                     ConversationTurnNavigator(model: conversationViewport.navigator, hasOlderHistory: hasOlderHistory)
                 }
                 .modifier(ConversationBottomBar(bar: bar, controls: floatingControls))
@@ -458,7 +460,7 @@ struct ConversationTurnRail: View {
             let height = max(1, geometry.size.height - 32)
             let layout = ConversationTurnRailGeometry(count: count, height: height, focus: hover.focus)
             let availableWidth = max(1, geometry.size.width - railWidth - 12)
-            ZStack(alignment: .topLeading) {
+            ZStack(alignment: .topTrailing) {
                 ConversationTurnMarks(layout: layout, current: current, selected: selected,
                                       hovered: hover.index, keyboardFocused: focused)
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: hover.focus)
@@ -498,7 +500,8 @@ struct ConversationTurnRail: View {
                     .allowsHitTesting(false).accessibilityHidden(true)
                     .transition(.opacity)
                 }
-            }.padding(.vertical, 16)
+            }.frame(width: geometry.size.width, alignment: .topTrailing)
+                .padding(.vertical, 16)
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hover.previewY != nil)
                 .onChange(of: height) { _, _ in hover.reset() }
                 .onDisappear { hover.reset() }
@@ -541,7 +544,8 @@ private struct ConversationTurnPreviewPlacement: Layout {
         guard let card = subviews.first else { return }
         let size = card.sizeThatFits(.unspecified)
         let y = min(max(0, anchorY - 24), max(0, bounds.height - size.height))
-        card.place(at: CGPoint(x: bounds.minX + railWidth + 8, y: bounds.minY + y),
+        // The rail sits on the trailing edge; its preview opens toward the text.
+        card.place(at: CGPoint(x: max(bounds.minX, bounds.maxX - railWidth - 8 - size.width), y: bounds.minY + y),
                    proposal: ProposedViewSize(size))
     }
 }

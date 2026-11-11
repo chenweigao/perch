@@ -5,6 +5,26 @@ public enum SidebarRecentFilter: String, CaseIterable {
     case all = "全部会话", running = "运行中"
 }
 
+/// The day group of a recent session in the flat sidebar list, like Qoder's
+/// 今天 / 昨天 / 最近 7 天 / 更早. Unknown times (0) count as earlier.
+public enum SidebarRecency: String, CaseIterable, Sendable {
+    case today, yesterday, week, earlier
+
+    public init(updatedAt: Double, now: Date, calendar: Calendar = .current) {
+        guard updatedAt > 0 else { self = .earlier; return }
+        let date = Date(timeIntervalSince1970: updatedAt)
+        let today = calendar.startOfDay(for: now)
+        if date >= today { self = .today; return }
+        if let yesterday = calendar.date(byAdding: .day, value: -1, to: today), date >= yesterday {
+            self = .yesterday; return
+        }
+        if let week = calendar.date(byAdding: .day, value: -7, to: today), date >= week {
+            self = .week; return
+        }
+        self = .earlier
+    }
+}
+
 /// Navigation membership only. Moving a session here never changes its runtime cwd.
 public struct SidebarProjectLocation: Codable, Equatable, Sendable, Identifiable {
     public let hostID: UUID

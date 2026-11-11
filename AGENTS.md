@@ -15,7 +15,7 @@ to light.
   Fills, strokes and elevation are independent light/dark tokens
   (`WorkbenchTheme.Fill` / `Stroke` / `Elevation`), never one alpha shared by both
   appearances. The sidebar has no separate glass card, outline, or shadow in the
-  wide layout; its selection is a light row card.
+  wide layout; its selection is a flat neutral wash (Qoder alignment, 2026-11-11).
 - The opaque workspace sheet floats below the toolbar. The full-height inspector
   is an internal auxiliary lane separated by whitespace, without its own rounded
   card, vertical divider or shadow; opening it resizes the reader and composer together. Keep the

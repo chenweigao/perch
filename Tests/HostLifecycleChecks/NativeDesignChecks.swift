@@ -489,7 +489,9 @@ import WorkbenchCore
     window.contentView!.layoutSubtreeIfNeeded()
     precondition(split.isSidebarShown && !split.isSidebarYieldingToInspector && !split.isInspectorOverlayingContent,
                  "Asking for a yielding sidebar must bring it back without overlaying the inspector")
-    try await place(width: 900)
+    // Narrower than sidebar + gap + the 600 pt minimum card, so the sidebar overlays.
+    try await place(width: WorkspaceLayoutMetrics.sidebarInset + split.floatingSidebarWidth +
+        WorkspaceLayoutMetrics.sidebarGap + WorkspaceLayoutMetrics.contentMinimumWidth - 40)
     let narrowSidebarFrame = split.floatingSidebarView!.convert(split.floatingSidebarView!.bounds, to: window.contentView)
     let narrowTitleFrame = title.convert(title.bounds, to: window.contentView)
     precondition(split.isSidebarOverlayingContent && split.sidebarOverlayBackdropView?.isHidden == false &&

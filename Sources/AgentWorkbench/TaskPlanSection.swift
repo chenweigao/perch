@@ -26,7 +26,7 @@ struct TaskPlanSection: View {
                             .font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
                             .rotationEffect(.degrees(expanded ? 90 : 0))
                             .foregroundStyle(WorkbenchTheme.quiet).accessibilityHidden(true)
-                        Text("计划").font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
+                        Text("计划").font(.system(size: TaskContextIconTile.headerSize))
                             .foregroundStyle(WorkbenchTheme.quiet)
                         Spacer(minLength: 4)
                         Text(verbatim: "\(todos.filter { $0.status == .done }.count) / \(todos.count)")

@@ -15,10 +15,10 @@ extension ReplyStyle {
         /// keeps the header in place; a top-level row clips it at the column edge.
         static let washOutset: CGFloat = 8
         /// Nested content (rows, tool details, thoughts, notes) starts under its
-        /// header's label: the disclosure's 12 pt chevron column and its 8 pt gap.
-        static let nestedIndent: CGFloat = 20
+        /// header's label: the 20 pt caret box and its 10 pt gap.
+        static let nestedIndent: CGFloat = WorkbenchDisclosureBox.size + 8 + WorkbenchDisclosureBox.trailingGap
         /// Header labels: the same size as prose; color and grouping convey their role.
-        static var labelSize: CGFloat { ReplyStyle.labelSize }
+        static var labelSize: CGFloat { ReplyStyle.bodySize }
         /// Between the rows of an expanded fold, and above its first row.
         static let rowSpacing: CGFloat = 12
         /// Thought text: the same reading size and line height as the reply,
@@ -26,9 +26,9 @@ extension ReplyStyle {
         /// would slant only the Latin glyphs, because PingFang has no italic.
         static var thoughtSize: CGFloat { ReplyStyle.secondarySize }
         static var thoughtLineHeight: CGFloat { ReplyStyle.scale.secondaryLine }
-        /// Leading rail under a thought disclosure's chevron.
+        /// Leading rail under a thought disclosure's caret box, on its center line.
         static let thoughtRailWidth: CGFloat = 2
-        static let thoughtRailLeading: CGFloat = 5
+        static let thoughtRailLeading: CGFloat = WorkbenchDisclosureBox.size / 2 - 1
     }
 }
 
@@ -81,14 +81,13 @@ struct ProcessLivePulse: View {
 /// The disclosure every process row uses: `WorkbenchDisclosureStyle`'s full-width
 /// header and content mechanics, at the `ReplyStyle.Process` inset.
 struct ProcessDisclosureStyle: DisclosureGroupStyle {
-    /// The turn fold's header closes its status cluster with the caret (PI's
-    /// turn-process header); leaf rows keep the caret on the trailing edge.
+    /// Kept for call sites that marked the turn fold; every process row now
+    /// leads with the same boxed caret (Qoder's 已处理 / 执行工具 rows).
     var caretFollowsContent = false
     func makeBody(configuration: Configuration) -> some View {
-        // Process rows carry the caret on the trailing edge (PI/DSH form).
         WorkbenchDisclosureStyle(horizontalPadding: ReplyStyle.Process.leadingInset,
                                  leadingWashOutset: ReplyStyle.Process.washOutset,
-                                 trailingChevron: true, caretFollowsContent: caretFollowsContent)
+                                 boxedChevron: true)
             .makeBody(configuration: configuration)
     }
 }
