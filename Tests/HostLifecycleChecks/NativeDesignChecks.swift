@@ -603,13 +603,14 @@ import WorkbenchCore
             preconditionFailure("Sidebar session row must expose a native hover target: \(identifiers)")
         }
         func postMouse(_ type: CGEventType, at point: CGPoint) {
-            let event = CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: point, mouseButton: .left)!
+            let screenHeight = NSScreen.screens.first?.frame.height ?? 1080
+            let event = CGEvent(mouseEventSource: nil, mouseType: type,
+                mouseCursorPosition: CGPoint(x: point.x, y: screenHeight - point.y), mouseButton: .left)!
             event.post(tap: .cghidEventTap)
         }
         func moveMouse(to point: CGPoint) {
             let screenHeight = NSScreen.screens.first?.frame.height ?? 1080
-            let warped = CGPoint(x: point.x, y: screenHeight - point.y)
-            CGWarpMouseCursorPosition(warped)
+            CGWarpMouseCursorPosition(CGPoint(x: point.x, y: screenHeight - point.y))
             let event = CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: point, mouseButton: .left)!
             event.post(tap: .cghidEventTap)
         }
@@ -636,10 +637,8 @@ import WorkbenchCore
         previewWindow.close()
         let actionPoint = CGPoint(x: actionsFrame.midX, y: actionsFrame.midY)
         moveMouse(to: actionPoint)
-        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
-            window.sendEvent(NSEvent.mouseEvent(with: type, location: actionPoint, modifierFlags: [],
-                timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
-                context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!)
+        for type in [CGEventType.leftMouseDown, .leftMouseUp] {
+            postMouse(type, at: actionPoint)
         }
         try await Task.sleep(for: .milliseconds(250))
         let localAction = window.convertFromScreen(NSRect(x: actionPoint.x, y: actionPoint.y, width: 1, height: 1)).origin
