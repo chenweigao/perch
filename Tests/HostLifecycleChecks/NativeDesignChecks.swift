@@ -606,7 +606,13 @@ import WorkbenchCore
             let event = CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: point, mouseButton: .left)!
             event.post(tap: .cghidEventTap)
         }
-        postMouse(.mouseMoved, at: rowPoint)
+        func moveMouse(to point: CGPoint) {
+            let event = NSEvent.mouseEvent(with: .mouseMoved, location: point, modifierFlags: [],
+                timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
+                context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!
+            window.sendEvent(event)
+        }
+        moveMouse(to: rowPoint)
         try await Task.sleep(for: .milliseconds(700))
         guard let actionsFrame = taskPanelControl(window, "sidebar.row.actions") else {
             preconditionFailure("Hovering a session row must reveal its ellipsis action")
@@ -638,7 +644,7 @@ import WorkbenchCore
         previewWindow.close()
         menuWindow.close()
         let center = card.convert(card.bounds, to: nil)
-        postMouse(.mouseMoved, at: CGPoint(x: center.midX, y: center.midY))
+        moveMouse(to: CGPoint(x: center.midX, y: center.midY))
         print("PASS: sidebar delayed styled preview, hover ellipsis and native session actions menu")
     }
 }
