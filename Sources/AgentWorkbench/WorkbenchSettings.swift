@@ -311,7 +311,7 @@ private struct SettingsSectionHeader: View {
 }
 
 private struct HostSettingsRow: View {
-    @ObservedObject var connection: HostConnection
+    var connection: HostConnection
     let action: () -> Void
 
     var body: some View {
@@ -327,7 +327,7 @@ private struct HostSettingsRow: View {
 
 private struct HostConnectionControls: View {
     @Bindable var model: WorkbenchModel
-    @ObservedObject var connection: HostConnection
+    var connection: HostConnection
     let kimi: KimiConnection
     let native: NativeAgentConnection
 

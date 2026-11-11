@@ -1,25 +1,28 @@
 import Foundation
+import Observation
 import WorkbenchCore
 
 /// A host's SSH control channel, on demand. Features like the command-line
 /// island multiplex over this master instead of paying a handshake per shell.
 /// It carries no remote daemon state: `online` means the master is usable.
-@MainActor
-final class HostConnection: ObservableObject, Identifiable {
-    @Published private(set) var host: SSHHost
+@MainActor @Observable
+final class HostConnection: Identifiable {
+    private(set) var host: SSHHost
     nonisolated let id: UUID
-    @Published private var stateMessage: String.LocalizationValue = "未连接"
+    private var stateMessage: String.LocalizationValue = "未连接"
     var state: String { L(stateMessage) }
     func state(locale: Locale) -> String { L(stateMessage, locale: locale) }
-    @Published private(set) var error: String?
-    @Published private(set) var online = false
-    @Published private(set) var wantsConnection = false
-    @Published private(set) var updatedAt: Date?
+    private(set) var error: String?
+    private(set) var online = false
+    private(set) var wantsConnection = false
+    private(set) var updatedAt: Date?
     private(set) var controlPath = ""
-    private var directory: URL?
-    private var process: Process?
-    private var task: Task<Void, Never>?
-    private var generation = UUID()
+    @ObservationIgnored private var directory: URL?
+    @ObservationIgnored private var process: Process?
+    @ObservationIgnored private var task: Task<Void, Never>?
+    @ObservationIgnored private var generation = UUID()
+    @ObservationIgnored private var exitSignal: CheckedContinuation<Void, Never>?
+    @ObservationIgnored private var processExited = false
 
     init(host: SSHHost) { self.host = host; self.id = host.id }
     func updateHost(_ host: SSHHost) { self.host = host }
@@ -66,11 +69,11 @@ final class HostConnection: ObservableObject, Identifiable {
                 do {
                     try await self.establish(token: token)
                     delay = 1
-                    // No polling: the master exiting is the liveness signal.
-                    while !Task.isCancelled && self.generation == token {
-                        if self.process?.isRunning != true { throw WorkbenchError(L("SSH 隧道已退出")) }
-                        try await Task.sleep(for: .seconds(2))
-                    }
+                    // The master exiting is the liveness signal; its termination
+                    // handler wakes this wait, so there is no polling interval.
+                    await self.waitForExit(token: token)
+                    guard !Task.isCancelled, self.generation == token else { break }
+                    throw WorkbenchError(L("SSH 隧道已退出"))
                 } catch is CancellationError { break }
                 catch {
                     guard self.generation == token else { break }
@@ -89,11 +92,28 @@ final class HostConnection: ObservableObject, Identifiable {
         generation = UUID()
         task?.cancel()
         task = nil
+        exitSignal?.resume(); exitSignal = nil
         stopTunnel()
         online = false
         wantsConnection = false
         stateMessage = "未连接"
         error = nil
+    }
+
+    /// Suspends until the master process exits. The check and the continuation
+    /// install run together on the main actor, so a termination that lands between
+    /// them is caught by `processExited` rather than lost.
+    private func waitForExit(token: UUID) async {
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            if processExited || generation != token || process?.isRunning != true {
+                continuation.resume(); return
+            }
+            exitSignal = continuation
+        }
+    }
+    private func signalExit() {
+        processExited = true
+        exitSignal?.resume(); exitSignal = nil
     }
 
     private func stopTunnel() {
@@ -106,6 +126,7 @@ final class HostConnection: ObservableObject, Identifiable {
     private func establish(token: UUID) async throws {
         try SSHCommand.validateDestination(host.destination)
         stateMessage = "连接中"
+        processExited = false
         let folder = URL(fileURLWithPath: "/tmp/awb-\(UUID().uuidString.prefix(12))")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: false,
                                               attributes: [.posixPermissions: 0o700])
@@ -124,6 +145,9 @@ final class HostConnection: ObservableObject, Identifiable {
         let errors = Pipe()
         tunnel.standardError = errors
         process = tunnel
+        tunnel.terminationHandler = { [weak self] _ in
+            Task { @MainActor in self?.signalExit() }
+        }
         try tunnel.run()
         for _ in 0..<150 {
             try Task.checkCancellation()

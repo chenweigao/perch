@@ -146,7 +146,7 @@ struct CommandLineIslandView: View {
 /// surface once connecting finishes.
 private struct CommandLineIslandConnectionView: View {
     let state: CommandLineIslandState
-    @ObservedObject var connection: HostConnection
+    var connection: HostConnection
     let onRestart: () -> Void
 
     var body: some View {
