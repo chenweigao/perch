@@ -612,6 +612,8 @@ import WorkbenchCore
                 context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!
             window.sendEvent(event)
         }
+        moveMouse(to: CGPoint(x: 600, y: 500))
+        try await Task.sleep(for: .milliseconds(100))
         moveMouse(to: rowPoint)
         try await Task.sleep(for: .milliseconds(700))
         FileHandle.standardError.write(Data("HOVER-DIAG: rowPoint=\(rowPoint), active=\(NSApp.isActive), key=\(window.isKeyWindow), ids=\(taskPanelIdentifiers(window))\n".utf8))
