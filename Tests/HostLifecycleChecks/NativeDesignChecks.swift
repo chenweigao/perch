@@ -636,8 +636,10 @@ import WorkbenchCore
         previewWindow.close()
         let actionPoint = CGPoint(x: actionsFrame.midX, y: actionsFrame.midY)
         moveMouse(to: actionPoint)
-        for type in [CGEventType.leftMouseDown, .leftMouseUp] {
-            postMouse(type, at: actionPoint)
+        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+            window.sendEvent(NSEvent.mouseEvent(with: type, location: actionPoint, modifierFlags: [],
+                timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
+                context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!)
         }
         try await Task.sleep(for: .milliseconds(250))
         let localAction = window.convertFromScreen(NSRect(x: actionPoint.x, y: actionPoint.y, width: 1, height: 1)).origin
