@@ -186,7 +186,14 @@ struct NativeAgentView: View {
                 stopping: connection.isStopping, request: TurnRequest.native(s.interactions)?.kind,
                 hasRunningTools: activeToolID != nil,
                 thinking: tail?.type == "thinking" && tail?.source?["kind"].string != "activity_summary")
-            ConversationLiveStatusDock(phase: phase).equatable().id("live-status:" + s.id)
+            if phase != nil {
+                ConversationLiveStatus(phase: phase).equatable().id("live-status:" + s.id)
+                    .padding(.horizontal, ReplyStyle.composerInset)
+                    .padding(.bottom, 8)
+                    .frame(maxWidth: ReplyStyle.composerWidth)
+                    .padding(.horizontal, ReplyStyle.composerPadding)
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
             NativeComposerView(connection: connection, s: s).id(s.id)
         }
     }

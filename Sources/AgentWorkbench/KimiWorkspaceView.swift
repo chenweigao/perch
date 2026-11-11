@@ -119,7 +119,14 @@ struct KimiWorkspaceView: View {
                 stopping: connection.isStopping, request: request?.kind,
                 hasRunningTools: conversation.live?.runningTools.isEmpty == false,
                 thinking: conversation.live?.thinkingText.isEmpty == false && conversation.live?.assistantText.isEmpty != false)
-            ConversationLiveStatusDock(phase: phase).equatable().id("live-status:" + sessionID)
+            if phase != nil {
+                ConversationLiveStatus(phase: phase).equatable().id("live-status:" + sessionID)
+                    .padding(.horizontal, ReplyStyle.composerInset)
+                    .padding(.bottom, 8)
+                    .frame(maxWidth: ReplyStyle.composerWidth)
+                    .padding(.horizontal, ReplyStyle.composerPadding)
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
             KimiComposerView(connection: connection, sessionID: sessionID, onInput: onInput)
                 .id(sessionID)
         }

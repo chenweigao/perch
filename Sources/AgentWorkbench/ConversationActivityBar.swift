@@ -52,22 +52,6 @@ struct ConversationLiveStatus: View, Equatable {
     }
 }
 
-/// The caption belongs to the conversation, outside the draft's glass surface.
-/// Use the composer's rail calculation so both stay aligned at narrow widths.
-struct ConversationLiveStatusDock: View, Equatable {
-    let phase: ConversationRunPhase?
-    var body: some View {
-        if phase != nil {
-            ConversationLiveStatus(phase: phase).equatable()
-                .padding(.horizontal, ReplyStyle.composerInset)
-                .padding(.bottom, 8)
-                .frame(maxWidth: ReplyStyle.composerWidth)
-                .padding(.horizontal, ReplyStyle.composerPadding)
-                .frame(maxWidth: .infinity, alignment: .center)
-        }
-    }
-}
-
 /// Results the reader has moved on from, by session and end time. In memory only:
 /// a relaunch starts with no results, because it watched no turn end.
 @MainActor enum TurnResultMemory {
