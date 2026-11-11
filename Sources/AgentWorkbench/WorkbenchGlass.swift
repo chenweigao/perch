@@ -11,20 +11,34 @@ extension View {
     }
 
     func workbenchComposerSurface() -> some View {
-        modifier(WorkbenchGlassSurface(cornerRadius: WorkbenchTheme.Radius.composer))
+        modifier(WorkbenchGlassSurface(cornerRadius: WorkbenchTheme.Radius.composer, outlined: true))
     }
 }
 
 private struct WorkbenchGlassSurface: ViewModifier {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     let cornerRadius: CGFloat
+    /// The composer keeps its glass but gains an edge and a soft shadow: on the
+    /// white sheet bare glass has no boundary, and the input should read as the
+    /// page's one solid block (Qoder).
+    var outlined = false
 
     @ViewBuilder func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        if reduceTransparency {
-            content.background(Color(nsColor: .controlBackgroundColor), in: shape)
-        } else {
-            content.glassEffect(.regular, in: shape)
+        Group {
+            if reduceTransparency {
+                content.background(Color(nsColor: .controlBackgroundColor), in: shape)
+            } else {
+                content.glassEffect(.regular, in: shape)
+            }
+        }
+        .overlay { if outlined { shape.strokeBorder(WorkbenchTheme.Stroke.hairline, lineWidth: 1).allowsHitTesting(false) } }
+        .background {
+            if outlined {
+                shape.fill(WorkbenchTheme.contentBackground)
+                    .shadow(color: WorkbenchTheme.Elevation.composerShadow, radius: 10, y: 3)
+                    .allowsHitTesting(false)
+            }
         }
     }
 }

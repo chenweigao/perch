@@ -12,18 +12,20 @@ import SwiftUI
 /// resolves through a dynamic NSColor so AppKit text (cached attributed strings)
 /// redraws correctly on appearance changes.
 enum WorkbenchTheme {
-    /// Primary reading ink: dark slate in light; dark is a soft blue-white held
+    /// Primary reading ink: a neutral near-black in light (Qoder's weight; a blue
+    /// slate reads lighter at the same value); dark is a soft blue-white held
     /// just below full brightness, which keeps CJK glyphs from blooming on the
     /// graphite canvas.
-    static let inkNS = nsColor(light: (0.16, 0.18, 0.23), dark: (0.847, 0.855, 0.882))
+    static let inkNS = nsColor(light: (0.13, 0.13, 0.14), dark: (0.847, 0.855, 0.882))
     static let ink = Color(nsColor: inkNS)
     /// Monochrome accent: near-black in light, near-white in dark. The dark value
     /// sits one step above `ink`, so primary actions read as the brightest text
     /// tone in the room.
     static let accent = color(light: (0.16, 0.16, 0.17), dark: (0.910, 0.918, 0.941))
-    /// De-emphasised ink for status lines and timestamps; dark holds ≈ 4.7:1 on
-    /// the canvas — legible, but clearly below body text.
-    static let quietNS = nsColor(light: (0.42, 0.45, 0.51), dark: (0.520, 0.550, 0.610))
+    /// De-emphasised ink for status lines and timestamps: neutral gray in light
+    /// (≈ 5.1:1 on white); dark holds ≈ 4.7:1 on the canvas — legible, but
+    /// clearly below body text.
+    static let quietNS = nsColor(light: (0.43, 0.43, 0.45), dark: (0.520, 0.550, 0.610))
     static let quiet = Color(nsColor: quietNS)
     /// Content surfaces: white in light; dark is the palette's blue-graphite
     /// canvas (#1F2229) instead of the system's neutral gray — a designed dark
@@ -234,6 +236,13 @@ extension WorkbenchTheme {
         static let hairlineNS = washNS(light: 0.12, dark: 0.18)
     }
     enum Elevation {
+        /// The reading sheet's contact shadow in the window's glass band.
+        static func sheetShadowAlpha(dark: Bool) -> CGFloat { dark ? 0.36 : 0.13 }
+        /// Under the composer glass, so the input reads as the page's solid block.
+        static let composerShadow = Color(nsColor: NSColor(name: nil) { appearance in
+            NSColor.black.withAlphaComponent(
+                appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? 0.32 : 0.07)
+        })
         /// Floating-panel shadow color. Light separates with shadow; dark keeps
         /// only a soft contact shadow while hairlines mark the edges.
         static let panelShadow = NSColor(name: nil) { appearance in
