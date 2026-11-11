@@ -241,8 +241,10 @@ struct TaskSessionOverviewSection: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .background(WorkbenchTheme.Fill.surface,
+        .background(WorkbenchTheme.overviewCard,
                     in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous)
+            .strokeBorder(WorkbenchTheme.Stroke.hairline, lineWidth: 1))
         .accessibilityElement(children: .contain)
     }
 

@@ -40,6 +40,8 @@ private final class TaskSummaryProtocol: URLProtocol {
 @MainActor func checkTaskSummary() async throws {
     UserDefaults.standard.removePersistentDomain(forName: Bundle.main.bundleIdentifier!)
     AppLanguage.applyToSystem(.zhHans)
+    NSApp.setActivationPolicy(.accessory)
+    NSApp.activate(ignoringOtherApps: true)
     AXUIElementSetAttributeValue(AXUIElementCreateApplication(getpid()), "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)
     let configuration = URLSessionConfiguration.ephemeral
     configuration.protocolClasses = [TaskSummaryProtocol.self]
@@ -81,6 +83,7 @@ private final class TaskSummaryProtocol: URLProtocol {
         precondition(model.taskContextWindow.detail == expected, message)
     }
     try await press("task-context-row-build")
+    _ = try await control("task-context-back")
     await expectDetail(TaskContextRoute(source: reference, taskID: "build"),
                        "A compact summary keeps the new in-place detail navigation")
     _ = try await control("task-context-output")
