@@ -8,7 +8,7 @@ struct ConversationBusyIndicator: View {
     var body: some View { PerchBusyIndicator() }
 }
 
-/// A live caption inside the composer's top edge. A cached ink copy carries
+/// A live caption above the composer. A cached ink copy carries
 /// one soft sweep; the phase, rather than streaming tokens, owns its lifetime.
 struct ConversationLiveStatus: View, Equatable {
     let phase: ConversationRunPhase?
@@ -49,6 +49,22 @@ struct ConversationLiveStatus: View, Equatable {
         #if TRANSCRIPT_CHECKS
         NavigationRenderMetrics.count("live_status_body")
         #endif
+    }
+}
+
+/// The caption belongs to the conversation, outside the draft's glass surface.
+/// Use the composer's rail calculation so both stay aligned at narrow widths.
+struct ConversationLiveStatusDock: View, Equatable {
+    let phase: ConversationRunPhase?
+    var body: some View {
+        if phase != nil {
+            ConversationLiveStatus(phase: phase).equatable()
+                .padding(.horizontal, ReplyStyle.composerInset)
+                .padding(.bottom, 8)
+                .frame(maxWidth: ReplyStyle.composerWidth)
+                .padding(.horizontal, ReplyStyle.composerPadding)
+                .frame(maxWidth: .infinity, alignment: .center)
+        }
     }
 }
 

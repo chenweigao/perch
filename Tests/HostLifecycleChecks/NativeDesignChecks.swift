@@ -144,6 +144,16 @@ import WorkbenchCore
     func descendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
     let draft = descendants(window.contentView!).compactMap { $0 as? DraftTextView }.first!
     precondition(draft.font?.pointSize == 14, "The mounted composer shares the default 14 pt reading size")
+    func checkStatusOutsideComposer() {
+        let caption = descendants(window.contentView!).compactMap { $0 as? ConversationLiveGlowView }.first!
+        let captionFrame = caption.convert(caption.bounds, to: nil)
+        let draftFrame = draft.convert(draft.bounds, to: nil)
+        precondition(captionFrame.minY >= draftFrame.maxY + ReplyStyle.composerInset + 8 - 1,
+                     "The live status must sit above the composer's surface with a visible gap: status=\(captionFrame), draft=\(draftFrame)")
+        precondition(abs(captionFrame.minX - draftFrame.minX) < 1,
+                     "The separate live status and input text must share their leading rail")
+    }
+    checkStatusOutsideComposer()
     let citedContext = "整轮只有一个执行中的过程头。\n工具与思考留在过程内，最终回答在外。"
     connection.drafts["design-0"] = "原有草稿"
     model.quoteSelection(citedContext)
@@ -169,6 +179,7 @@ import WorkbenchCore
     kimi.drafts["kimi-cite-fixture"] = nil
     for _ in 0..<40 where !draft.draftString.isEmpty { try await Task.sleep(for: .milliseconds(25)) }
     precondition(draft.draftString.isEmpty)
+    checkStatusOutsideComposer()
     print("PASS: production context citation chip, exact prompt expansion and native/Kimi session ownership")
     let reply = descendants(window.contentView!).compactMap { $0 as? ReplyTextView }.first { $0.string.contains("初步发现") }!
     func splitController(_ view: NSView) -> WorkbenchSplitController? {

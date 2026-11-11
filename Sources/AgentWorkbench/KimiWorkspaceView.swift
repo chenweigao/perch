@@ -119,7 +119,8 @@ struct KimiWorkspaceView: View {
                 stopping: connection.isStopping, request: request?.kind,
                 hasRunningTools: conversation.live?.runningTools.isEmpty == false,
                 thinking: conversation.live?.thinkingText.isEmpty == false && conversation.live?.assistantText.isEmpty != false)
-            KimiComposerView(connection: connection, sessionID: sessionID, livePhase: phase, onInput: onInput)
+            ConversationLiveStatusDock(phase: phase).equatable().id("live-status:" + sessionID)
+            KimiComposerView(connection: connection, sessionID: sessionID, onInput: onInput)
                 .id(sessionID)
         }
     }
@@ -145,7 +146,6 @@ private struct KimiComposerView: View {
     @UILocalization private var L
     let connection: KimiConnection
     let sessionID: String
-    let livePhase: ConversationRunPhase?
     let onInput: () -> Void
     @State private var chooseFiles = false
     @State private var palette = CommandPaletteState()
@@ -163,7 +163,6 @@ private struct KimiComposerView: View {
                 }
             }
             VStack(alignment: .leading, spacing: 8) {
-                ConversationLiveStatus(phase: livePhase).equatable().id("live-status:" + sessionID)
                 if let files = connection.attachments[sessionID], !files.isEmpty {
                     ScrollView(.horizontal) {
                         HStack {

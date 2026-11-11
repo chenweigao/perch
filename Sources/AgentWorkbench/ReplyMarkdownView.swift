@@ -261,6 +261,81 @@ enum ReplyMarkdownPreparation: Equatable {
     }
 }
 
+/// Each live text surface owns its display prefix. Timed writes are observed by
+/// that surface alone; the authoritative transcript and drafts stay unchanged.
+@MainActor @Observable final class StreamingReplyState {
+    private(set) var text: String
+    @ObservationIgnored private var reveal: StreamingTextReveal
+    @ObservationIgnored private var lastFrame: TimeInterval = 0
+    var hasBacklog: Bool { reveal.hasBacklog }
+
+    init(_ source: String) { text = source; reveal = StreamingTextReveal(source) }
+
+    func update(_ source: String, smoothing: Bool) {
+        let wasPending = reveal.hasBacklog
+        if reveal.update(source, smoothing: smoothing) { text = reveal.text }
+        if !wasPending && reveal.hasBacklog { lastFrame = CACurrentMediaTime() }
+    }
+    @discardableResult func advance() -> Bool {
+        let now = CACurrentMediaTime()
+        let changed = reveal.advance(elapsed: now - lastFrame)
+        lastFrame = now
+        if changed { text = reveal.text }
+        return changed
+    }
+    func flush() { if reveal.flush() { text = reveal.text } }
+}
+
+@MainActor private final class StreamingReplyVisibility {
+    weak var view: NSView?
+    var visible: Bool {
+        guard let view, let window = view.window else { return false }
+        return window.isVisible && !window.isMiniaturized && !view.isHiddenOrHasHiddenAncestor
+            && !view.visibleRect.isEmpty
+    }
+}
+private struct StreamingReplyVisibilityAnchor: NSViewRepresentable {
+    let visibility: StreamingReplyVisibility
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView(); visibility.view = view; return view
+    }
+    func updateNSView(_ view: NSView, context: Context) { visibility.view = view }
+}
+
+/// Hosted Markdown and expanded thoughts use the same release as native prose.
+/// SwiftUI cancels the loop when the surface disappears or its input changes.
+struct SmoothReplyText<Content: View>: View {
+    let source: String
+    let streaming: Bool
+    let content: (String) -> Content
+    @State private var state: StreamingReplyState
+    @State private var visibility = StreamingReplyVisibility()
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @Environment(\.conversationReduceMotion) private var conversationReduceMotion
+    private struct Input: Equatable { let source: String; let smoothing: Bool }
+
+    init(source: String, streaming: Bool, @ViewBuilder content: @escaping (String) -> Content) {
+        self.source = source; self.streaming = streaming; self.content = content
+        _state = State(initialValue: StreamingReplyState(source))
+    }
+    var body: some View {
+        let input = Input(source: source, smoothing: streaming && !systemReduceMotion && !conversationReduceMotion)
+        content(input.smoothing ? state.text : source)
+            .background(StreamingReplyVisibilityAnchor(visibility: visibility).allowsHitTesting(false))
+            .onChange(of: input, initial: true) { _, next in state.update(next.source, smoothing: next.smoothing) }
+            .task(id: input) {
+                state.update(input.source, smoothing: input.smoothing)
+                while state.hasBacklog && !Task.isCancelled {
+                    do { try await Task.sleep(for: .seconds(StreamingTextReveal.frameInterval)) }
+                    catch { return }
+                    guard !Task.isCancelled else { return }
+                    guard visibility.visible else { state.flush(); return }
+                    state.advance()
+                }
+            }
+    }
+}
+
 struct KimiMarkdown: View {
     let text: String
     var sessionID: String? = nil

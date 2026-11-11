@@ -6,6 +6,7 @@ import WorkbenchCore
 @MainActor @Observable private final class StreamingFixture {
     var messages: [KimiMessage] = []
     var running = true
+    var reduceMotion = false
 }
 
 private struct StreamingFixtureView: View {
@@ -14,6 +15,7 @@ private struct StreamingFixtureView: View {
         ScrollView {
             ConversationTranscript(messages: model.messages, sessionId: "streaming-rendering-fixture", isRunning: model.running)
         }.frame(width: 720, height: 500)
+            .environment(\.conversationReduceMotion, model.reduceMotion)
     }
 }
 
@@ -85,8 +87,12 @@ private struct StreamingFixtureView: View {
 
     let complete = prefix + " — appended 中文流式文本 VISIBLE_END"
     model.messages = try messages(complete)
+    await streamingSettle(host, milliseconds: 40)
+    let releasedPrefix = renderedText(host)
+    precondition(releasedPrefix.contains("Paragraph 8") && !releasedPrefix.contains("VISIBLE_END"),
+                 "A burst progressively releases new text while retaining the visible prefix")
     guard await waitForStreaming(host, { renderedText(host).contains("VISIBLE_END") }) else {
-        preconditionFailure("The latest cumulative Unicode snapshot must be visible without a reveal drain")
+        preconditionFailure("The adaptive release must promptly catch up to the latest cumulative Unicode snapshot")
     }
     let updatedTexts = textViews(row)
     precondition(nativeRows(host).first === row && updatedTexts.count == 2,
@@ -96,12 +102,24 @@ private struct StreamingFixtureView: View {
     precondition(updatedTexts[0].selectedRange() == selection,
                  "Updating the tail must preserve selection in the stable prefix")
 
+    let completedBeforeDrain = complete + String(repeating: "等待展示的追加正文", count: 20) + "COMPLETION_FLUSH"
+    model.messages = try messages(completedBeforeDrain)
+    await streamingSettle(host, milliseconds: 30)
+    precondition(!renderedText(host).contains("COMPLETION_FLUSH"))
     model.running = false
     guard await waitForStreaming(host, { !actions.isHidden && actions.frame.height == 24 }) else {
         preconditionFailure("Settling must expose actions on the existing native row")
     }
     precondition(nativeRows(host).first === row && textViews(row)[0].selectedRange() == selection,
                  "Settling must not replace the row or lose selection")
+    precondition(renderedText(host).contains("COMPLETION_FLUSH"), "Completion must flush the remaining text immediately")
+
+    model.reduceMotion = true; model.running = true
+    model.messages = try messages(completedBeforeDrain + "REDUCED_MOTION_FULL")
+    guard await waitForStreaming(host, { renderedText(host).contains("REDUCED_MOTION_FULL") }) else {
+        preconditionFailure("Reduce Motion must display complete stream updates")
+    }
+    model.reduceMotion = false
 
     let fallback = "| A | B |\n| --- | --- |\n| 中文 👩🏽‍💻 | é |\n\nFINAL_CHUNK"
     model.running = true
@@ -114,5 +132,35 @@ private struct StreamingFixtureView: View {
     precondition(nativeRows(host).isEmpty && renderedText(host).contains("FINAL_CHUNK"),
                  "Completion must not truncate or replace unsupported fallback content")
 
-    print("PASS: cumulative snapshots use a persistent native row, stable block views and complete hosted fallback")
+    func thoughts(_ text: String, answer: String? = nil) throws -> [KimiMessage] {
+        var parts: [[String: Any]] = [["type": "thinking", "thinking": text]]
+        if let answer { parts.append(["type": "text", "text": answer]) }
+        let json: [[String: Any]] = [
+            ["id": "u-thought", "role": "user", "created_at": "0", "content": [["type": "text", "text": "思考流式展示"]]],
+            ["id": "a-thought", "role": "assistant", "created_at": "1", "content": parts]
+        ]
+        return try KimiWire.decoder().decode([KimiMessage].self, from: JSONSerialization.data(withJSONObject: json))
+    }
+    let thoughtPrefix = "先核对已有的会话状态。"
+    model.running = true; model.messages = try thoughts(thoughtPrefix)
+    guard await waitForStreaming(host, { renderedText(host).contains(thoughtPrefix) }) else {
+        preconditionFailure("Live thoughts must start expanded with their existing text visible")
+    }
+    let thoughtComplete = thoughtPrefix + String(repeating: "逐步检查中文👩🏽‍💻与边界。", count: 16) + "THOUGHT_RELEASE_END"
+    model.messages = try thoughts(thoughtComplete)
+    await streamingSettle(host, milliseconds: 40)
+    precondition(renderedText(host).contains(thoughtPrefix) && !renderedText(host).contains("THOUGHT_RELEASE_END"),
+                 "Expanded thoughts must use the same progressive release as prose")
+    guard await waitForStreaming(host, { renderedText(host).contains("THOUGHT_RELEASE_END") }) else {
+        preconditionFailure("Thoughts must catch up without truncating the Unicode stream")
+    }
+    let thoughtFinal = thoughtComplete + String(repeating: "追加的思考尾部", count: 20) + "THOUGHT_FLUSH"
+    model.messages = try thoughts(thoughtFinal)
+    await streamingSettle(host, milliseconds: 25)
+    model.messages = try thoughts(thoughtFinal, answer: "最终正文已开始")
+    guard await waitForStreaming(host, { renderedText(host).contains("THOUGHT_FLUSH") }) else {
+        preconditionFailure("Starting the answer must immediately flush settled thought text")
+    }
+
+    print("PASS: adaptive prose/thought Unicode release, persistent native row and selection, immediate completion/reduced motion, complete hosted fallback")
 }
