@@ -25,6 +25,7 @@ struct SessionRowChrome<Indicator: View>: View {
     @ViewBuilder let indicator: Indicator
     @State private var hovered = false
     @State private var showPreview = false
+    @State private var showActionsMenu = false
     @State private var previewTask: Task<Void, Never>?
     @Environment(\.locale) private var locale
 
@@ -107,7 +108,10 @@ struct SessionRowChrome<Indicator: View>: View {
                 .accessibilityValue(([offline ? L("离线 · 状态未同步") : nil, hostName, directory, detail,
                                       updatedAt > 0 ? SessionTime.label(since: updatedAt, waiting: false) : nil].compactMap { $0 } + groups).joined(separator: " · "))
             if let actions {
-                Menu { actions } label: {
+                Button {
+                    showPreview = false
+                    showActionsMenu = true
+                } label: {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(WorkbenchTheme.quiet)
@@ -116,13 +120,14 @@ struct SessionRowChrome<Indicator: View>: View {
                                     in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.chip, style: .continuous))
                         .contentShape(Rectangle())
                 }
-                .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
                 .buttonStyle(.plain)
                 .opacity(hovered ? 1 : 0)
                 .allowsHitTesting(hovered)
                 .accessibilityLabel("会话操作")
                 .accessibilityIdentifier("sidebar.row.actions")
-                .onHover { inside in if inside { showPreview = false } }
+                .popover(isPresented: $showActionsMenu, arrowEdge: .trailing) {
+                    actions
+                }
             }
         }
         .overlay(SessionHoverTracking(onChange: updateHover))
