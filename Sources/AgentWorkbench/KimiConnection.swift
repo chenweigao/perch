@@ -146,6 +146,9 @@ final class KimiConnection {
     /// subscription, and closing it unsubscribes that agent again.
     private(set) var subagentTranscript: KimiSubagentTranscript?
     private(set) var subagentTranscriptError: String?
+    @ObservationIgnored private var transcriptGeneration = UUID()
+    /// Tests can suspend this async boundary; production decoding stays off-main.
+    @ObservationIgnored var beforeTranscriptDecode: @Sendable () async throws -> Void = {}
     private(set) var loadingSubagentTranscript = false
     private(set) var loadingOlderSubagentTurns = false
     /// The subagent whose transcript sheet the selected conversation shows; nil
@@ -945,12 +948,16 @@ final class KimiConnection {
     /// channel the page stays readable and the reader can refresh it explicitly.
     func openSubagentTranscript(_ agentId: String) async {
         guard online, let api, let id = selectedId else { return }
+        let token = UUID()
+        transcriptGeneration = token
+        let selectionToken = selectionGeneration
         loadingSubagentTranscript = true; subagentTranscriptError = nil
-        defer { loadingSubagentTranscript = false }
+        defer { if transcriptGeneration == token { loadingSubagentTranscript = false } }
         do {
             let page = try await api.get(KimiTranscriptPage.self,
                                          "/api/v1/sessions/\(id)/transcript?agent_id=\(agentId)&page_size=\(Self.transcriptPageSize)")
-            guard selectedId == id else { return }
+            try Task.checkCancellation()
+            guard selectedId == id, selectionToken == selectionGeneration, transcriptGeneration == token else { return }
             var transcript = KimiSubagentTranscript(agentId: agentId)
             transcript.load(page, prepend: false)
             subagentTranscript = transcript
@@ -961,29 +968,40 @@ final class KimiConnection {
             try await sendFrame(socket, type: "subscribe_v2", payload: payload)
         } catch is CancellationError {
         } catch {
-            if selectedId == id { subagentTranscriptError = error.localizedDescription }
+            if selectedId == id, selectionToken == selectionGeneration, transcriptGeneration == token {
+                subagentTranscriptError = error.localizedDescription
+            }
         }
     }
     func loadOlderSubagentTurns() async {
         guard online, let api, let id = selectedId, !loadingOlderSubagentTurns,
               let transcript = subagentTranscript, transcript.hasMoreOlder,
               let oldest = transcript.turns.first?.turnId else { return }
+        let token = transcriptGeneration
+        let selectionToken = selectionGeneration
         loadingOlderSubagentTurns = true
-        defer { loadingOlderSubagentTurns = false }
+        defer { if token == transcriptGeneration { loadingOlderSubagentTurns = false } }
         do {
             let page = try await api.get(KimiTranscriptPage.self,
                                          "/api/v1/sessions/\(id)/transcript?agent_id=\(transcript.agentId)&page_size=\(Self.transcriptPageSize)&before_turn=\(oldest)")
-            guard selectedId == id, subagentTranscript?.agentId == transcript.agentId else { return }
+            try Task.checkCancellation()
+            guard selectedId == id, selectionToken == selectionGeneration, transcriptGeneration == token,
+                  subagentTranscript?.agentId == transcript.agentId else { return }
             var updated = subagentTranscript ?? transcript
             updated.load(page, prepend: true)
             subagentTranscript = updated
         } catch is CancellationError {
         } catch {
-            if selectedId == id { subagentTranscriptError = error.localizedDescription }
+            if selectedId == id, selectionToken == selectionGeneration, transcriptGeneration == token {
+                subagentTranscriptError = error.localizedDescription
+            }
         }
     }
     /// Closing the sheet releases the subscription; the child keeps running.
     func closeSubagentTranscript() {
+        transcriptGeneration = UUID()
+        loadingSubagentTranscript = false
+        loadingOlderSubagentTurns = false
         guard let transcript = subagentTranscript else { return }
         subagentTranscript = nil; subagentTranscriptError = nil
         guard let socket, let id = selectedId else { return }
@@ -993,24 +1011,35 @@ final class KimiConnection {
             ])
         }
     }
-    private func applyTranscript(_ event: KimiEvent, data: Data) async {
+    func applyTranscript(_ event: KimiEvent, data: Data) async {
         guard event.sessionId == selectedId, let transcript = subagentTranscript else { return }
+        let token = transcriptGeneration
+        let selectionToken = selectionGeneration
+        let connectionToken = generation
+        func current() -> KimiSubagentTranscript? {
+            guard !Task.isCancelled, token == transcriptGeneration, selectionToken == selectionGeneration,
+                  connectionToken == generation, event.sessionId == selectedId,
+                  let value = subagentTranscript, value.agentId == transcript.agentId else { return nil }
+            return value
+        }
         do {
-            var updated = transcript
+            try await beforeTranscriptDecode()
             switch event.type {
             case "transcript.reset":
                 let reset = try await Self.decodeTranscript(KimiTranscriptReset.self, from: data)
-                guard reset.agentId == transcript.agentId else { return }
+                guard reset.agentId == transcript.agentId, var updated = current() else { return }
                 updated.apply(reset)
+                subagentTranscript = updated
             case "transcript.ops":
                 let batch = try await Self.decodeTranscript(KimiTranscriptOpsBatch.self, from: data)
-                guard batch.agentId == transcript.agentId else { return }
+                guard batch.agentId == transcript.agentId, var updated = current() else { return }
                 updated.apply(batch)
+                subagentTranscript = updated
             default: return
             }
-            subagentTranscript = updated
+        } catch is CancellationError {
         } catch {
-            subagentTranscriptError = error.localizedDescription
+            if current() != nil { subagentTranscriptError = error.localizedDescription }
         }
     }
     func setArchived(_ id: String, archived: Bool, refresh: Bool = true) async throws {
