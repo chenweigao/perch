@@ -125,7 +125,7 @@ struct SessionRowChrome<Indicator: View>: View {
                 .onHover { inside in if inside { showPreview = false } }
             }
         }
-        .background(SessionHoverTracking(onChange: updateHover))
+        .overlay(SessionHoverTracking(onChange: updateHover))
     }
 
     private var standardRow: some View {
