@@ -682,7 +682,7 @@ import WorkbenchCore
         moveMouse(to: rowPoint)
         try await Task.sleep(for: .milliseconds(550))
         guard taskPanelControl(window, "sidebar.row.actions") != nil else {
-            preconditionFailure("Hovering a session row must reveal its ellipsis action")
+            preconditionFailure("Hovering a session row must reveal its ellipsis action; row=\(rowPoint), pointer=\(NSEvent.mouseLocation), local=\(window.mouseLocationOutsideOfEventStream), key=\(window.isKeyWindow), active=\(NSApp.isActive)")
         }
         guard let previewWindow = visibleWindow(with: "sidebar.row.preview") else {
             preconditionFailure("Hovering a session row must open the styled preview after its delay")
