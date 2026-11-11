@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import Observation
+import QuartzCore
 import WorkbenchCore
 
 /// The reading scale. Kimi, OMP, Qoder and the other native agents share it with
@@ -274,14 +275,17 @@ enum ReplyMarkdownPreparation: Equatable {
     private(set) var text: String
     @ObservationIgnored private var reveal: StreamingTextReveal
     @ObservationIgnored private var lastFrame: TimeInterval = 0
+    @ObservationIgnored private weak var frameOwner: NSView?
+    @ObservationIgnored private var requestFrame: (() -> Void)?
     var hasBacklog: Bool { reveal.hasBacklog }
 
     init(_ source: String) { text = source; reveal = StreamingTextReveal(source) }
 
-    func update(_ source: String, smoothing: Bool) {
+    func update(_ source: String, smoothing: Bool, receivedAt: TimeInterval? = nil) {
         let wasPending = reveal.hasBacklog
         if reveal.update(source, smoothing: smoothing) { text = reveal.text }
-        if !wasPending && reveal.hasBacklog { lastFrame = CACurrentMediaTime() }
+        if !wasPending && reveal.hasBacklog { lastFrame = receivedAt ?? CACurrentMediaTime() }
+        requestFrame?()
     }
     @discardableResult func advance() -> Bool {
         let now = CACurrentMediaTime()
@@ -290,33 +294,93 @@ enum ReplyMarkdownPreparation: Equatable {
         if changed { text = reveal.text }
         return changed
     }
-    func flush() { if reveal.flush() { text = reveal.text } }
+    func flush() { if reveal.flush() { text = reveal.text }; requestFrame?() }
+    func bindFrames(to owner: NSView, request: @escaping () -> Void) {
+        frameOwner = owner; requestFrame = request
+    }
+    func unbindFrames(from owner: NSView) {
+        guard frameOwner === owner else { return }
+        frameOwner = nil; requestFrame = nil
+    }
 }
 
-@MainActor private final class StreamingReplyVisibility {
-    weak var view: NSView?
-    var visible: Bool {
-        guard let view, let window = view.window else { return false }
-        return window.isVisible && !window.isMiniaturized && !view.isHiddenOrHasHiddenAncestor
-            && !view.visibleRect.isEmpty
+/// The native equivalent of PI's requestAnimationFrame: one persistent display
+/// clock, capped at 60 Hz, which new source snapshots cannot postpone.
+@MainActor final class ReplyFrameClock {
+    @MainActor private final class Target: NSObject {
+        weak var clock: ReplyFrameClock?
+        @objc func tick(_ link: CADisplayLink) { clock?.tick(link) }
     }
+    private let target = Target()
+    private var link: CADisplayLink?
+    private weak var screen: NSScreen?
+    private var lastTick: CFTimeInterval = 0
+    private let frame: () -> Bool
+
+    init(frame: @escaping () -> Bool) { self.frame = frame; target.clock = self }
+    func start(screen requested: NSScreen?) {
+        guard let screen = requested ?? NSScreen.main ?? NSScreen.screens.first else { return }
+        guard link == nil || self.screen !== screen else { return }
+        stop()
+        let link = screen.displayLink(target: target, selector: #selector(Target.tick(_:)))
+        link.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
+        self.screen = screen; self.link = link
+        lastTick = CACurrentMediaTime()
+        link.add(to: .main, forMode: .common)
+    }
+    private func tick(_ link: CADisplayLink) {
+        let now = CACurrentMediaTime()
+        // A little timestamp jitter must not halve a nominal 60 Hz display.
+        guard now - lastTick >= StreamingTextReveal.frameInterval - 0.0005 else { return }
+        lastTick = now
+        if !frame() { stop() }
+    }
+    func stop() { link?.invalidate(); link = nil; screen = nil; lastTick = 0 }
+    deinit { link?.invalidate() }
 }
-private struct StreamingReplyVisibilityAnchor: NSViewRepresentable {
-    let visibility: StreamingReplyVisibility
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView(); visibility.view = view; return view
+
+private final class SmoothReplyFrameView: NSView {
+    weak var state: StreamingReplyState?
+    private lazy var clock = ReplyFrameClock { [weak self] in self?.step() ?? false }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); refresh() }
+    func bind(_ state: StreamingReplyState) {
+        if self.state !== state { self.state?.unbindFrames(from: self) }
+        self.state = state
+        state.bindFrames(to: self) { [weak self] in self?.refresh() }
+        refresh()
     }
-    func updateNSView(_ view: NSView, context: Context) { visibility.view = view }
+    private var visible: Bool {
+        window?.isVisible == true && window?.isMiniaturized == false
+            && !isHiddenOrHasHiddenAncestor && !visibleRect.isEmpty
+    }
+    func refresh() {
+        guard state?.hasBacklog == true else { clock.stop(); return }
+        clock.start(screen: window?.screen)
+    }
+    private func step() -> Bool {
+        guard let state else { return false }
+        guard visible else { state.flush(); return false }
+        state.advance()
+        return state.hasBacklog
+    }
+    func stop() { clock.stop(); state?.unbindFrames(from: self) }
+}
+private struct SmoothReplyFrameAnchor: NSViewRepresentable {
+    let state: StreamingReplyState
+    func makeNSView(context: Context) -> SmoothReplyFrameView { SmoothReplyFrameView() }
+    func updateNSView(_ view: SmoothReplyFrameView, context: Context) { view.bind(state) }
+    static func dismantleNSView(_ view: SmoothReplyFrameView, coordinator: ()) { view.stop() }
 }
 
 /// Hosted Markdown and expanded thoughts use the same release as native prose.
-/// SwiftUI cancels the loop when the surface disappears or its input changes.
+/// The native anchor owns its display clock; input changes only replace the
+/// target, and dismantling the surface stops the clock.
 struct SmoothReplyText<Content: View>: View {
     let source: String
     let streaming: Bool
     let content: (String) -> Content
     @State private var state: StreamingReplyState
-    @State private var visibility = StreamingReplyVisibility()
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @Environment(\.conversationReduceMotion) private var conversationReduceMotion
     @Environment(\.streamingReduceMotionOverride) private var motionOverride
@@ -330,18 +394,9 @@ struct SmoothReplyText<Content: View>: View {
         let reduced = motionOverride ?? (systemReduceMotion || conversationReduceMotion)
         let input = Input(source: source, smoothing: streaming && !reduced)
         content(input.smoothing && source.utf16.starts(with: state.text.utf16) ? state.text : source)
-            .background(StreamingReplyVisibilityAnchor(visibility: visibility).allowsHitTesting(false))
+            .background(SmoothReplyFrameAnchor(state: state).allowsHitTesting(false))
             .onChange(of: input, initial: true) { _, next in state.update(next.source, smoothing: next.smoothing) }
-            .task(id: input) {
-                state.update(input.source, smoothing: input.smoothing)
-                while state.hasBacklog && !Task.isCancelled {
-                    do { try await Task.sleep(for: .seconds(StreamingTextReveal.frameInterval)) }
-                    catch { return }
-                    guard !Task.isCancelled else { return }
-                    guard visibility.visible else { state.flush(); return }
-                    state.advance()
-                }
-            }
+            .onDisappear { state.flush() }
     }
 }
 

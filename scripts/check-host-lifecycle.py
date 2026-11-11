@@ -11,7 +11,7 @@ import tempfile
 import time
 import uuid
 
-PHASES = ["startup", "seed", "restart", "removal", "connection-controls", "connection-restart", "architecture", "interactions", "streaming-rendering", "git-write", "reading-design", "reading-controls", "goal-header", "reading-canvas", "sidebar-scroll", "activity-bar", "reply-selection", "frame-hitch", "workspace-upgrade", "file-reader", "code-reader", "workflow-polish", "document-reading", "task-context", "task-detail", "task-summary", "native-design"]
+PHASES = ["startup", "seed", "restart", "removal", "connection-controls", "connection-restart", "architecture", "interactions", "streaming-rendering", "streaming-cadence", "git-write", "reading-design", "reading-controls", "goal-header", "reading-canvas", "sidebar-scroll", "activity-bar", "reply-selection", "frame-hitch", "workspace-upgrade", "file-reader", "code-reader", "workflow-polish", "document-reading", "task-context", "task-detail", "task-summary", "native-design"]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--preview-reading-design", action="store_true", help="Keep a standalone native reading review app")
 parser.add_argument("--release", action="store_true", help="Compile fixtures with optimization for component timing")

@@ -9,7 +9,6 @@ public struct StreamingTextReveal {
     public private(set) var text: String
     private var source: NSString
     private var revealed: Int
-    private var pendingAge: TimeInterval = 0
     private var fractionalAdvance: Double = 0
     public var hasBacklog: Bool { revealed < source.length }
 
@@ -30,12 +29,10 @@ public struct StreamingTextReveal {
 
     @discardableResult public mutating func advance(elapsed: TimeInterval) -> Bool {
         guard hasBacklog, elapsed.isFinite, elapsed > 0 else { return false }
-        let remainingTime = max(Self.frameInterval, Self.maximumLag - pendingAge)
-        // PI's 60 characters/sec base, accelerated by backlog. The remaining
-        // deadline also bounds catch-up when a provider delivers one large burst.
-        let speed = max(60, Double(source.length - revealed) / remainingTime)
-        pendingAge += elapsed
-        if pendingAge >= Self.maximumLag { return flush() }
+        // Match PI's fixed backlog horizon. A shrinking deadline followed by a
+        // forced flush every 500 ms creates a repeating slow/fast/jump cadence
+        // throughout a continuous stream. Only terminal updates flush the tail.
+        let speed = max(60, Double(source.length - revealed) / Self.maximumLag)
         let exact = fractionalAdvance + speed * min(elapsed, 0.1)
         let amount = Int(exact)
         fractionalAdvance = exact - Double(amount)
@@ -49,7 +46,7 @@ public struct StreamingTextReveal {
         }
         revealed = end
         text = source.substring(to: end)
-        if !hasBacklog { pendingAge = 0; fractionalAdvance = 0 }
+        if !hasBacklog { fractionalAdvance = 0 }
         return true
     }
 
@@ -57,7 +54,6 @@ public struct StreamingTextReveal {
         let changed = revealed != source.length || text != source as String
         revealed = source.length
         text = source as String
-        pendingAge = 0
         fractionalAdvance = 0
         return changed
     }

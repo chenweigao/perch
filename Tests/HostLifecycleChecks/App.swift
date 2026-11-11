@@ -20,10 +20,11 @@ import WorkbenchCore
         let readingControls = CommandLine.arguments.contains("reading-controls")
         let activityBar = CommandLine.arguments.contains("activity-bar")
         let streamingRendering = CommandLine.arguments.contains("streaming-rendering")
+        let streamingCadence = CommandLine.arguments.contains("streaming-cadence")
         let readingDesign = readingPreview || CommandLine.arguments.contains("reading-design")
         let taskDetail = CommandLine.arguments.contains("task-detail")
         let taskContext = CommandLine.arguments.contains("task-context")
-        if CommandLine.arguments.contains("preview") || nativeDesign || readingControls || readingDesign || activityBar || streamingRendering || taskDetail || taskSummary || taskContext {
+        if CommandLine.arguments.contains("preview") || nativeDesign || readingControls || readingDesign || activityBar || streamingRendering || streamingCadence || taskDetail || taskSummary || taskContext {
             // Interactive fixtures need AppKit's event loop for native window events
             // and accessibility, unlike the command-line layout checks below.
             NSApp.setActivationPolicy(designPreview || readingPreview ? .regular : .accessory)
@@ -34,6 +35,7 @@ import WorkbenchCore
                     else if readingControls { try await checkReadingControls() }
                     else if activityBar { try await checkActivityBar() }
                     else if streamingRendering { try await checkProductionStreamingRendering() }
+                    else if streamingCadence { try await checkStreamingCadence() }
                     else if readingDesign {
                         try await checkReadingDesign()
                         try await checkProgressReading()

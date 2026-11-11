@@ -431,9 +431,13 @@ alone do not establish a performance improvement.
 
 ## Native completed assistant rich blocks
 
-Live assistant rows own one `ReplyStreamSnapshot` per incoming source. The local
-release clock projects its parsed blocks; it does not parse a new Markdown prefix
-on every frame. Native and hosted renderers consume the same projection, retain
+Live assistant rows retain the latest incoming source and prepare one
+`ReplyStreamSnapshot` on a display frame. Raw append updates do not invalidate
+unchanged visible text or its measured height. A persistent native display link
+projects parsed blocks at at most 60 Hz; incoming source changes cannot restart
+or postpone that clock. It does not parse a new Markdown prefix on every frame.
+The release speed follows PI's fixed `max(60, backlog / 0.5)` horizon, without a
+shrinking deadline or periodic flush. Native and hosted renderers retain
 the authoritative source for copy/actions, and flush on completion or replacement.
 Expanded thoughts use TextKit 2 inside the full conversation row, without an inner
 scroll viewport; chip drawing must not request `layoutManager`, which would

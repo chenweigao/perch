@@ -1663,9 +1663,11 @@ private final class ConversationEntryController: NSViewController {
     private var textReveal: StreamingReplyState?
     private var streamSnapshot: ReplyStreamSnapshot?
     private var streamSnapshotSource: String?
+    private var pendingStreamSource: String?
+    private var pendingStreamReceivedAt: TimeInterval?
     private var streamPreparation: (blocks: [ReplyBlock], size: CGFloat, rich: Bool, value: NativeAssistantContent.Preparation)?
     private var revealIdentity: String?
-    private var revealTask: Task<Void, Never>?
+    private var revealClock: ReplyFrameClock?
     private var revealFlushPending = false
     private var sizes: [(width: CGFloat, height: CGFloat)] = []
     /// Width of the last committed native place; content changes re-place.
@@ -1805,7 +1807,8 @@ private final class ConversationEntryController: NSViewController {
         }
     }
     deinit {
-        revealTask?.cancel()
+        // The clock's weak display-link target lets releasing this controller
+        // release/invalidate the clock without an actor hop from deinit.
         if let settleFlipObserver { NotificationCenter.default.removeObserver(settleFlipObserver) }
         if let nativeUser { NativeUserMessageView.recycle(nativeUser) }
         if let nativeAssistant { NativeAssistantMessageView.recycle(nativeAssistant) }
@@ -1829,6 +1832,8 @@ private final class ConversationEntryController: NSViewController {
         let contentChanged = content != next
         let appearanceChanged = appearance != nextAppearance
         guard contentChanged || appearanceChanged else { return }
+        let previousContent = content
+        let previousText = textReveal?.text
         #if TRANSCRIPT_CHECKS
         if contentChanged { NavigationRenderMetrics.count("host_content_update") }
         if appearanceChanged { NavigationRenderMetrics.count("host_appearance_update") }
@@ -1843,20 +1848,32 @@ private final class ConversationEntryController: NSViewController {
         content = next
         appearance = nextAppearance
         updateTextReveal()
+        if !appearanceChanged, (pendingStreamSource != nil || textReveal?.hasBacklog == true),
+           textReveal?.text == previousText, next.onlyAppendsLiveText(to: previousContent) {
+            // The wire target is authoritative immediately, but unchanged
+            // visible text needs neither placement nor height invalidation.
+            // Coalesce any number of incoming deltas into the next display frame.
+            replySource = next.entry.messages.first?.content.first?.text
+            #if TRANSCRIPT_CHECKS
+            NavigationRenderMetrics.count("streaming_input_coalesced")
+            #endif
+            return
+        }
         generation += 1
         publishedHeight = nil
         sizes.removeAll(keepingCapacity: true)
         // The settle edge: a reply that just finished pre-renders its diagrams
         // offscreen so scrolling to them does not wait on the renderer.
-        if contentChanged, content.entry.presentation == .progress, next.entry.presentation == .message,
+        if contentChanged, previousContent.entry.presentation == .progress, next.entry.presentation == .message,
            let source = next.entry.messages.first?.content.first?.text {
             MermaidRenderer.shared.prewarmSources(in: source, dark: nextAppearance.colorScheme == .dark)
         }
         setRoot()
     }
 
-    /// Parse incoming snapshots once. Native and hosted shapes share the
-    /// projected blocks; a release frame never parses a Markdown prefix.
+    /// Keep the latest wire snapshot, then parse it once on a display frame.
+    /// Native and hosted shapes share its projected blocks; no frame reparses
+    /// a Markdown prefix, and fast transport deltas cannot outrun the display.
     private func updateTextReveal() {
         guard !content.isProgressNote,
               content.entry.presentation == .message || content.entry.presentation == .progress,
@@ -1865,19 +1882,40 @@ private final class ConversationEntryController: NSViewController {
               message.content.count == 1, let part = message.content.first,
               part.type == "text", !part.isRuntimeContext, part.skillContextSplit == nil,
               let source = part.text else {
-            revealTask?.cancel(); revealTask = nil; textReveal = nil; revealIdentity = nil
+            revealClock?.stop(); textReveal = nil; revealIdentity = nil
             streamSnapshot = nil; streamSnapshotSource = nil; streamPreparation = nil
+            pendingStreamSource = nil; pendingStreamReceivedAt = nil
             return
         }
         let identity = content.memoryKey + ":" + message.id
         if revealIdentity != identity {
-            revealTask?.cancel(); revealTask = nil
+            revealClock?.stop()
             textReveal = nil; streamSnapshot = nil; streamSnapshotSource = nil; streamPreparation = nil
+            pendingStreamSource = nil; pendingStreamReceivedAt = nil
             revealIdentity = identity
         }
         // Cold completed history uses the ordinary preparation cache, without
         // a second parse or a release owner for every historical message.
         guard textReveal != nil || content.streamingMessageID == message.id else { return }
+        let visible = !isViewLoaded || (view.window?.isVisible == true && !view.isHiddenOrHasHiddenAncestor && !view.visibleRect.isEmpty)
+        let smoothing = content.streamingMessageID == message.id && !appearance.reduceMotion && visible
+            && source.utf16.count <= StreamingTextReveal.maximumLength
+        let previousSource = pendingStreamSource ?? streamSnapshotSource
+        if smoothing, textReveal != nil, let previousSource, source != previousSource,
+           source.hasPrefix(previousSource) {
+            if pendingStreamSource == nil { pendingStreamReceivedAt = CACurrentMediaTime() }
+            pendingStreamSource = source
+            startRevealClock()
+            return
+        }
+        let receivedAt = pendingStreamReceivedAt
+        pendingStreamSource = nil; pendingStreamReceivedAt = nil
+        let appending = previousSource.map { source.hasPrefix($0) } ?? true
+        prepareStreamSource(source, smoothing: smoothing && appending, receivedAt: receivedAt)
+        guard textReveal!.hasBacklog else { revealClock?.stop(); return }
+        startRevealClock()
+    }
+    private func prepareStreamSource(_ source: String, smoothing: Bool, receivedAt: TimeInterval? = nil) {
         if streamSnapshotSource != source {
             let parseProbe = PerfDiagnostics.begin()
             #if TRANSCRIPT_CHECKS
@@ -1893,30 +1931,31 @@ private final class ConversationEntryController: NSViewController {
         }
         let rendered = streamSnapshot!.text
         if textReveal == nil { textReveal = StreamingReplyState(rendered) }
-        let visible = !isViewLoaded || (view.window?.isVisible == true && !view.isHiddenOrHasHiddenAncestor && !view.visibleRect.isEmpty)
-        textReveal!.update(rendered, smoothing: content.streamingMessageID == message.id && !appearance.reduceMotion && visible
-                           && source.utf16.count <= StreamingTextReveal.maximumLength)
-        guard textReveal!.hasBacklog else { revealTask?.cancel(); revealTask = nil; return }
-        guard revealTask == nil else { return }
-        revealTask = Task { @MainActor [weak self] in
-            while !Task.isCancelled {
-                do { try await Task.sleep(for: .seconds(StreamingTextReveal.frameInterval)) }
-                catch { return }
-                guard !Task.isCancelled, self?.advanceTextReveal() == true else { return }
-            }
+        textReveal!.update(rendered, smoothing: smoothing, receivedAt: receivedAt)
+    }
+    private func startRevealClock() {
+        if revealClock == nil {
+            revealClock = ReplyFrameClock { [weak self] in self?.advanceTextReveal() ?? false }
         }
+        revealClock?.start(screen: isViewLoaded ? view.window?.screen : nil)
     }
     private func advanceTextReveal() -> Bool {
-        guard let textReveal else { revealTask = nil; return false }
+        guard let textReveal else { return false }
+        let sourceChanged = pendingStreamSource != nil
+        if let source = pendingStreamSource {
+            prepareStreamSource(source, smoothing: true, receivedAt: pendingStreamReceivedAt)
+            pendingStreamSource = nil; pendingStreamReceivedAt = nil
+        }
         guard isViewLoaded, view.window?.isVisible == true, view.window?.isMiniaturized == false,
               !view.isHiddenOrHasHiddenAncestor, !view.visibleRect.isEmpty else {
-            textReveal.flush(); revealTask = nil
+            textReveal.flush(); revealClock?.stop()
             // One final flush, with no measurement or ongoing hidden-window
             // clock. Returning to the same mounted row must not leave a prefix.
             setRoot(); sizes.removeAll(keepingCapacity: true)
             return false
         }
-        if textReveal.advance() {
+        let advanced = textReveal.advance()
+        if advanced || sourceChanged {
             let revealProbe = PerfDiagnostics.begin()
             defer { PerfDiagnostics.end("streaming_text_frame", revealProbe) }
             // Publish this row's real measured height through the existing
@@ -1926,11 +1965,16 @@ private final class ConversationEntryController: NSViewController {
             setRoot()
             report(measure(width: view.bounds.width), generation: generation)
         }
-        if !textReveal.hasBacklog { revealTask = nil }
+        if !textReveal.hasBacklog { revealClock?.stop() }
         return textReveal.hasBacklog
     }
     func suspendTextReveal() {
-        revealTask?.cancel(); revealTask = nil
+        revealClock?.stop()
+        if let source = pendingStreamSource {
+            prepareStreamSource(source, smoothing: false)
+            pendingStreamSource = nil; pendingStreamReceivedAt = nil
+            revealFlushPending = true
+        }
         if textReveal?.hasBacklog == true {
             // State can settle while the outgoing document is hidden, but its
             // native subtree and saved geometry must remain untouched.
@@ -2116,7 +2160,7 @@ private final class ConversationEntryController: NSViewController {
         }
         var hostedContent = content
         hostedContent.markdownPreparation = markdownPreparation
-        hostedContent.displayTextOverride = streamSnapshotSource
+        hostedContent.displayTextOverride = streamSnapshot == nil ? nil : content.entry.messages.first?.content.first?.text
         let version = generation
         let root = HostedConversationEntry(content: hostedContent, appearance: appearance, disclosureChanged: { [weak self] in
             self?.sizes.removeAll(keepingCapacity: true)
@@ -2382,7 +2426,10 @@ private struct ConversationEntryView: View, Equatable {
     var displayTextOverride: String? = nil
     @RememberedExpansion("commentary", initial: true) private var commentaryExpanded
     static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.entry == rhs.entry && lhs.tools == rhs.tools && lhs.api === rhs.api
+        lhs.entry == rhs.entry && sameConfiguration(lhs, rhs)
+    }
+    private static func sameConfiguration(_ lhs: Self, _ rhs: Self) -> Bool {
+        lhs.tools == rhs.tools && lhs.api === rhs.api
             && lhs.sessionId == rhs.sessionId && lhs.memoryKey == rhs.memoryKey
             && lhs.activityNarrative == rhs.activityNarrative
             && lhs.markdownPreparation == rhs.markdownPreparation
@@ -2396,6 +2443,24 @@ private struct ConversationEntryView: View, Equatable {
             && lhs.liveStartedAt == rhs.liveStartedAt
             && lhs.streamingMessageID == rhs.streamingMessageID
             && lhs.displayTextOverride == rhs.displayTextOverride
+    }
+    /// Only raw text appends may wait for the display clock. Identity, controls,
+    /// appearance, tool state and completion keep their immediate update paths.
+    func onlyAppendsLiveText(to old: Self) -> Bool {
+        guard let streamingMessageID, Self.sameConfiguration(self, old),
+              entry.id == old.entry.id, entry.presentation == old.entry.presentation,
+              entry.messages.count == 1, old.entry.messages.count == 1,
+              let current = entry.messages.first, let previous = old.entry.messages.first,
+              current.id == streamingMessageID, current.id == previous.id,
+              current.role == previous.role, current.createdAt == previous.createdAt, current.metadata == previous.metadata,
+              current.content.count == 1, previous.content.count == 1,
+              let part = current.content.first, let previousPart = previous.content.first,
+              part.type == "text", previousPart.type == "text",
+              let text = part.text, let previousText = previousPart.text, text.hasPrefix(previousText) else { return false }
+        return part.thinking == previousPart.thinking && part.toolCallId == previousPart.toolCallId
+            && part.toolName == previousPart.toolName && part.input == previousPart.input
+            && part.output == previousPart.output && part.isError == previousPart.isError
+            && part.source == previousPart.source && part.fileId == previousPart.fileId && part.name == previousPart.name
     }
     /// Ordinary provider progress prose needs the same rhythm as narrative anchors.
     var isStageNote: Bool { isProgressNote || entry.presentation == .progress }

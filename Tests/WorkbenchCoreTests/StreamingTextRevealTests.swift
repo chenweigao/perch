@@ -14,7 +14,10 @@ func checkStreamingTextReveal() {
         precondition(reveal.text.hasPrefix(previous) && burst.hasPrefix(reveal.text), "Release stays monotonic and never invents text")
         previous = reveal.text
     }
-    precondition(reveal.text == burst && !reveal.hasBacklog, "A large burst catches up within 500 ms")
+    precondition(reveal.hasBacklog && reveal.text.count > burst.count / 2,
+                 "A live burst advances continuously instead of jumping to the tail at 500 ms")
+    for _ in 0..<300 where reveal.hasBacklog { reveal.advance(elapsed: StreamingTextReveal.frameInterval) }
+    precondition(reveal.text == burst && !reveal.hasBacklog, "The fixed PI backlog horizon still drains a burst completely")
     reveal.update(burst + "未显示的尾部", smoothing: true)
     reveal.update("修订后的同一条消息", smoothing: true)
     precondition(reveal.text == "修订后的同一条消息" && !reveal.hasBacklog, "Replacements cannot retain stale characters")
@@ -48,7 +51,24 @@ func checkStreamingTextReveal() {
     }
     continuous.update(latest + "最终结果", smoothing: false)
     precondition(continuous.text == latest + "最终结果" && !continuous.hasBacklog, "Completion flushes the newest target without dropping a delta")
-    print("PASS: bounded adaptive text release, Unicode boundaries, replacement and immediate completion")
+    var paced = StreamingTextReveal("")
+    var source = ""
+    var increments: [Int] = []
+    for frame in 0..<180 {
+        source += "abcdefghijkl"
+        paced.update(source, smoothing: true)
+        let before = paced.text.utf16.count
+        paced.advance(elapsed: StreamingTextReveal.frameInterval)
+        if frame >= 90 { increments.append(paced.text.utf16.count - before) }
+    }
+    precondition(increments.min()! > 0 && increments.max()! - increments.min()! <= 2,
+                 "Steady input must settle to steady output, without half-second speed resets or jumps")
+    var stalled = StreamingTextReveal("")
+    stalled.update(String(repeating: "x", count: 1_000), smoothing: true)
+    stalled.advance(elapsed: 2)
+    precondition(stalled.hasBacklog && stalled.text.count <= 200,
+                 "A delayed frame caps its elapsed time instead of dumping an entire live backlog")
+    print("PASS: PI steady streaming cadence, Unicode boundaries, replacement and immediate completion")
 }
 
 func checkReplyStreamSnapshot() {
