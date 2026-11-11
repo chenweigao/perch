@@ -85,7 +85,10 @@ struct WorkbenchDisclosureContent<Content: View>: View {
     @ViewBuilder var content: Content
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
     @Environment(\.conversationReduceMotion) private var conversationReduceMotion
-    @State private var naturalHeight: CGFloat = 0
+    /// A reference box, not observable state: streaming growth re-measures on
+    /// every layout pass, but the height is only read at toggle boundaries.
+    private final class NaturalHeight { var value: CGFloat = 0 }
+    @State private var naturalHeight = NaturalHeight()
     @State private var mounted: Bool
     /// Non-nil while animating: the clipped height growing 0→natural or
     /// shrinking natural→0. Nil means the content flows at its natural height.
@@ -105,7 +108,7 @@ struct WorkbenchDisclosureContent<Content: View>: View {
             if mounted {
                 content
                     .fixedSize(horizontal: false, vertical: true)
-                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { naturalHeight = $0 }
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { naturalHeight.value = $0 }
                     .frame(height: clippedHeight, alignment: .top)
                     .clipped()
             }
@@ -122,13 +125,13 @@ struct WorkbenchDisclosureContent<Content: View>: View {
                     DispatchQueue.main.async {
                         guard revision == animationRevision else { return }
                         withAnimation(.easeInOut(duration: 0.25)) {
-                            clippedHeight = naturalHeight
+                            clippedHeight = naturalHeight.value
                         } completion: {
                             if revision == animationRevision { clippedHeight = nil }
                         }
                     }
                 } else {
-                    clippedHeight = naturalHeight
+                    clippedHeight = naturalHeight.value
                     withAnimation(.easeInOut(duration: 0.25)) {
                         clippedHeight = 0
                     } completion: {

@@ -302,7 +302,9 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
             return view
         }()
         codeText.update(text)
-        codeText.highlightCode(language: language)
+        // Like the SwiftUI card: a growing stream prefix debounces instead of
+        // re-highlighting the whole block on every display frame.
+        codeText.highlightCode(language: language, debounce: true)
         let lineCount = CodeLineNumbers.count(in: source)
         if lineCount > 1 {
             let gutter = self.gutter ?? {

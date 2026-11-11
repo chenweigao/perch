@@ -427,7 +427,26 @@ struct SmoothReplyMarkdown: View {
 
     private final class ParserBox {
         private var value = ReplyStreamParser()
+        private var snapshotSource: String?
+        private var cachedSnapshot: ReplyStreamSnapshot?
         func blocks(_ source: String) -> [ReplyBlock] { value.update(source) }
+        /// Reveal frames re-evaluate the body without a new source; joining the
+        /// snapshot text is O(document), so build it only when source changes.
+        func snapshot(for source: String, blocks: [ReplyBlock]) -> ReplyStreamSnapshot {
+            if let cachedSnapshot, snapshotSource == source {
+                #if TRANSCRIPT_CHECKS
+                NavigationRenderMetrics.count("stream_snapshot_reused")
+                #endif
+                return cachedSnapshot
+            }
+            let built = ReplyStreamSnapshot(blocks: blocks)
+            snapshotSource = source
+            cachedSnapshot = built
+            #if TRANSCRIPT_CHECKS
+            NavigationRenderMetrics.count("stream_snapshot_built")
+            #endif
+            return built
+        }
     }
 
     private var blocks: [ReplyBlock] {
@@ -437,7 +456,7 @@ struct SmoothReplyMarkdown: View {
     }
     var body: some View {
         if streaming && source.utf16.count <= StreamingTextReveal.maximumLength {
-            let snapshot = ReplyStreamSnapshot(blocks: blocks)
+            let snapshot = parser.snapshot(for: source, blocks: blocks)
             SmoothReplyText(source: snapshot.text, streaming: true) { visible in
                 ReplyBlocks(blocks: snapshot.prefix(utf16Length: visible.utf16.count))
                     .foregroundStyle(ReplyStyle.ink)
