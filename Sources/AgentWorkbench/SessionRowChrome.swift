@@ -43,7 +43,6 @@ struct SessionRowChrome<Indicator: View>: View {
         .background { SidebarHighlight(selected: selected, hovered: hovered) }
         .contentShape(Rectangle())
         .accessibilityIdentifier("sidebar.row")
-        .onHover(perform: updateHover)
         .popover(isPresented: $showPreview, arrowEdge: .trailing) {
             SessionRowPreview(title: title, detail: tooltip)
         }
@@ -125,6 +124,7 @@ struct SessionRowChrome<Indicator: View>: View {
                 .onHover { inside in if inside { showPreview = false } }
             }
         }
+        .onHover(perform: updateHover)
     }
 
     private var standardRow: some View {
