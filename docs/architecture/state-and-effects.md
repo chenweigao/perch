@@ -489,6 +489,9 @@ the whole string out on one 1,000,000pt line — and `text_measure_wrapped`, wit
 Occurrences: `row_parse_native_user`, `row_parse_native_assistant`,
 `row_parse_rejected`, `markdown_parse_reused`,
 `markdown_parse_rejected_fallback` and `markdown_parse_direct`.
+`stream_snapshot_built` and `stream_snapshot_reused` count hosted streaming
+snapshot construction versus reveal-frame reuse in `SmoothReplyMarkdown`; a
+reveal frame without a new source must reuse, not rebuild.
 `NAVIGATION_REUSE_REJECTED_MARKDOWN=0` is an acceptance-build-only ablation that
 restores the rejected-admission reparse; production builds always use the bounded
 current-entry handoff.
