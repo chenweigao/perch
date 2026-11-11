@@ -607,7 +607,9 @@ import WorkbenchCore
             event.post(tap: .cghidEventTap)
         }
         func moveMouse(to point: CGPoint) {
-            CGWarpMouseCursorPosition(point)
+            let screenHeight = NSScreen.screens.first?.frame.height ?? 1080
+            let warped = CGPoint(x: point.x, y: screenHeight - point.y)
+            CGWarpMouseCursorPosition(warped)
             let event = CGEvent(mouseEventSource: nil, mouseType: .mouseMoved, mouseCursorPosition: point, mouseButton: .left)!
             event.post(tap: .cghidEventTap)
         }
