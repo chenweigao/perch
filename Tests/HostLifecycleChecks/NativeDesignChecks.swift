@@ -629,6 +629,8 @@ import WorkbenchCore
         precondition(connection.snapshot?.thinking == "medium" && selectedEfforts[0] == "medium")
         print("PASS: model and effort changes reach the fixture runtime and return in the selected session")
 
+        split.setInspectorDesiredVisible(false)
+        try await place(width: min(1100, visible.width))
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         var rowPoint: CGPoint?
@@ -650,8 +652,11 @@ import WorkbenchCore
             }
             preconditionFailure("Sidebar session row must expose a native hover target: \(identifiers)")
         }
+        let screenHeight = window.screen?.frame.height ?? NSScreen.screens.first?.frame.height ?? 1080
+        let quartzRowPoint = CGPoint(x: rowPoint.x, y: screenHeight - rowPoint.y)
+        precondition(visible.contains(quartzRowPoint),
+                     "Hover target must be inside the display's visible frame \(visible), got \(quartzRowPoint)")
         func moveMouse(to point: CGPoint) {
-            let screenHeight = NSScreen.screens.first?.frame.height ?? 1080
             CGWarpMouseCursorPosition(CGPoint(x: point.x, y: screenHeight - point.y))
             let location = window.convertFromScreen(NSRect(origin: point, size: .zero)).origin
             let event = NSEvent.mouseEvent(with: .mouseMoved, location: location, modifierFlags: [],
