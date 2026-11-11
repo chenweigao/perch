@@ -179,7 +179,14 @@ enum DocumentTypography {
     }
 }
 private struct ReplyToneKey: EnvironmentKey { static let defaultValue = ReplyTone.body }
+private struct StreamingReduceMotionKey: EnvironmentKey { static let defaultValue: Bool? = nil }
 extension EnvironmentValues {
+    /// Stream fixtures can pin motion without changing the reader's system
+    /// accessibility preference. Ordinary views leave this unset.
+    var streamingReduceMotionOverride: Bool? {
+        get { self[StreamingReduceMotionKey.self] }
+        set { self[StreamingReduceMotionKey.self] = newValue }
+    }
     /// `.quiet` sets `ReplyText` (and list markers) at `ReplyStyle.quietSize` on
     /// `quietLineHeight` in `quietInk`. SwiftUI rows only: native rows never admit
     /// quiet content. Set with `.environment(\.replyTone, .quiet)`.
@@ -312,6 +319,7 @@ struct SmoothReplyText<Content: View>: View {
     @State private var visibility = StreamingReplyVisibility()
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @Environment(\.conversationReduceMotion) private var conversationReduceMotion
+    @Environment(\.streamingReduceMotionOverride) private var motionOverride
     private struct Input: Equatable { let source: String; let smoothing: Bool }
 
     init(source: String, streaming: Bool, @ViewBuilder content: @escaping (String) -> Content) {
@@ -319,7 +327,8 @@ struct SmoothReplyText<Content: View>: View {
         _state = State(initialValue: StreamingReplyState(source))
     }
     var body: some View {
-        let input = Input(source: source, smoothing: streaming && !systemReduceMotion && !conversationReduceMotion)
+        let reduced = motionOverride ?? (systemReduceMotion || conversationReduceMotion)
+        let input = Input(source: source, smoothing: streaming && !reduced)
         content(input.smoothing && source.utf16.starts(with: state.text.utf16) ? state.text : source)
             .background(StreamingReplyVisibilityAnchor(visibility: visibility).allowsHitTesting(false))
             .onChange(of: input, initial: true) { _, next in state.update(next.source, smoothing: next.smoothing) }

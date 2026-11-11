@@ -1547,7 +1547,7 @@ private struct ConversationEntryAppearance: Equatable {
         layoutDirection = environment.layoutDirection
         displayScale = environment.displayScale
         dynamicTypeSize = environment.dynamicTypeSize
-        reduceMotion = environment.accessibilityReduceMotion || environment.conversationReduceMotion
+        reduceMotion = environment.streamingReduceMotionOverride ?? (environment.accessibilityReduceMotion || environment.conversationReduceMotion)
         isEnabled = environment.isEnabled
         actionContext = environment.conversationActionContext
         locale = environment.locale
@@ -1571,6 +1571,7 @@ private struct HostedConversationEntry: View {
             .environment(\.displayScale, appearance.displayScale)
             .environment(\.dynamicTypeSize, appearance.dynamicTypeSize)
             .environment(\.conversationReduceMotion, appearance.reduceMotion)
+            .environment(\.streamingReduceMotionOverride, appearance.reduceMotion)
             .environment(\.isEnabled, appearance.isEnabled)
             .environment(\.conversationActionContext, appearance.actionContext)
             .environment(\.locale, appearance.locale)

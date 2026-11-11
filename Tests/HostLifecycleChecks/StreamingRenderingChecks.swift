@@ -17,7 +17,7 @@ private struct StreamingFixtureView: View {
         }.frame(width: 720, height: 500)
             // Normal-motion checks must not inherit a runner's accessibility
             // preference. The controlled flag below covers Reduce Motion.
-            .environment(\.accessibilityReduceMotion, false)
+            .environment(\.streamingReduceMotionOverride, model.reduceMotion)
             .environment(\.conversationReduceMotion, model.reduceMotion)
     }
 }
