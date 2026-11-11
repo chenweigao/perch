@@ -671,7 +671,7 @@ private struct ReplyAlertBlock: View {
 /// Use the same marker metrics as native transcript rows. SwiftUI Text's rounded
 /// baseline can otherwise add a pixel to every list item at some font sizes.
 /// Quiet prose sets its markers like its text: quiet size, secondary ink.
-/// Markers stay in secondary ink (DSH `li::marker` label-secondary).
+/// Body markers take the body ink, so each item opens on a solid mark (Qoder).
 private struct ReplyListMarker: View {
     let marker: String
     @Environment(\.replyTone) private var tone
@@ -680,7 +680,7 @@ private struct ReplyListMarker: View {
     var body: some View {
         let quiet = tone == .quiet
         let size = (quiet ? ReplyStyle.quietSize : ReplyStyle.bodySize) * documentFontScale
-        ReplyListMarkerLabel(marker: marker, size: size, ink: ReplyStyle.quietInk)
+        ReplyListMarkerLabel(marker: marker, size: size, ink: quiet ? ReplyStyle.quietInk : ReplyStyle.nativeInk)
             .fixedSize()
             .alignmentGuide(.firstTextBaseline) { _ in
                 let font = NSFont.systemFont(ofSize: size)

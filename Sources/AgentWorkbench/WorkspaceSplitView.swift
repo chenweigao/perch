@@ -358,7 +358,8 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             button.imagePosition = .imageOnly
             button.imageScaling = .scaleNone
             button.controlSize = .small
-            button.contentTintColor = .secondaryLabelColor
+            // Toolbar glyphs in full ink, as Qoder's: chrome anchors the page.
+            button.contentTintColor = WorkbenchTheme.inkNS
             button.setButtonType(.momentaryPushIn)
             button.bezelStyle = .texturedRounded
             button.isBordered = false
@@ -706,12 +707,12 @@ private final class WorkbenchPanelShadowView: NSView {
         effectiveAppearance.performAsCurrentDrawingAppearance {
             layer?.backgroundColor = WorkbenchTheme.contentBackgroundNS.cgColor
             let elevation = NSShadow()
-            elevation.shadowColor = NSColor.black.withAlphaComponent(
-                effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? 0.30 : 0.08)
-            // A thin glass band surrounds the sheet now; a soft contact shadow
-            // reads in it without spilling a gray halo over the sidebar.
-            elevation.shadowBlurRadius = 10
-            elevation.shadowOffset = NSSize(width: 0, height: -2)
+            elevation.shadowColor = NSColor.black.withAlphaComponent(WorkbenchTheme.Elevation.sheetShadowAlpha(
+                dark: effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua))
+            // The sheet carries the page's weight: a real contact shadow in the
+            // thin glass band, a step lighter than a floating panel's.
+            elevation.shadowBlurRadius = 16
+            elevation.shadowOffset = NSSize(width: 0, height: -4)
             shadow = elevation
         }
     }

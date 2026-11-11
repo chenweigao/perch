@@ -464,7 +464,8 @@ private final class NativeListBlockView: NativeAssistantBlockView {
         init(links: SelectableReplyText.Coordinator) {
             content = NativeAssistantStackView(compact: true, links: links)
             marker.font = nativeMarkerMetrics().font
-            marker.textColor = ReplyStyle.quietInk
+            // Native rows hold body prose only; markers share its ink.
+            marker.textColor = ReplyStyle.nativeInk
             marker.alignment = .right
             marker.lineBreakMode = .byClipping
         }
