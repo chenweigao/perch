@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 import Observation
 import QuartzCore
+import UniformTypeIdentifiers
 import WorkbenchCore
 
 /// The reading scale. Kimi, OMP, Qoder and the other native agents share it with
@@ -2042,25 +2043,50 @@ private struct ReplyTable: View {
     let headers: [[ReplyInline]]
     let rows: [[[ReplyInline]]]
     let alignments: [ReplyAlignment]
+    /// The preview sheet renders the same cells without re-nesting its own bar.
+    var showsActions = true
+    @State private var previewPresented = false
     private var cellSize: CGFloat { ReplyStyle.tableCellSize }
     private var geometry: ReplyTableGeometry {
         documentReadingStyle ? ReplyTableGeometry(fontSize: cellSize * documentFontScale) : ReplyStyle.tableGeometry
     }
+    /// Math/code content survives extraction from the rendered cell runs.
+    private var tableData: TableData {
+        TableData(headerCells: headers.map { TableCell(inlines: $0) },
+                  cellRows: rows.map { $0.map { TableCell(inlines: $0) } },
+                  alignments: alignments)
+    }
 
     var body: some View {
         let geometry = geometry
+        let data = tableData
         let contents = ReplyTableGeometry.contentWidths(headers: headers, rows: rows, fontSize: geometry.fontSize)
         let minimumTotal = geometry.minimumWidths(contentWidths: contents).reduce(0, +)
-        // Fit the viewport first; only the minimum column widths can cause overflow.
-        ReplyHorizontalScroll {
-            ReplyTableLayout(contents: contents, geometry: geometry, columnCount: headers.count) {
-                cells
+        VStack(alignment: .leading, spacing: 2) {
+            if showsActions {
+                HStack(spacing: 2) {
+                    Spacer(minLength: 0)
+                    ReplyTableCopyButton(data: data)
+                    ReplyTableActionButton(symbol: "square.and.arrow.up", label: "导出 CSV") { exportTableCSV(data) }
+                    ReplyTableActionButton(symbol: "arrow.up.left.and.arrow.down.right", label: "放大表格") {
+                        previewPresented = true
+                    }
+                }
             }
-            .containerRelativeFrame(.horizontal, alignment: .leading) { width, _ in
-                max(width, minimumTotal)
+            // Fit the viewport first; only the minimum column widths can cause overflow.
+            ReplyHorizontalScroll {
+                ReplyTableLayout(contents: contents, geometry: geometry, columnCount: headers.count) {
+                    cells
+                }
+                .containerRelativeFrame(.horizontal, alignment: .leading) { width, _ in
+                    max(width, minimumTotal)
+                }
             }
+            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         }
-        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+        .sheet(isPresented: $previewPresented) {
+            ReplyTablePreview(headers: headers, rows: rows, alignments: alignments, tableData: data)
+        }
     }
 
     /// Header cells first, then one separator and one row of cells per data row,
@@ -2094,6 +2120,84 @@ private struct ReplyTable: View {
             .padding(.leading, column == 0 ? 0 : geometry.cellPadding)
             .padding(.trailing, column == headers.count - 1 ? 0 : geometry.cellPadding)
             .padding(.vertical, documentReadingStyle ? 11 : ReplyStyle.Table.cellVerticalPadding)
+    }
+}
+
+/// Shared by the transcript row and the preview sheet; the BOM keeps Chinese
+/// readable when the CSV lands in Excel.
+@MainActor private func exportTableCSV(_ tableData: TableData) {
+    let panel = NSSavePanel()
+    panel.nameFieldStringValue = L("表格.csv")
+    panel.allowedContentTypes = [.commaSeparatedText]
+    guard panel.runModal() == .OK, let url = panel.url else { return }
+    do {
+        try ("\u{FEFF}" + TableSerialization.csv(tableData)).write(to: url, atomically: true, encoding: .utf8)
+    } catch {
+        NSAlert(error: error).runModal()
+    }
+}
+
+/// A table action sharing the code card's copy-button geometry: 24 pt hit area,
+/// caption-size glyph, quiet until hovered.
+private struct ReplyTableActionButton: View {
+    let symbol: String
+    let label: LocalizedStringKey
+    let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: symbol).font(.system(size: ReplyStyle.captionSize))
+                .frame(width: 24, height: 24).contentShape(Rectangle())
+        }.buttonStyle(.plain).foregroundStyle(.secondary).help(label)
+            .accessibilityLabel(label)
+    }
+}
+
+/// Serialize on the copy action rather than on every streamed table update.
+private struct ReplyTableCopyButton: View {
+    let data: TableData
+    @State private var copied = false
+    var body: some View {
+        ReplyTableActionButton(symbol: copied ? "checkmark" : "doc.on.doc", label: copied ? "已复制" : "复制 Markdown") {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(TableSerialization.markdown(data), forType: .string)
+            copied = true
+        }
+        .onChange(of: data) { _, _ in copied = false }
+        .task(id: copied) {
+            guard copied else { return }
+            try? await Task.sleep(for: .seconds(2))
+            if !Task.isCancelled { copied = false }
+        }
+    }
+}
+
+/// The table's own wider surface: same cells and actions, more room, Escape or
+/// 关闭 returns to the reader's scroll position untouched.
+private struct ReplyTablePreview: View {
+    let headers: [[ReplyInline]]
+    let rows: [[[ReplyInline]]]
+    let alignments: [ReplyAlignment]
+    let tableData: TableData
+    @Environment(\.dismiss) private var dismiss
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 2) {
+                Text("表格预览").font(.system(size: ReplyStyle.labelSize, weight: .medium))
+                Spacer(minLength: 0)
+                ReplyTableCopyButton(data: tableData)
+                ReplyTableActionButton(symbol: "square.and.arrow.up", label: "导出 CSV") { exportTableCSV(tableData) }
+                ReplyTableActionButton(symbol: "xmark", label: "关闭") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+            }
+            ScrollView(.vertical) {
+                ReplyTable(headers: headers, rows: rows, alignments: alignments, showsActions: false)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .scrollBounceBehavior(.basedOnSize, axes: .vertical)
+        }
+        .padding(16)
+        .frame(minWidth: 640, idealWidth: 880, minHeight: 240, idealHeight: 480)
+        .onExitCommand { dismiss() }
     }
 }
 

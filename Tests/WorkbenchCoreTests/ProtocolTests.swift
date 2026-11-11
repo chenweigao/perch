@@ -69,6 +69,7 @@ struct ProtocolTests {
         checkReplyAlerts()
         checkReplySelection()
         checkReplyTableGeometry()
+        checkTableSerialization()
         try checkNativeAgents()
         try checkNativeSubagents()
         try checkIncrementalLoading()
