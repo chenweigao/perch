@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 import SwiftUI
 import WorkbenchCore
 
@@ -7,6 +8,7 @@ import WorkbenchCore
 @MainActor func checkNativeDesign() async throws {
     UserDefaults.standard.removePersistentDomain(forName: Bundle.main.bundleIdentifier!)
     AppLanguage.applyToSystem(.zhHans)
+    AXUIElementSetAttributeValue(AXUIElementCreateApplication(getpid()), "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)
     let persistentPreview = Bundle.main.object(forInfoDictionaryKey: "PerchDesignPreview") as? Bool == true
     NSApp.setActivationPolicy(persistentPreview ? .regular : .accessory)
     let root = FileManager.default.temporaryDirectory.appendingPathComponent("perch-design-\(UUID())")
