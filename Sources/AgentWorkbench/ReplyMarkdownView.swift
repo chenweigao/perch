@@ -1638,10 +1638,24 @@ final class ReplyTextView: NSTextView {
             NavigationRenderMetrics.record(width >= 1_000_000 ? "text_measure_unwrapped" : "text_measure_wrapped", since: start)
         }
         #endif
-        // Measure independently from NSTextView's drawing container: Grid probes
-        // multiple widths, and those probes must never reflow the displayed text.
-        let used = storage.boundingRect(with: NSSize(width: width, height: .greatestFiniteMagnitude),
+        // Plain prose and ideal/minimum probes stay independent of the drawing
+        // container. Wrapped thoughts use their actual TextKit 2 glyph layout.
+        let used: CGRect
+        if let layout = textLayoutManager, let content = layout.textContentManager,
+           let container = textContainer, proposed != nil, width >= 32, width < 1_000_000 {
+            // A thought's final wrapped proposal must match the text system's
+            // real glyph layout, including its paragraph rendering attributes.
+            // Ideal/minimum probes keep the independent boundingRect path.
+            if container.size.width != width {
+                container.size = CGSize(width: width, height: 10_000_000)
+                layout.invalidateLayout(for: content.documentRange)
+            }
+            layout.ensureLayout(for: content.documentRange)
+            used = layout.usageBoundsForTextContainer
+        } else {
+            used = storage.boundingRect(with: NSSize(width: width, height: .greatestFiniteMagnitude),
                                         options: [.usesLineFragmentOrigin, .usesFontLeading])
+        }
         let size = CGSize(width: min(width, ceil(used.width)), height: ceil(used.height))
         if measurements.count == 8 { measurements.removeFirst() }
         measurements.append((width, size))

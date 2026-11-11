@@ -3,6 +3,14 @@ import Observation
 import SwiftUI
 import WorkbenchCore
 
+@MainActor private func streamingRenderingFailure(_ message: String, file: StaticString = #filePath, line: UInt = #line) -> Never {
+    FileHandle.standardError.write(Data("FAIL streaming rendering at \(line): \(message)\n".utf8))
+    preconditionFailure(message, file: file, line: line)
+}
+@MainActor private func streamingRenderingRequire(_ condition: @autoclosure () -> Bool, _ message: String = "", file: StaticString = #filePath, line: UInt = #line) {
+    if !condition() { streamingRenderingFailure(message, file: file, line: line) }
+}
+
 @MainActor @Observable private final class StreamingFixture {
     var messages: [KimiMessage] = []
     var running = true
@@ -12,8 +20,11 @@ import WorkbenchCore
 private struct StreamingFixtureView: View {
     let model: StreamingFixture
     var body: some View {
-        ScrollView {
-            ConversationTranscript(messages: model.messages, sessionId: "streaming-rendering-fixture", isRunning: model.running)
+        ScrollViewReader { proxy in
+            ConversationScrollView(onContentSizeChange: { proxy.scrollTo("streaming-bottom", anchor: .bottom) }) {
+                ConversationTranscript(messages: model.messages, sessionId: "streaming-rendering-fixture", isRunning: model.running)
+                Color.clear.frame(height: 1).id("streaming-bottom")
+            } bar: { Color.clear.frame(height: 26) }
         }.frame(width: 720, height: 500)
             // Normal-motion checks must not inherit a runner's accessibility
             // preference. The controlled flag below covers Reduce Motion.
@@ -65,7 +76,7 @@ private struct StreamingFixtureView: View {
     model.messages = try messages(prefix)
     let projection = ConversationPresentationModel(key: "streaming-rendering-check").update(
         .init(messages: model.messages, isRunning: true, language: "en"))
-    precondition(projection.displayedRows(activity: { _ in nil }).contains {
+    streamingRenderingRequire(projection.displayedRows(activity: { _ in nil }).contains {
         $0.entry.presentation == .progress && $0.activity == nil
     })
 
@@ -76,18 +87,18 @@ private struct StreamingFixtureView: View {
     window.contentView = host
     window.makeKeyAndOrderFront(nil)
     NSApp.activate(ignoringOtherApps: true)
-    precondition(window.isVisible, "Native release checks require a visible fixture window")
+    streamingRenderingRequire(window.isVisible, "Native release checks require a visible fixture window")
 
     guard await waitForStreaming(host, { nativeRows(host).count == 1 && renderedText(host).contains("Paragraph 8") }) else {
-        preconditionFailure("An admitted live reply must mount its native row")
+        streamingRenderingFailure("An admitted live reply must mount its native row")
     }
     let row = nativeRows(host)[0]
     guard let actions = row.subviews.first(where: { !($0 is NativeAssistantStackView) }) else {
-        preconditionFailure("The native assistant row lost its actions view")
+        streamingRenderingFailure("The native assistant row lost its actions view")
     }
-    precondition(actions.isHidden && actions.frame == .zero, "Live message actions must not reserve layout space")
+    streamingRenderingRequire(actions.isHidden && actions.frame == .zero, "Live message actions must not reserve layout space")
     let originalTexts = textViews(row)
-    precondition(originalTexts.count == 2, "Nine paragraphs must form one stable block and one tail block")
+    streamingRenderingRequire(originalTexts.count == 2, "Nine paragraphs must form one stable block and one tail block")
     let selection = (originalTexts[0].string as NSString).range(of: "Paragraph 2")
     originalTexts[0].setSelectedRange(selection)
 
@@ -110,37 +121,37 @@ private struct StreamingFixtureView: View {
     model.messages = try messages(complete)
     await streamingSettle(host, milliseconds: 40)
     let releasedPrefix = renderedText(host)
-    precondition(releasedPrefix.contains("Paragraph 8") && !releasedPrefix.contains("VISIBLE_END"),
+    streamingRenderingRequire(releasedPrefix.contains("Paragraph 8") && !releasedPrefix.contains("VISIBLE_END"),
                  "A burst progressively releases new text while retaining the visible prefix")
     try capture("streaming-prose-partial")
     guard await waitForStreaming(host, { renderedText(host).contains("VISIBLE_END") }) else {
-        preconditionFailure("The adaptive release must promptly catch up to the latest cumulative Unicode snapshot")
+        streamingRenderingFailure("The adaptive release must promptly catch up to the latest cumulative Unicode snapshot")
     }
     let assistantLag = (CACurrentMediaTime() - assistantStarted) * 1_000
     let updatedTexts = textViews(row)
-    precondition(nativeRows(host).first === row && updatedTexts.count == 2,
+    streamingRenderingRequire(nativeRows(host).first === row && updatedTexts.count == 2,
                  "A live append must retain its native row and paragraph grouping")
-    precondition(updatedTexts[0] === originalTexts[0] && updatedTexts[1] === originalTexts[1],
+    streamingRenderingRequire(updatedTexts[0] === originalTexts[0] && updatedTexts[1] === originalTexts[1],
                  "Stable and changing blocks must retain their TextKit views")
-    precondition(updatedTexts[0].selectedRange() == selection,
+    streamingRenderingRequire(updatedTexts[0].selectedRange() == selection,
                  "Updating the tail must preserve selection in the stable prefix")
 
     let completedBeforeDrain = complete + String(repeating: "等待展示的追加正文", count: 20) + "COMPLETION_FLUSH"
     model.messages = try messages(completedBeforeDrain)
     await streamingSettle(host, milliseconds: 30)
-    precondition(!renderedText(host).contains("COMPLETION_FLUSH"))
+    streamingRenderingRequire(!renderedText(host).contains("COMPLETION_FLUSH"))
     model.running = false
     guard await waitForStreaming(host, { !actions.isHidden && actions.frame.height == 24 }) else {
-        preconditionFailure("Settling must expose actions on the existing native row")
+        streamingRenderingFailure("Settling must expose actions on the existing native row")
     }
-    precondition(nativeRows(host).first === row && textViews(row)[0].selectedRange() == selection,
+    streamingRenderingRequire(nativeRows(host).first === row && textViews(row)[0].selectedRange() == selection,
                  "Settling must not replace the row or lose selection")
-    precondition(renderedText(host).contains("COMPLETION_FLUSH"), "Completion must flush the remaining text immediately")
+    streamingRenderingRequire(renderedText(host).contains("COMPLETION_FLUSH"), "Completion must flush the remaining text immediately")
 
     model.reduceMotion = true; model.running = true
     model.messages = try messages(completedBeforeDrain + "REDUCED_MOTION_FULL")
     guard await waitForStreaming(host, { renderedText(host).contains("REDUCED_MOTION_FULL") }) else {
-        preconditionFailure("Reduce Motion must display complete stream updates")
+        streamingRenderingFailure("Reduce Motion must display complete stream updates")
     }
     model.reduceMotion = false
 
@@ -148,11 +159,11 @@ private struct StreamingFixtureView: View {
     model.running = true
     model.messages = try messages(fallback)
     guard await waitForStreaming(host, { nativeRows(host).isEmpty && renderedText(host).contains("FINAL_CHUNK") }) else {
-        preconditionFailure("Unsupported live Markdown must render its complete hosted snapshot")
+        streamingRenderingFailure("Unsupported live Markdown must render its complete hosted snapshot")
     }
     model.running = false
     await streamingSettle(host, milliseconds: 100)
-    precondition(nativeRows(host).isEmpty && renderedText(host).contains("FINAL_CHUNK"),
+    streamingRenderingRequire(nativeRows(host).isEmpty && renderedText(host).contains("FINAL_CHUNK"),
                  "Completion must not truncate or replace unsupported fallback content")
 
     func thoughts(_ text: String, answer: String? = nil) throws -> [KimiMessage] {
@@ -167,17 +178,17 @@ private struct StreamingFixtureView: View {
     let thoughtPrefix = "先核对已有的会话状态。"
     model.running = true; model.messages = try thoughts(thoughtPrefix)
     guard await waitForStreaming(host, { renderedText(host).contains(thoughtPrefix) }) else {
-        preconditionFailure("Live thoughts must start expanded with their existing text visible")
+        streamingRenderingFailure("Live thoughts must start expanded with their existing text visible")
     }
     let thoughtComplete = thoughtPrefix + String(repeating: "逐步检查中文👩🏽‍💻与边界。", count: 16) + "THOUGHT_RELEASE_END"
     let thoughtStarted = CACurrentMediaTime()
     model.messages = try thoughts(thoughtComplete)
     await streamingSettle(host, milliseconds: 40)
-    precondition(renderedText(host).contains(thoughtPrefix) && !renderedText(host).contains("THOUGHT_RELEASE_END"),
+    streamingRenderingRequire(renderedText(host).contains(thoughtPrefix) && !renderedText(host).contains("THOUGHT_RELEASE_END"),
                  "Expanded thoughts must use the same progressive release as prose")
     try capture("streaming-thought-partial")
     guard await waitForStreaming(host, { renderedText(host).contains("THOUGHT_RELEASE_END") }) else {
-        preconditionFailure("Thoughts must catch up without truncating the Unicode stream")
+        streamingRenderingFailure("Thoughts must catch up without truncating the Unicode stream")
     }
     let thoughtLag = (CACurrentMediaTime() - thoughtStarted) * 1_000
     try capture("streaming-thought-complete")
@@ -186,13 +197,13 @@ private struct StreamingFixtureView: View {
     await streamingSettle(host, milliseconds: 25)
     model.messages = try thoughts(thoughtFinal, answer: "最终正文已开始")
     guard await waitForStreaming(host, { renderedText(host).contains("THOUGHT_FLUSH") }) else {
-        preconditionFailure("Starting the answer must immediately flush settled thought text")
+        streamingRenderingFailure("Starting the answer must immediately flush settled thought text")
     }
     let longThought = "THOUGHT_LONG_START" + String(repeating: "逐段检查已有状态和输出边界。", count: 340) + "THOUGHT_LONG_PREFIX_END"
-    precondition(longThought.count > 4_000)
+    streamingRenderingRequire(longThought.count > 4_000)
     model.messages = try thoughts(longThought)
     guard await waitForStreaming(host, { renderedText(host).contains("THOUGHT_LONG_PREFIX_END") }) else {
-        preconditionFailure("Expanded thoughts must remain continuous beyond the old 4,000-character cutoff")
+        streamingRenderingFailure("Expanded thoughts must remain continuous beyond the old 4,000-character cutoff")
     }
     let longPrefixView = textViews(host).first { $0.string.contains("THOUGHT_LONG_PREFIX_END") }!
     let thoughtSelection = (longPrefixView.string as NSString).range(of: "THOUGHT_LONG_START")
@@ -200,15 +211,23 @@ private struct StreamingFixtureView: View {
     let longComplete = longThought + String(repeating: "继续平滑释放尾部。", count: 20) + "THOUGHT_LONG_RELEASE_END"
     model.messages = try thoughts(longComplete)
     await streamingSettle(host, milliseconds: 40)
-    precondition(renderedText(host).contains("THOUGHT_LONG_PREFIX_END") && !renderedText(host).contains("THOUGHT_LONG_RELEASE_END"),
+    streamingRenderingRequire(renderedText(host).contains("THOUGHT_LONG_PREFIX_END") && !renderedText(host).contains("THOUGHT_LONG_RELEASE_END"),
                  "New thought text beyond 4,000 characters must still release progressively")
     guard await waitForStreaming(host, { renderedText(host).contains("THOUGHT_LONG_RELEASE_END") }) else {
-        preconditionFailure("Long thought release must expose its newest tail without a second output disclosure")
+        streamingRenderingFailure("Long thought release must expose its newest tail without a second output disclosure")
     }
     let longText = textViews(host).first { $0.string.contains("THOUGHT_LONG_RELEASE_END") }!
-    precondition(longText.frame.height > 500, "Long thoughts must flow in the conversation rather than a fixed inner viewport")
-    precondition(longText === longPrefixView && longText.selectedRange() == thoughtSelection,
+    streamingRenderingRequire(longText.frame.height > 500, "Long thoughts must flow in the conversation rather than a fixed inner viewport")
+    streamingRenderingRequire(longText === longPrefixView && longText.selectedRange() == thoughtSelection,
                  "Long thought appends must retain their text view and selected prefix")
+    let finalRange = (longText.string as NSString).range(of: "THOUGHT_LONG_RELEASE_END")
+    longText.setSelectedRange(NSRange(location: 0, length: 0))
+    longText.scrollRangeToVisible(finalRange)
+    guard await waitForStreaming(host, {
+        longText.scrollRangeToVisible(finalRange)
+        let rect = longText.firstRect(forCharacterRange: NSRange(location: NSMaxRange(finalRange)-1, length: 1), actualRange: nil)
+        return !rect.isEmpty && window.frame.contains(CGPoint(x: rect.midX, y: rect.midY))
+    }) else { streamingRenderingFailure("Following the thought must keep its last glyph in the native window, without blank estimated height") }
     if let folder = ProcessInfo.processInfo.environment["PERCH_DESIGN_CAPTURES"] {
         let report: [String: Any] = [
             "scope": "visible native prose/thought release; display-link main-thread scheduling, not GPU-presented FPS",

@@ -121,7 +121,7 @@ struct KimiWorkspaceView: View {
                 thinking: conversation.live?.thinkingText.isEmpty == false && conversation.live?.assistantText.isEmpty != false)
             if phase != nil {
                 ConversationLiveStatus(phase: phase,
-                    summary: ConversationWorkSummary.current(messages: conversation.messages,
+                    summary: ConversationWorkSummary.current(messages: conversation.displayMessages,
                         running: Set((conversation.live?.runningTools ?? []).map(\.id)), live: conversation.live?.runningTools ?? []),
                     timing: connection.timings.turns[sessionID]).equatable().id("live-status:" + sessionID)
                     .padding(.horizontal, ReplyStyle.composerInset)
