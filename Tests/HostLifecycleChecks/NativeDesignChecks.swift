@@ -651,8 +651,7 @@ import WorkbenchCore
             preconditionFailure("Sidebar session row must expose a native hover target: \(identifiers)")
         }
         func moveMouse(to point: CGPoint) {
-            let screenHeight = NSScreen.screens.first?.frame.height ?? 1080
-            CGWarpMouseCursorPosition(CGPoint(x: point.x, y: screenHeight - point.y))
+            CGWarpMouseCursorPosition(point)
             let location = window.convertFromScreen(NSRect(origin: point, size: .zero)).origin
             let event = NSEvent.mouseEvent(with: .mouseMoved, location: location, modifierFlags: [],
                 timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
