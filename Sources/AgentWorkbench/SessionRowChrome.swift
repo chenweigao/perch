@@ -49,6 +49,7 @@ struct SessionRowChrome<Indicator: View>: View {
     }
 
     private func updateHover(_ inside: Bool) {
+        FileHandle.standardError.write(Data("ROW-HOVER: \(inside)\n".utf8))
         hovered = inside
         previewTask?.cancel()
         guard inside else {
