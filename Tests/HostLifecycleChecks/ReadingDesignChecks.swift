@@ -673,6 +673,12 @@ private struct ReadingReviewControls: View {
             host.layoutSubtreeIfNeeded()
         }
     }
+    func waitForVisible(_ identifier: String) async throws {
+        for _ in 0..<40 where taskPanelControl(window, identifier) == nil {
+            try await Task.sleep(for: .milliseconds(50))
+            host.layoutSubtreeIfNeeded()
+        }
+    }
     func captureCollapseFailure(_ name: String) throws {
         let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds)!
         host.cacheDisplay(in: host.bounds, to: bitmap)
@@ -732,7 +738,8 @@ private struct ReadingReviewControls: View {
     let hit = ConversationSearch().hits(in: searchRecords, query: "marker-26", running: false).hits.first!
     NotificationCenter.default.post(name: .init("PerchRevealConversationHit"), object: ConversationFindTarget(
         session: "stage-page-A", hit: hit, query: "marker-26"))
-    try await settle()
+    try await waitForVisible("tool-call:page-tool-26")
+    try await waitForVisible("tool-call:page-tool-0")
     precondition(taskPanelControl(window, "tool-call:page-tool-26") != nil && taskPanelControl(window, "tool-call:page-tool-0") != nil,
                  "Find opens the whole stage and reaches its exact final tool record")
     precondition(readingTextViews(host).contains { $0.string.contains("marker-26") })
