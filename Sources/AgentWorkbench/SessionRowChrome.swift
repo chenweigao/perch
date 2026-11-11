@@ -42,7 +42,6 @@ struct SessionRowChrome<Indicator: View>: View {
         }
         .background { SidebarHighlight(selected: selected, hovered: hovered) }
         .contentShape(Rectangle())
-        .accessibilityIdentifier("sidebar.row")
         .popover(isPresented: $showPreview, arrowEdge: .trailing) {
             SessionRowPreview(title: title, detail: tooltip)
         }
@@ -103,6 +102,7 @@ struct SessionRowChrome<Indicator: View>: View {
                     .frame(maxWidth: .infinity, minHeight: SidebarMetrics.rowHeight, maxHeight: SidebarMetrics.rowHeight, alignment: .leading)
                     .contentShape(Rectangle())
             }.buttonStyle(.plain).disabled(!canOpen)
+                .accessibilityIdentifier("sidebar.row")
                 .accessibilityLabel(title)
                 .accessibilityValue(([offline ? L("离线 · 状态未同步") : nil, hostName, directory, detail,
                                       updatedAt > 0 ? SessionTime.label(since: updatedAt, waiting: false) : nil].compactMap { $0 } + groups).joined(separator: " · "))
@@ -118,8 +118,8 @@ struct SessionRowChrome<Indicator: View>: View {
                 }
                 .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
                 .buttonStyle(.plain)
-                .opacity(1)
-                .allowsHitTesting(true)
+                .opacity(hovered ? 1 : 0)
+                .allowsHitTesting(hovered)
                 .accessibilityLabel("会话操作")
                 .accessibilityIdentifier("sidebar.row.actions")
                 .onHover { inside in if inside { showPreview = false } }
