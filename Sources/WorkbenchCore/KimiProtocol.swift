@@ -226,10 +226,32 @@ public struct KimiLiveTool: Decodable, Identifiable, Equatable, Sendable {
 }
 public struct KimiInFlight: Decodable, Sendable {
     public let turnId: Int
-    public var assistantText: String
-    public var thinkingText: String
+    public private(set) var assistantText: String
+    public private(set) var thinkingText: String
     public var runningTools: [KimiLiveTool]
     public let currentPromptId: String?
+    // Counting UTF-16 walks the whole text; a long stream must not pay it per delta.
+    private var assistantUTF16Count: Int?
+    private var thinkingUTF16Count: Int?
+
+    public var assistantUTF16Length: Int { assistantUTF16Count ?? assistantText.utf16.count }
+    public var thinkingUTF16Length: Int { thinkingUTF16Count ?? thinkingText.utf16.count }
+
+    /// Applies a volatile delta at its UTF-16 offset. Returns false when the
+    /// offset lies beyond the current text and an authoritative snapshot is needed.
+    public mutating func appendDelta(_ delta: String, offset: Int, thinking: Bool) -> Bool {
+        let length = thinking ? thinkingUTF16Length : assistantUTF16Length
+        guard offset <= length else { return false }
+        let overlap = length - offset
+        let deltaLength = delta.utf16.count
+        if overlap < deltaLength {
+            let appended = String(decoding: delta.utf16.dropFirst(overlap), as: UTF16.self)
+            if thinking { thinkingText += appended; thinkingUTF16Count = offset + deltaLength }
+            else { assistantText += appended; assistantUTF16Count = offset + deltaLength }
+        } else if thinking { thinkingUTF16Count = length }
+        else { assistantUTF16Count = length }
+        return true
+    }
 }
 public struct KimiApproval: Decodable, Identifiable, Sendable {
     public let approvalId: String
@@ -345,12 +367,7 @@ public struct KimiConversation: Sendable {
         switch event.type {
         case "assistant.delta", "thinking.delta":
             guard var live, live.turnId == p["turnId"].int, let delta = p["delta"].string, let offset = event.offset else { return true }
-            var text = event.type == "assistant.delta" ? live.assistantText : live.thinkingText
-            let length = text.utf16.count
-            guard offset <= length else { return true }
-            let overlap = length - offset
-            if overlap < delta.utf16.count { text += String(decoding: delta.utf16.dropFirst(overlap), as: UTF16.self) }
-            if event.type == "assistant.delta" { live.assistantText = text } else { live.thinkingText = text }
+            guard live.appendDelta(delta, offset: offset, thinking: event.type == "thinking.delta") else { return true }
             self.live = live; notice = nil
             return false
         case "tool.progress":

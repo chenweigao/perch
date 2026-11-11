@@ -641,7 +641,7 @@ final class KimiConnection {
         // Transcript frames belong to the open subagent sheet; they never enter
         // the main conversation fold.
         if event.type.hasPrefix("transcript.") {
-            applyTranscript(event, data: data)
+            await applyTranscript(event, data: data)
             return
         }
         if event.type == "error", event.sessionId == nil {
@@ -699,7 +699,15 @@ final class KimiConnection {
         let message = try await ws.receive()
         let data: Data
         switch message { case .data(let d): data = d; case .string(let s): data = Data(s.utf8); @unknown default: throw WorkbenchError(L("未知 WebSocket 消息")) }
-        return (try KimiWire.decodeEvent(from: data), data)
+        return (try await Self.decodeEvent(from: data), data)
+    }
+    // Catch-up bursts can carry hundreds of frames; decoding stays off the main
+    // actor while the conversation fold remains on it.
+    nonisolated private static func decodeEvent(from data: Data) async throws -> KimiEvent {
+        try KimiWire.decodeEvent(from: data)
+    }
+    nonisolated private static func decodeTranscript<T: Decodable & Sendable>(_ type: T.Type, from data: Data) async throws -> T {
+        try KimiWire.decodeTranscript(type, from: data)
     }
     private func sendFrame(_ ws: URLSessionWebSocketTask, type: String, payload: [String: JSONValue]) async throws {
         let frame = JSONValue.object(["type": .string(type), "id": .string(UUID().uuidString), "payload": .object(payload)])
@@ -946,17 +954,17 @@ final class KimiConnection {
             ])
         }
     }
-    private func applyTranscript(_ event: KimiEvent, data: Data) {
+    private func applyTranscript(_ event: KimiEvent, data: Data) async {
         guard event.sessionId == selectedId, let transcript = subagentTranscript else { return }
         do {
             var updated = transcript
             switch event.type {
             case "transcript.reset":
-                let reset = try KimiWire.decodeTranscript(KimiTranscriptReset.self, from: data)
+                let reset = try await Self.decodeTranscript(KimiTranscriptReset.self, from: data)
                 guard reset.agentId == transcript.agentId else { return }
                 updated.apply(reset)
             case "transcript.ops":
-                let batch = try KimiWire.decodeTranscript(KimiTranscriptOpsBatch.self, from: data)
+                let batch = try await Self.decodeTranscript(KimiTranscriptOpsBatch.self, from: data)
                 guard batch.agentId == transcript.agentId else { return }
                 updated.apply(batch)
             default: return
