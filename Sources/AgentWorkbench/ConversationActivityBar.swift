@@ -654,7 +654,7 @@ struct RecapActionButton: View {
     }
 }
 
-private struct TurnClockSchedule: TimelineSchedule {
+struct TurnClockSchedule: TimelineSchedule {
     let start: Date
     func entries(from startDate: Date, mode: TimelineScheduleMode) -> AnyIterator<Date> {
         var next = startDate

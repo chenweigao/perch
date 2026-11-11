@@ -626,6 +626,7 @@
 "过程记录 · %lld 次调用" = "Activity · %lld calls";
 "过程记录 · %lld 条" = "Activity · %lld records";
 "运行上下文" = "Runtime context";
+"运行上下文 · %lld 项" = "Runtime context · %lld items";
 "想做点什么？" = "What would you like to work on?";
 "想做点什么？输入 @ 引用项目文件" = "What would you like to work on? Type @ to reference project files";
 "任务描述" = "Task prompt";
@@ -2090,6 +2091,7 @@
 "%@ 失败" = "%@ failed";
 
 "展开查看失败记录" = "Expand to view failed calls";
+"展开查看运行上下文" = "Expand to view runtime context";
 
 "等待 Agent 新输出…" = "Waiting for new agent output…";
 

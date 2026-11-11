@@ -79,7 +79,9 @@ struct KimiActivityView: View {
         let _ = NavigationRenderMetrics.count("activity_row_tool_scan", by: items.count)
         #endif
         let edit = items.count == 1 && ToolPresentation.isEdit(items[0].name) ? items[0] : nil
-        let standaloneTool = edit == nil && entry.messages.count == 1 && items.count == 1 && planProgress == nil
+        let isRuntimeContextOnly = items.isEmpty
+            && entry.messages.allSatisfy { $0.content.first?.isRuntimeContext == true }
+        let standaloneTool = edit == nil && items.count == 1 && planProgress == nil
         /// The header's trailing summary slot (DSH ToolRow form: title · summary,
         /// packed leading, one line). Priority: the live public summary (follows
         /// the active phase), the running tool's latest output line, the first
@@ -104,6 +106,9 @@ struct KimiActivityView: View {
         VStack(alignment: .leading, spacing: 0) {
             if let edit {
                 EditStepRow(tool: edit, messageID: entry.messages[0].id, expanded: expansion)
+            } else if isRuntimeContextOnly {
+                RuntimeContextRow(id: entry.id, texts: entry.messages.flatMap(\.content).compactMap(\.text),
+                                  count: entry.messages.count, expanded: expansion)
             } else if !standaloneTool {
                 let title = entry.processPhase.map { ToolPresentation.phaseTitle($0, tools: items) }
                     ?? items.first.map { ToolPresentation.action($0.name) } ?? L("运行上下文")
@@ -168,6 +173,9 @@ struct KimiActivityView: View {
                             if message.content.first?.type == "thinking" {
                                 ThoughtOutput(messages: [message], finished: !isLive, embedded: true)
                                     .environment(\.conversationMemoryKey, memoryKey + ":thought:" + message.id)
+                            } else if message.content.first?.isRuntimeContext == true {
+                                KimiMarkdown(text: message.content.first?.text ?? "")
+                                    .environment(\.replyTone, .quiet)
                             } else {
                                 KimiMessageView(message: message, tools: tools, api: api, sessionId: sessionId)
                                     .environment(\.conversationMemoryKey, memoryKey + ":part:\(index)")
@@ -233,6 +241,42 @@ struct KimiActivityView: View {
         .foregroundStyle(WorkbenchTheme.quiet)
         .monospacedDigit()
         .fixedSize()
+    }
+}
+
+/// Context records share one quiet disclosure and retain their original content.
+struct RuntimeContextRow: View {
+    let id: String
+    let texts: [String]
+    let count: Int
+    let expanded: Binding<Bool>
+    @UILocalization private var L
+    @Environment(\.conversationDisclosureWillChange) private var disclosureWillChange
+    private var title: String {
+        ToolPresentation.runtimeContextSummary(texts).map { L("运行上下文") + " · " + $0 }
+            ?? (count > 1 ? L("运行上下文 · \(count) 项") : L("运行上下文"))
+    }
+    var body: some View {
+        Button {
+            disclosureWillChange()
+            expanded.wrappedValue.toggle()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: expanded.wrappedValue ? "chevron.down" : "chevron.right")
+                    .font(.system(size: 10, weight: .medium)).frame(width: 12).accessibilityHidden(true)
+                Text(verbatim: title).lineLimit(1).truncationMode(.tail)
+                    .help(Text(verbatim: title))
+                Spacer(minLength: 0)
+            }
+            .font(.system(size: ReplyStyle.captionSize)).foregroundStyle(WorkbenchTheme.quiet)
+            .padding(.vertical, 2).frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(WorkbenchDisclosureButtonStyle())
+        .help(Text("展开查看运行上下文"))
+        .accessibilityLabel(Text(verbatim: title))
+        .accessibilityValue(Text(expanded.wrappedValue ? "已展开" : "已收起"))
+        .accessibilityIdentifier("activity-context:" + id)
     }
 }
 

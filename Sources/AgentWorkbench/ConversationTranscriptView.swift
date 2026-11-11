@@ -3010,7 +3010,10 @@ struct ThoughtOutput: View {
     private var fullText: String { messages.flatMap(\.content).compactMap(\.thinking).joined(separator: "\n\n") }
     @RememberedExpansion("thought", initial: true) private var expanded
     var body: some View {
-        VStack(alignment: .leading, spacing: embedded ? 4 : 9) {
+        if embedded {
+            ThoughtText(text: fullText, streaming: !finished)
+        } else {
+            VStack(alignment: .leading, spacing: 9) {
                 // A collapsed running thought shows the provider's public summary
                 // first, else its latest meaningful line beside the title (DSH's
                 // streaming summary), so the preview reads without pushing the
@@ -3030,6 +3033,7 @@ struct ThoughtOutput: View {
                 if !expanded, !finished, let summary = ConversationThinkingSummary.latest(in: messages) {
                     LiveThinkingSummary(text: summary).padding(.leading, ReplyStyle.Process.nestedIndent)
                 }
+            }
         }
     }
 }
