@@ -471,8 +471,20 @@ private struct ActivityBarCheckFixture: View {
     let window = NSWindow(contentRect: NSRect(x: 80, y: 80, width: 700, height: 180), styleMask: [.titled], backing: .buffered, defer: false)
     defer { window.orderOut(nil) }
     var measuredHeight: CGFloat = 0
-    func root(_ phase: ConversationRunPhase?, reduced: Bool = false, locale: String = "zh-Hans") -> AnyView {
-        AnyView(ConversationLiveStatus(phase: phase, reduceMotionOverride: reduced).equatable()
+    var timings = ConversationTimings()
+    timings.submitted("work-line", at: Date().addingTimeInterval(-12))
+    timings.observe(sessionID: "work-line", requestID: "work-line", running: true, waiting: false)
+    let facts: [[String: Any]] = [
+        ["id": "u", "role": "user", "created_at": "0", "content": [["type": "text", "text": "check rendering"]]],
+        ["id": "a", "role": "assistant", "created_at": "1", "content": [["type": "tool_use", "tool_call_id": "build",
+            "tool_name": "Bash", "input": ["command": "swift build", "description": "检查流式渲染"]]]]
+    ]
+    let messages = try KimiWire.decoder().decode([KimiMessage].self, from: JSONSerialization.data(withJSONObject: facts))
+    let action = ConversationWorkSummary.current(messages: messages, running: ["build"])
+    precondition(action == "检查流式渲染" && ConversationWorkSummary.current(messages: messages, running: []) == nil,
+                 "The work line uses a currently running action, and drops it after the tool settles")
+    func root(_ phase: ConversationRunPhase?, reduced: Bool = false, locale: String = "zh-Hans", summary: String? = nil) -> AnyView {
+        AnyView(ConversationLiveStatus(phase: phase, summary: summary, timing: timings.turns["work-line"], reduceMotionOverride: reduced).equatable()
             .environment(\.locale, Locale(identifier: locale))
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { measuredHeight = $0 }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -484,8 +496,8 @@ private struct ActivityBarCheckFixture: View {
         try await Task.sleep(for: .milliseconds(180))
         host.layoutSubtreeIfNeeded(); host.displayIfNeeded(); CATransaction.flush()
     }
-    func glow(_ view: NSView) -> ConversationLiveGlowView? {
-        (view as? ConversationLiveGlowView) ?? view.subviews.lazy.compactMap(glow).first
+    func glow(_ view: NSView) -> ConversationWorkIndicatorView? {
+        (view as? ConversationWorkIndicatorView) ?? view.subviews.lazy.compactMap(glow).first
     }
     func accessibleStatus() -> String {
         taskPanelElements(window).filter { $0.identifier == "conversation-live-status" }.flatMap { element in
@@ -499,7 +511,7 @@ private struct ActivityBarCheckFixture: View {
     try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
     for (suffix, width, appearance) in [("light", 700.0, NSAppearance.Name.aqua), ("narrow-dark", 340.0, .darkAqua)] {
         window.appearance = NSAppearance(named: appearance); window.setContentSize(NSSize(width: width, height: 180))
-        for (phase, label) in [(ConversationRunPhase.thinking, "正在思考"), (.executing, "正在执行"), (.running, "正在处理"), (.waitingForConfirmation, "等待你确认"), (.waitingForAnswer, "等待你回答"), (.stopping, "正在停止")] {
+        for (phase, label) in [(ConversationRunPhase.thinking, "运行中"), (.executing, "运行中"), (.running, "运行中"), (.waitingForConfirmation, "等待你确认"), (.waitingForAnswer, "等待你回答"), (.stopping, "正在停止")] {
             host.rootView = root(phase)
             try await settle()
             precondition(accessibleStatus().contains(label),
@@ -518,14 +530,21 @@ private struct ActivityBarCheckFixture: View {
     }
     host.rootView = root(.thinking); try await settle()
     let caption = glow(host)!
-    let before = caption.motionLayer.presentation()!.position.x
+    let before = atan2(caption.motionLayer.presentation()!.transform.m12, caption.motionLayer.presentation()!.transform.m11)
     try await Task.sleep(for: .milliseconds(420))
-    let after = caption.motionLayer.presentation()!.position.x
-    precondition(abs(before - after) > 5, "The thinking caption visibly sweeps while its text stays readable")
+    let after = atan2(caption.motionLayer.presentation()!.transform.m12, caption.motionLayer.presentation()!.transform.m11)
+    precondition(abs(before - after) > 0.1, "The work mark visibly rotates while its label stays stationary")
     host.rootView = root(.thinking, reduced: true); try await settle()
     precondition(glow(host)!.motionLayer.animationKeys()?.isEmpty != false, "Reduce Motion stops the same mounted caption")
     host.rootView = root(.thinking, locale: "en"); try await settle()
-    precondition(accessibleStatus().contains("Thinking"), "An unchanged phase follows the app language: \(accessibleStatus())")
+    precondition(accessibleStatus().contains("Running"), "An unchanged phase follows the app language: \(accessibleStatus())")
+    host.rootView = root(.executing, summary: action); try await settle()
+    precondition(accessibleStatus().contains("检查流式渲染") && !accessibleStatus().contains("正在执行"),
+                 "A real action replaces the abstract phase wording")
+    host.rootView = root(.waitingForConfirmation, summary: action); try await settle()
+    precondition(accessibleStatus().contains("等待你确认") && !accessibleStatus().contains("检查流式渲染"),
+                 "Waiting for the user must outrank an action summary")
+    host.rootView = root(.thinking); try await settle()
     window.orderOut(nil); try await settle()
     precondition(glow(host)!.motionLayer.animationKeys()?.isEmpty != false, "An invisible window pauses the caption")
     window.makeKeyAndOrderFront(nil)

@@ -145,7 +145,7 @@ import WorkbenchCore
     let draft = descendants(window.contentView!).compactMap { $0 as? DraftTextView }.first!
     precondition(draft.font?.pointSize == 14, "The mounted composer shares the default 14 pt reading size")
     func checkStatusOutsideComposer() {
-        let caption = descendants(window.contentView!).compactMap { $0 as? ConversationLiveGlowView }.first!
+        let caption = descendants(window.contentView!).compactMap { $0 as? ConversationWorkIndicatorView }.first!
         let captionFrame = caption.convert(caption.bounds, to: nil)
         let draftFrame = draft.convert(draft.bounds, to: nil)
         precondition(captionFrame.minY >= draftFrame.maxY + ReplyStyle.composerInset + 8 - 1,

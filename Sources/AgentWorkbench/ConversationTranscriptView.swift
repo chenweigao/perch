@@ -205,10 +205,9 @@ struct KimiMessageView: View {
                         }
                     } else {
                         let source = displayTextOverride ?? part.text ?? ""
-                        SmoothReplyText(source: source, streaming: streaming && !isUserMessage && displayTextOverride == nil) { visible in
-                            KimiMarkdown(text: visible, sessionID: sessionId, messageID: message.id,
-                                         preparation: visible == source ? markdownPreparation : nil)
-                        }.environment(\.isConversationBodyText, true)
+                        SmoothReplyMarkdown(source: source, streaming: streaming && !isUserMessage && displayTextOverride == nil,
+                                            sessionID: sessionId, messageID: message.id, preparation: markdownPreparation)
+                            .environment(\.isConversationBodyText, true)
                     }
                 case "thinking": ThoughtDisclosure(text: part.thinking ?? "", publicSummary: ConversationThinkingSummary.publicSummary(of: part))
                 case "tool_use":
@@ -1662,6 +1661,9 @@ private final class ConversationEntryController: NSViewController {
     private var appearance: ConversationEntryAppearance
     private var generation = 0
     private var textReveal: StreamingReplyState?
+    private var streamSnapshot: ReplyStreamSnapshot?
+    private var streamSnapshotSource: String?
+    private var streamPreparation: (blocks: [ReplyBlock], size: CGFloat, rich: Bool, value: NativeAssistantContent.Preparation)?
     private var revealIdentity: String?
     private var revealTask: Task<Void, Never>?
     private var revealFlushPending = false
@@ -1853,9 +1855,8 @@ private final class ConversationEntryController: NSViewController {
         setRoot()
     }
 
-    /// Only one cumulative assistant text is timed here. Native and hosted
-    /// shapes share its prefix, so incomplete Markdown can change renderer
-    /// without replaying text or adding a second release loop.
+    /// Parse incoming snapshots once. Native and hosted shapes share the
+    /// projected blocks; a release frame never parses a Markdown prefix.
     private func updateTextReveal() {
         guard !content.isProgressNote,
               content.entry.presentation == .message || content.entry.presentation == .progress,
@@ -1865,15 +1866,36 @@ private final class ConversationEntryController: NSViewController {
               part.type == "text", !part.isRuntimeContext, part.skillContextSplit == nil,
               let source = part.text else {
             revealTask?.cancel(); revealTask = nil; textReveal = nil; revealIdentity = nil
+            streamSnapshot = nil; streamSnapshotSource = nil; streamPreparation = nil
             return
         }
         let identity = content.memoryKey + ":" + message.id
         if revealIdentity != identity {
             revealTask?.cancel(); revealTask = nil
-            textReveal = StreamingReplyState(source); revealIdentity = identity
+            textReveal = nil; streamSnapshot = nil; streamSnapshotSource = nil; streamPreparation = nil
+            revealIdentity = identity
         }
+        // Cold completed history uses the ordinary preparation cache, without
+        // a second parse or a release owner for every historical message.
+        guard textReveal != nil || content.streamingMessageID == message.id else { return }
+        if streamSnapshotSource != source {
+            let parseProbe = PerfDiagnostics.begin()
+            #if TRANSCRIPT_CHECKS
+            let parseStart = CACurrentMediaTime()
+            #endif
+            streamSnapshot = ReplyStreamSnapshot(blocks: ReplyDocument.parse(source))
+            streamSnapshotSource = source
+            PerfDiagnostics.end("streaming_markdown_parse", parseProbe)
+            #if TRANSCRIPT_CHECKS
+            NavigationRenderMetrics.record("row_parse", since: parseStart)
+            NavigationRenderMetrics.count("streaming_markdown_parse")
+            #endif
+        }
+        let rendered = streamSnapshot!.text
+        if textReveal == nil { textReveal = StreamingReplyState(rendered) }
         let visible = !isViewLoaded || (view.window?.isVisible == true && !view.isHiddenOrHasHiddenAncestor && !view.visibleRect.isEmpty)
-        textReveal!.update(source, smoothing: content.streamingMessageID == message.id && !appearance.reduceMotion && visible)
+        textReveal!.update(rendered, smoothing: content.streamingMessageID == message.id && !appearance.reduceMotion && visible
+                           && source.utf16.count <= StreamingTextReveal.maximumLength)
         guard textReveal!.hasBacklog else { revealTask?.cancel(); revealTask = nil; return }
         guard revealTask == nil else { return }
         revealTask = Task { @MainActor [weak self] in
@@ -1952,7 +1974,16 @@ private final class ConversationEntryController: NSViewController {
               message.content.count == 1, let part = message.content.first,
               part.type == "text", !part.isRuntimeContext, part.skillContextSplit == nil,
               let rawSource = part.text else { return nil }
-        let source = textReveal?.text ?? rawSource
+        if let streamSnapshot, let textReveal {
+            let blocks = streamSnapshot.prefix(utf16Length: textReveal.text.utf16.count)
+            if streamPreparation?.blocks != blocks || streamPreparation?.size != appearance.bodySize
+                || streamPreparation?.rich != allowsRichBlocks {
+                streamPreparation = (blocks, appearance.bodySize, allowsRichBlocks,
+                    NativeAssistantContent.prepare(blocks: blocks, allowsRichBlocks: allowsRichBlocks))
+            }
+            return (message.id, rawSource, streamPreparation!.value)
+        }
+        let source = rawSource
         let preparation = nativeRowPreparations.assistant(session: content.sessionId, messageID: message.id,
                                                           source: source, allowsRichBlocks: allowsRichBlocks) {
             NativeAssistantContent.prepare(source, allowsRichBlocks: allowsRichBlocks)
@@ -2085,7 +2116,7 @@ private final class ConversationEntryController: NSViewController {
         }
         var hostedContent = content
         hostedContent.markdownPreparation = markdownPreparation
-        hostedContent.displayTextOverride = textReveal?.text
+        hostedContent.displayTextOverride = streamSnapshotSource
         let version = generation
         let root = HostedConversationEntry(content: hostedContent, appearance: appearance, disclosureChanged: { [weak self] in
             self?.sizes.removeAll(keepingCapacity: true)
@@ -2851,7 +2882,8 @@ private struct ThoughtText: View {
         ThoughtRail {
             SmoothReplyText(source: attributed.string, streaming: streaming) { visible in
                 SelectableReplyText(attributed: attributed.attributedSubstring(
-                    from: NSRange(location: 0, length: (visible as NSString).length)))
+                    from: NSRange(location: 0, length: (visible as NSString).length)),
+                    preservesSelectionOnAppend: true, usesViewportLayout: true)
             }
         }
     }

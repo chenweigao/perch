@@ -3,65 +3,52 @@ import QuartzCore
 import SwiftUI
 import WorkbenchCore
 
-/// A narrow ink band crossing the live caption. The base SwiftUI text stays
-/// legible throughout; Core Animation moves only this cached overlay.
-struct ConversationLiveGlow: NSViewRepresentable {
-    let text: String
-    let size: CGFloat
+/// A small monochrome progress mark. Its layer rotates independently of
+/// SwiftUI; visibility also pauses the work line's separate elapsed clock.
+struct ConversationWorkIndicator: NSViewRepresentable {
     let phase: ConversationRunPhase
     let animated: Bool
-    func makeNSView(context: Context) -> ConversationLiveGlowView { ConversationLiveGlowView() }
-    func updateNSView(_ view: ConversationLiveGlowView, context: Context) {
-        view.update(text: text, size: size, phase: phase, animated: animated)
+    let visibilityChanged: (Bool) -> Void
+    func makeNSView(context: Context) -> ConversationWorkIndicatorView { ConversationWorkIndicatorView() }
+    func updateNSView(_ view: ConversationWorkIndicatorView, context: Context) {
+        view.visibilityChanged = visibilityChanged
+        view.update(phase: phase, animated: animated)
     }
+    static func dismantleNSView(_ view: ConversationWorkIndicatorView, coordinator: ()) { view.stop() }
 }
 
-final class ConversationLiveGlowView: NSView {
-    private let inkCopy = CALayer()
-    private let band = CAGradientLayer()
-    private var text = ""
-    private var size: CGFloat = 0
+final class ConversationWorkIndicatorView: NSView {
+    private let track = CAShapeLayer()
+    private let arc = CAShapeLayer()
     private var phase: ConversationRunPhase = .running
     private var animated = false
-    private var observers: [NSObjectProtocol] = []
-    private var rendered: (text: String, size: CGFloat, bounds: CGSize, scale: CGFloat, dark: Bool)?
     private var playing = false
+    private var reportedVisible: Bool?
+    private var observers: [NSObjectProtocol] = []
+    var visibilityChanged: ((Bool) -> Void)?
+    var motionLayer: CALayer { arc }
     override var isFlipped: Bool { true }
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
-    /// The actual moving layer, also sampled by the native motion check.
-    var motionLayer: CALayer { band }
 
     init() {
         super.init(frame: .zero)
         wantsLayer = true
-        identifier = NSUserInterfaceItemIdentifier("conversation-live-glow")
+        identifier = NSUserInterfaceItemIdentifier("conversation-work-indicator")
         setAccessibilityElement(false)
-        layer?.addSublayer(inkCopy)
-        band.startPoint = CGPoint(x: 0, y: 0.5)
-        band.endPoint = CGPoint(x: 1, y: 0.5)
-        band.colors = [NSColor(white: 1, alpha: 0).cgColor, NSColor(white: 1, alpha: 0.75).cgColor,
-                       NSColor(white: 1, alpha: 0).cgColor]
-        inkCopy.mask = band
+        for shape in [track, arc] {
+            shape.fillColor = nil; shape.lineCap = .round; shape.lineWidth = 1.35
+            layer?.addSublayer(shape)
+        }
+        arc.strokeEnd = 0.72
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-
-    func update(text: String, size: CGFloat, phase: ConversationRunPhase, animated: Bool) {
-        guard self.text != text || self.size != size || self.phase != phase || self.animated != animated else { return }
-        self.text = text; self.size = size; self.phase = phase; self.animated = animated
-        render(); refreshMotion(force: true)
+    func update(phase: ConversationRunPhase, animated: Bool) {
+        self.phase = phase; self.animated = animated
+        render(); refreshMotion()
     }
-    override func layout() {
-        super.layout()
-        if render() { refreshMotion(force: true) }
-    }
-    override func viewDidChangeEffectiveAppearance() {
-        super.viewDidChangeEffectiveAppearance()
-        if render() { refreshMotion(force: true) }
-    }
-    override func viewDidChangeBackingProperties() {
-        super.viewDidChangeBackingProperties()
-        if render() { refreshMotion(force: true) }
-    }
+    override func layout() { super.layout(); render(); refreshMotion() }
+    override func viewDidChangeEffectiveAppearance() { super.viewDidChangeEffectiveAppearance(); render() }
+    override func viewDidChangeBackingProperties() { super.viewDidChangeBackingProperties(); render() }
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         for observer in observers { NotificationCenter.default.removeObserver(observer) }
@@ -74,53 +61,48 @@ final class ConversationLiveGlowView: NSView {
                 })
             }
         }
-        render(); refreshMotion(force: true)
+        render(); refreshMotion()
     }
-    @discardableResult private func render() -> Bool {
-        guard let window, bounds.width > 0, bounds.height > 0, !text.isEmpty else {
-            inkCopy.contents = nil; rendered = nil
-            return false
-        }
-        let scale = window.backingScaleFactor
-        let dark = effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
-        if let rendered, rendered.text == text, rendered.size == size, rendered.bounds == bounds.size,
-           rendered.scale == scale, rendered.dark == dark { return false }
-        var ink = WorkbenchTheme.inkNS
-        effectiveAppearance.performAsCurrentDrawingAppearance {
-            ink = WorkbenchTheme.inkNS.usingColorSpace(.sRGB) ?? WorkbenchTheme.inkNS
-        }
-        let renderer = ImageRenderer(content: Text(verbatim: text)
-            .font(.system(size: size, weight: .medium)).foregroundStyle(Color(nsColor: ink))
-            .lineLimit(1).truncationMode(.tail)
-            .frame(width: bounds.width, height: bounds.height, alignment: .leading))
-        renderer.scale = scale
+    private func render() {
+        guard bounds.width > 0, bounds.height > 0 else { return }
+        var ink = phase.needsInput ? NSColor.systemOrange : WorkbenchTheme.quietNS
+        effectiveAppearance.performAsCurrentDrawingAppearance { ink = ink.usingColorSpace(.sRGB) ?? ink }
+        let radius = max(1, min(bounds.width, bounds.height) / 2 - 1.25)
+        let path = CGPath(ellipseIn: CGRect(x: bounds.midX-radius, y: bounds.midY-radius, width: radius*2, height: radius*2), transform: nil)
         CATransaction.begin(); CATransaction.setDisableActions(true)
-        inkCopy.frame = bounds; inkCopy.contentsScale = scale; inkCopy.contents = renderer.cgImage
-        let width = max(28, bounds.height * 2.4)
-        band.frame = CGRect(x: -width, y: 0, width: width, height: bounds.height)
+        for shape in [track, arc] {
+            shape.frame = bounds; shape.path = path; shape.contentsScale = window?.backingScaleFactor ?? 2
+        }
+        track.strokeColor = ink.withAlphaComponent(0.16).cgColor
+        arc.strokeColor = ink.cgColor
         CATransaction.commit()
-        rendered = (text, size, bounds.size, scale, dark)
-        return true
     }
-    private func refreshMotion(force: Bool = false) {
-        let shouldPlay = animated && phase.animates && inkCopy.contents != nil && window?.isVisible == true
-            && window?.occlusionState.contains(.visible) == true && !isHiddenOrHasHiddenAncestor
-        guard force || shouldPlay != playing else { return }
+    private func refreshMotion() {
+        let visible = window?.isVisible == true && window?.isMiniaturized == false
+            && window?.occlusionState.contains(.visible) == true && !isHiddenOrHasHiddenAncestor && !visibleRect.isEmpty
+        if reportedVisible != visible {
+            reportedVisible = visible
+            let callback = visibilityChanged
+            DispatchQueue.main.async { callback?(visible) }
+        }
+        let shouldPlay = visible && animated && phase.animates
+        guard shouldPlay != playing else { return }
         playing = shouldPlay
         CATransaction.begin(); CATransaction.setDisableActions(true)
-        band.removeAllAnimations()
-        band.position.x = -band.bounds.width / 2
+        arc.removeAllAnimations(); arc.transform = CATransform3DIdentity
         if shouldPlay {
-            let duration = phase == .thinking ? 3.2 : phase == .executing ? 2.4 : 2.8
-            let end = bounds.width + band.bounds.width / 2
-            let sweep = CAKeyframeAnimation(keyPath: "position.x")
-            sweep.values = [-band.bounds.width / 2, end, end]
-            sweep.keyTimes = [0, 0.72, 1]
-            sweep.timingFunctions = [CAMediaTimingFunction(name: .easeInEaseOut), CAMediaTimingFunction(name: .linear)]
-            sweep.duration = duration; sweep.repeatCount = .infinity
-            band.add(sweep, forKey: "live-sweep")
+            let rotation = CABasicAnimation(keyPath: "transform.rotation.z")
+            rotation.fromValue = 0; rotation.toValue = 2 * CGFloat.pi
+            rotation.duration = 1.05; rotation.repeatCount = .infinity
+            rotation.timingFunction = CAMediaTimingFunction(name: .linear)
+            arc.add(rotation, forKey: "work-rotation")
         }
         CATransaction.commit()
+    }
+    func stop() {
+        visibilityChanged = nil; arc.removeAllAnimations(); playing = false
+        for observer in observers { NotificationCenter.default.removeObserver(observer) }
+        observers.removeAll()
     }
     deinit { for observer in observers { NotificationCenter.default.removeObserver(observer) } }
 }

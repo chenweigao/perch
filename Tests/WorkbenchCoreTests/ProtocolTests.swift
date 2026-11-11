@@ -31,6 +31,7 @@ struct ProtocolTests {
         try checkPhaseReading()
         try checkReadingLifecycle()
         checkStreamingTextReveal()
+        checkReplyStreamSnapshot()
         try checkConversationPresentation()
         try checkConversationProcessFold()
         try checkConversationPresentationModel()

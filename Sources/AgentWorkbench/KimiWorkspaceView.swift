@@ -120,7 +120,10 @@ struct KimiWorkspaceView: View {
                 hasRunningTools: conversation.live?.runningTools.isEmpty == false,
                 thinking: conversation.live?.thinkingText.isEmpty == false && conversation.live?.assistantText.isEmpty != false)
             if phase != nil {
-                ConversationLiveStatus(phase: phase).equatable().id("live-status:" + sessionID)
+                ConversationLiveStatus(phase: phase,
+                    summary: ConversationWorkSummary.current(messages: conversation.messages,
+                        running: Set((conversation.live?.runningTools ?? []).map(\.id)), live: conversation.live?.runningTools ?? []),
+                    timing: connection.timings.turns[sessionID]).equatable().id("live-status:" + sessionID)
                     .padding(.horizontal, ReplyStyle.composerInset)
                     .padding(.bottom, 8)
                     .frame(maxWidth: ReplyStyle.composerWidth)

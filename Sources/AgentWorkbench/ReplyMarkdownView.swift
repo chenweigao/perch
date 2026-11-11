@@ -357,6 +357,34 @@ struct KimiMarkdown: View {
     }
 }
 
+/// Mixed-content hosted replies use the same parsed-block release as native
+/// rows. Keep the raw source for copying while only the visible blocks change.
+struct SmoothReplyMarkdown: View {
+    let source: String
+    let streaming: Bool
+    let sessionID: String?
+    let messageID: String?
+    let preparation: ReplyMarkdownPreparation?
+
+    private var blocks: [ReplyBlock] {
+        if case .reuse(let session, let message, let expected, let blocks)? = preparation,
+           session == sessionID, message == messageID, expected == source { return blocks }
+        return ReplyDocument.parse(source)
+    }
+    var body: some View {
+        if streaming && source.utf16.count <= StreamingTextReveal.maximumLength {
+            let snapshot = ReplyStreamSnapshot(blocks: blocks)
+            SmoothReplyText(source: snapshot.text, streaming: true) { visible in
+                ReplyBlocks(blocks: snapshot.prefix(utf16Length: visible.utf16.count))
+                    .foregroundStyle(ReplyStyle.ink)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        } else {
+            KimiMarkdown(text: source, sessionID: sessionID, messageID: messageID, preparation: preparation)
+        }
+    }
+}
+
 /// Static history is not reparsed when the surrounding conversation streams updates.
 private struct ReplyContent: View, Equatable {
     let text: String
@@ -906,8 +934,11 @@ struct SelectableReplyText: NSViewRepresentable {
     /// Gutter-style rows opt out of selection.
     var selectable = true
     var codeLanguage: String?
-    init(attributed: NSAttributedString, preservesSelectionOnAppend: Bool = false, selectable: Bool = true, codeLanguage: String? = nil) {
+    var usesViewportLayout = false
+    init(attributed: NSAttributedString, preservesSelectionOnAppend: Bool = false, selectable: Bool = true,
+         codeLanguage: String? = nil, usesViewportLayout: Bool = false) {
         self.codeLanguage = codeLanguage
+        self.usesViewportLayout = usesViewportLayout
         self.attributed = attributed
         self.preservesSelectionOnAppend = preservesSelectionOnAppend
         self.selectable = selectable
@@ -952,8 +983,8 @@ struct SelectableReplyText: NSViewRepresentable {
         if recycled.count < 64 { recycled.append(view) }
     }
     func makeCoordinator() -> Coordinator { Coordinator() }
-    func makeNSView(context: Context) -> ReplyTextView { Self.acquire(delegate: context.coordinator) }
-    static func acquire(delegate: NSTextViewDelegate) -> ReplyTextView {
+    func makeNSView(context: Context) -> ReplyTextView { Self.acquire(delegate: context.coordinator, usesViewportLayout: usesViewportLayout) }
+    static func acquire(delegate: NSTextViewDelegate, usesViewportLayout: Bool = false) -> ReplyTextView {
         #if TRANSCRIPT_CHECKS
         let start = CACurrentMediaTime()
         defer { NavigationRenderMetrics.record("text_create", since: start) }
@@ -961,7 +992,9 @@ struct SelectableReplyText: NSViewRepresentable {
         // The enclosing conversation owns viewport layout; each short paragraph
         // needs selection and drawing, not another TextKit 2 viewport controller.
         let view: ReplyTextView
-        if let index = Self.recycled.firstIndex(where: { $0.superview == nil && $0.window == nil }) {
+        if let index = Self.recycled.firstIndex(where: {
+            $0.superview == nil && $0.window == nil && ($0.textLayoutManager != nil) == usesViewportLayout
+        }) {
             view = Self.recycled.remove(at: index)
             #if TRANSCRIPT_CHECKS
             precondition(view.string.isEmpty && view.delegate == nil && view.selectedRange().length == 0,
@@ -969,7 +1002,7 @@ struct SelectableReplyText: NSViewRepresentable {
             NavigationRenderMetrics.record("text_reuse", since: CACurrentMediaTime())
             #endif
         } else {
-            view = ReplyTextView(usingTextLayoutManager: false)
+            view = ReplyTextView(usingTextLayoutManager: usesViewportLayout)
         }
         view.isEditable = false
         view.delegate = delegate
@@ -1398,12 +1431,31 @@ final class ReplyTextView: NSTextView {
         super.draw(dirtyRect)
     }
     private func paintChips() {
-        guard let storage = textStorage, let manager = layoutManager, let container = textContainer else { return }
+        guard let storage = textStorage else { return }
         var runs: [(color: NSColor, range: NSRange)] = []
         storage.enumerateAttribute(.replyChip, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
             if let color = value as? NSColor, range.length > 0 { runs.append((color, range)) }
         }
         guard !runs.isEmpty else { return }
+        // Asking a TextKit 2 view for layoutManager silently converts it to
+        // TextKit 1 and restores synchronous layout of the entire tall thought.
+        if let layout = textLayoutManager, let content = layout.textContentManager {
+            for run in runs {
+                guard let start = content.location(content.documentRange.location, offsetBy: run.range.location),
+                      let end = content.location(start, offsetBy: run.range.length),
+                      let range = NSTextRange(location: start, end: end),
+                      let font = storage.attribute(.font, at: run.range.location, effectiveRange: nil) as? NSFont else { continue }
+                layout.enumerateTextSegments(in: range, type: .standard, options: [.rangeNotRequired]) { _, segment, baseline, _ in
+                    let rect = CGRect(x: segment.minX + self.textContainerOrigin.x,
+                                      y: baseline - font.ascender + self.textContainerOrigin.y,
+                                      width: segment.width, height: font.ascender - font.descender)
+                    self.paintChip(rect, color: run.color)
+                    return true
+                }
+            }
+            return
+        }
+        guard let manager = layoutManager, let container = textContainer else { return }
         if ProcessInfo.processInfo.environment["CHIP_TRACE"] != nil {
             let snippet = storage.string.count > 30 ? String(storage.string.prefix(30)) : storage.string
             print("CHIP-PAINT view=\(Unmanaged.passUnretained(self).toOpaque()) runs=\(runs.count) bounds=\(NSStringFromRect(bounds)) text=«\(snippet)»")
@@ -1437,22 +1489,21 @@ final class ReplyTextView: NSTextView {
                                   width: right - left, height: runFont.ascender - runFont.descender)
                 rect.origin.x += self.textContainerInset.width
                 rect.origin.y += self.textContainerInset.height
-                rect = rect.insetBy(dx: -4, dy: -2.5)
-                // Crisp hairline at any backing scale: a fractional 0.5 pt stroke
-                // reads as a double edge on Retina.
-                rect = self.backingAlignedRect(rect, options: .alignAllEdgesNearest)
                 if ProcessInfo.processInfo.environment["CHIP_DEBUG"] != nil {
                     print("CHIP-DRAW range=\(run.range) rect=\(rect) lineGlyphs=\(lineGlyphs) segment=\(segment)")
                 }
-                let radius = min(7, rect.height / 2)
-                let path = NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
-                path.fill()
-                // DSH's hairline chip border (4% ink), now feasible self-drawn.
-                NSColor.separatorColor.withAlphaComponent(0.35).setStroke()
-                path.lineWidth = 0.5
-                path.stroke()
+                self.paintChip(rect, color: run.color)
             }
         }
+    }
+    private func paintChip(_ glyphBounds: CGRect, color: NSColor) {
+        let rect = backingAlignedRect(glyphBounds.insetBy(dx: -4, dy: -2.5), options: .alignAllEdgesNearest)
+        (ProcessInfo.processInfo.environment["CHIP_RED"] != nil ? NSColor.red : color).setFill()
+        let radius = min(7, rect.height / 2)
+        let path = NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
+        path.fill()
+        NSColor.separatorColor.withAlphaComponent(0.35).setStroke()
+        path.lineWidth = 0.5; path.stroke()
     }
     var isConversationBodyText = false
     /// Extra context-menu items (message-level actions) supplied by the row.
@@ -1552,7 +1603,9 @@ final class ReplyTextView: NSTextView {
         guard let storage = textStorage, !storage.isEqual(to: value) else { return }
         let appending = value.string.hasPrefix(storage.string)
         let retainedSelection = (preservingSelectionOnAppend || replacingAttributes) && appending ? selectedRange() : nil
-        if appending && !replacingAttributes {
+        let unchangedPrefix = appending && !replacingAttributes
+            && storage.isEqual(to: value.attributedSubstring(from: NSRange(location: 0, length: storage.length)))
+        if unchangedPrefix {
             // Streaming prefix growth appends only the delta so TextKit layout
             // invalidates the tail, not the whole paragraph.
             storage.append(value.attributedSubstring(from: NSRange(location: storage.length, length: value.length - storage.length)))

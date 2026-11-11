@@ -42,6 +42,12 @@ enum NativeAssistantContent {
         #else
         let blocks = ReplyDocument.parse(source)
         #endif
+        return prepare(blocks: blocks, allowsRichBlocks: allowsRichBlocks)
+    }
+
+    /// The live row already parsed its source snapshot. Release frames only
+    /// project blocks and reuse the attributed cache for unchanged paragraphs.
+    static func prepare(blocks: [ReplyBlock], allowsRichBlocks: Bool = true) -> Preparation {
         let content = build(blocks, allowsRichBlocks: allowsRichBlocks)
         #if TRANSCRIPT_CHECKS
         if content == nil { NavigationRenderMetrics.count("row_parse_rejected") }

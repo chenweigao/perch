@@ -164,7 +164,8 @@ struct NativeAgentView: View {
     @ViewBuilder private func bottomBar(_ s: NativeAgentSnapshot, readingKey: String) -> some View {
         VStack(spacing: 0) {
             let turn = SessionTurn(native: s)
-            let activeToolID = turn.running ? ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy).first : nil
+            let runningTools = turn.running ? ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy) : []
+            let activeToolID = runningTools.first
             if turn.running {
                 let actions = ConversationActionContext(hostID: connection.host.id, kind: s.provider, sessionID: s.id)
                 let animates = connection.online && s.interactions.isEmpty && !connection.isStopping
@@ -187,7 +188,9 @@ struct NativeAgentView: View {
                 hasRunningTools: activeToolID != nil,
                 thinking: tail?.type == "thinking" && tail?.source?["kind"].string != "activity_summary")
             if phase != nil {
-                ConversationLiveStatus(phase: phase).equatable().id("live-status:" + s.id)
+                ConversationLiveStatus(phase: phase,
+                    summary: ConversationWorkSummary.current(messages: s.messages, running: runningTools),
+                    timing: connection.timings.turns[s.id]).equatable().id("live-status:" + s.id)
                     .padding(.horizontal, ReplyStyle.composerInset)
                     .padding(.bottom, 8)
                     .frame(maxWidth: ReplyStyle.composerWidth)

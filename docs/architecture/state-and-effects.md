@@ -431,6 +431,14 @@ alone do not establish a performance improvement.
 
 ## Native completed assistant rich blocks
 
+Live assistant rows own one `ReplyStreamSnapshot` per incoming source. The local
+release clock projects its parsed blocks; it does not parse a new Markdown prefix
+on every frame. Native and hosted renderers consume the same projection, retain
+the authoritative source for copy/actions, and flush on completion or replacement.
+Expanded thoughts use TextKit 2 inside the full conversation row, without an inner
+scroll viewport; chip drawing must not request `layoutManager`, which would
+silently convert that view back to synchronous TextKit 1 layout.
+
 The native assistant row also admits headings, code cards, rules, paragraph-only
 quotes and paragraph/list items (nested lists to depth four). Tables, attachments
 and deeper nesting keep the SwiftUI renderer. `NativeAssistantContent.prepare`

@@ -1,6 +1,6 @@
 import Foundation
 
-/// The live footer reports a phase, never a tool target or a generated summary.
+/// The turn's live state. Its independent work line may attach a provider action summary.
 public enum ConversationRunPhase: Equatable, Sendable {
     case thinking, running, executing, waitingForConfirmation, waitingForAnswer, stopping
 

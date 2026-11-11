@@ -8,39 +8,45 @@ struct ConversationBusyIndicator: View {
     var body: some View { PerchBusyIndicator() }
 }
 
-/// A live caption above the composer. A cached ink copy carries
-/// one soft sweep; the phase, rather than streaming tokens, owns its lifetime.
+/// One independent work line outside the input surface. Real action summaries
+/// change on events; Core Animation owns the mark and only the clock ticks.
 struct ConversationLiveStatus: View, Equatable {
     let phase: ConversationRunPhase?
+    var summary: String? = nil
+    var timing: ConversationTiming? = nil
     var reduceMotionOverride: Bool? = nil
+    @State private var clockVisible = false
     @UILocalization private var L
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     private var reduceMotion: Bool { reduceMotionOverride ?? systemReduceMotion }
     static let height: CGFloat = 26
 
     static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.phase == rhs.phase && lhs.reduceMotionOverride == rhs.reduceMotionOverride
+        lhs.phase == rhs.phase && lhs.summary == rhs.summary && lhs.timing == rhs.timing
+            && lhs.reduceMotionOverride == rhs.reduceMotionOverride
     }
 
     var body: some View {
         let _ = countBody()
         if let phase {
-            HStack(spacing: 0) {
-                Text(verbatim: L(key: phase.titleKey))
-                    .font(.system(size: WorkbenchTheme.Typography.secondary, weight: .medium))
+            let title = phase.animates ? (summary ?? L("运行中")) : L(key: phase.titleKey)
+            HStack(spacing: 8) {
+                ConversationWorkIndicator(phase: phase, animated: !reduceMotion) { clockVisible = $0 }
+                    .frame(width: 12, height: 12).accessibilityHidden(true)
+                Text(verbatim: title)
+                    .font(.system(size: 13))
                     .foregroundStyle(phase.needsInput ? Color.orange : WorkbenchTheme.quiet)
                     .lineLimit(1)
-                    .overlay {
-                        ConversationLiveGlow(text: L(key: phase.titleKey), size: WorkbenchTheme.Typography.secondary,
-                                             phase: phase, animated: !reduceMotion)
-                            .accessibilityHidden(true)
-                    }
-                    .contentTransition(.opacity)
-                    .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: phase)
+                    .help(Text(verbatim: title))
+                if let timing {
+                    Text("·").foregroundStyle(WorkbenchTheme.quiet.opacity(0.5))
+                    ConversationWorkClock(timing: timing, visible: clockVisible)
+                        .fixedSize(horizontal: true, vertical: false).accessibilityHidden(true)
+                }
                 Spacer(minLength: 0)
             }.frame(height: Self.height)
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel(Text(verbatim: L(key: phase.titleKey)))
+                .accessibilityLabel(Text(verbatim: title))
                 .accessibilityIdentifier("conversation-live-status")
         }
     }
@@ -49,6 +55,63 @@ struct ConversationLiveStatus: View, Equatable {
         #if TRANSCRIPT_CHECKS
         NavigationRenderMetrics.count("live_status_body")
         #endif
+    }
+}
+
+private struct ConversationWorkClock: View {
+    let timing: ConversationTiming
+    let visible: Bool
+    @UILocalization private var L
+    @Environment(\.locale) private var locale
+    var body: some View {
+        TimelineView(ConversationWorkClockSchedule(active: visible)) { context in
+            let duration = ConversationTiming.duration(timing.elapsed(at: context.date),
+                chinese: locale.language.languageCode?.identifier == "zh")
+            Text(verbatim: timing.observedOnly ? L("观察时长 \(duration)") : duration)
+                .font(.system(size: 12)).monospacedDigit().foregroundStyle(WorkbenchTheme.quiet.opacity(0.7))
+        }.id(visible)
+    }
+}
+private struct ConversationWorkClockSchedule: TimelineSchedule {
+    let active: Bool
+    func entries(from startDate: Date, mode: TimelineScheduleMode) -> AnyIterator<Date> {
+        var next: Date? = startDate
+        return AnyIterator {
+            defer { next = active ? next?.addingTimeInterval(1) : nil }
+            return next
+        }
+    }
+}
+
+/// Read only existing provider facts. No extra summary request, private-thought
+/// excerpt, or fabricated stage text is needed for the work line.
+enum ConversationWorkSummary {
+    static func current(messages: [KimiMessage], running: Set<String>, live: [KimiLiveTool] = []) -> String? {
+        let start = messages.lastIndex(where: \.isUserPrompt) ?? 0
+        for message in messages[start...].reversed() where message.role == "assistant" {
+            for part in message.content.reversed() where part.type == "tool_use" {
+                if let id = part.toolCallId, running.contains(id) {
+                    return tool(name: part.toolName ?? "Tool", input: part.input)
+                }
+            }
+        }
+        if let active = live.last { return tool(name: active.name, input: active.args) }
+        guard let part = messages.last(where: { $0.role == "assistant" })?.content.last,
+              let summary = ConversationThinkingSummary.publicSummary(of: part) else { return nil }
+        return firstLine(summary)
+    }
+    private static func tool(name: String, input: JSONValue?) -> String {
+        if let description = input?["description"].string.flatMap(firstLine) { return description }
+        if let command = input?["command"].string.flatMap(firstLine) { return "\(name) · \(command)" }
+        if let path = (input?["file_path"].string ?? input?["path"].string).flatMap(firstLine) {
+            return "\(name) · \((path as NSString).lastPathComponent)"
+        }
+        return name
+    }
+    private static func firstLine(_ source: String) -> String? {
+        guard let line = source.split(whereSeparator: \.isNewline).first?
+            .trimmingCharacters(in: .whitespacesAndNewlines), !line.isEmpty else { return nil }
+        return String(line.prefix(160))
     }
 }
 
