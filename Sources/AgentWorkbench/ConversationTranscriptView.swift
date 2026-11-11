@@ -2842,10 +2842,16 @@ private struct ThoughtRail<Content: View>: View {
 /// Expanded thoughts sit under their toggle's label, like every nested process row.
 private struct ThoughtText: View {
     let text: String
+    var streaming = false
     var body: some View {
+        // Prepare styles only for incoming content. Reveal frames slice this
+        // attributed value instead of reparsing the entire thought every tick.
+        let attributed = ThoughtTextStyle.attributed(text)
         ThoughtRail {
-            DisclosureReplyText(text: text, attributes: ThoughtTextStyle.attributes,
-                                attributedText: ThoughtTextStyle.attributed)
+            SmoothReplyText(source: attributed.string, streaming: streaming) { visible in
+                SelectableReplyText(attributed: attributed.attributedSubstring(
+                    from: NSRange(location: 0, length: (visible as NSString).length)))
+            }
         }
     }
 }
@@ -2921,7 +2927,7 @@ struct ThoughtOutput: View {
                               expanded: $expanded)
                     .accessibilityIdentifier("thought-disclosure:" + memoryKey)
                 WorkbenchDisclosureContent(expanded: expanded) {
-                    SmoothReplyText(source: fullText, streaming: !finished) { ThoughtText(text: $0) }
+                    ThoughtText(text: fullText, streaming: !finished)
                 }
                 if !expanded, !finished, let summary = ConversationThinkingSummary.latest(in: messages) {
                     LiveThinkingSummary(text: summary).padding(.leading, ReplyStyle.Process.nestedIndent)

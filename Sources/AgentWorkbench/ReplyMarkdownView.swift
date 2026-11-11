@@ -320,7 +320,7 @@ struct SmoothReplyText<Content: View>: View {
     }
     var body: some View {
         let input = Input(source: source, smoothing: streaming && !systemReduceMotion && !conversationReduceMotion)
-        content(input.smoothing ? state.text : source)
+        content(input.smoothing && source.utf16.starts(with: state.text.utf16) ? state.text : source)
             .background(StreamingReplyVisibilityAnchor(visibility: visibility).allowsHitTesting(false))
             .onChange(of: input, initial: true) { _, next in state.update(next.source, smoothing: next.smoothing) }
             .task(id: input) {

@@ -182,6 +182,27 @@ private struct StreamingFixtureView: View {
     guard await waitForStreaming(host, { renderedText(host).contains("THOUGHT_FLUSH") }) else {
         preconditionFailure("Starting the answer must immediately flush settled thought text")
     }
+    let longThought = "THOUGHT_LONG_START" + String(repeating: "逐段检查已有状态和输出边界。", count: 340) + "THOUGHT_LONG_PREFIX_END"
+    precondition(longThought.count > 4_000)
+    model.messages = try thoughts(longThought)
+    guard await waitForStreaming(host, { renderedText(host).contains("THOUGHT_LONG_PREFIX_END") }) else {
+        preconditionFailure("Expanded thoughts must remain continuous beyond the old 4,000-character cutoff")
+    }
+    let longPrefixView = textViews(host).first { $0.string.contains("THOUGHT_LONG_PREFIX_END") }!
+    let thoughtSelection = (longPrefixView.string as NSString).range(of: "THOUGHT_LONG_START")
+    longPrefixView.setSelectedRange(thoughtSelection)
+    let longComplete = longThought + String(repeating: "继续平滑释放尾部。", count: 20) + "THOUGHT_LONG_RELEASE_END"
+    model.messages = try thoughts(longComplete)
+    await streamingSettle(host, milliseconds: 40)
+    precondition(renderedText(host).contains("THOUGHT_LONG_PREFIX_END") && !renderedText(host).contains("THOUGHT_LONG_RELEASE_END"),
+                 "New thought text beyond 4,000 characters must still release progressively")
+    guard await waitForStreaming(host, { renderedText(host).contains("THOUGHT_LONG_RELEASE_END") }) else {
+        preconditionFailure("Long thought release must expose its newest tail without a second output disclosure")
+    }
+    let longText = textViews(host).first { $0.string.contains("THOUGHT_LONG_RELEASE_END") }!
+    precondition(longText.frame.height > 500, "Long thoughts must flow in the conversation rather than a fixed inner viewport")
+    precondition(longText === longPrefixView && longText.selectedRange() == thoughtSelection,
+                 "Long thought appends must retain their text view and selected prefix")
     if let folder = ProcessInfo.processInfo.environment["PERCH_DESIGN_CAPTURES"] {
         let report: [String: Any] = [
             "scope": "visible native prose/thought release; display-link main-thread scheduling, not GPU-presented FPS",
