@@ -703,9 +703,13 @@ extension NavigationRunner {
         func textViews(_ view: NSView) -> [ReplyTextView] {
             descendants(view).compactMap { $0 as? ReplyTextView }
         }
+        func counter(_ key: String) -> Int { NavigationRenderMetrics.counters[key] ?? 0 }
         let width: CGFloat = 680
-        let prefix = (0..<9).map { "Paragraph \($0) 中文 👩🏽‍💻 é" }.joined(separator: "\n\n")
-        guard let initialBlocks = NativeAssistantContent.make(prefix) else {
+        let incremental = ProcessInfo.processInfo.environment["NAVIGATION_NATIVE_BODY_INCREMENTAL"] != "0"
+        let prefix = (0..<33).map { "Paragraph \($0) 中文 👩🏽‍💻 é" }.joined(separator: "\n\n")
+        var parser = ReplyStreamParser()
+        var previous = NativeAssistantContent.prepare(blocks: parser.update(prefix))
+        guard let initialBlocks = previous.content else {
             throw NavigationError("Streaming benchmark fixture was not admitted")
         }
         let row = NativeAssistantMessageView(frame: .zero)
@@ -713,32 +717,57 @@ extension NavigationRunner {
         row.frame.size = row.measure(width: width)
         row.place(width: width)
         let initialTexts = textViews(row)
-        guard initialTexts.count == 2,
+        guard initialTexts.count == 5,
               let actions = row.subviews.first(where: { !($0 is NativeAssistantStackView) }) else {
             throw NavigationError("Streaming benchmark did not create stable and tail blocks")
         }
         let selection = (initialTexts[0].string as NSString).range(of: "Paragraph 2")
         initialTexts[0].setSelectedRange(selection)
+        let rebuiltBefore = counter("native_prepare_rebuilt_blocks")
+        let reusedBefore = counter("native_prepare_reused_blocks")
+        let geometryBefore = counter("native_stack_geometry_rebuilt_blocks")
+        let geometryHitsBefore = counter("native_stack_geometry_cache_hit")
 
         var source = prefix
         var samples: [Double] = []
-        for index in 0..<40 {
+        for index in 0..<120 {
             source += " chunk-\(index)-中文"
             let started = CACurrentMediaTime()
-            guard let blocks = NativeAssistantContent.make(source) else {
+            let parsed = parser.update(source)
+            let stable = min(parser.stableBlockCount, max(0, previous.blocks.count - 1))
+            let next = incremental
+                ? NativeAssistantContent.prepare(blocks: parsed, reusing: previous, stableBlockCount: stable)
+                : NativeAssistantContent.prepare(blocks: parsed)
+            guard let blocks = next.content else {
                 throw NavigationError("Streaming benchmark update was not admitted")
             }
-            row.update(blocks, source: source, dark: false, showsActions: false)
+            row.update(blocks, source: source, dark: false, showsActions: false,
+                       unchangedPrefix: next.reusedBlockCount)
             row.frame.size = row.measure(width: width)
             row.place(width: width)
             row.layoutSubtreeIfNeeded()
             samples.append((CACurrentMediaTime() - started) * 1_000)
             let currentTexts = textViews(row)
-            guard currentTexts.count == 2,
-                  currentTexts[0] === initialTexts[0], currentTexts[1] === initialTexts[1],
+            guard currentTexts.count == initialTexts.count,
+                  zip(currentTexts, initialTexts).allSatisfy(===),
                   currentTexts[0].selectedRange() == selection,
                   actions.isHidden, actions.frame == .zero else {
                 throw NavigationError("Streaming benchmark replaced native state during an append")
+            }
+            // Full parity is outside the timed path and cannot pollute its counters.
+            let full = NativeAssistantContent.prepare(blocks: parsed)
+            guard next.blocks == full.blocks, next.content == full.content else {
+                throw NavigationError("Incremental preparation diverged from a full rebuild at chunk \(index)")
+            }
+            previous = next
+        }
+        let reused = counter("native_prepare_reused_blocks") - reusedBefore
+        let rebuilt = counter("native_prepare_rebuilt_blocks") - rebuiltBefore
+        let geometryRebuilt = counter("native_stack_geometry_rebuilt_blocks") - geometryBefore
+        let geometryHits = counter("native_stack_geometry_cache_hit") - geometryHitsBefore
+        if incremental {
+            guard reused > 0, rebuilt <= samples.count, geometryRebuilt <= samples.count, geometryHits >= samples.count else {
+                throw NavigationError("Streaming tail work was not bounded: reused=\(reused), rebuilt=\(rebuilt), geometry=\(geometryRebuilt), hits=\(geometryHits)")
             }
         }
 
@@ -749,11 +778,51 @@ extension NavigationRunner {
         row.frame.size = row.measure(width: width)
         row.place(width: width)
         let settledTexts = textViews(row)
-        guard settledTexts.count == 2,
-              settledTexts[0] === initialTexts[0], settledTexts[1] === initialTexts[1],
+        guard settledTexts.count == initialTexts.count,
+              zip(settledTexts, initialTexts).allSatisfy(===),
               settledTexts[0].selectedRange() == selection,
               !actions.isHidden, actions.frame.height == 24 else {
             throw NavigationError("Settling replaced native state or failed to expose actions")
+        }
+
+        let settledHeight = row.measure(width: width).height
+        let replacementSource = "Replacement paragraph 中文"
+        let replacementBlocks = parser.update(replacementSource)
+        guard parser.stableBlockCount == 0 else {
+            throw NavigationError("A non-append replacement retained a certified prefix")
+        }
+        let replacement = NativeAssistantContent.prepare(blocks: replacementBlocks,
+                                                          reusing: previous, stableBlockCount: 0)
+        guard replacement.content == NativeAssistantContent.prepare(blocks: replacementBlocks).content,
+              let replacementContent = replacement.content else {
+            throw NavigationError("Replacement preparation diverged from a full rebuild")
+        }
+        row.update(replacementContent, source: replacementSource, dark: false, showsActions: false,
+                   unchangedPrefix: replacement.reusedBlockCount)
+        row.update([], source: "", dark: false, showsActions: false)
+        guard row.measure(width: width).height == 0 else {
+            throw NavigationError("Clearing native blocks retained stale geometry")
+        }
+        row.update(settledBlocks, source: source, dark: false, showsActions: true)
+        guard row.measure(width: width).height == settledHeight else {
+            throw NavigationError("Restoring native blocks after a clear changed their full-layout height")
+        }
+
+        if incremental {
+            let shared = ReplyTextAttributes.paragraphs([[ReplyInline(text: "Shared measurement 中文 👩🏽‍💻")]])
+            let links = SelectableReplyText.Coordinator()
+            let first = SelectableReplyText.acquire(delegate: links)
+            let second = SelectableReplyText.acquire(delegate: links)
+            first.update(shared)
+            second.update(shared)
+            let expected = first.measure(width: 320)
+            let sharedBefore = counter("text_measure_shared_cache_hit")
+            let actual = second.measure(width: 320)
+            guard actual == expected, counter("text_measure_shared_cache_hit") == sharedBefore + 1 else {
+                throw NavigationError("A recreated text view did not reuse its identical immutable measurement")
+            }
+            SelectableReplyText.recycle(first)
+            SelectableReplyText.recycle(second)
         }
 
         let sorted = samples.sorted()
@@ -763,7 +832,13 @@ extension NavigationRunner {
             "streaming_update_ms": ["mean": mean, "p95": p95, "max": sorted.last!, "count": samples.count],
             "row_identity": true, "block_identity": true, "selection_preserved": true,
             "actions_hidden_while_streaming": true, "actions_shown_on_completion": true,
-            "incremental_snapshots": true
+            "incremental_enabled": incremental,
+            "incremental_snapshots": true, "full_parity_every_update": true,
+            "native_prepare_reused_blocks": reused, "native_prepare_rebuilt_blocks": rebuilt,
+            "native_stack_geometry_rebuilt_blocks": geometryRebuilt,
+            "native_stack_geometry_cache_hits": geometryHits,
+            "replacement_and_clear_invalidation": true,
+            "shared_measurement_across_views": incremental
         ]
     }
 }

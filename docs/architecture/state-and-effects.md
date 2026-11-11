@@ -469,6 +469,40 @@ transitions, table/attachment fallback, code-card copy and horizontal overflow.
 `NAVIGATION_NATIVE_ASSISTANT_BLOCKS=0` limits acceptance builds to prose rows for
 stacked A/B measurements.
 
+## Streaming tail and measurement reuse
+
+`ReplyStreamParser.stableBlockCount` certifies only complete top-level blocks left
+unchanged by the latest append. Replacements, shrinking input and document-wide
+Markdown syntax certify no prefix. Native preparation also excludes the last
+visible block because the display release can cut inside it. Reuse starts at the
+latest completed eight-paragraph group or rich-block boundary, and checks both
+reading size and rich-block admission. Every incremental result must equal a full
+`NativeAssistantContent.prepare` of the same input.
+
+`NativeAssistantStackView` receives that certified native prefix count. Its block
+heights and offsets invalidate from the first changed block, rather than measuring
+every block on every release frame. Width changes, replacements and clearing still
+invalidate the affected geometry; stable views and text selections retain identity.
+The cache stores geometry only and does not retain additional row controllers.
+
+Recreated TextKit 1 text views can also share measurements for the identical
+immutable attributed string and width. Keys strongly retain the string so object
+address reuse cannot alias unrelated content. The FIFO store is capped at 4,096
+width entries and 2,000,000 attributed UTF-16 units (an admission estimate, not an
+RSS measurement); TextKit 2 viewport readers stay on their live layout path. This
+does not retain extra hosting graphs or skip the text drawing needed on revisit.
+
+The `streaming-rendering` fixture checks 120 appends against full preparation on
+every update, selection/view identity, replacement, clearing and shared measurement.
+`NAVIGATION_NATIVE_BODY_INCREMENTAL=0` is an acceptance-build-only ablation of all
+three reuse paths for fixed-binary A/B runs. Production builds always enable them.
+Use the same app binary for repeated on/off `streaming-rendering` and `fast-scroll`
+runs; compare application work separately from compositor frame evidence. Occurrence
+counters include `native_prepare_reused_blocks`, `native_prepare_rebuilt_blocks`,
+`native_stack_geometry_rebuilt_blocks`, `native_stack_geometry_cache_hit` and
+`text_measure_shared_cache_{hit,miss,store,evict}`. Counter reductions alone are not
+a 10x latency or FPS claim.
+
 ## Cold-row typesetting segments
 
 `markdown_parse` only times `ReplyContent.blocks`, so the parses performed by the

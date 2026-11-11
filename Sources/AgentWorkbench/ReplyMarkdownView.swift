@@ -1461,9 +1461,9 @@ final class NativeAssistantMessageView: NSView {
     }
     func update(_ blocks: [NativeAssistantBlock], source: String, dark: Bool, enabled: Bool = true,
                 actionContext: ConversationActionContext? = nil, messageID: String? = nil,
-                showsActions: Bool = true) {
+                showsActions: Bool = true, unchangedPrefix: Int = 0) {
         appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
-        stack.update(blocks)
+        stack.update(blocks, unchangedPrefix: unchangedPrefix)
         self.showsActions = showsActions
         actions.isHidden = !showsActions
         let source = showsActions ? source : nil
@@ -1685,6 +1685,65 @@ final class ReplyTextView: NSTextView {
         hasFindHighlight = findHighlight != nil
         storage.endEditing()
     }
+    private struct SharedMeasurementKey: Hashable {
+        let content: NSAttributedString
+        let width: CGFloat
+        static func == (lhs: Self, rhs: Self) -> Bool {
+            lhs.content === rhs.content && lhs.width == rhs.width
+        }
+        func hash(into hasher: inout Hasher) {
+            hasher.combine(ObjectIdentifier(content))
+            hasher.combine(width)
+        }
+    }
+    private static let sharedMeasurementLimit = 4096
+    private static let sharedMeasurementCharacterLimit = 2_000_000
+    #if TRANSCRIPT_CHECKS
+    private static let sharedMeasurementEnabled = ProcessInfo.processInfo.environment["NAVIGATION_NATIVE_BODY_INCREMENTAL"] != "0"
+    #else
+    private static let sharedMeasurementEnabled = true
+    #endif
+    private static var sharedMeasurements: [SharedMeasurementKey: CGSize] = [:]
+    private static var sharedMeasurementOrder = [SharedMeasurementKey?](repeating: nil, count: sharedMeasurementLimit)
+    private static var sharedMeasurementCursor = 0
+    private static var sharedMeasurementCharacters = 0
+    private var measurementContent: NSAttributedString?
+
+    private static func sharedMeasurement(for content: NSAttributedString, width: CGFloat) -> CGSize? {
+        sharedMeasurements[SharedMeasurementKey(content: content, width: width)]
+    }
+    private static func storeSharedMeasurement(_ size: CGSize, for content: NSAttributedString, width: CGFloat) {
+        guard content.length <= sharedMeasurementCharacterLimit else { return }
+        let key = SharedMeasurementKey(content: content, width: width)
+        guard sharedMeasurements[key] == nil else { return }
+        while true {
+            if sharedMeasurements.count < sharedMeasurementLimit,
+               sharedMeasurementCharacters + content.length <= sharedMeasurementCharacterLimit,
+               sharedMeasurementOrder[sharedMeasurementCursor] == nil {
+                sharedMeasurementOrder[sharedMeasurementCursor] = key
+                sharedMeasurements[key] = size
+                sharedMeasurementCharacters += content.length
+                sharedMeasurementCursor = (sharedMeasurementCursor + 1) % sharedMeasurementLimit
+                #if TRANSCRIPT_CHECKS
+                NavigationRenderMetrics.count("text_measure_shared_cache_store")
+                #endif
+                return
+            }
+            if let oldest = sharedMeasurementOrder[sharedMeasurementCursor] {
+                sharedMeasurements.removeValue(forKey: oldest)
+                sharedMeasurementCharacters -= oldest.content.length
+                #if TRANSCRIPT_CHECKS
+                NavigationRenderMetrics.count("text_measure_shared_cache_evict")
+                #endif
+            }
+            sharedMeasurementOrder[sharedMeasurementCursor] = nil
+            if sharedMeasurements.count >= sharedMeasurementLimit
+                || sharedMeasurementCharacters + content.length > sharedMeasurementCharacterLimit {
+                sharedMeasurementCursor = (sharedMeasurementCursor + 1) % sharedMeasurementLimit
+            }
+        }
+    }
+
     // SwiftUI alternates minimum, ideal and final width proposals. Retain those
     // sizes together; a single last-width cache remeasures unchanged history.
     private var measurements: [(width: CGFloat, size: CGSize)] = []
@@ -1702,6 +1761,7 @@ final class ReplyTextView: NSTextView {
             storage.setAttributedString(value)
         }
         if let retainedSelection { setSelectedRange(retainedSelection) }
+        measurementContent = value
         measurements.removeAll(keepingCapacity: true)
         applyFindHighlight()
     }
@@ -1715,6 +1775,19 @@ final class ReplyTextView: NSTextView {
             return cached.size
         }
         guard let storage = textStorage else { return .zero }
+        if Self.sharedMeasurementEnabled, textLayoutManager == nil, let content = measurementContent {
+            if let cached = Self.sharedMeasurement(for: content, width: width) {
+                if measurements.count == 8 { measurements.removeFirst() }
+                measurements.append((width, cached))
+                #if TRANSCRIPT_CHECKS
+                NavigationRenderMetrics.count("text_measure_shared_cache_hit")
+                #endif
+                return cached
+            }
+            #if TRANSCRIPT_CHECKS
+            NavigationRenderMetrics.count("text_measure_shared_cache_miss")
+            #endif
+        }
         let perfProbe = PerfDiagnostics.begin()
         defer { PerfDiagnostics.end("text_measure", perfProbe, detail: "length=\(storage.length) wrapped=\(width < 1_000_000)") }
         #if TRANSCRIPT_CHECKS
@@ -1748,6 +1821,9 @@ final class ReplyTextView: NSTextView {
         let size = CGSize(width: min(width, ceil(used.width)), height: ceil(used.height))
         if measurements.count == 8 { measurements.removeFirst() }
         measurements.append((width, size))
+        if Self.sharedMeasurementEnabled, textLayoutManager == nil, let content = measurementContent {
+            Self.storeSharedMeasurement(size, for: content, width: width)
+        }
         return size
     }
 

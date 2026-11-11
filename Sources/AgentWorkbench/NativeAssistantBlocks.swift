@@ -22,9 +22,27 @@ struct NativeAssistantListItem: Equatable {
 }
 
 enum NativeAssistantContent {
+    struct ReusePoint {
+        let source: Int
+        let native: Int
+    }
     struct Preparation {
         let blocks: [ReplyBlock]
         let content: [NativeAssistantBlock]?
+        let allowsRichBlocks: Bool
+        let bodySize: CGFloat
+        let reusePoints: [ReusePoint]
+        let reusedBlockCount: Int
+
+        init(blocks: [ReplyBlock], content: [NativeAssistantBlock]?, allowsRichBlocks: Bool,
+             reusePoints: [ReusePoint] = [], reusedBlockCount: Int = 0) {
+            self.blocks = blocks
+            self.content = content
+            self.allowsRichBlocks = allowsRichBlocks
+            self.bodySize = ReplyStyle.bodySize
+            self.reusePoints = reusePoints
+            self.reusedBlockCount = reusedBlockCount
+        }
     }
 
     /// Assistant text with bounded structure. `allowsRichBlocks` exists for
@@ -45,59 +63,101 @@ enum NativeAssistantContent {
         return prepare(blocks: blocks, allowsRichBlocks: allowsRichBlocks)
     }
 
-    /// The live row already parsed its source snapshot. Release frames only
-    /// project blocks and reuse the attributed cache for unchanged paragraphs.
     static func prepare(blocks: [ReplyBlock], allowsRichBlocks: Bool = true) -> Preparation {
-        let content = build(blocks, allowsRichBlocks: allowsRichBlocks)
+        let built = build(blocks, allowsRichBlocks: allowsRichBlocks)
         #if TRANSCRIPT_CHECKS
-        if content == nil { NavigationRenderMetrics.count("row_parse_rejected") }
+        if built == nil { NavigationRenderMetrics.count("row_parse_rejected") }
         #endif
-        return Preparation(blocks: blocks, content: content)
+        return Preparation(blocks: blocks, content: built?.blocks, allowsRichBlocks: allowsRichBlocks,
+                           reusePoints: built?.reusePoints ?? [])
     }
 
-    private static func build(_ blocks: [ReplyBlock], allowsRichBlocks: Bool) -> [NativeAssistantBlock]? {
-        guard !blocks.isEmpty else { return nil }
-        var result: [NativeAssistantBlock] = []
+    /// Reuse only a parser-certified complete prefix. The last visible block is
+    /// deliberately excluded by the caller because a reveal can cut inside it.
+    static func prepare(blocks: [ReplyBlock], allowsRichBlocks: Bool = true,
+                        reusing previous: Preparation, stableBlockCount: Int) -> Preparation {
+        guard stableBlockCount > 0, stableBlockCount <= previous.blocks.count,
+              previous.allowsRichBlocks == allowsRichBlocks, previous.bodySize == ReplyStyle.bodySize,
+              let previousContent = previous.content,
+              let pointIndex = previous.reusePoints.indices.last(where: { previous.reusePoints[$0].source <= stableBlockCount })
+        else { return prepare(blocks: blocks, allowsRichBlocks: allowsRichBlocks) }
+        let point = previous.reusePoints[pointIndex]
+        guard point.source <= blocks.count, point.native <= previousContent.count
+        else { return prepare(blocks: blocks, allowsRichBlocks: allowsRichBlocks) }
+        let initial = BuildResult(blocks: Array(previousContent.prefix(point.native)),
+                                  reusePoints: Array(previous.reusePoints.prefix(through: pointIndex)))
+        let built = build(Array(blocks.dropFirst(point.source)), allowsRichBlocks: allowsRichBlocks,
+                          initial: initial, sourceOffset: point.source)
+        #if TRANSCRIPT_CHECKS
+        NavigationRenderMetrics.count("native_prepare_reused_blocks", by: point.native)
+        NavigationRenderMetrics.count("native_prepare_rebuilt_blocks", by: max(0, (built?.blocks.count ?? 0) - point.native))
+        if built == nil { NavigationRenderMetrics.count("row_parse_rejected") }
+        #endif
+        return Preparation(blocks: blocks, content: built?.blocks, allowsRichBlocks: allowsRichBlocks,
+                           reusePoints: built?.reusePoints ?? [], reusedBlockCount: point.native)
+    }
+
+    private struct BuildResult {
+        let blocks: [NativeAssistantBlock]
+        let reusePoints: [ReusePoint]
+    }
+
+    private static func build(_ blocks: [ReplyBlock], allowsRichBlocks: Bool,
+                              initial: BuildResult? = nil, sourceOffset: Int = 0) -> BuildResult? {
+        guard !blocks.isEmpty || initial != nil else { return nil }
+        var result = initial?.blocks ?? []
+        var reusePoints = initial?.reusePoints ?? [ReusePoint(source: 0, native: 0)]
         var pending: [[ReplyInline]] = []
-        func flush() {
+        func flush(after sourceIndex: Int) {
             guard !pending.isEmpty else { return }
             for start in stride(from: 0, to: pending.count, by: 8) {
                 result.append(.paragraphs(ReplyTextAttributes.paragraphs(Array(pending[start..<min(start + 8, pending.count)]))))
             }
             pending = []
+            reusePoints.append(ReusePoint(source: sourceIndex, native: result.count))
         }
-        for block in blocks {
+        for (index, block) in blocks.enumerated() {
+            let sourceIndex = sourceOffset + index
             switch block {
             case .paragraph(let runs):
                 guard runs.contains(where: { !$0.text.isEmpty }) else { return nil }
                 pending.append(runs)
+                if pending.count == 8 { flush(after: sourceIndex + 1) }
             case .heading(let level, let runs):
                 guard allowsRichBlocks else { return nil }
-                flush()
+                flush(after: sourceIndex)
                 result.append(.heading(level: level, ReplyTextAttributes.paragraphs([runs],
                     size: ReplyStyle.headingSize(level),
                     weight: ReplyStyle.headingWeight(level), lineHeight: ReplyStyle.headingLineHeight(level))))
+                reusePoints.append(ReusePoint(source: sourceIndex + 1, native: result.count))
             case .code(let language, let code):
                 // Mermaid renders asynchronously as a rasterized image; the
                 // message keeps the SwiftUI renderer, as tables and math do.
                 guard allowsRichBlocks, !MermaidSupport.isMermaid(language) else { return nil }
-                flush()
+                flush(after: sourceIndex)
                 result.append(.code(language: language, source: code, text: ReplyTextAttributes.code(code)))
+                reusePoints.append(ReusePoint(source: sourceIndex + 1, native: result.count))
             case .rule:
                 guard allowsRichBlocks else { return nil }
-                flush(); result.append(.rule)
+                flush(after: sourceIndex)
+                result.append(.rule)
+                reusePoints.append(ReusePoint(source: sourceIndex + 1, native: result.count))
             case .quote(let inner):
                 guard allowsRichBlocks, let quoted = compactParagraphs(inner) else { return nil }
-                flush(); result.append(.quote(quoted))
+                flush(after: sourceIndex)
+                result.append(.quote(quoted))
+                reusePoints.append(ReusePoint(source: sourceIndex + 1, native: result.count))
             case .list(let items):
                 guard allowsRichBlocks, let list = listItems(items, depth: 1) else { return nil }
-                flush(); result.append(.list(list))
+                flush(after: sourceIndex)
+                result.append(.list(list))
+                reusePoints.append(ReusePoint(source: sourceIndex + 1, native: result.count))
             case .table, .math, .alert:
                 return nil
             }
         }
-        flush()
-        return result.isEmpty ? nil : result
+        flush(after: sourceOffset + blocks.count)
+        return result.isEmpty ? nil : BuildResult(blocks: result, reusePoints: reusePoints)
     }
 
     /// Quotes admit only non-empty paragraphs; compact layout uses 8pt spacing.
@@ -545,6 +605,17 @@ final class NativeAssistantStackView: NSView {
     private(set) var blocks: [NativeAssistantBlock] = []
     private var blockViews: [NativeAssistantBlockView] = []
     private var dirtyBlocks: Set<ObjectIdentifier> = []
+    private var geometryWidth: CGFloat?
+    private var geometryDirtyFrom: Int?
+    private var placementDirtyFrom: Int?
+    private var heights: [CGFloat] = []
+    private var offsets: [CGFloat] = []
+    private var totalHeight: CGFloat = 0
+    #if TRANSCRIPT_CHECKS
+    private static let incrementalGeometry = ProcessInfo.processInfo.environment["NAVIGATION_NATIVE_BODY_INCREMENTAL"] != "0"
+    #else
+    private static let incrementalGeometry = true
+    #endif
     override var isFlipped: Bool { true }
 
     init(compact: Bool, links: SelectableReplyText.Coordinator) {
@@ -563,16 +634,33 @@ final class NativeAssistantStackView: NSView {
         case .list: return NativeListBlockView(links: links)
         }
     }
-    func update(_ blocks: [NativeAssistantBlock]) {
-        guard blocks != self.blocks else { return }
+    func update(_ blocks: [NativeAssistantBlock], unchangedPrefix: Int = 0) {
+        if unchangedPrefix == 0 && blocks == self.blocks { return }
+        let stable = min(unchangedPrefix, blocks.count, self.blocks.count, blockViews.count)
+        if stable == blocks.count && blockViews.count == blocks.count {
+            self.blocks = blocks
+            #if TRANSCRIPT_CHECKS
+            NavigationRenderMetrics.count("native_assistant_block_stable", by: stable)
+            #endif
+            return
+        }
         let previous = self.blocks
-        self.blocks = blocks
+        let previousViewCount = blockViews.count
         var next: [NativeAssistantBlockView] = []
+        var firstChange = blocks.count
         for (index, block) in blocks.enumerated() {
+            if index < stable {
+                next.append(blockViews[index])
+                #if TRANSCRIPT_CHECKS
+                NavigationRenderMetrics.count("native_assistant_block_stable")
+                #endif
+                continue
+            }
             if index < blockViews.count, type(of: blockViews[index]) == makeViewType(for: block) {
                 if index >= previous.count || previous[index] != block {
                     blockViews[index].update(block)
                     dirtyBlocks.insert(ObjectIdentifier(blockViews[index]))
+                    firstChange = min(firstChange, index)
                     #if TRANSCRIPT_CHECKS
                     NavigationRenderMetrics.count("native_assistant_block_update")
                     #endif
@@ -586,6 +674,7 @@ final class NativeAssistantStackView: NSView {
                 let view = makeView(for: block)
                 view.update(block)
                 dirtyBlocks.insert(ObjectIdentifier(view))
+                firstChange = min(firstChange, index)
                 next.append(view)
                 #if TRANSCRIPT_CHECKS
                 NavigationRenderMetrics.count("native_assistant_block_create")
@@ -597,7 +686,12 @@ final class NativeAssistantStackView: NSView {
             dirtyBlocks.remove(ObjectIdentifier(view))
             view.teardown(); view.removeFromSuperview()
         }
+        if blockViews.count != next.count { firstChange = min(firstChange, next.count) }
         blockViews = next
+        self.blocks = blocks
+        if firstChange < blockViews.count || previousViewCount != blockViews.count || geometryDirtyFrom != nil {
+            invalidateGeometry(from: firstChange)
+        }
         let views = blockViews.map { $0 as NSView }
         if subviews.count != views.count || !zip(subviews, views).allSatisfy(===) {
             subviews = views
@@ -612,32 +706,67 @@ final class NativeAssistantStackView: NSView {
         case .list: return NativeListBlockView.self
         }
     }
-    func contentHeight(width: CGFloat) -> CGFloat {
-        var height: CGFloat = 0
-        for (index, view) in blockViews.enumerated() {
-            if index > 0 {
-                height += NativeAssistantContent.spacing(before: blocks[index], after: blocks[index - 1], compact: compact)
-            }
-            height += view.contentHeight(width: width)
-        }
-        return height
+    private func invalidateGeometry(from index: Int) {
+        geometryDirtyFrom = min(geometryDirtyFrom ?? index, index)
+        placementDirtyFrom = min(placementDirtyFrom ?? index, index)
     }
-    func place(width: CGFloat) {
-        var y: CGFloat = 0
-        for (index, view) in blockViews.enumerated() {
+    private func resolveGeometry(width: CGFloat) {
+        if !Self.incrementalGeometry || geometryWidth != width {
+            geometryWidth = width
+            geometryDirtyFrom = 0
+            placementDirtyFrom = 0
+        }
+        guard let requested = geometryDirtyFrom else {
+            #if TRANSCRIPT_CHECKS
+            NavigationRenderMetrics.count("native_stack_geometry_cache_hit")
+            #endif
+            return
+        }
+        let start = min(requested, blockViews.count)
+        heights = Array(heights.prefix(start))
+        offsets = Array(offsets.prefix(start))
+        var y = start > 0 ? offsets[start - 1] + heights[start - 1] : 0
+        for index in start..<blockViews.count {
             if index > 0 {
                 y += NativeAssistantContent.spacing(before: blocks[index], after: blocks[index - 1], compact: compact)
             }
-            let height = view.contentHeight(width: width)
-            let frame = CGRect(x: 0, y: y, width: width, height: height)
+            offsets.append(y)
+            let height = blockViews[index].contentHeight(width: width)
+            heights.append(height)
+            y += height
+        }
+        totalHeight = y
+        geometryDirtyFrom = nil
+        #if TRANSCRIPT_CHECKS
+        NavigationRenderMetrics.count("native_stack_geometry_rebuilt_blocks", by: blockViews.count - start)
+        #endif
+    }
+    func contentHeight(width: CGFloat) -> CGFloat {
+        resolveGeometry(width: width)
+        return totalHeight
+    }
+    func place(width: CGFloat) {
+        resolveGeometry(width: width)
+        let start = min(placementDirtyFrom ?? blockViews.count, blockViews.count)
+        guard start < blockViews.count || !dirtyBlocks.isEmpty else {
+            placementDirtyFrom = nil
+            #if TRANSCRIPT_CHECKS
+            NavigationRenderMetrics.count("native_stack_place_cache_hit")
+            #endif
+            return
+        }
+        for index in blockViews.indices {
+            let view = blockViews[index]
+            guard index >= start || dirtyBlocks.contains(ObjectIdentifier(view)) else { continue }
+            let frame = CGRect(x: 0, y: offsets[index], width: width, height: heights[index])
             let sizeChanged = view.frame.size != frame.size
             if view.frame != frame { view.frame = frame }
             if sizeChanged || dirtyBlocks.contains(ObjectIdentifier(view)) {
                 view.placeContent(width: width)
             }
-            y += height
         }
         dirtyBlocks.removeAll(keepingCapacity: true)
+        placementDirtyFrom = nil
     }
     /// Return all text views to the shared pool and detach every block view.
     func teardown() {
@@ -645,6 +774,12 @@ final class NativeAssistantStackView: NSView {
         blockViews = []
         blocks = []
         dirtyBlocks.removeAll(keepingCapacity: true)
+        geometryWidth = nil
+        geometryDirtyFrom = nil
+        placementDirtyFrom = nil
+        heights = []
+        offsets = []
+        totalHeight = 0
         subviews = []
     }
     func textViews() -> [ReplyTextView] { blockViews.flatMap { $0.textViews() } }
