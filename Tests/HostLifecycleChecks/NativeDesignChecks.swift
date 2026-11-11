@@ -606,6 +606,9 @@ import WorkbenchCore
             let screenHeight = NSScreen.screens.first?.frame.height ?? 1080
             let event = CGEvent(mouseEventSource: nil, mouseType: type,
                 mouseCursorPosition: CGPoint(x: point.x, y: screenHeight - point.y), mouseButton: .left)!
+            event.setIntegerValueField(.mouseEventClickState, value: 1)
+            event.setDoubleValueField(.mouseEventPressure, value: 1)
+            event.setTimestamp(CFAbsoluteTimeGetCurrent())
             event.post(tap: .cghidEventTap)
         }
         func moveMouse(to point: CGPoint) {
