@@ -9,6 +9,9 @@ final class NativeAgentConnection {
     /// The open subagent sheet and the roster's stop state (bridge protocol 7).
     let subagents = NativeSubagentState()
     private(set) var host: SSHHost
+    /// The host's shared SSH master; the conversation forward multiplexes over it
+    /// when online, falling back to a private master otherwise.
+    @ObservationIgnored weak var hostConnection: HostConnection?
     private(set) var sessions: [NativeAgentSession] = []
     private(set) var snapshot: NativeAgentSnapshot? {
         get { conversation.snapshot }
@@ -86,6 +89,13 @@ final class NativeAgentConnection {
     /// Idle snapshot reads double their interval while nothing changes (2s → 4s → 8s).
     @ObservationIgnored private var idleSnapshotInterval: TimeInterval = 2
     @ObservationIgnored private var pendingWake: CheckedContinuation<Void, Never>?
+    /// Long-poll push (bridge advertises `watch` in /health). While work is active
+    /// one held request replaces the 400 ms tick; older bridges keep the tick.
+    @ObservationIgnored private var watchSupported = false
+    @ObservationIgnored private var watchCursor = ""
+    @ObservationIgnored private var watchWake: CheckedContinuation<Bool, Never>?
+    @ObservationIgnored private var watchTask: Task<Void, Never>?
+    @ObservationIgnored private var watchGeneration = UUID()
     private var selectionGeneration: UUID { conversation.generation }
     @ObservationIgnored private var generation = UUID()
     private let requestTransport: ((String, JSONValue?) async throws -> Data)?
@@ -148,7 +158,8 @@ final class NativeAgentConnection {
                     online = true; error = nil; onSessionsChanged?()
                     while !Task.isCancelled && generation == token {
                         try await poll()
-                        await sleepUntilNextPoll()
+                        if needsFastTick { await waitForRemoteChange() }
+                        else { await sleepUntilNextPoll() }
                     }
                 } catch is CancellationError { return }
                 catch {
@@ -166,6 +177,7 @@ final class NativeAgentConnection {
         nextIdleSnapshotRefresh = .distantPast
         nextBridgeRecheck = .distantPast
         idleSnapshotInterval = 2
+        watchCursor = ""
         wakePolling()
         online = false; catalogSynced = false; wantsConnection = false; error = nil; bridgeTransition = nil; closeTunnel()
     }
@@ -173,9 +185,39 @@ final class NativeAgentConnection {
     /// before its next scheduled deadline.
     private func wakePolling() {
         pendingWake?.resume(); pendingWake = nil
+        if let continuation = watchWake { watchWake = nil; continuation.resume(returning: true) }
+        watchTask?.cancel()
     }
     private func completeWake() {
         pendingWake?.resume(); pendingWake = nil
+    }
+    /// Holds one long-poll request while work is active, so a change costs a single
+    /// SSH round trip instead of a 400 ms tick. A wake (selection, send) cancels the
+    /// held read; a failed read falls back to the timed tick and let `poll` surface
+    /// any real transport failure through the reconnect loop.
+    private func waitForRemoteChange() async {
+        guard watchSupported else { await sleepUntilNextPoll(); return }
+        let cursor = watchCursor
+        let generation = UUID(); watchGeneration = generation
+        let changed: Bool = await withCheckedContinuation { continuation in
+            watchWake = continuation
+            watchTask = Task { [weak self] in
+                guard let self else { return }
+                do {
+                    let value: JSONValue = try await self.request("/watch?since=\(cursor)&timeout=20")
+                    self.watchCursor = value["revision"].string ?? cursor
+                    self.finishWatch(generation, changed: true)
+                } catch {
+                    self.finishWatch(generation, changed: false)
+                }
+            }
+        }
+        if !changed { await sleepUntilNextPoll() }
+    }
+    private func finishWatch(_ generation: UUID, changed: Bool) {
+        guard generation == watchGeneration, let continuation = watchWake else { return }
+        watchWake = nil
+        continuation.resume(returning: changed)
     }
     /// Idle connections wait for the next due read instead of waking every 400ms.
     /// Busy sessions, pending interactions and in-flight sends keep the fast tick.
@@ -258,6 +300,11 @@ final class NativeAgentConnection {
             return
         }
         let local = try KimiAPI.availableLoopbackPort()
+        // Reuse the host's shared master when usable; a private master below is
+        // the fallback. A protocol-gate failure propagates rather than falling back.
+        if try await openSharedForward(localPort: local, remotePort: port, secret: secret, restartPending: restartPending) {
+            return
+        }
         let folder = URL(fileURLWithPath: "/tmp/awb-native-\(UUID().uuidString.prefix(10))")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700]); directory = folder
         let control = folder.appendingPathComponent("ssh").path
@@ -277,10 +324,39 @@ final class NativeAgentConnection {
         }
         throw WorkbenchError(L("原生对话 SSH 转发超时"))
     }
+    /// Forwards over the host's shared master, wiring `api`/`tunnel` and applying
+    /// the protocol gate once the forward carries traffic. Returns false when the
+    /// shared master is not usable so the caller dials a private master; a gate
+    /// failure throws instead, since a private master would hit the same gate.
+    private func openSharedForward(localPort: UInt16, remotePort: Int, secret: String, restartPending: Int?) async throws -> Bool {
+        guard let hostConnection, !host.isLocal else { return false }
+        hostConnection.connectIfNeeded()
+        for _ in 0..<50 {
+            try Task.checkCancellation()
+            if hostConnection.online { break }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        guard hostConnection.online,
+              let process = hostConnection.multiplexedForward(localPort: localPort, remotePort: remotePort) else { return false }
+        let client = KimiAPI(baseURL: URL(string: "http://127.0.0.1:\(localPort)")!, token: secret)
+        for _ in 0..<50 {
+            try Task.checkCancellation()
+            if !process.isRunning { process.terminate(); return false }
+            if (try? await client.request("/health")) != nil {
+                api = client; tunnel = process
+                try await readBridgeHealth(restartPending: restartPending)
+                return true
+            }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        process.terminate()
+        return false
+    }
     /// The protocol gate plus the identity of the process actually serving: a
     /// hand-bumped version number does not say which source it is executing.
     private func readBridgeHealth(restartPending: Int? = nil) async throws {
         let health: JSONValue = try await request("/health")
+        watchSupported = health["watch"] == .bool(true)
         let expected = RemoteSetup.bridgeServiceVersion
         guard let version = health["version"].int else {
             throw WorkbenchError(L("无法读取远端桥接服务的版本。请重新安装桥接组件后重试。"))

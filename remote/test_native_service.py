@@ -1390,6 +1390,18 @@ class QoderHandlerContractTests(unittest.TestCase):
         self.assertEqual(observed,[True])
 
 class DshProtocolTests(unittest.TestCase):
+    def test_launch_keeps_managed_home_and_telemetry_disabled(self):
+        session = broker.Session({'id':'isolated-dsh','provider':'dsh','cwd':str(broker.ROOT),'title':'Fixture',
+                                  'model':'','busy':False,'archived':False,'updated':0,'revision':0,'completed':0,
+                                  'messages':[],'interactions':[],'error':None})
+        with patch.object(broker, 'dsh_binary', return_value='/fixture/dsh'), \
+             patch.object(broker.subprocess, 'Popen') as launch, \
+             patch.object(broker.threading.Thread, 'start'), \
+             patch.object(session.acp_adapter, 'request'):
+            session.launch()
+        self.assertEqual(launch.call_args.kwargs['env']['DSH_HOME'], str(broker.ROOT/'dsh-home'))
+        self.assertEqual(launch.call_args.kwargs['env']['DSH_TELEMETRY_MODE'], 'DISABLED')
+
     OPTIONS = [
         {'id':'model','name':'Model','category':'model','type':'select','currentValue':'["deepseek-official","deepseek-v4-flash"]',
          'options':[{'group':'deepseek-official','name':'DeepSeek','options':[

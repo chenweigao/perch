@@ -1663,6 +1663,7 @@ private final class ConversationEntryController: NSViewController {
     private var textReveal: StreamingReplyState?
     private var streamSnapshot: ReplyStreamSnapshot?
     private var streamSnapshotSource: String?
+    private var streamParser = ReplyStreamParser()
     private var pendingStreamSource: String?
     private var pendingStreamReceivedAt: TimeInterval?
     private var streamPreparation: (blocks: [ReplyBlock], size: CGFloat, rich: Bool, value: NativeAssistantContent.Preparation)?
@@ -1884,6 +1885,7 @@ private final class ConversationEntryController: NSViewController {
               let source = part.text else {
             revealClock?.stop(); textReveal = nil; revealIdentity = nil
             streamSnapshot = nil; streamSnapshotSource = nil; streamPreparation = nil
+            streamParser = ReplyStreamParser()
             pendingStreamSource = nil; pendingStreamReceivedAt = nil
             return
         }
@@ -1891,6 +1893,7 @@ private final class ConversationEntryController: NSViewController {
         if revealIdentity != identity {
             revealClock?.stop()
             textReveal = nil; streamSnapshot = nil; streamSnapshotSource = nil; streamPreparation = nil
+            streamParser = ReplyStreamParser()
             pendingStreamSource = nil; pendingStreamReceivedAt = nil
             revealIdentity = identity
         }
@@ -1921,7 +1924,7 @@ private final class ConversationEntryController: NSViewController {
             #if TRANSCRIPT_CHECKS
             let parseStart = CACurrentMediaTime()
             #endif
-            streamSnapshot = ReplyStreamSnapshot(blocks: ReplyDocument.parse(source))
+            streamSnapshot = ReplyStreamSnapshot(blocks: streamParser.update(source))
             streamSnapshotSource = source
             PerfDiagnostics.end("streaming_markdown_parse", parseProbe)
             #if TRANSCRIPT_CHECKS

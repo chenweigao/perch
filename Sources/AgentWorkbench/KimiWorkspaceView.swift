@@ -138,8 +138,8 @@ struct KimiWorkspaceView: View {
     private func stallSignature(_ conversation: KimiConversation) -> Int {
         var hasher = Hasher()
         hasher.combine(conversation.lastSeq)
-        hasher.combine(conversation.live?.assistantText.utf16.count ?? 0)
-        hasher.combine(conversation.live?.thinkingText.utf16.count ?? 0)
+        hasher.combine(conversation.live?.assistantUTF16Length ?? 0)
+        hasher.combine(conversation.live?.thinkingUTF16Length ?? 0)
         hasher.combine(conversation.live?.runningTools.count ?? 0)
         return hasher.finalize()
     }
@@ -402,7 +402,7 @@ private struct KimiTimeline<Bar: View>: View {
     @State private var appActive = NSApp.isActive
     @State private var follow = true
     private var readingKey: String { "\(connection.host.id):kimi:\(connection.conversation?.snapshot.session.id ?? "")" }
-    private var readingRevision: String { "\(connection.conversation?.lastSeq ?? 0):\(connection.conversation?.live?.assistantText.utf16.count ?? 0)" }
+    private var readingRevision: String { "\(connection.conversation?.lastSeq ?? 0):\(connection.conversation?.live?.assistantUTF16Length ?? 0)" }
     private var hasNewReply: Bool { ConversationReadingMemory.shared.seenRevision[readingKey] != readingRevision }
     private var displayedResult: KimiSession? {
         guard appActive, follow, ConversationReadingMemory.shared.following[readingKey] != false,

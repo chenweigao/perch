@@ -63,6 +63,18 @@ func checkKimiProtocol() throws {
     require(c.lastSeq == 20 && c.live?.assistantText == "恢复😀")
     require(!c.apply(try event("assistant.delta", seq: 11, offset: 0, delta: "旧步骤不能混入")))
     require(c.live?.assistantText == "恢复😀")
+    // Cached UTF-16 lengths track the text through appends, overlaps and resets.
+    var lengths = try KimiConversation(snapshot())
+    require(lengths.live?.assistantUTF16Length == "你好😀".utf16.count)
+    require(!lengths.apply(try event("assistant.delta", seq: 12, offset: 4, delta: "继续😀")))
+    require(lengths.live?.assistantUTF16Length == lengths.live?.assistantText.utf16.count)
+    require(!lengths.apply(try event("assistant.delta", seq: 13, offset: 6, delta: "😀尾巴")))
+    require(lengths.live?.assistantText == "你好😀继续😀尾巴")
+    require(lengths.live?.assistantUTF16Length == lengths.live?.assistantText.utf16.count)
+    require(!lengths.apply(try event("thinking.delta", seq: 14, offset: 0, delta: "想")))
+    require(lengths.live?.thinkingUTF16Length == 1)
+    lengths.reconcile(try snapshot(20, text: "重置"))
+    require(lengths.live?.assistantUTF16Length == 2 && lengths.live?.thinkingUTF16Length == 0)
     func history(_ ids: [String], more: Bool) throws -> KimiPage<KimiMessage> {
         let rows = ids.map { "{\"id\":\"\($0)\",\"role\":\"user\",\"content\":[],\"created_at\":\"\($0)\"}" }.joined(separator: ",")
         return try KimiWire.decoder().decode(KimiPage<KimiMessage>.self, from: Data("{\"items\":[\(rows)],\"has_more\":\(more)}".utf8))
