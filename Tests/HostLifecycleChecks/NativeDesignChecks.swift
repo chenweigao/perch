@@ -591,7 +591,15 @@ import WorkbenchCore
             rowPoint = CGPoint(x: frame.midX, y: frame.midY)
             break
         }
-        guard let rowPoint else { preconditionFailure("Sidebar session row must expose a native hover target") }
+        guard let rowPoint else {
+            let identifiers = taskPanelElements(window).map { element -> String in
+                guard let frame = (element.node.value(forKey: "accessibilityFrame") as? NSValue)?.rectValue else {
+                    return "\(element.identifier ?? "nil"){}"
+                }
+                return "\(element.identifier ?? "nil"){\(frame)}"
+            }
+            preconditionFailure("Sidebar session row must expose a native hover target: \(identifiers)")
+        }
         func postMouse(_ type: CGEventType, at point: CGPoint) {
             let event = CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: point, mouseButton: .left)!
             event.post(tap: .cghidEventTap)
