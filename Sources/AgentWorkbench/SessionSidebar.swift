@@ -199,12 +199,12 @@ struct WorkbenchSidebar: View {
         }
     }
     private enum ProjectEntry: Identifiable {
-        case favorites, emptyFavorites, projects, project(SidebarProject), session(WorkspaceSession, Bool), more(SidebarProject), moreProjects, moreSessions(Int)
+        case favorites, projects, recency(SidebarRecency), project(SidebarProject), session(WorkspaceSession, Bool), more(SidebarProject), moreProjects, moreSessions(Int)
         var id: String {
             switch self {
             case .favorites: "header-favorites"
-            case .emptyFavorites: "empty-favorites"
             case .projects: "header-projects"
+            case .recency(let bucket): "recency-" + bucket.rawValue
             case .project(let project): "project-" + project.id
             case .session(let item, _): "session-" + item.id
             case .more(let project): "more-" + project.id
@@ -215,14 +215,11 @@ struct WorkbenchSidebar: View {
     }
     private func projectEntries(_ projection: SidebarProjection) -> [ProjectEntry] {
         var result: [ProjectEntry] = []
-        result.append(.favorites)
-        if favoritesExpanded {
-            result += projection.favorites.map { .session($0, false) }
-            // The invitation to pin needs something to pin. On a first run the picker
-            // it opens would be empty, so it waits for the first session.
-            if projection.favorites.isEmpty && model.allSessions.contains(where: { !$0.archived }) {
-                result.append(.emptyFavorites)
-            }
+        // Pins appear once something is pinned (from a row's actions or ⇧⌘P);
+        // otherwise the recent list starts right under the navigation.
+        if !projection.favorites.isEmpty {
+            result.append(.favorites)
+            if favoritesExpanded { result += projection.favorites.map { .session($0, false) } }
         }
         result.append(.projects)
         let collapsed = collapsedProjects
@@ -231,7 +228,18 @@ struct WorkbenchSidebar: View {
             var sessions = Array(projection.ungrouped.prefix(sessionLimit))
             if let selected = projection.ungrouped.first(where: { $0.id == selectedID }),
                !sessions.contains(where: { $0.id == selected.id }) { sessions.append(selected) }
-            result += sessions.map { .session($0, false) }
+            // Flat recents read as a dated list (今天 / 昨天 / 最近 7 天 / 更早). The
+            // catalog is newest first, so a header opens each run of one bucket.
+            let now = Date()
+            var bucket: SidebarRecency?
+            for item in sessions {
+                let next = SidebarRecency(updatedAt: item.updatedAt, now: now)
+                if next != bucket {
+                    bucket = next
+                    if !result.contains(where: { $0.id == ProjectEntry.recency(next).id }) { result.append(.recency(next)) }
+                }
+                result.append(.session(item, false))
+            }
             if sessions.count < projection.ungrouped.count { result.append(.moreSessions(projection.ungrouped.count)) }
             return result
         }
@@ -255,13 +263,12 @@ struct WorkbenchSidebar: View {
         ForEach(projectEntries(projection)) { entry in
             switch entry {
             case .favorites: pinnedHeader(count: projection.favorites.count)
-            case .emptyFavorites:
-                Button { showPinPicker = true } label: {
-                    Text("置顶常用会话，随时继续")
-                        .font(.system(size: SidebarMetrics.detailSize)).foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, SidebarMetrics.rowInset)
-                        .frame(height: SidebarMetrics.auxiliaryRowHeight)
-                }.buttonStyle(SidebarNavigationStyle()).accessibilityIdentifier("sidebar.pin.empty")
+            case .recency(let bucket):
+                SidebarSectionTitle(title: Text(bucket.title))
+                    .padding(.horizontal, SidebarMetrics.rowInset)
+                    .frame(maxWidth: .infinity, minHeight: SidebarMetrics.sectionHeaderHeight, alignment: .leading)
+                    .padding(.top, entryIsFirstRecency(bucket, in: projection) ? 0 : SidebarMetrics.sectionTopSpacing)
+                    .accessibilityAddTraits(.isHeader)
             case .projects:
                 HStack(spacing: 6) {
                     SidebarViewOptionsMenu(title: Text(groupedByProject ? L("项目") : L("最近会话")),
@@ -313,6 +320,11 @@ struct WorkbenchSidebar: View {
                 .font(.system(size: SidebarMetrics.detailSize)).foregroundStyle(.secondary)
                 .padding(.horizontal, SidebarMetrics.rowInset).padding(.vertical, 12)
         }
+    }
+
+    /// The newest bucket sits directly under the 最近会话 header; later ones get air above.
+    private func entryIsFirstRecency(_ bucket: SidebarRecency, in projection: SidebarProjection) -> Bool {
+        projection.ungrouped.first.map { SidebarRecency(updatedAt: $0.updatedAt, now: Date()) == bucket } ?? true
     }
 
     /// The first section header. It shares the other headers' style, and its add
@@ -425,6 +437,17 @@ struct WorkbenchSidebar: View {
         SessionSidebarRow(model: model, item: item, groups: groups,
                           selected: !model.showDashboard && item.id == model.tabs.selectedID,
                           onOpen: { model.open(item) })
+    }
+}
+
+extension SidebarRecency {
+    var title: LocalizedStringKey {
+        switch self {
+        case .today: "今天"
+        case .yesterday: "昨天"
+        case .week: "最近 7 天"
+        case .earlier: "更早"
+        }
     }
 }
 

@@ -15,7 +15,8 @@ import WorkbenchCore
 /// step up through a real ramp, H4+ separate by weight). Horizontal geometry —
 /// the 748 pt column, insets — stays fixed at every size.
 enum ReplyStyle {
-    static let readingWidth: CGFloat = 748
+    /// Qoder's measure: about 57 em of 14 pt body in the centered column.
+    static let readingWidth: CGFloat = 800
     static let horizontalPadding = WorkbenchTheme.Reading.inset
     static let composerInset: CGFloat = 12
     /// The editor text and transcript share the same centered reading column.
@@ -41,7 +42,10 @@ enum ReplyStyle {
     /// Between the parts of one transcript entry, and above a reply's actions.
     static let entryPartSpacing: CGFloat = 10
     /// Between transcript entries; consecutive process rows sit closer.
-    static let entrySpacing: CGFloat = 12
+    /// Qoder spaces a fold row and the prose after it a full step apart.
+    static let entrySpacing: CGFloat = 16
+    /// Below a user prompt, before the reply's first row.
+    static let promptSpacing: CGFloat = 20
     static let processEntrySpacing: CGFloat = 4
     static let progressToolSpacing: CGFloat = 4
     static let progressStageSpacing: CGFloat = 28
@@ -217,7 +221,8 @@ enum UserMessageStyle {
     static var collapsedHeight: CGFloat { lineHeight * 9 }
     static var foldThreshold: CGFloat { lineHeight * 11 }
     static let horizontalPadding: CGFloat = 16
-    static let verticalPadding: CGFloat = 10
+    /// A one-line prompt is a 46 pt neutral pill: 22 pt of text plus 12 pt above and below.
+    static let verticalPadding: CGFloat = 12
     /// TextKit puts a line's extra leading above its glyphs, so text at the
     /// reading line height sits low in its line box. A bubble raises its text
     /// until capitals and ideographs sit midway between its edges, in whole
@@ -230,11 +235,12 @@ enum UserMessageStyle {
     }
     static var topPadding: CGFloat { verticalPadding - textLift }
     static var bottomPadding: CGFloat { verticalPadding + textLift }
-    /// DSH bubble radius (radius-xl = 20 px).
-    static let cornerRadius: CGFloat = 20
+    /// Qoder's prompt bubble: a card-radius neutral surface, not a pill.
+    static let cornerRadius = WorkbenchTheme.Radius.card
     /// DSH caps the bubble at 0.702 of the column (525/748).
     static let maxWidthRatio: CGFloat = 0.72
-    static let topSpacing: CGFloat = 8
+    /// A new turn opens with air above its prompt, apart from the previous reply.
+    static let topSpacing: CGFloat = 24
     static var paragraphSpacing: CGFloat { ReplyStyle.paragraphSpacing }
     /// The fold toggle under a long prompt, as `LongUserPrompt` sets it: label-size
     /// secondary text on a 24 pt row, 6 pt below the prompt.

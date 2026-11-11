@@ -74,6 +74,8 @@ struct SessionRowChrome<Indicator: View>: View {
             } label: {
                 HStack(alignment: .center, spacing: 6) {
                     Text(title).font(.system(size: SidebarMetrics.titleSize, weight: unread ? .semibold : .regular))
+                        .foregroundStyle(selected || unread ? WorkbenchTheme.ink
+                                         : WorkbenchTheme.ink.opacity(SidebarMetrics.idleTitleOpacity))
                         .lineLimit(1).truncationMode(.tail)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     if running {

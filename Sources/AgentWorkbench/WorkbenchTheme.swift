@@ -43,10 +43,6 @@ enum WorkbenchTheme {
     /// crisp white in light, one step lighter in dark.
     static let overviewCard = color(
         light: (1.0, 1.0, 1.0), dark: (0.180, 0.196, 0.235))
-    /// Selected sidebar rows: a small light card on the window glass. Translucent,
-    /// so the desktop tint still reads through it.
-    static let rowCard = Color(nsColor: nsColor(light: NSColor(white: 1, alpha: 0.92),
-                                                dark: NSColor(white: 1, alpha: 0.11)))
     /// The base beneath the window glass, at the reader's chosen intensity
     /// (Settings › 界面 › 窗口玻璃). Day and night share one setting: a white
     /// underlay in light, the canvas's blue-graphite in dark. `standard` keeps
@@ -103,10 +99,10 @@ enum WorkbenchTheme {
         }
     }
 
-    /// Inline-code chip fill in prose (DSH: `--dsw-alias-markdown-inline-code`,
-    /// neutral-50/800, OPAQUE like the web token: an alpha wash over the glass
-    /// backdrop reads as a border-only bubble. Rounded, self-drawn (ReplyTextView).
-    static let inlineCodeTintNS = nsColor(light: (250/255, 250/255, 250/255), dark: (41/255, 41/255, 41/255))
+    /// Inline-code chip fill in prose: an opaque neutral a step darker than the
+    /// sheet, so `main` and hashes read as chips (Qoder). Opaque, because an alpha
+    /// wash over the glass backdrop reads as a border-only bubble. Self-drawn (ReplyTextView).
+    static let inlineCodeTintNS = nsColor(light: (240/255, 240/255, 241/255), dark: (41/255, 41/255, 41/255))
 
     /// Code/mermaid/tool card surface (DSH `--dsw-alias-markdown-code-block`:
     /// neutral-bluish-50 / neutral-bluish-900).
@@ -116,9 +112,9 @@ enum WorkbenchTheme {
     /// identical to the surface in light, a lighter strip in dark.
     static let replyBannerNS = nsColor(light: (249/255, 250/255, 251/255), dark: (44/255, 44/255, 46/255))
 
-    /// User message bubble (DSH `--dsw-specific-bubble`: deepseek-50 light,
-    /// neutral-bluish-850 dark) — a blue tint, not a neutral wash.
-    static let userBubbleNS = nsColor(light: (237/255, 243/255, 254/255), dark: (44/255, 44/255, 46/255))
+    /// User message bubble: Qoder's flat neutral gray on the white sheet; the
+    /// dark graphite stays a step above the dark canvas.
+    static let userBubbleNS = nsColor(light: (243/255, 243/255, 244/255), dark: (44/255, 44/255, 46/255))
 
     /// A primary-ink wash with independent light/dark alphas. labelColor resolves
     /// inside the requested appearance; applying alpha outside it can freeze the
@@ -222,7 +218,7 @@ extension WorkbenchTheme {
     /// Each token is a primary-ink wash with its own light/dark alpha: at night,
     /// separation comes from lighter surfaces, so the dark washes are a step
     /// stronger than the light ones. Keyboard selection is `selected`, so it never
-    /// reads as a hover. Sidebar rows on the window glass use `rowCard` instead.
+    /// reads as a hover. Sidebar rows on the window glass use the same washes.
     enum Fill {
         static let hover = wash(light: 0.045, dark: 0.055)
         static let selected = wash(light: 0.08, dark: 0.10)

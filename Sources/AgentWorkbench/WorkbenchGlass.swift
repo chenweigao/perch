@@ -41,24 +41,29 @@ struct WorkbenchDisclosureStyle: DisclosureGroupStyle {
     /// PI's turn-process header: the caret closes the status cluster itself,
     /// following the last label instead of either edge.
     var caretFollowsContent = false
+    /// Qoder's process rows: the caret leads in a small outlined square, then the
+    /// label. Takes precedence over the other caret placements.
+    var boxedChevron = false
 
     func makeBody(configuration: Configuration) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Button { configuration.isExpanded.toggle() } label: {
                 HStack(spacing: 8) {
-                    if !trailingChevron && !caretFollowsContent {
+                    if boxedChevron {
+                        WorkbenchDisclosureBox(expanded: configuration.isExpanded)
+                    } else if !trailingChevron && !caretFollowsContent {
                         Image(systemName: configuration.isExpanded ? "chevron.down" : "chevron.right")
                             .font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
                             .frame(width: 12).accessibilityHidden(true)
                     }
                     configuration.label
-                    if caretFollowsContent {
+                    if caretFollowsContent && !boxedChevron {
                         Image(systemName: configuration.isExpanded ? "chevron.down" : "chevron.right")
                             .font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
                             .accessibilityHidden(true)
                     }
                     Spacer(minLength: 0)
-                    if trailingChevron && !caretFollowsContent {
+                    if trailingChevron && !caretFollowsContent && !boxedChevron {
                         Image(systemName: configuration.isExpanded ? "chevron.down" : "chevron.right")
                             .font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
                             .accessibilityHidden(true)
@@ -72,6 +77,29 @@ struct WorkbenchDisclosureStyle: DisclosureGroupStyle {
                 .accessibilityValue(configuration.isExpanded ? Text("已展开") : Text("已收起"))
             WorkbenchDisclosureContent(expanded: configuration.isExpanded) { configuration.content }
         }
+    }
+}
+
+/// The leading caret of a process row: a 20 pt outlined square whose chevron
+/// turns down while the row is open. Its trailing gap brings the label to
+/// `ReplyStyle.Process.nestedIndent`, where nested rows start.
+struct WorkbenchDisclosureBox: View {
+    let expanded: Bool
+    static let size: CGFloat = 20
+    /// With the row's 8 pt spacing, the label starts 30 pt in.
+    static let trailingGap: CGFloat = 2
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.chip, style: .continuous)
+        Image(systemName: "chevron.right")
+            .font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
+            .rotationEffect(.degrees(expanded ? 90 : 0))
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: expanded)
+            .frame(width: Self.size, height: Self.size)
+            .background(WorkbenchTheme.contentBackground, in: shape)
+            .overlay(shape.strokeBorder(WorkbenchTheme.Stroke.hairline, lineWidth: 1))
+            .padding(.trailing, Self.trailingGap)
+            .accessibilityHidden(true)
     }
 }
 

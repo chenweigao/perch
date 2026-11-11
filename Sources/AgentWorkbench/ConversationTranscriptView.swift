@@ -1098,6 +1098,9 @@ private final class ConversationDocumentView: NSView {
         let current = contents[index], next = contents[index + 1]
         if next.isStageNote && current.entry.isProcess { return ReplyStyle.progressStageSpacing }
         if current.isStageNote && next.entry.isProcess { return ReplyStyle.progressToolSpacing }
+        if current.entry.presentation == .message && current.entry.messages.first?.isUserPrompt == true {
+            return ReplyStyle.promptSpacing
+        }
         return current.entry.isProcess && next.entry.isProcess ? ReplyStyle.processEntrySpacing : ReplyStyle.entrySpacing
     }
     private var viewportRect: CGRect {
@@ -2617,8 +2620,7 @@ struct ProcessFoldRow: View {
             HStack(alignment: .center, spacing: 8) {
                 DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: "sparkles").font(.system(size: ReplyStyle.captionSize))
-                            .foregroundStyle(WorkbenchTheme.quiet).fixedSize()
+                        // The boxed caret leads the fold; no glyph competes with it.
                         Text(verbatim: live ? liveLabel : L("工作过程")).fixedSize()
                         if live {
                             ProcessStatusDot(status: .running)

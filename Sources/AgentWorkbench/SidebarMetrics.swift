@@ -11,14 +11,18 @@ import SwiftUI
 /// A project's sessions start under the project's icon, so their titles align
 /// with the project title. Section headers start at the icon column.
 enum SidebarMetrics {
-    static let rowHeight: CGFloat = 30
-    static let navigationHeight: CGFloat = 28
-    static let navigationSize: CGFloat = 13
+    /// Qoder rhythm: 32 pt rows 1 pt apart, navigation and sessions alike.
+    static let rowHeight: CGFloat = 32
+    static let navigationHeight: CGFloat = rowHeight
+    static let navigationSize: CGFloat = WorkbenchTheme.Typography.body
+    static let rowSpacing: CGFloat = 1
+    /// The list's side padding inside the sidebar; the selection fill spans it.
+    static let listInset: CGFloat = 4
     /// Session rows that carry a status line in diagnostic height-change checks.
     static let subtitleRowHeight: CGFloat = 44
     /// Compact vertical padding for single-line session rows.
     static let sessionVerticalPadding: CGFloat = 5
-    /// Inside the shell's 10 pt list padding.
+    /// Inside the shell's `listInset`.
     static let rowInset: CGFloat = 8
     static let iconWidth: CGFloat = 18
     static let iconSize: CGFloat = 14
@@ -36,20 +40,22 @@ enum SidebarMetrics {
     /// Leading offset of row titles, for secondary rows that carry no icon.
     static let titleOffset: CGFloat = rowInset + iconWidth + labelSpacing
 
-    /// Section headers: small semibold labels starting at the icon column, a step
-    /// below the 14 pt session titles they group. Darker than secondary text, so
-    /// headers such as 置顶 never read as disabled.
-    static let sectionTitleSize: CGFloat = WorkbenchTheme.Typography.caption
-    static let sectionTitleOpacity: Double = 0.62
-    static let sectionHeaderHeight: CGFloat = 22
+    /// Section and date headers (最近会话, 今天, 昨天): regular weight, one step
+    /// smaller than the rows and lighter than their titles, starting at the
+    /// title column. Weight stays regular so the list reads as one calm column.
+    static let sectionTitleSize: CGFloat = 13
+    static let sectionTitleOpacity: Double = 0.40
+    static let sectionHeaderHeight: CGFloat = 28
+    /// Unselected session titles recede; the selected row returns to full ink.
+    static let idleTitleOpacity: Double = 0.72
     /// Trailing actions of headers and project rows (+, filter, retry): one quiet
     /// glyph size and one hit target.
     static let actionSize: CGFloat = 24
     static let actionGlyphSize: CGFloat = 12
-    static let sectionTopSpacing: CGFloat = 8
+    static let sectionTopSpacing: CGFloat = 6
     static let sectionBottomSpacing: CGFloat = 1
     /// "显示全部", "更多会话" and the pin invitation: quieter than a session row.
-    static let auxiliaryRowHeight: CGFloat = 24
+    static let auxiliaryRowHeight: CGFloat = 28
     /// The first header sits closer to the navigation block than the later ones.
     static let pinnedHeaderTopSpacing: CGFloat = 2
     static let sectionHeight: CGFloat = sectionTopSpacing + sectionHeaderHeight + sectionBottomSpacing
@@ -65,16 +71,16 @@ enum SidebarMetrics {
     /// Hover fades: row highlights and the actions they reveal.
     static let highlightDuration: Double = 0.1
 
-    /// Strength of the row card: the selection is a full card, hover or a press
-    /// a fainter one. A press additionally shades the row.
+    /// Strength of the row wash: the selection is a full wash, hover a fainter
+    /// one. A press additionally shades the row.
     static func cardOpacity(selected: Bool, hovered: Bool, pressed: Bool = false) -> Double {
         selected ? 1 : hovered || pressed ? 0.5 : 0
     }
 }
 
 /// The highlight behind every sidebar row and header control: one shape and one
-/// fade. On the window glass a gray wash reads as dirt, so the selection is a
-/// small light card with a hairline, like the conversation sheet beside it.
+/// fade. Qoder-style, the selection is a flat neutral wash on the window glass
+/// (no card, hairline or shadow); hover is the same wash at half strength.
 struct SidebarHighlight: View {
     var selected = false
     var hovered = false
@@ -83,13 +89,11 @@ struct SidebarHighlight: View {
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius, style: .continuous)
-        let card = SidebarMetrics.cardOpacity(selected: selected, hovered: hovered, pressed: pressed)
+        let wash = SidebarMetrics.cardOpacity(selected: selected, hovered: hovered, pressed: pressed)
         let animation: Animation? = reduceMotion ? nil : .easeOut(duration: SidebarMetrics.highlightDuration)
-        shape.fill(WorkbenchTheme.rowCard.opacity(card))
-            .overlay(shape.strokeBorder(selected ? WorkbenchTheme.Stroke.hairline : .clear, lineWidth: 1))
+        shape.fill(WorkbenchTheme.Fill.selected.opacity(wash))
             .overlay(shape.fill(pressed ? WorkbenchTheme.Fill.hover : .clear))
-            .shadow(color: .black.opacity(selected ? 0.06 : 0), radius: 1.5, y: 0.5)
-            .animation(animation, value: card)
+            .animation(animation, value: wash)
             .animation(animation, value: pressed)
     }
 }
@@ -109,7 +113,7 @@ struct SidebarSectionTitle: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         HStack(spacing: 4) {
-            title.font(.system(size: SidebarMetrics.sectionTitleSize, weight: .semibold))
+            title.font(.system(size: SidebarMetrics.sectionTitleSize, weight: .regular))
                 .foregroundStyle(Color.primary.opacity(SidebarMetrics.sectionTitleOpacity))
                 .lineLimit(1)
             if let count, count > 0 {

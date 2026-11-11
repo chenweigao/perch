@@ -489,7 +489,9 @@ import WorkbenchCore
     window.contentView!.layoutSubtreeIfNeeded()
     precondition(split.isSidebarShown && !split.isSidebarYieldingToInspector && !split.isInspectorOverlayingContent,
                  "Asking for a yielding sidebar must bring it back without overlaying the inspector")
-    try await place(width: 900)
+    // Narrower than sidebar + gap + the 600 pt minimum card, so the sidebar overlays.
+    try await place(width: WorkspaceLayoutMetrics.sidebarInset + split.floatingSidebarWidth +
+        WorkspaceLayoutMetrics.sidebarGap + WorkspaceLayoutMetrics.contentMinimumWidth - 40)
     let narrowSidebarFrame = split.floatingSidebarView!.convert(split.floatingSidebarView!.bounds, to: window.contentView)
     let narrowTitleFrame = title.convert(title.bounds, to: window.contentView)
     precondition(split.isSidebarOverlayingContent && split.sidebarOverlayBackdropView?.isHidden == false &&
@@ -629,6 +631,8 @@ import WorkbenchCore
         precondition(connection.snapshot?.thinking == "medium" && selectedEfforts[0] == "medium")
         print("PASS: model and effort changes reach the fixture runtime and return in the selected session")
 
+        split.setInspectorDesiredVisible(false)
+        try await place(width: min(1100, visible.width))
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         var rowPoint: CGPoint?
@@ -650,8 +654,12 @@ import WorkbenchCore
             }
             preconditionFailure("Sidebar session row must expose a native hover target: \(identifiers)")
         }
+        let screenHeight = NSScreen.screens.first?.frame.height ?? 1080
+        let quartzRowPoint = CGPoint(x: rowPoint.x, y: screenHeight - rowPoint.y)
+        precondition(visible.contains(quartzRowPoint),
+                     "Hover target must be inside the display's visible frame \(visible), got \(quartzRowPoint)")
         func moveMouse(to point: CGPoint) {
-            CGWarpMouseCursorPosition(point)
+            CGWarpMouseCursorPosition(CGPoint(x: point.x, y: screenHeight - point.y))
             let location = window.convertFromScreen(NSRect(origin: point, size: .zero)).origin
             let event = NSEvent.mouseEvent(with: .mouseMoved, location: location, modifierFlags: [],
                 timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
@@ -676,10 +684,18 @@ import WorkbenchCore
         moveMouse(to: rowPoint)
         try await Task.sleep(for: .milliseconds(550))
         guard taskPanelControl(window, "sidebar.row.actions") != nil else {
-            preconditionFailure("Hovering a session row must reveal its ellipsis action")
+            preconditionFailure("Hovering a session row must reveal its ellipsis action; row=\(rowPoint), pointer=\(NSEvent.mouseLocation), local=\(window.mouseLocationOutsideOfEventStream), key=\(window.isKeyWindow), active=\(NSApp.isActive)")
         }
-        guard let previewWindow = visibleWindow(with: "sidebar.row.preview") else {
-            preconditionFailure("Hovering a session row must open the styled preview after its delay")
+        var previewWindow: NSWindow?
+        for _ in 0..<20 {
+            if let presented = visibleWindow(with: "sidebar.row.preview") {
+                previewWindow = presented
+                break
+            }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        guard let previewWindow else {
+            preconditionFailure("Hovering a session row must open the styled preview after its delay; row=\(rowPoint), pointer=\(NSEvent.mouseLocation), local=\(window.mouseLocationOutsideOfEventStream), key=\(window.isKeyWindow), active=\(NSApp.isActive), windows=\(NSApp.windows)")
         }
         precondition(previewWindow.contentView?.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .aqua,
                      "Session previews must follow the workspace's light appearance")
