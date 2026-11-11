@@ -118,10 +118,10 @@ struct SessionRowChrome<Indicator: View>: View {
                 }
                 .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
                 .buttonStyle(.plain)
-                .opacity(hovered ? 1 : 0)
-                .allowsHitTesting(hovered)
+                .opacity(1)
+                .allowsHitTesting(true)
                 .accessibilityLabel("会话操作")
-                .accessibilityIdentifier(hovered ? "sidebar.row.actions" : "sidebar.row.actions.hidden")
+                .accessibilityIdentifier("sidebar.row.actions")
                 .onHover { inside in if inside { showPreview = false } }
             }
         }
