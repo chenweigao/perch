@@ -85,15 +85,32 @@ private struct StreamingFixtureView: View {
     let selection = (originalTexts[0].string as NSString).range(of: "Paragraph 2")
     originalTexts[0].setSelectedRange(selection)
 
+    let diagnostics = PerfDiagnostics.shared
+    diagnostics.setEnabled(false)
+    let monitor = FrameHitchMonitor(requiresActiveApp: false)
+    monitor.install(); diagnostics.setEnabled(true)
+    defer { monitor.uninstall(); diagnostics.setEnabled(false) }
+    func capture(_ name: String) throws {
+        guard let folder = ProcessInfo.processInfo.environment["PERCH_DESIGN_CAPTURES"] else { return }
+        let output = URL(fileURLWithPath: folder)
+        try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+        let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds)!
+        host.cacheDisplay(in: host.bounds, to: bitmap)
+        try bitmap.representation(using: .png, properties: [:])!.write(to: output.appendingPathComponent(name + ".png"))
+    }
+
     let complete = prefix + " — appended 中文流式文本 VISIBLE_END"
+    let assistantStarted = CACurrentMediaTime()
     model.messages = try messages(complete)
     await streamingSettle(host, milliseconds: 40)
     let releasedPrefix = renderedText(host)
     precondition(releasedPrefix.contains("Paragraph 8") && !releasedPrefix.contains("VISIBLE_END"),
                  "A burst progressively releases new text while retaining the visible prefix")
+    try capture("streaming-prose-partial")
     guard await waitForStreaming(host, { renderedText(host).contains("VISIBLE_END") }) else {
         preconditionFailure("The adaptive release must promptly catch up to the latest cumulative Unicode snapshot")
     }
+    let assistantLag = (CACurrentMediaTime() - assistantStarted) * 1_000
     let updatedTexts = textViews(row)
     precondition(nativeRows(host).first === row && updatedTexts.count == 2,
                  "A live append must retain its native row and paragraph grouping")
@@ -147,19 +164,33 @@ private struct StreamingFixtureView: View {
         preconditionFailure("Live thoughts must start expanded with their existing text visible")
     }
     let thoughtComplete = thoughtPrefix + String(repeating: "逐步检查中文👩🏽‍💻与边界。", count: 16) + "THOUGHT_RELEASE_END"
+    let thoughtStarted = CACurrentMediaTime()
     model.messages = try thoughts(thoughtComplete)
     await streamingSettle(host, milliseconds: 40)
     precondition(renderedText(host).contains(thoughtPrefix) && !renderedText(host).contains("THOUGHT_RELEASE_END"),
                  "Expanded thoughts must use the same progressive release as prose")
+    try capture("streaming-thought-partial")
     guard await waitForStreaming(host, { renderedText(host).contains("THOUGHT_RELEASE_END") }) else {
         preconditionFailure("Thoughts must catch up without truncating the Unicode stream")
     }
+    let thoughtLag = (CACurrentMediaTime() - thoughtStarted) * 1_000
+    try capture("streaming-thought-complete")
     let thoughtFinal = thoughtComplete + String(repeating: "追加的思考尾部", count: 20) + "THOUGHT_FLUSH"
     model.messages = try thoughts(thoughtFinal)
     await streamingSettle(host, milliseconds: 25)
     model.messages = try thoughts(thoughtFinal, answer: "最终正文已开始")
     guard await waitForStreaming(host, { renderedText(host).contains("THOUGHT_FLUSH") }) else {
         preconditionFailure("Starting the answer must immediately flush settled thought text")
+    }
+    if let folder = ProcessInfo.processInfo.environment["PERCH_DESIGN_CAPTURES"] {
+        let report: [String: Any] = [
+            "scope": "visible native prose/thought release; display-link main-thread scheduling, not GPU-presented FPS",
+            "assistant_burst_complete_ms": assistantLag, "thought_burst_complete_ms": thoughtLag,
+            "delivered_frames": monitor.deliveredFrames,
+            "diagnostics": try JSONSerialization.jsonObject(with: Data(diagnostics.report().utf8))
+        ]
+        try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys])
+            .write(to: URL(fileURLWithPath: folder).appendingPathComponent("streaming-frame-diagnostics.json"))
     }
 
     print("PASS: adaptive prose/thought Unicode release, persistent native row and selection, immediate completion/reduced motion, complete hosted fallback")

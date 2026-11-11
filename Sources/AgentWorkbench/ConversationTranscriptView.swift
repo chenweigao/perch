@@ -864,6 +864,7 @@ private final class ConversationDocumentView: NSView {
         }
         suspended = true
         isHidden = true
+        for controller in controllers.values { controller.suspendTextReveal() }
     }
 
     func configure(_ next: [ConversationEntryView], contentIdentity: ConversationContentIdentity, navigation: [ConversationTurnSummary], sessionId: String,
@@ -900,8 +901,10 @@ private final class ConversationDocumentView: NSView {
             self.navigation = navigation
             turnRows = navigation.compactMap { indices[$0.id] }
         }
+        let wasSuspended = suspended
         suspended = false
         isHidden = preparingInitialViewport
+        if wasSuspended { for controller in controllers.values { controller.resumeTextReveal() } }
         self.contentOriginY = contentOriginY
         observeScroll()
         restoreReadingPosition()
@@ -1660,6 +1663,7 @@ private final class ConversationEntryController: NSViewController {
     private var textReveal: StreamingReplyState?
     private var revealIdentity: String?
     private var revealTask: Task<Void, Never>?
+    private var revealFlushPending = false
     private var sizes: [(width: CGFloat, height: CGFloat)] = []
     /// Width of the last committed native place; content changes re-place.
     private var placedWidth: CGFloat?
@@ -1890,6 +1894,8 @@ private final class ConversationEntryController: NSViewController {
             return false
         }
         if textReveal.advance() {
+            let revealProbe = PerfDiagnostics.begin()
+            defer { PerfDiagnostics.end("streaming_text_frame", revealProbe) }
             // Publish this row's real measured height through the existing
             // anchor/follow path, without re-projecting the conversation.
             generation += 1; publishedHeight = nil
@@ -1899,6 +1905,21 @@ private final class ConversationEntryController: NSViewController {
         }
         if !textReveal.hasBacklog { revealTask = nil }
         return textReveal.hasBacklog
+    }
+    func suspendTextReveal() {
+        revealTask?.cancel(); revealTask = nil
+        if textReveal?.hasBacklog == true {
+            // State can settle while the outgoing document is hidden, but its
+            // native subtree and saved geometry must remain untouched.
+            textReveal?.flush(); revealFlushPending = true
+        }
+    }
+    func resumeTextReveal() {
+        guard revealFlushPending else { return }
+        revealFlushPending = false
+        generation += 1; publishedHeight = nil
+        sizes.removeAll(keepingCapacity: true)
+        setRoot()
     }
     private func nativeUserPreparation() -> (messageID: String, source: String, value: NativeParagraphContent.Preparation)? {
         #if TRANSCRIPT_CHECKS
