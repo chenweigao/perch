@@ -155,8 +155,8 @@ struct SessionRowChrome<Indicator: View>: View {
         if !location.isEmpty { lines.append(location) }
         let meta = ([detail].compactMap { $0 }.filter { !$0.isEmpty } + groups).joined(separator: " · ")
         if !meta.isEmpty { lines.append(meta) }
-        if updatedAt > 0 {
-            lines.append(SessionTime.label(since: updatedAt, waiting: false))
+        if updatedAt > 0, let timeLabel = SessionTime.label(since: updatedAt, waiting: false) {
+            lines.append(timeLabel)
         }
         return lines.joined(separator: "\n")
     }
