@@ -1161,6 +1161,8 @@
 
 "移动到项目" = "Move to project";
 
+"移动到项目  ›" = "Move to project  ›";
+
 "按所属仓库归组" = "Group by repository";
 
 "在此项目新建会话" = "New Session in This Project";

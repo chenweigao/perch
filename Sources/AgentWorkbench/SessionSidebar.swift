@@ -641,7 +641,7 @@ struct SessionActionsMenu: View {
             Divider()
             Button("按所属仓库归组") { model.moveSidebarSession(item, to: nil) }
         } label: {
-            Label(presentation == .popover ? "移动到项目  ›" : "移动到项目", systemImage: "folder")
+            Label(L(presentation == .popover ? "移动到项目  ›" : "移动到项目"), systemImage: "folder")
                 .frame(maxWidth: .infinity, minHeight: presentation == .popover ? 28 : nil, alignment: .leading)
                 .padding(.horizontal, presentation == .popover ? 10 : 0)
         }
