@@ -633,6 +633,7 @@ import WorkbenchCore
             try? bitmap.representation(using: .png, properties: [:])?
                 .write(to: URL(fileURLWithPath: folder).appendingPathComponent("sidebar-hover-preview.png"))
         }
+        previewWindow.close()
         let actionPoint = CGPoint(x: actionsFrame.midX, y: actionsFrame.midY)
         moveMouse(to: actionPoint)
         for type in [CGEventType.leftMouseDown, .leftMouseUp] {
@@ -649,7 +650,6 @@ import WorkbenchCore
             try? bitmap.representation(using: .png, properties: [:])?
                 .write(to: URL(fileURLWithPath: folder).appendingPathComponent("sidebar-actions-menu.png"))
         }
-        previewWindow.close()
         menuWindow.close()
         let center = card.convert(card.bounds, to: nil)
         moveMouse(to: CGPoint(x: center.midX, y: center.midY))
