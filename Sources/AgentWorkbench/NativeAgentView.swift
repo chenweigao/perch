@@ -164,11 +164,10 @@ struct NativeAgentView: View {
     @ViewBuilder private func bottomBar(_ s: NativeAgentSnapshot, readingKey: String) -> some View {
         VStack(spacing: 0) {
             let turn = SessionTurn(native: s)
-            let runningTools = turn.running ? ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy) : []
-            let activeToolID = runningTools.first
             if turn.running {
                 let actions = ConversationActionContext(hostID: connection.host.id, kind: s.provider, sessionID: s.id)
                 let animates = connection.online && s.interactions.isEmpty && !connection.isStopping
+                let activeToolID = ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy).first
                 TurnStallMonitor(animates: animates, signature: s.revision, activeToolID: activeToolID) {
                     actions.post(.turnStalled(minutes: $0))
                 }.id(s.id)
@@ -181,21 +180,6 @@ struct NativeAgentView: View {
                     Text(command.status == "running" ? L("正在压缩上下文…") : command.error ?? L("上下文压缩完成"))
                         .font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(command.error == nil ? Color.secondary : Color.orange).textSelection(.enabled)
                 }.padding(6)
-            }
-            let tail = s.messages.last?.content.last
-            let phase = ConversationRunPhase(turn: turn, online: connection.online && isCurrent(s),
-                stopping: connection.isStopping, request: TurnRequest.native(s.interactions)?.kind,
-                hasRunningTools: activeToolID != nil,
-                thinking: tail?.type == "thinking" && tail?.source?["kind"].string != "activity_summary")
-            if phase != nil {
-                ConversationLiveStatus(phase: phase,
-                    summary: ConversationWorkSummary.current(messages: s.messages, running: runningTools),
-                    timing: connection.timings.turns[s.id]).equatable().id("live-status:" + s.id)
-                    .padding(.horizontal, ReplyStyle.composerInset)
-                    .padding(.bottom, 8)
-                    .frame(maxWidth: ReplyStyle.composerWidth)
-                    .padding(.horizontal, ReplyStyle.composerPadding)
-                    .frame(maxWidth: .infinity, alignment: .center)
             }
             NativeComposerView(connection: connection, s: s).id(s.id)
         }

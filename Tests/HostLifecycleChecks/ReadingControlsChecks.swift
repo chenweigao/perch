@@ -108,29 +108,29 @@ import WorkbenchCore
             "content":[["type":thinking ? "thinking" : "text", thinking ? "thinking" : "text":text]]]
         return try KimiWire.decoder().decode(KimiMessage.self, from: JSONSerialization.data(withJSONObject: object))
     }
-    let rows = try (0..<35).map { index -> ConversationPresentationModel.Row in
-        let entry = ConversationTimelineEntry.make([try message("continuous-\(index)", "记录 \(index)", thinking: true)]).first!
+    let rows = try (0..<19).map { index -> ConversationPresentationModel.Row in
+        let entry = ConversationTimelineEntry.make([try message("page-\(index)", "记录 \(index)", thinking: true)]).first!
         return .init(entry: entry, tools: [:], activity: nil)
     }
     for size: CGFloat in [14, 18] {
         ReadingBodySize.shared.set(size)
-        let key = "reading-controls:continuous:\(Int(size))"
-        let continuous = NSHostingView(rootView: ProcessFoldRow(rows: rows, api: nil, sessionId: "reading-controls")
+        let key = "reading-controls:pages:\(Int(size))"
+        memory.expansions[key + ":process-fold"] = true
+        let pages = NSHostingView(rootView: ProcessFoldRow(rows: rows, api: nil, sessionId: "reading-controls")
             .environment(\.conversationMemoryKey, key)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading))
-        window.contentView = continuous; window.setContentSize(NSSize(width: 720, height: 700))
+        window.contentView = pages; window.setContentSize(NSSize(width: 720, height: 700))
         try await Task.sleep(for: .milliseconds(300))
-        precondition(!controlViews(continuous).contains { $0.identifier?.rawValue.hasPrefix("process-entry:") == true },
-                     "A completed process starts collapsed")
-        controlClick(window, identifier: "completed-process:" + rows[0].entry.id)
-        try await Task.sleep(for: .milliseconds(350))
-        let identifiers = controlViews(continuous).compactMap(\.identifier?.rawValue)
-        let mountedEntries = identifiers.filter { $0.hasPrefix("process-entry:") }
-        precondition(Set(mountedEntries) == Set(rows.map { "process-entry:" + $0.entry.id }),
-                     "Opening the process reveals every record across the former page boundaries")
-        precondition(!identifiers.contains { $0.contains("previous-page") || $0.contains("next-page") }, "The process has no pagination controls")
-        let texts = controlViews(continuous).compactMap { $0 as? NSTextView }.map(\.string)
-        precondition(texts.contains("记录 0") && texts.contains("记录 34"), "Thought contents default open across the entire process")
+        func mountedEntries() -> [String] { controlViews(pages).compactMap(\.identifier?.rawValue).filter { $0.hasPrefix("process-entry:") } }
+        precondition(mountedEntries().count == 8)
+        for (button, page) in [("next", 1), ("next", 2), ("previous", 1), ("previous", 0)] {
+            controlClick(window, identifier: "process-\(button)-page")
+            try await Task.sleep(for: .milliseconds(250))
+            let start = page * ConversationProcessPage.size
+            precondition(memory.processPages[key] == rows[start].entry.id, "Actual \(button)-page button selects page \(page + 1) at \(size)pt")
+            let expected = rows[start..<min(start + ConversationProcessPage.size, rows.count)].map { "process-entry:" + $0.entry.id }
+            precondition(Set(mountedEntries()) == Set(expected), "Only the selected bounded page is mounted")
+        }
     }
     ReadingBodySize.shared.set(ReadingBodySize.standard)
 
@@ -154,9 +154,9 @@ import WorkbenchCore
         session: "reading-controls-find", hit: .init(entryID: targetEntry.id, occurrence: 0, excerpt: "PAGE_FIND_299"), query: "PAGE_FIND_299"))
     try await Task.sleep(for: .milliseconds(600))
     let texts = controlViews(transcript).compactMap { $0 as? NSTextView }
-    precondition(texts.contains { $0.string.contains("PAGE_FIND_299") }, "Find reveals the target record and nested thought in the continuous process")
+    precondition(texts.contains { $0.string.contains("PAGE_FIND_299") }, "Find opens the target process page and nested thought")
     precondition(texts.contains { $0.selectedRange().length > 0 && ($0.string as NSString).substring(with: $0.selectedRange()) == "PAGE_FIND_299" }, "Find selects the actual occurrence")
-    print("PASS: measured native/fallback long-question folds, full Unicode source, recycled identity, continuous process/thought defaults and search to the final record")
+    print("PASS: measured native/fallback long-question folds, full Unicode source, recycled identity, bounded page clicks and search to a later page")
 
     let request: JSONValue = .object(["id": .string("plan"), "planReview": .object([
         "revision": .string("v1"), "content": .string("# 实施计划\n\n1. 修改阅读布局\n2. 验证搜索和复制\n3. 提交结果"), "complete": .bool(true), "status": .string("awaiting_review")])])

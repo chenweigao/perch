@@ -1,6 +1,5 @@
 import AppKit
 import ApplicationServices
-import QuartzCore
 import SwiftUI
 import WorkbenchCore
 
@@ -83,7 +82,18 @@ import WorkbenchCore
         preconditionFailure("\(identifier) must \(present ? "appear" : "disappear") in the task panel; identifiers: \(taskPanelIdentifiers(window))")
     }
     func press(_ identifier: String) async throws {
-        try await clickTaskPanelControl(window, identifier)
+        precondition(window.isVisible, "The task panel must be visible before clicking a control")
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
+        for _ in 0..<100 where !NSApp.isActive || !window.isKeyWindow { try await Task.sleep(for: .milliseconds(20)) }
+        precondition(NSApp.isActive && window.isKeyWindow, "The task panel must own the click")
+        let frame = try await control(identifier)!
+        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+            window.sendEvent(NSEvent.mouseEvent(with: type, location: NSPoint(x: frame.midX, y: frame.midY), modifierFlags: [],
+                timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
+                context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!)
+        }
+        try await Task.sleep(for: .milliseconds(150))
     }
 
     // The whole row opens the locked task in place of the list.
@@ -227,56 +237,6 @@ import WorkbenchCore
           let frame = (element.value(forKey: "accessibilityFrame") as? NSValue)?.rectValue,
           !frame.isEmpty else { return nil }
     return window.convertFromScreen(frame)
-}
-
-/// A published AX frame can precede the ScrollView's initial placement. Wait
-/// for its painted, visible position to settle, then send exactly one click.
-/// The callers still verify the resulting route and rendered controls.
-@MainActor func clickTaskPanelControl(_ window: NSWindow, _ identifier: String) async throws {
-    precondition(window.isVisible, "The task panel must be visible before clicking a control")
-    NSApp.activate(ignoringOtherApps: true)
-    window.makeKeyAndOrderFront(nil)
-    var previous: NSRect?
-    var stable = 0
-    var frames: [String] = []
-    let deadline = Date().addingTimeInterval(5)
-    repeat {
-        try await Task.sleep(for: .milliseconds(25))
-        guard let host = window.contentView else { break }
-        host.layoutSubtreeIfNeeded()
-        host.displayIfNeeded()
-        CATransaction.flush()
-        guard NSApp.isActive, window.isKeyWindow,
-              let frame = taskPanelControl(window, identifier) else {
-            previous = nil; stable = 0
-            continue
-        }
-        let point = NSPoint(x: frame.midX, y: frame.midY)
-        let local = host.convert(point, from: nil)
-        guard host.visibleRect.contains(local), host.hitTest(local) != nil else {
-            previous = nil; stable = 0
-            continue
-        }
-        if previous != frame {
-            if frames.count < 12 { frames.append(NSStringFromRect(frame)) }
-            previous = frame; stable = 0
-        } else { stable += 1 }
-        guard stable >= 3 else { continue }
-        let hit = host.accessibilityHitTest(window.convertPoint(toScreen: point)) as? NSObject
-        let selector = NSSelectorFromString("accessibilityIdentifier")
-        let hitID = hit?.responds(to: selector) == true
-            ? hit?.perform(selector)?.takeUnretainedValue() as? String : nil
-        print("TASK-CLICK: \(identifier) frame=\(NSStringFromRect(frame)) hit=\(hitID ?? String(describing: hit)) placements=\(frames)")
-        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
-            window.sendEvent(NSEvent.mouseEvent(with: type, location: point, modifierFlags: [],
-                timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
-                context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!)
-        }
-        try await Task.sleep(for: .milliseconds(150))
-        return
-    } while Date() < deadline
-    captureTaskPanel(window.contentView, "task-click-not-ready")
-    preconditionFailure("\(identifier) must have a stable visible click target; active=\(NSApp.isActive) key=\(window.isKeyWindow) placements=\(frames) identifiers=\(taskPanelIdentifiers(window))")
 }
 
 @MainActor func taskPanelLabel(_ window: NSWindow, _ identifier: String) -> String? {

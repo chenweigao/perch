@@ -21,7 +21,6 @@ struct EditStepRow: View {
                 Text(ToolPresentation.target(tool)).lineLimit(1).truncationMode(.middle)
             }
             Spacer(minLength: 6)
-            ProcessStatusDot(status: tool.status)
             if tool.status != .succeeded {
                 Text(ConversationActivity.status(of: tool, exitCode: tool.exitCodeReport))
                     .font(.system(size: ReplyStyle.captionSize))

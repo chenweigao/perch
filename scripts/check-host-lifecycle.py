@@ -11,7 +11,7 @@ import tempfile
 import time
 import uuid
 
-PHASES = ["startup", "seed", "restart", "removal", "connection-controls", "connection-restart", "architecture", "interactions", "streaming-rendering", "streaming-cadence", "git-write", "reading-design", "reading-controls", "goal-header", "reading-canvas", "sidebar-scroll", "activity-bar", "reply-selection", "frame-hitch", "workspace-upgrade", "file-reader", "code-reader", "workflow-polish", "document-reading", "task-context", "task-detail", "task-summary", "native-design"]
+PHASES = ["startup", "seed", "restart", "removal", "connection-controls", "connection-restart", "architecture", "interactions", "streaming-rendering", "git-write", "reading-design", "reading-controls", "goal-header", "reading-canvas", "sidebar-scroll", "activity-bar", "reply-selection", "frame-hitch", "workspace-upgrade", "file-reader", "code-reader", "workflow-polish", "document-reading", "task-context", "task-detail", "task-summary", "native-design"]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--preview-reading-design", action="store_true", help="Keep a standalone native reading review app")
 parser.add_argument("--release", action="store_true", help="Compile fixtures with optimization for component timing")
@@ -53,9 +53,6 @@ with tempfile.TemporaryDirectory(prefix="perch-host-check-", dir=ROOT / ".build"
         "CFBundleExecutable": executable.name, "CFBundlePackageType": "APPL", "LSUIElement": True,
     }))
     subprocess.run([str(ROOT / "scripts/prepare-highlight.sh"), str(app / "Contents/Resources")], check=True)
-    # Dynamic phase labels use the same catalogs as the production app.
-    for locale in (ROOT / "Resources/Localization").glob("*.lproj"):
-        shutil.copytree(locale, app / "Contents/Resources" / locale.name, dirs_exist_ok=True)
     compiled = work / "compiled"
     started = time.monotonic()
     print("Compiling host lifecycle fixture", flush=True)

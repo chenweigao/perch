@@ -446,10 +446,7 @@ final class NavigationRunner {
         }) != nil else {
             throw NavigationError("no fold disclosure mounted; fold: \(foldID); bindings: \(ConversationDisclosureFixture.bindings.keys.count)")
         }
-        guard !ConversationDisclosureFixture.bindings[key]!.wrappedValue else {
-            throw NavigationError("an untouched completed process must start collapsed")
-        }
-        guard let foldRow = findRow(foldID, in: host) else { throw NavigationError("collapsed fold row is not mounted") }
+        guard let foldRow = findRow(foldID, in: host) else { throw NavigationError("fold row is not mounted") }
         let collapsedHeight = foldRow.frame.height
         let collapsedViews = countViews(foldRow)
         ConversationDisclosureFixture.bindings[key]!.wrappedValue = true
@@ -475,8 +472,6 @@ final class NavigationRunner {
                 && ConversationReadingMemory.shared.expansions["\(target):\($0.entry.id):process-fold"] != true
         }), let inner = other.foldedRows?.first else { throw NavigationError("missing second fold group") }
         let otherKey = "\(target):\(other.entry.id):process-fold"
-        if let binding = ConversationDisclosureFixture.bindings[otherKey] { binding.wrappedValue = false }
-        else { ConversationReadingMemory.shared.expansions[otherKey] = false }
         NotificationCenter.default.post(name: .init("PerchRevealConversationHit"),
             object: ConversationFindTarget(session: target,
                 hit: ConversationSearchHit(entryID: inner.entry.id, occurrence: 0, excerpt: ""), query: "fixture"))
@@ -1647,8 +1642,8 @@ extension NavigationRunner {
                 try await Task.sleep(for: .milliseconds(350))
                 host.layoutSubtreeIfNeeded()
             }
-            var fullSource: String? = kind == "Thoughts" ? payload : nil
-            if full && kind == "Bash" {
+            var fullSource: String?
+            if full {
                 binding(for: kind)!.wrappedValue = true
                 guard await flushAndWait(host, until: { !ConversationDisclosureFixture.fullBindings.isEmpty }) != nil else {
                     throw NavigationError("full-content control did not mount")
@@ -1664,21 +1659,12 @@ extension NavigationRunner {
                 ConversationTranscript.navigator(in: host)?.reveal?(targetRowID)
                 return ["demo": true]
             }
-            // Thinking now starts expanded. This fixture measures repeated
-            // collapse/expand transitions from a deliberately collapsed
-            // baseline, independent of the production opening preference.
-            if !full || kind == "Thoughts" {
-                binding(for: kind)!.wrappedValue = false
-                try await Task.sleep(for: .milliseconds(350))
-                host.layoutSubtreeIfNeeded()
-            }
             try recordReveal("before toggle")
             guard let collapsed = rows().first?.frame.height, collapsed > 0 else {
                 throw NavigationError("Disclosure target was not mounted before toggling")
             }
             for iteration in 0..<6 {
-                let outputControl = full && kind == "Bash" ? fullSource.flatMap({ ConversationDisclosureFixture.fullBindings[$0] }) : nil
-                guard let control = outputControl ?? binding(for: kind) else { throw NavigationError("lost disclosure") }
+                guard let control = fullSource.flatMap({ ConversationDisclosureFixture.fullBindings[$0] }) ?? binding(for: kind) else { throw NavigationError("lost disclosure") }
                 NavigationRenderMetrics.stages = [:]
                 let headerY = rows().first?.convert(.zero, to: host).y ?? 0
                 let start = CACurrentMediaTime()
@@ -1714,8 +1700,7 @@ extension NavigationRunner {
                 // Preserve the failing sample too; assertions must not erase the
                 // geometry needed to distinguish stale row height from scroll drift.
                 try writeNavigationArtifact("disclosure-samples.json", ["disclosures": samples])
-                let bounded = viewport && kind == "Bash"
-                let correctHeight = expanded && full && bounded ? finalHeight < 3_000 : finalHeight > collapsed + (bounded ? 200 : 500)
+                let correctHeight = expanded && full && viewport ? finalHeight < 3_000 : finalHeight > collapsed + (viewport ? 200 : 500)
                 guard expanded ? correctHeight : abs(finalHeight - collapsed) < 1 else {
                     try writeNavigationArtifact("disclosure-failure.json", ["kind": kind, "iteration": iteration,
                         "heights": heights, "keys": Array(ConversationDisclosureFixture.bindings.keys)])
@@ -1727,7 +1712,7 @@ extension NavigationRunner {
                 if withContext && headerOffsets.contains(where: { abs($0) > 1 }) {
                     throw NavigationError("\(kind) disclosure header moved during toggle: \(headerOffsets)")
                 }
-                if expanded, let fullSource {
+                if full, expanded, let fullSource {
                     var pending = rows(), textViews: [NSTextView] = []
                     while let view = pending.popLast() {
                         if let text = view as? NSTextView { textViews.append(text) }
@@ -1746,12 +1731,7 @@ extension NavigationRunner {
                         throw NavigationError("Full Unicode selection/copy lost content: selected=\(text.selectedRange()), copied=\(pasteboard.string(forType: .string)?.utf16.count ?? -1), expected=\(fullSource.utf16.count), types=\(text.writablePasteboardTypes)")
                     }
                     text.setSelectedRange(NSRange(location: 0, length: 0))
-                    if kind == "Thoughts" {
-                        guard text.enclosingScrollView?.identifier?.rawValue != "perch-long-output", text.bounds.height > 500 else {
-                            throw NavigationError("Thoughts must flow fully in the conversation without an inner output viewport")
-                        }
-                    }
-                    if viewport && kind == "Bash" {
+                    if viewport {
                         guard text.textLayoutManager != nil, let inner = text.enclosingScrollView,
                               inner.identifier?.rawValue == "perch-long-output", abs(inner.bounds.height - 360) < 1 else {
                             throw NavigationError("Missing bounded TextKit 2 viewport")

@@ -855,7 +855,7 @@ final class NativeAgentConnection {
         // silently send a prompt with a dead token in it.
         let expansion = pastes.expand(draftText)
         guard expansion.missing.isEmpty else {
-            actionError = L("引用或粘贴内容已丢失，请重新添加后再发送。")
+            actionError = L("粘贴内容已丢失，请重新粘贴后再发送。")
             return
         }
         let text = expansion.text

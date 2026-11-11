@@ -6,7 +6,6 @@
     { "file": "Sources/AgentWorkbench/ReplyMarkdownView.swift", "line": "RoundedRectangle(cornerRadius: 1).fill(.primary.opacity(ReplyStyle.Quote.barOpacity)).frame(width: ReplyStyle.Quote.barWidth)", "reason": "Quote bar, a drawn detail" },
     { "file": "Sources/AgentWorkbench/ReplyMarkdownView.swift", "line": "RoundedRectangle(cornerRadius: 1).fill(kind.tint.opacity(0.7)).frame(width: ReplyStyle.Quote.barWidth)", "reason": "Alert bar, a drawn detail" },
     { "file": "Sources/AgentWorkbench/WorkbenchTheme.swift", "line": "static let cornerRadius: CGFloat = 6", "reason": "Composer.CompactShape: PI radius-2xs model/source rows and raised reasoning segment" },
-    { "file": "Sources/AgentWorkbench/WorkbenchTheme.swift", "line": "static let cornerRadius: CGFloat = 8", "reason": "Composer.ThinkingTrackShape: PI radius-xs reasoning range track" },
-    { "file": "Sources/AgentWorkbench/WorkbenchTheme.swift", "line": "static let cornerRadius: CGFloat = 12", "reason": "Composer.Citation: PI radius-md inline context reference chip" }
+    { "file": "Sources/AgentWorkbench/WorkbenchTheme.swift", "line": "static let cornerRadius: CGFloat = 8", "reason": "Composer.ThinkingTrackShape: PI radius-xs reasoning range track" }
   ]
 }

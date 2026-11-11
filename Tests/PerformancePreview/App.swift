@@ -235,16 +235,6 @@ struct PerformanceTranscript: View {
                 RenderMarker(count: (conversation.live?.assistantText.utf16.count ?? 0) + (conversation.live?.thinkingText.utf16.count ?? 0), state: marker)
                     .frame(width: ReplyStyle.readingWidth, height: 1).id("bottom")
                     .background { GeometryReader { geometry in LayoutMarker(size: geometry.size, reading: true, state: marker) } }
-            } bar: {
-                #if PERFORMANCE_LIVE_STATUS
-                ConversationLiveStatus(phase: ConversationRunPhase(turn: SessionTurn(kimi: conversation.snapshot), online: true,
-                    hasRunningTools: conversation.live?.runningTools.isEmpty == false,
-                    thinking: conversation.live?.thinkingText.isEmpty == false && conversation.live?.assistantText.isEmpty != false)).equatable()
-                #else
-                // Match viewport geometry when comparing a revision before the
-                // live footer; the baseline draws no status or animation.
-                Color.clear.frame(height: 26)
-                #endif
             }.task {
                 await Task.yield()
                 if !Task.isCancelled { proxy.scrollTo("bottom", anchor: .bottom) }

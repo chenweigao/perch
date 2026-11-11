@@ -32,7 +32,6 @@ final class ProjectFileSuggestions: ObservableObject {
 /// References remain plain draft text, so draft persistence and queueing retain
 /// them without another attachment store. Listing paths never reads file bodies.
 struct ProjectMessageComposer: View {
-    @UILocalization private var L
     @Binding var text: String
     let host: SSHHost
     let cwd: String
@@ -126,7 +125,7 @@ struct ProjectMessageComposer: View {
                     }
                 }
             }
-            let pastes = pastes.map { store in DraftPaste.references(in: text).filter { $0.kind == .paste }.map { ($0, store) } } ?? []
+            let pastes = pastes.map { store in DraftPaste.references(in: text).map { ($0, store) } } ?? []
             if !pastes.isEmpty {
                 ScrollView(.horizontal) {
                     HStack(spacing: 8) {
@@ -160,14 +159,6 @@ struct ProjectMessageComposer: View {
                     do { return DraftPaste.token(id: try store.save(content)) }
                     catch { onError?(error.localizedDescription); return nil }
                 } },
-                citations: pastes.map { store in
-                    DraftPaste.references(in: text).filter { $0.kind == .cite }.map { reference in
-                        ComposerCitation(token: DraftPaste.token(id: reference.id, kind: .cite),
-                                         label: store.stats(for: reference.id).map { L("引用 · \($0.lines) 行") } ?? L("引用内容"),
-                                         missingMessage: L("引用内容已丢失，请重新引用。"),
-                                         load: { store.text(for: reference.id) })
-                    }
-                } ?? [],
                 onEditSelection: editSelection, selectionAfterReplacement: nextSelection, minimumHeight: minimumEditorHeight)
     }
 

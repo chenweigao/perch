@@ -129,22 +129,23 @@ func checkPhaseReading() throws {
     let longMessages = try decode(longSource)
     let longStage = ConversationTimelineEntry.make(longMessages, isRunning: true)
     precondition(longStage.count == 1 && longStage[0].messages.count == 49,
-                 "A long continuous process remains one work stage")
+                 "A rendering page boundary cannot manufacture a new work stage")
     for count in [23, 24, 25, 48] {
         let prefix = ConversationTimelineEntry.make(Array(longMessages.prefix(count)), isRunning: true)
         precondition(prefix.count == 1 && prefix[0].id == longStage[0].id)
     }
     let ids = longStage[0].processPartIDs
     precondition(Set(ids).count == 49)
-    let appended = ConversationTimelineEntry.make(longMessages + [try decode([call("later", "git -C /repo show stage-marker-49")]).first!], isRunning: true)
-    precondition(Array(appended[0].processPartIDs.prefix(49)) == ids,
-                 "Appending to a continuous stage preserves every earlier record identity")
+    let page = ConversationProcessPage(ids: ids, anchor: ids[24], pageSize: 24)
+    precondition(page.range == 24..<48 && page.number == 2 && page.count == 3)
+    let appendedPage = ConversationProcessPage(ids: ids + ["tool:later"], anchor: ids[24], pageSize: 24)
+    precondition(appendedPage.range == page.range, "Appending records cannot move the selected page")
     let hit = ConversationSearch().hits(in: longMessages, query: "stage-marker-48", running: true).hits.first!
     precondition(hit.entryID == longStage[0].id && hit.toolID == "long-48",
-                 "Search carries the exact record near the end of a continuous stage")
+                 "Search carries the exact record so the UI can open a later page")
     let repeated = ConversationSearch().hits(in: longMessages, query: "stage-marker-", running: true).hits
     precondition(repeated.count == 49 && repeated.last?.occurrence == 48 && repeated.allSatisfy { $0.toolOccurrence == 0 },
-                 "Record-local search counts remain correct across the entire stage")
+                 "Selecting a later page uses record-local counts, while hit identity stays stage-wide")
     let gitCalls = ["git status", "git -C /repo diff", "git -c color.ui=false log"].enumerated().map { index, command in
         VisibleTool(id: "git-\(index)", name: "Bash", input: .object(["command": .string(command)]), status: .succeeded)
     }

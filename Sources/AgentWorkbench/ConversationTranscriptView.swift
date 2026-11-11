@@ -129,9 +129,6 @@ struct KimiMessageView: View {
     let api: KimiAPI?
     let sessionId: String
     var markdownPreparation: ReplyMarkdownPreparation? = nil
-    var streaming = false
-    /// A native row's release survives a temporary hosted Markdown fallback.
-    var displayTextOverride: String? = nil
     /// The hosting entry's id doubles as the turn's bookmark id for user rows.
     var entryID: String? = nil
     @Environment(\.conversationActionContext) private var actionContext
@@ -204,9 +201,8 @@ struct KimiMessageView: View {
                                 .environment(\.isConversationBodyText, true)
                         }
                     } else {
-                        let source = displayTextOverride ?? part.text ?? ""
-                        SmoothReplyMarkdown(source: source, streaming: streaming && !isUserMessage && displayTextOverride == nil,
-                                            sessionID: sessionId, messageID: message.id, preparation: markdownPreparation)
+                        KimiMarkdown(text: part.text ?? "", sessionID: sessionId, messageID: message.id,
+                                     preparation: markdownPreparation)
                             .environment(\.isConversationBodyText, true)
                     }
                 case "thinking": ThoughtDisclosure(text: part.thinking ?? "", publicSummary: ConversationThinkingSummary.publicSummary(of: part))
@@ -362,7 +358,6 @@ struct ConversationTranscript: View {
             let seconds = timing.elapsed(at: ended).rounded()
             return seconds >= 5 ? seconds : nil
         }()
-        let streamingMessageID = isRunning && online && messages.last?.role == "assistant" ? messages.last?.id : nil
         let contents = presented.rows.map { row in
             let isLiveActivity = row.entry.id == liveActivityID
             let foldDuration = row.entry.id == latestFoldID ? settledDuration : nil
@@ -372,10 +367,7 @@ struct ConversationTranscript: View {
                 liveThinkingSummary: (isLiveActivity || row.live) ? ConversationThinkingSummary.current(snapshot.narrative.current) : nil,
                 planProgress: isLiveActivity ? planProgress : nil,
                 completedDuration: foldDuration, liveProcessFold: row.live,
-                liveStartedAt: row.live ? timing?.startedAt : nil,
-                streamingMessageID: streamingMessageID.flatMap { id in
-                    row.entry.messages.contains { $0.id == id } || row.foldedRows?.contains { $0.entry.messages.contains { $0.id == id } } == true ? id : nil
-                })
+                liveStartedAt: row.live ? timing?.startedAt : nil)
         }
         let _ = PerfDiagnostics.end("snapshot_projection", projectionProbe,
                                     detail: "messages=\(messages.count) rows=\(contents.count)")
@@ -719,6 +711,7 @@ private final class ConversationDocumentView: NSView {
         guard !suspended else { return }
         if let toolID = target.hit.toolID {
             let id = target.hit.entryID, scope = sessionId + ":" + id
+            ConversationReadingMemory.shared.processPages[scope + ":stage"] = "tool:" + toolID
             for name in ["expanded", "thought"] {
                 ConversationReadingMemory.shared.expansions[scope + ":" + name] = true
             }
@@ -791,6 +784,7 @@ private final class ConversationDocumentView: NSView {
             // land on the fold row. The expanded content re-measures on mount.
             let scope = sessionId + ":" + fold
             ConversationReadingMemory.shared.expansions[scope + ":process-fold"] = true
+            ConversationReadingMemory.shared.processPages[scope] = id
             for name in ["thought", "live-thought", "full-thought", "commentary", "expanded", "full-output"] {
                 ConversationReadingMemory.shared.expansions[sessionId + ":" + id + ":" + name] = true
             }
@@ -863,7 +857,6 @@ private final class ConversationDocumentView: NSView {
         }
         suspended = true
         isHidden = true
-        for controller in controllers.values { controller.suspendTextReveal() }
     }
 
     func configure(_ next: [ConversationEntryView], contentIdentity: ConversationContentIdentity, navigation: [ConversationTurnSummary], sessionId: String,
@@ -900,10 +893,8 @@ private final class ConversationDocumentView: NSView {
             self.navigation = navigation
             turnRows = navigation.compactMap { indices[$0.id] }
         }
-        let wasSuspended = suspended
         suspended = false
         isHidden = preparingInitialViewport
-        if wasSuspended { for controller in controllers.values { controller.resumeTextReveal() } }
         self.contentOriginY = contentOriginY
         observeScroll()
         restoreReadingPosition()
@@ -1546,7 +1537,7 @@ private struct ConversationEntryAppearance: Equatable {
         layoutDirection = environment.layoutDirection
         displayScale = environment.displayScale
         dynamicTypeSize = environment.dynamicTypeSize
-        reduceMotion = environment.streamingReduceMotionOverride ?? (environment.accessibilityReduceMotion || environment.conversationReduceMotion)
+        reduceMotion = environment.accessibilityReduceMotion || environment.conversationReduceMotion
         isEnabled = environment.isEnabled
         actionContext = environment.conversationActionContext
         locale = environment.locale
@@ -1570,7 +1561,6 @@ private struct HostedConversationEntry: View {
             .environment(\.displayScale, appearance.displayScale)
             .environment(\.dynamicTypeSize, appearance.dynamicTypeSize)
             .environment(\.conversationReduceMotion, appearance.reduceMotion)
-            .environment(\.streamingReduceMotionOverride, appearance.reduceMotion)
             .environment(\.isEnabled, appearance.isEnabled)
             .environment(\.conversationActionContext, appearance.actionContext)
             .environment(\.locale, appearance.locale)
@@ -1660,15 +1650,6 @@ private final class ConversationEntryController: NSViewController {
     private var content: ConversationEntryView
     private var appearance: ConversationEntryAppearance
     private var generation = 0
-    private var textReveal: StreamingReplyState?
-    private var streamSnapshot: ReplyStreamSnapshot?
-    private var streamSnapshotSource: String?
-    private var pendingStreamSource: String?
-    private var pendingStreamReceivedAt: TimeInterval?
-    private var streamPreparation: (blocks: [ReplyBlock], size: CGFloat, rich: Bool, value: NativeAssistantContent.Preparation)?
-    private var revealIdentity: String?
-    private var revealClock: ReplyFrameClock?
-    private var revealFlushPending = false
     private var sizes: [(width: CGFloat, height: CGFloat)] = []
     /// Width of the last committed native place; content changes re-place.
     private var placedWidth: CGFloat?
@@ -1704,7 +1685,6 @@ private final class ConversationEntryController: NSViewController {
         self.disclosureChanged = disclosureChanged
         super.init(nibName: nil, bundle: nil)
         if let measuredSize { sizes.append(measuredSize) }
-        updateTextReveal()
         setRoot()
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
@@ -1807,8 +1787,6 @@ private final class ConversationEntryController: NSViewController {
         }
     }
     deinit {
-        // The clock's weak display-link target lets releasing this controller
-        // release/invalidate the clock without an actor hop from deinit.
         if let settleFlipObserver { NotificationCenter.default.removeObserver(settleFlipObserver) }
         if let nativeUser { NativeUserMessageView.recycle(nativeUser) }
         if let nativeAssistant { NativeAssistantMessageView.recycle(nativeAssistant) }
@@ -1832,8 +1810,6 @@ private final class ConversationEntryController: NSViewController {
         let contentChanged = content != next
         let appearanceChanged = appearance != nextAppearance
         guard contentChanged || appearanceChanged else { return }
-        let previousContent = content
-        let previousText = textReveal?.text
         #if TRANSCRIPT_CHECKS
         if contentChanged { NavigationRenderMetrics.count("host_content_update") }
         if appearanceChanged { NavigationRenderMetrics.count("host_appearance_update") }
@@ -1847,145 +1823,15 @@ private final class ConversationEntryController: NSViewController {
         }
         content = next
         appearance = nextAppearance
-        updateTextReveal()
-        if !appearanceChanged, (pendingStreamSource != nil || textReveal?.hasBacklog == true),
-           textReveal?.text == previousText, next.onlyAppendsLiveText(to: previousContent) {
-            // The wire target is authoritative immediately, but unchanged
-            // visible text needs neither placement nor height invalidation.
-            // Coalesce any number of incoming deltas into the next display frame.
-            replySource = next.entry.messages.first?.content.first?.text
-            #if TRANSCRIPT_CHECKS
-            NavigationRenderMetrics.count("streaming_input_coalesced")
-            #endif
-            return
-        }
         generation += 1
         publishedHeight = nil
         sizes.removeAll(keepingCapacity: true)
         // The settle edge: a reply that just finished pre-renders its diagrams
         // offscreen so scrolling to them does not wait on the renderer.
-        if contentChanged, previousContent.entry.presentation == .progress, next.entry.presentation == .message,
+        if contentChanged, content.entry.presentation == .progress, next.entry.presentation == .message,
            let source = next.entry.messages.first?.content.first?.text {
             MermaidRenderer.shared.prewarmSources(in: source, dark: nextAppearance.colorScheme == .dark)
         }
-        setRoot()
-    }
-
-    /// Keep the latest wire snapshot, then parse it once on a display frame.
-    /// Native and hosted shapes share its projected blocks; no frame reparses
-    /// a Markdown prefix, and fast transport deltas cannot outrun the display.
-    private func updateTextReveal() {
-        guard !content.isProgressNote,
-              content.entry.presentation == .message || content.entry.presentation == .progress,
-              content.entry.messages.count == 1, let message = content.entry.messages.first,
-              message.role == "assistant", !message.isCompactionSummary,
-              message.content.count == 1, let part = message.content.first,
-              part.type == "text", !part.isRuntimeContext, part.skillContextSplit == nil,
-              let source = part.text else {
-            revealClock?.stop(); textReveal = nil; revealIdentity = nil
-            streamSnapshot = nil; streamSnapshotSource = nil; streamPreparation = nil
-            pendingStreamSource = nil; pendingStreamReceivedAt = nil
-            return
-        }
-        let identity = content.memoryKey + ":" + message.id
-        if revealIdentity != identity {
-            revealClock?.stop()
-            textReveal = nil; streamSnapshot = nil; streamSnapshotSource = nil; streamPreparation = nil
-            pendingStreamSource = nil; pendingStreamReceivedAt = nil
-            revealIdentity = identity
-        }
-        // Cold completed history uses the ordinary preparation cache, without
-        // a second parse or a release owner for every historical message.
-        guard textReveal != nil || content.streamingMessageID == message.id else { return }
-        let visible = !isViewLoaded || (view.window?.isVisible == true && !view.isHiddenOrHasHiddenAncestor && !view.visibleRect.isEmpty)
-        let smoothing = content.streamingMessageID == message.id && !appearance.reduceMotion && visible
-            && source.utf16.count <= StreamingTextReveal.maximumLength
-        let previousSource = pendingStreamSource ?? streamSnapshotSource
-        if smoothing, textReveal != nil, let previousSource, source != previousSource,
-           source.hasPrefix(previousSource) {
-            if pendingStreamSource == nil { pendingStreamReceivedAt = CACurrentMediaTime() }
-            pendingStreamSource = source
-            startRevealClock()
-            return
-        }
-        let receivedAt = pendingStreamReceivedAt
-        pendingStreamSource = nil; pendingStreamReceivedAt = nil
-        let appending = previousSource.map { source.hasPrefix($0) } ?? true
-        prepareStreamSource(source, smoothing: smoothing && appending, receivedAt: receivedAt)
-        guard textReveal!.hasBacklog else { revealClock?.stop(); return }
-        startRevealClock()
-    }
-    private func prepareStreamSource(_ source: String, smoothing: Bool, receivedAt: TimeInterval? = nil) {
-        if streamSnapshotSource != source {
-            let parseProbe = PerfDiagnostics.begin()
-            #if TRANSCRIPT_CHECKS
-            let parseStart = CACurrentMediaTime()
-            #endif
-            streamSnapshot = ReplyStreamSnapshot(blocks: ReplyDocument.parse(source))
-            streamSnapshotSource = source
-            PerfDiagnostics.end("streaming_markdown_parse", parseProbe)
-            #if TRANSCRIPT_CHECKS
-            NavigationRenderMetrics.record("row_parse", since: parseStart)
-            NavigationRenderMetrics.count("streaming_markdown_parse")
-            #endif
-        }
-        let rendered = streamSnapshot!.text
-        if textReveal == nil { textReveal = StreamingReplyState(rendered) }
-        textReveal!.update(rendered, smoothing: smoothing, receivedAt: receivedAt)
-    }
-    private func startRevealClock() {
-        if revealClock == nil {
-            revealClock = ReplyFrameClock { [weak self] in self?.advanceTextReveal() ?? false }
-        }
-        revealClock?.start(screen: isViewLoaded ? view.window?.screen : nil)
-    }
-    private func advanceTextReveal() -> Bool {
-        guard let textReveal else { return false }
-        let sourceChanged = pendingStreamSource != nil
-        if let source = pendingStreamSource {
-            prepareStreamSource(source, smoothing: true, receivedAt: pendingStreamReceivedAt)
-            pendingStreamSource = nil; pendingStreamReceivedAt = nil
-        }
-        guard isViewLoaded, view.window?.isVisible == true, view.window?.isMiniaturized == false,
-              !view.isHiddenOrHasHiddenAncestor, !view.visibleRect.isEmpty else {
-            textReveal.flush(); revealClock?.stop()
-            // One final flush, with no measurement or ongoing hidden-window
-            // clock. Returning to the same mounted row must not leave a prefix.
-            setRoot(); sizes.removeAll(keepingCapacity: true)
-            return false
-        }
-        let advanced = textReveal.advance()
-        if advanced || sourceChanged {
-            let revealProbe = PerfDiagnostics.begin()
-            defer { PerfDiagnostics.end("streaming_text_frame", revealProbe) }
-            // Publish this row's real measured height through the existing
-            // anchor/follow path, without re-projecting the conversation.
-            generation += 1; publishedHeight = nil
-            sizes.removeAll(keepingCapacity: true)
-            setRoot()
-            report(measure(width: view.bounds.width), generation: generation)
-        }
-        if !textReveal.hasBacklog { revealClock?.stop() }
-        return textReveal.hasBacklog
-    }
-    func suspendTextReveal() {
-        revealClock?.stop()
-        if let source = pendingStreamSource {
-            prepareStreamSource(source, smoothing: false)
-            pendingStreamSource = nil; pendingStreamReceivedAt = nil
-            revealFlushPending = true
-        }
-        if textReveal?.hasBacklog == true {
-            // State can settle while the outgoing document is hidden, but its
-            // native subtree and saved geometry must remain untouched.
-            textReveal?.flush(); revealFlushPending = true
-        }
-    }
-    func resumeTextReveal() {
-        guard revealFlushPending else { return }
-        revealFlushPending = false
-        generation += 1; publishedHeight = nil
-        sizes.removeAll(keepingCapacity: true)
         setRoot()
     }
     private func nativeUserPreparation() -> (messageID: String, source: String, value: NativeParagraphContent.Preparation)? {
@@ -2017,17 +1863,7 @@ private final class ConversationEntryController: NSViewController {
               let message = content.entry.messages.first, message.role == "assistant", !message.isCompactionSummary,
               message.content.count == 1, let part = message.content.first,
               part.type == "text", !part.isRuntimeContext, part.skillContextSplit == nil,
-              let rawSource = part.text else { return nil }
-        if let streamSnapshot, let textReveal {
-            let blocks = streamSnapshot.prefix(utf16Length: textReveal.text.utf16.count)
-            if streamPreparation?.blocks != blocks || streamPreparation?.size != appearance.bodySize
-                || streamPreparation?.rich != allowsRichBlocks {
-                streamPreparation = (blocks, appearance.bodySize, allowsRichBlocks,
-                    NativeAssistantContent.prepare(blocks: blocks, allowsRichBlocks: allowsRichBlocks))
-            }
-            return (message.id, rawSource, streamPreparation!.value)
-        }
-        let source = rawSource
+              let source = part.text else { return nil }
         let preparation = nativeRowPreparations.assistant(session: content.sessionId, messageID: message.id,
                                                           source: source, allowsRichBlocks: allowsRichBlocks) {
             NativeAssistantContent.prepare(source, allowsRichBlocks: allowsRichBlocks)
@@ -2124,7 +1960,7 @@ private final class ConversationEntryController: NSViewController {
             self.nativeUser = nil
         }
         if let assistant = nativeAssistantPreparation() {
-            replySource = content.entry.messages.first?.content.first?.text
+            replySource = assistant.source
             if let blocks = assistant.value.content {
                 // A hosted fallback may become native after its incomplete Markdown
                 // changes shape. Keep an active selection until the user clears it.
@@ -2160,7 +1996,6 @@ private final class ConversationEntryController: NSViewController {
         }
         var hostedContent = content
         hostedContent.markdownPreparation = markdownPreparation
-        hostedContent.displayTextOverride = streamSnapshot == nil ? nil : content.entry.messages.first?.content.first?.text
         let version = generation
         let root = HostedConversationEntry(content: hostedContent, appearance: appearance, disclosureChanged: { [weak self] in
             self?.sizes.removeAll(keepingCapacity: true)
@@ -2422,14 +2257,9 @@ private struct ConversationEntryView: View, Equatable {
     var liveProcessFold = false
     /// Live turn start for the fold header's ticking duration (PI).
     var liveStartedAt: Date? = nil
-    var streamingMessageID: String? = nil
-    var displayTextOverride: String? = nil
-    @RememberedExpansion("commentary", initial: true) private var commentaryExpanded
+    @RememberedExpansion("commentary") private var commentaryExpanded
     static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.entry == rhs.entry && sameConfiguration(lhs, rhs)
-    }
-    private static func sameConfiguration(_ lhs: Self, _ rhs: Self) -> Bool {
-        lhs.tools == rhs.tools && lhs.api === rhs.api
+        lhs.entry == rhs.entry && lhs.tools == rhs.tools && lhs.api === rhs.api
             && lhs.sessionId == rhs.sessionId && lhs.memoryKey == rhs.memoryKey
             && lhs.activityNarrative == rhs.activityNarrative
             && lhs.markdownPreparation == rhs.markdownPreparation
@@ -2441,26 +2271,6 @@ private struct ConversationEntryView: View, Equatable {
             && lhs.completedDuration == rhs.completedDuration
             && lhs.liveProcessFold == rhs.liveProcessFold
             && lhs.liveStartedAt == rhs.liveStartedAt
-            && lhs.streamingMessageID == rhs.streamingMessageID
-            && lhs.displayTextOverride == rhs.displayTextOverride
-    }
-    /// Only raw text appends may wait for the display clock. Identity, controls,
-    /// appearance, tool state and completion keep their immediate update paths.
-    func onlyAppendsLiveText(to old: Self) -> Bool {
-        guard let streamingMessageID, Self.sameConfiguration(self, old),
-              entry.id == old.entry.id, entry.presentation == old.entry.presentation,
-              entry.messages.count == 1, old.entry.messages.count == 1,
-              let current = entry.messages.first, let previous = old.entry.messages.first,
-              current.id == streamingMessageID, current.id == previous.id,
-              current.role == previous.role, current.createdAt == previous.createdAt, current.metadata == previous.metadata,
-              current.content.count == 1, previous.content.count == 1,
-              let part = current.content.first, let previousPart = previous.content.first,
-              part.type == "text", previousPart.type == "text",
-              let text = part.text, let previousText = previousPart.text, text.hasPrefix(previousText) else { return false }
-        return part.thinking == previousPart.thinking && part.toolCallId == previousPart.toolCallId
-            && part.toolName == previousPart.toolName && part.input == previousPart.input
-            && part.output == previousPart.output && part.isError == previousPart.isError
-            && part.source == previousPart.source && part.fileId == previousPart.fileId && part.name == previousPart.name
     }
     /// Ordinary provider progress prose needs the same rhythm as narrative anchors.
     var isStageNote: Bool { isProgressNote || entry.presentation == .progress }
@@ -2502,8 +2312,7 @@ private struct ConversationEntryView: View, Equatable {
                         ProcessFoldRow(rows: foldedRows, api: api, sessionId: sessionId,
                                        completedDuration: completedDuration,
                                        sourceMemoryPrefix: String(memoryKey.dropLast(entry.id.count + 1)),
-                                       live: liveProcessFold, liveStartedAt: liveStartedAt,
-                                       streamingMessageID: streamingMessageID)
+                                       live: liveProcessFold, liveStartedAt: liveStartedAt)
                     }
                 default:
                     if entry.presentation == .record {
@@ -2511,9 +2320,7 @@ private struct ConversationEntryView: View, Equatable {
                     }
                     ForEach(entry.messages) { message in
                         KimiMessageView(message: message, tools: tools, api: api, sessionId: sessionId,
-                                        markdownPreparation: markdownPreparation,
-                                        streaming: streamingMessageID == message.id,
-                                        displayTextOverride: displayTextOverride, entryID: entry.id)
+                                        markdownPreparation: markdownPreparation, entryID: entry.id)
                     }
                     if entry.messages.first?.role == "assistant" && entry.presentation != .progress {
                         let text = entry.messages.flatMap(\.content).compactMap(\.text).joined(separator: "\n\n")
@@ -2544,12 +2351,11 @@ struct ProcessFoldRow: View {
     let sessionId: String
     var completedDuration: TimeInterval? = nil
     var sourceMemoryPrefix: String? = nil
-    /// Untouched processes open while running and close on completion.
-    /// An explicit user choice remains authoritative for this turn.
+    /// The running turn's process disclosure (PI: active turns start open and
+    /// settle in place on completion; the row id is stable across the flip).
     var live = false
     /// Live turn start, so the header's duration ticks while it runs (PI).
     var liveStartedAt: Date? = nil
-    var streamingMessageID: String? = nil
     @UILocalization private var L
     @Environment(\.locale) private var locale
     @Environment(\.conversationMemoryKey) private var memoryKey
@@ -2557,15 +2363,26 @@ struct ProcessFoldRow: View {
 
     init(rows: [ConversationPresentationModel.Row], api: KimiAPI?, sessionId: String,
          completedDuration: TimeInterval? = nil, sourceMemoryPrefix: String? = nil,
-         live: Bool = false, liveStartedAt: Date? = nil, streamingMessageID: String? = nil) {
+         live: Bool = false, liveStartedAt: Date? = nil) {
         self.rows = rows; self.api = api; self.sessionId = sessionId
         self.completedDuration = completedDuration; self.sourceMemoryPrefix = sourceMemoryPrefix
         self.live = live; self.liveStartedAt = liveStartedAt
-        self.streamingMessageID = streamingMessageID
         _expanded = RememberedExpansion("process-fold", initial: live)
     }
     @RememberedExpansion("process-fold") private var expanded
     @Environment(\.conversationDisclosureWillChange) private var disclosureWillChange
+    @State private var pageRevision = 0
+    private var page: ConversationProcessPage {
+        _ = pageRevision
+        return ConversationProcessPage(ids: rows.map(\.entry.id), anchor: ConversationReadingMemory.shared.processPages[memoryKey])
+    }
+    private func changePage(_ offset: Int) {
+        let start = page.range.lowerBound + offset * ConversationProcessPage.size
+        guard rows.indices.contains(start) else { return }
+        disclosureWillChange()
+        ConversationReadingMemory.shared.processPages[memoryKey] = rows[start].entry.id
+        pageRevision += 1
+    }
     private var toolCalls: Int {
         rows.reduce(0) { $0 + $1.entry.messages.flatMap(\.content).filter { $0.type == "tool_use" }.count }
     }
@@ -2600,7 +2417,6 @@ struct ProcessFoldRow: View {
     }
     var body: some View {
         let countLabel = toolCalls > 0 ? L("\(toolCalls) 个工具") : L("\(rows.count) 条记录")
-        let headline = expanded ? nil : externalHeadline
         VStack(alignment: .leading, spacing: 2) {
             HStack(alignment: .center, spacing: 8) {
                 DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
@@ -2612,7 +2428,9 @@ struct ProcessFoldRow: View {
                         Image(systemName: "sparkles").font(.system(size: ReplyStyle.captionSize))
                             .foregroundStyle(WorkbenchTheme.quiet).fixedSize()
                         Text(verbatim: live ? liveLabel : L("运行完成")).fixedSize()
-                        ProcessStatusDot(status: live ? .running : .succeeded)
+                        if live {
+                            ProcessLivePulse()
+                        }
                         if live, let liveStartedAt {
                             let isZh = locale.language.languageCode?.identifier.hasPrefix("zh") ?? true
                             TimelineView(.periodic(from: liveStartedAt, by: 1)) { context in
@@ -2630,15 +2448,15 @@ struct ProcessFoldRow: View {
                             Text(L("· \(editStat.files) 个文件 +\(editStat.additions) −\(editStat.deletions)"))
                                 .monospacedDigit().fixedSize()
                         }
-                        if !expanded, headline == nil, let summary = thinkingSummary {
+                        if live || !expanded, externalHeadline == nil, let summary = thinkingSummary {
                             Text(verbatim: "· " + summary)
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                                 .layoutPriority(-1)
                         }
                     }
-                    .font(.system(size: headline != nil ? ReplyStyle.captionSize : ReplyStyle.Process.labelSize))
-                    .foregroundStyle(headline != nil ? WorkbenchTheme.quiet : Color.secondary)
+                    .font(.system(size: externalHeadline != nil ? ReplyStyle.captionSize : ReplyStyle.Process.labelSize))
+                    .foregroundStyle(externalHeadline != nil ? WorkbenchTheme.quiet : Color.secondary)
                 }
                 .disclosureGroupStyle(ProcessDisclosureStyle(caretFollowsContent: true))
                 .accessibilityValue(Text(expanded ? "已展开" : "已收起"))
@@ -2653,7 +2471,7 @@ struct ProcessFoldRow: View {
                         .accessibilityValue(Text(verbatim: L("本轮改了 \(editStat.files) 个文件") + " +\(editStat.additions) −\(editStat.deletions)"))
                 }
             }
-            if let externalHeadline = headline {
+            if let externalHeadline {
                 Button { expanded.toggle() } label: {
                     Text(verbatim: externalHeadline)
                         .font(.system(size: ReplyStyle.Process.labelSize))
@@ -2671,7 +2489,16 @@ struct ProcessFoldRow: View {
             }
             WorkbenchDisclosureContent(expanded: expanded) {
                 VStack(alignment: .leading, spacing: ReplyStyle.Process.rowSpacing) {
-                    ForEach(rows, id: \.entry.id) { row in
+                    if page.count > 1 {
+                        HStack(spacing: 12) {
+                            Button("上一页") { changePage(-1) }.disabled(page.number == 1)
+                                .accessibilityIdentifier("process-previous-page")
+                            Text(L("第 \(page.number) / \(page.count) 页")).monospacedDigit()
+                            Button("下一页") { changePage(1) }.disabled(page.number == page.count)
+                                .accessibilityIdentifier("process-next-page")
+                        }.buttonStyle(.borderless).font(.system(size: ReplyStyle.Process.labelSize))
+                    }
+                    ForEach(Array(rows[page.range]), id: \.entry.id) { row in
                         foldedRowView(row)
                     }
                 }.padding(.top, ReplyStyle.Process.rowSpacing).padding(.leading, ReplyStyle.Process.nestedIndent)
@@ -2686,7 +2513,7 @@ struct ProcessFoldRow: View {
         return ConversationEntryView(entry: row.entry, tools: row.tools, api: api, sessionId: sessionId,
                                      memoryKey: (sourceMemoryPrefix ?? sessionId) + ":" + row.entry.id, activityNarrative: row.activity,
                                      isLive: live && row.entry.id == rows.last?.entry.id,
-                                     preservesExpandedProcess: true, streamingMessageID: streamingMessageID)
+                                     preservesExpandedProcess: true)
             .environment(\.conversationMemoryKey, (sourceMemoryPrefix ?? sessionId) + ":" + row.entry.id)
             .environment(\.isConversationBodyText, true)
             .background(ProcessFindAnchor(id: row.entry.id))
@@ -2939,17 +2766,10 @@ private struct ThoughtRail<Content: View>: View {
 /// Expanded thoughts sit under their toggle's label, like every nested process row.
 private struct ThoughtText: View {
     let text: String
-    var streaming = false
     var body: some View {
-        // Prepare styles only for incoming content. Reveal frames slice this
-        // attributed value instead of reparsing the entire thought every tick.
-        let attributed = ThoughtTextStyle.attributed(text)
         ThoughtRail {
-            SmoothReplyText(source: attributed.string, streaming: streaming) { visible in
-                SelectableReplyText(attributed: attributed.attributedSubstring(
-                    from: NSRange(location: 0, length: (visible as NSString).length)),
-                    preservesSelectionOnAppend: true, usesViewportLayout: true)
-            }
+            DisclosureReplyText(text: text, attributes: ThoughtTextStyle.attributes,
+                                attributedText: ThoughtTextStyle.attributed)
         }
     }
 }
@@ -2958,14 +2778,11 @@ private struct ThoughtToggle: View {
     /// A looked-up `Text`, so callers pass `Text("…")` rather than a raw string.
     let title: Text
     var summary: String? = nil
-    var status: VisibleTool.Status? = nil
     @Binding var expanded: Bool
     var body: some View {
         DisclosureGroup(isExpanded: $expanded) { EmptyView() } label: {
             HStack(spacing: 6) {
-                Image(systemName: "sparkles").font(.system(size: 15)).foregroundStyle(WorkbenchTheme.quiet).fixedSize()
                 title.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(.secondary).fixedSize()
-                if let status { ProcessStatusDot(status: status) }
                 if !expanded, let summary, !summary.isEmpty {
                     Text(verbatim: "·")
                         .font(.system(size: ReplyStyle.Process.labelSize))
@@ -2988,12 +2805,11 @@ struct ThoughtDisclosure: View {
     /// collapsed header never surfaces redacted reasoning).
     var publicSummary: String? = nil
     @UILocalization private var L
-    @RememberedExpansion("thought", initial: true) private var expanded
+    @RememberedExpansion("thought") private var expanded
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
             ThoughtToggle(title: Text(verbatim: L("Thoughts")),
                           summary: expanded ? nil : (publicSummary ?? ThoughtTextStyle.latestSummaryLine(text)),
-                          status: .succeeded,
                           expanded: $expanded)
             WorkbenchDisclosureContent(expanded: expanded) { ThoughtText(text: text) }
         }
@@ -3008,9 +2824,12 @@ struct ThoughtOutput: View {
     let finished: Bool
     var embedded = false
     private var fullText: String { messages.flatMap(\.content).compactMap(\.thinking).joined(separator: "\n\n") }
-    @RememberedExpansion("thought", initial: true) private var expanded
+    @RememberedExpansion("thought") private var expanded
     var body: some View {
-        VStack(alignment: .leading, spacing: embedded ? 4 : 9) {
+        if embedded {
+            ThoughtText(text: fullText)
+        } else {
+            VStack(alignment: .leading, spacing: 9) {
                 // A collapsed running thought shows the provider's public summary
                 // first, else its latest meaningful line beside the title (DSH's
                 // streaming summary), so the preview reads without pushing the
@@ -3021,15 +2840,13 @@ struct ThoughtOutput: View {
                 }
                 ThoughtToggle(title: Text(verbatim: finished ? L("Thoughts") : L("Thinking")),
                               summary: expanded ? nil : (publicSummary ?? ThoughtTextStyle.latestSummaryLine(fullText)),
-                              status: finished ? .succeeded : .running,
                               expanded: $expanded)
                     .accessibilityIdentifier("thought-disclosure:" + memoryKey)
-                WorkbenchDisclosureContent(expanded: expanded) {
-                    ThoughtText(text: fullText, streaming: !finished)
-                }
+                WorkbenchDisclosureContent(expanded: expanded) { ThoughtText(text: fullText) }
                 if !expanded, !finished, let summary = ConversationThinkingSummary.latest(in: messages) {
                     LiveThinkingSummary(text: summary).padding(.leading, ReplyStyle.Process.nestedIndent)
                 }
+            }
         }
     }
 }
