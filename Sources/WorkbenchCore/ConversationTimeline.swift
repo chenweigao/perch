@@ -83,11 +83,31 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
                 }
                 let nextPhase = ToolPresentation.processPhase(part)
                 let process = (thinking(part) && part.source?["kind"].string != "activity_summary") || nextPhase != nil
+                // A thought never stands alone once the turn has acted and no
+                // stage is open: it rides with the action it follows (edit
+                // receipt or stage), stays readable in that row's expansion, and
+                // seals the entry so a later tool starts a fresh stage instead of
+                // stretching a receipt. A turn's opening thought keeps its own
+                // row — that is where the streaming preview lives.
+                var sealed = false
+                if thinking(part), !canGroup, index > 0,
+                   entries.last?.messages.flatMap(\.content).contains(where: { $0.type == "tool_use" }) == true {
+                    entries[entries.count - 1].messages.append(phase.message)
+                    entries[entries.count - 1].presentation = .activity
+                    sealed = true
+                // Consecutive runtime-context records (skill loads, reminders)
+                // share one quiet entry instead of stacking one row per record.
+                // They never join a tool stage: a stage entry fails the all-context
+                // test and opens a fresh entry below.
+                } else if part.isRuntimeContext, index > 0,
+                   entries.last?.presentation == .activity,
+                   entries.last?.messages.allSatisfy({ $0.content.first?.isRuntimeContext == true }) == true {
+                    entries[entries.count - 1].messages.append(phase.message)
                 // A phase follows the work, not the model's think/tool alternation.
                 // Prose, edits and validation are boundaries. Unknown shell work
                 // can share exploration's stage, but gives the whole stage a
                 // neutral execution label rather than fragmenting it by syntax.
-                if process, canGroup, index > 0,
+                } else if process, canGroup, index > 0,
                    nextPhase == nil || groupPhase == nil || nextPhase == groupPhase
                     || (nextPhase != .validating && groupPhase != .validating) {
                     entries[entries.count - 1].messages.append(phase.message)
@@ -101,7 +121,7 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
                     entries.append(Self(messages: [phase.message], presentation: presentation, partOffset: phase.offset))
                     groupPhase = nextPhase
                 }
-                canGroup = process
+                canGroup = process && !sealed
             }
             if !hasText && !phases.contains(where: { thinking($0.message.content[0]) }) && !running && turn.contains(where: { $0.role == "assistant" }) {
                 entries.append(Self(messages: [turn[0]], presentation: .emptyOutput, partOffset: 0))

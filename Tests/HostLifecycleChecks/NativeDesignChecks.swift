@@ -382,6 +382,10 @@ import WorkbenchCore
         precondition(abs((fromTop(toggle)["midY"] ?? 0) - (closeFrame["midY"] ?? 0)) < 2,
                      "Sidebar toggle must share the window controls' vertical center")
     }
+    for control in [title, toolbarActions] {
+        precondition(abs((fromTop(control)["midY"] ?? 0) - (closeFrame["midY"] ?? 0)) < 2,
+                     "Unified header title/actions must share the native toolbar's vertical center: title/actions=\(fromTop(control)), trafficLights=\(closeFrame)")
+    }
     precondition(abs((fromTop(title)["midY"] ?? 0) - (fromTop(toolbarActions)["midY"] ?? 0)) < 2,
                  "Unified header title and actions must share the same vertical center inside the main container")
     print("Native window chrome: \(chrome)")
@@ -503,6 +507,17 @@ import WorkbenchCore
     window.setFrame(wideFrame, display: true)
     try await Task.sleep(for: .milliseconds(300))
     window.contentView!.layoutSubtreeIfNeeded()
+    // Sidebar rows show only the title and status dots; full title, host, path,
+    // agent and time are all in the hover tooltip.
+    let rowTooltip = SessionRowChrome(title: "长会话标题", subtitle: nil,
+                                      hostName: "Mac mini", directory: "/tmp/perch",
+                                      detail: "Codex · 结果待查看", updatedAt: Date().timeIntervalSince1970 - 60,
+                                      compact: true, selected: false, canOpen: true,
+                                      onOpen: {}, indicator: { EmptyView() }).tooltip
+    precondition(rowTooltip.contains("长会话标题") && rowTooltip.contains("Mac mini") &&
+                 rowTooltip.contains("/tmp/perch") && rowTooltip.contains("Codex") &&
+                 rowTooltip.contains("分钟") || rowTooltip.contains("min"),
+                 "Hover tooltip must include full title, host, directory, agent and time: \(rowTooltip)")
     model.taskContextWindow.embeddedVisible = false
     try await Task.sleep(for: .milliseconds(250))
     try await capture("native-inspector-closed-light")

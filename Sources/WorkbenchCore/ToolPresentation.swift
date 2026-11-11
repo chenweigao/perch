@@ -171,6 +171,37 @@ public enum ToolPresentation {
         return labels.reversed().joined(separator: " · ")
     }
 
+    /// One quiet line summarizing folded runtime context. Labels come from the
+    /// records themselves — a skill's `name=` attribute, a block's tag, or the
+    /// first line — never from invented semantics.
+    public static func runtimeContextSummary(_ texts: [String]) -> String? {
+        var labels: [String] = []
+        for text in texts {
+            guard let label = contextLabel(text), !labels.contains(label) else { continue }
+            labels.append(label)
+        }
+        guard !labels.isEmpty else { return nil }
+        let head = labels.prefix(2).joined(separator: " · ")
+        return labels.count > 2 ? L("\(head) 等") : head
+    }
+
+    private static func contextLabel(_ text: String) -> String? {
+        if let range = text.range(of: #"name\s*=\s*["']"#, options: .regularExpression) {
+            let rest = text[range.upperBound...]
+            if let end = rest.firstIndex(where: { $0 == "\"" || $0 == "'" }) {
+                let name = rest[..<end].trimmingCharacters(in: .whitespaces)
+                if !name.isEmpty { return String(name) }
+            }
+        }
+        if let bracket = text.firstIndex(of: "<") {
+            let tag = text[text.index(after: bracket)...].prefix(while: { $0.isLetter || $0 == "-" })
+            if !tag.isEmpty { return String(tag) }
+        }
+        let firstLine = text.split(whereSeparator: \.isNewline).first.map(String.init)?
+            .trimmingCharacters(in: .whitespaces) ?? ""
+        return firstLine.isEmpty ? nil : String(firstLine.prefix(24))
+    }
+
     /// Other tool kinds join summaries without exposing shell arguments or edits.
     public static func summaryTarget(_ tool: VisibleTool) -> String {
         if let path = path(tool) { return (path as NSString).lastPathComponent }

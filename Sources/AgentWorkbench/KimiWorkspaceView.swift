@@ -138,8 +138,8 @@ struct KimiWorkspaceView: View {
     private func stallSignature(_ conversation: KimiConversation) -> Int {
         var hasher = Hasher()
         hasher.combine(conversation.lastSeq)
-        hasher.combine(conversation.live?.assistantText.utf16.count ?? 0)
-        hasher.combine(conversation.live?.thinkingText.utf16.count ?? 0)
+        hasher.combine(conversation.live?.assistantUTF16Length ?? 0)
+        hasher.combine(conversation.live?.thinkingUTF16Length ?? 0)
         hasher.combine(conversation.live?.runningTools.count ?? 0)
         return hasher.finalize()
     }
@@ -216,16 +216,15 @@ private struct KimiComposerView: View {
                                             }, onSelectThinking: { connection.thinkingChoices[sessionID] = $0 })
                     }
                     HStack(spacing: 6) {
+                        ComposerEnvironmentMenu(host: connection.host, provider: "Kimi",
+                                                directory: connection.conversation?.snapshot.session.cwd ?? "")
                         PermissionPicker(provider: .kimi, capability: connection.permissionCapability(for: sessionID),
                                          disabled: connection.sending) { mode in
                             connection.setPermission(mode, for: sessionID)
                         }
-                        ComposerTemplatesMenu(draft: connection.drafts[sessionID] ?? "") { template in
-                            onInput()
-                            let existing = connection.drafts[sessionID] ?? ""
-                            connection.drafts[sessionID] = existing.isEmpty ? template : existing + "\n\n" + template
-                            NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil)
-                        }
+                        ContextMeter(budget: connection.conversation?.snapshot.session.budget,
+                                     isStale: !connection.online || !connection.snapshotReady,
+                                     autoCompactHost: connection.host.id, autoCompactSession: sessionID)
                     }.foregroundStyle(.secondary)
                     ComposerActionButton(isRunning: isRunning,
                                          isStopping: connection.isStopping, canSend: canSend, canStop: connection.canStop,
@@ -239,13 +238,8 @@ private struct KimiComposerView: View {
                                          onQueue: nextTurnSend)
                 }
             }.padding(ReplyStyle.composerInset).workbenchComposerSurface()
-            ComposerEnvironmentBar(host: connection.host, provider: "Kimi",
-                                   directory: connection.conversation?.snapshot.session.cwd ?? "",
-                                   budget: connection.conversation?.snapshot.session.budget,
-                                   isStale: !connection.online || !connection.snapshotReady,
-                                   autoCompactHost: connection.host.id, autoCompactSession: sessionID,
-                                   sending: connection.sending, saveError: connection.draftSaveError,
-                                   draftLength: (connection.drafts[sessionID] ?? "").count)
+            ComposerDeliveryHint(sending: connection.sending, saveError: connection.draftSaveError,
+                                 draftLength: (connection.drafts[sessionID] ?? "").count)
         }.dropDestination(for: URL.self) { files, _ in
             addAttachments(files.filter(\.isFileURL), to: sessionID)
             return files.contains(where: \.isFileURL)
@@ -408,7 +402,7 @@ private struct KimiTimeline<Bar: View>: View {
     @State private var appActive = NSApp.isActive
     @State private var follow = true
     private var readingKey: String { "\(connection.host.id):kimi:\(connection.conversation?.snapshot.session.id ?? "")" }
-    private var readingRevision: String { "\(connection.conversation?.lastSeq ?? 0):\(connection.conversation?.live?.assistantText.utf16.count ?? 0)" }
+    private var readingRevision: String { "\(connection.conversation?.lastSeq ?? 0):\(connection.conversation?.live?.assistantUTF16Length ?? 0)" }
     private var hasNewReply: Bool { ConversationReadingMemory.shared.seenRevision[readingKey] != readingRevision }
     private var displayedResult: KimiSession? {
         guard appActive, follow, ConversationReadingMemory.shared.following[readingKey] != false,

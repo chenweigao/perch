@@ -595,9 +595,7 @@ private struct SessionSidebarRow: View {
                          offline: compact && !item.online && !item.archived,
                          selected: selected,
                          canOpen: item.online && !item.archived, onOpen: onOpen) {
-            if compact {
-                SidebarAgentIndicator(item: item)
-            } else { SessionStatusIndicator(item: item) }
+            SessionStatusIndicator(item: item)
         }.opacity(item.online || item.archived ? 1 : 0.65)
             .contextMenu { SessionActionsMenu(model: model, item: item) }
             #if PERCH_ACCEPTANCE

@@ -136,6 +136,22 @@ struct ShellActivity {
     /// operation is execution, not exploration. Shell syntax stays available in
     /// full; this small display parser does not attempt to prove shell semantics.
     static func groupingPhase(_ command: String) -> ActivityNarrativePhase {
+        groupingPhaseLock.lock()
+        let hit = groupingPhases[command]
+        groupingPhaseLock.unlock()
+        if let hit { return hit }
+        let value = groupingPhaseUncached(command)
+        groupingPhaseLock.lock()
+        if groupingPhases.count > 2048 { groupingPhases.removeAll() }
+        groupingPhases[command] = value
+        groupingPhaseLock.unlock()
+        return value
+    }
+
+    private static let groupingPhaseLock = NSLock()
+    private static var groupingPhases: [String: ActivityNarrativePhase] = [:]
+
+    private static func groupingPhaseUncached(_ command: String) -> ActivityNarrativePhase {
         guard !command.contains(">"), !command.contains("$("), !command.contains("`"),
               !command.contains("\n"), !command.contains("<(") else { return .mixed }
         let commands = segments(command)
@@ -145,7 +161,7 @@ struct ShellActivity {
             let name = (first as NSString).lastPathComponent.lowercased()
             if name == "cd" { continue }
             if ["bash", "sh", "zsh"].contains(name), words.count == 3, ["-c", "-lc"].contains(words[1]) {
-                phases.append(groupingPhase(words[2])); continue
+                phases.append(groupingPhaseUncached(words[2])); continue
             }
             // Control flow, environment wrappers and assignments are deliberately
             // neutral here even when the compact label can identify their target.

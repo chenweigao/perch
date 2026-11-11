@@ -276,6 +276,9 @@ final class WorkbenchModel {
 
     func registerEnvironment(kimi: KimiConnection, native: NativeAgentConnection) {
         kimiEnvironments[kimi.host.id] = kimi; nativeEnvironments[native.host.id] = native
+        let sharedMaster = connections.first { $0.id == kimi.host.id }
+        kimi.hostConnection = sharedMaster
+        native.hostConnection = sharedMaster
         native.onSessionsChanged = { [weak self] in self?.catalogChanged() }
         kimi.onSessionsChanged = { [weak self] in self?.catalogChanged() }
         native.onOnlineChanged = { [weak self] in Task { @MainActor in self?.catalogChanged() } }

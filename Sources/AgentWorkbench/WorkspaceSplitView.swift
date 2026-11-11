@@ -471,10 +471,12 @@ final class WorkbenchDetailController: NSViewController {
             headerBar.trailingAnchor.constraint(equalTo: card.trailingAnchor),
             headerBar.heightAnchor.constraint(equalToConstant: WorkbenchChrome.headerHeight),
             headerLeading,
-            header.centerYAnchor.constraint(equalTo: headerBar.centerYAnchor),
+            header.centerYAnchor.constraint(equalTo: headerBar.topAnchor,
+                constant: WorkbenchChrome.headerHeight / 2 - WorkspaceLayoutMetrics.frameInset),
             header.trailingAnchor.constraint(lessThanOrEqualTo: actions.leadingAnchor, constant: -12),
             actions.trailingAnchor.constraint(equalTo: headerBar.trailingAnchor, constant: -12),
-            actions.centerYAnchor.constraint(equalTo: headerBar.centerYAnchor),
+            actions.centerYAnchor.constraint(equalTo: headerBar.topAnchor,
+                constant: WorkbenchChrome.headerHeight / 2 - WorkspaceLayoutMetrics.frameInset),
             detail.topAnchor.constraint(equalTo: headerBar.bottomAnchor),
             detail.leadingAnchor.constraint(equalTo: card.leadingAnchor),
             detail.bottomAnchor.constraint(equalTo: card.bottomAnchor),
@@ -507,7 +509,7 @@ final class WorkbenchDetailController: NSViewController {
     }
 
     /// One clipped sheet contains the reader and its full-height auxiliary lane,
-    /// separated by clean whitespace rather than a hard vertical rule.
+    /// separated only by whitespace (Qoder-style), never a hard vertical rule.
     func installInspector(_ inspector: NSView) -> (NSView, NSLayoutConstraint) {
         _ = view
         let sheet = card!
@@ -704,9 +706,9 @@ private final class WorkbenchPanelShadowView: NSView {
             layer?.backgroundColor = WorkbenchTheme.contentBackgroundNS.cgColor
             let elevation = NSShadow()
             elevation.shadowColor = NSColor.black.withAlphaComponent(
-                effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? 0.28 : 0.10)
-            elevation.shadowBlurRadius = 12
-            elevation.shadowOffset = NSSize(width: 0, height: -3)
+                effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? 0.38 : 0.16)
+            elevation.shadowBlurRadius = 20
+            elevation.shadowOffset = NSSize(width: 0, height: -6)
             shadow = elevation
         }
     }
@@ -1128,14 +1130,6 @@ final class WorkbenchSplitController: NSSplitViewController {
             headerLeading = WorkbenchTheme.Reading.inset
         }
         detailController?.setHeaderLeadingInset(headerLeading)
-        if let titlebarContainer = view.window?.standardWindowButton(.closeButton)?.superview?.superview {
-            var frame = titlebarContainer.frame
-            let maxToolbarWidth = min(view.bounds.width, 196)
-            if abs(frame.width - maxToolbarWidth) > 0.5 {
-                frame.size.width = maxToolbarWidth
-                titlebarContainer.frame = frame
-            }
-        }
         sidebarOverlayBackdrop?.isHidden = !isSidebarOverlayingContent
         sidebarOverlayShadow?.isHidden = !isSidebarOverlayingContent
         isInspectorOverlayingContent = false

@@ -12,10 +12,8 @@ struct WorkbenchHeader: View {
     }
     var body: some View {
         HStack(spacing: 6) {
-            if !model.showDashboard {
-                Image(systemName: "folder")
-                    .font(.system(size: WorkbenchTheme.Typography.caption))
-                    .foregroundStyle(WorkbenchTheme.quiet)
+            if let item {
+                AgentMark(kind: item.reference.kind, size: 15)
                     .accessibilityHidden(true)
             }
             Text(title).font(.system(size: WorkbenchTheme.Typography.title, weight: .medium))
