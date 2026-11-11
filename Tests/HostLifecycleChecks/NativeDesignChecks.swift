@@ -614,6 +614,7 @@ import WorkbenchCore
         }
         moveMouse(to: rowPoint)
         try await Task.sleep(for: .milliseconds(700))
+        print("HOVER-DIAG: rowPoint=\(rowPoint), active=\(NSApp.isActive), key=\(window.isKeyWindow), ids=\(taskPanelIdentifiers(window))")
         guard let actionsFrame = taskPanelControl(window, "sidebar.row.actions") else {
             preconditionFailure("Hovering a session row must reveal its ellipsis action")
         }
