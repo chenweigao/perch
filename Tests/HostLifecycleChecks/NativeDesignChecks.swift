@@ -684,8 +684,16 @@ import WorkbenchCore
         guard taskPanelControl(window, "sidebar.row.actions") != nil else {
             preconditionFailure("Hovering a session row must reveal its ellipsis action; row=\(rowPoint), pointer=\(NSEvent.mouseLocation), local=\(window.mouseLocationOutsideOfEventStream), key=\(window.isKeyWindow), active=\(NSApp.isActive)")
         }
-        guard let previewWindow = visibleWindow(with: "sidebar.row.preview") else {
-            preconditionFailure("Hovering a session row must open the styled preview after its delay")
+        var previewWindow: NSWindow?
+        for _ in 0..<20 {
+            if let presented = visibleWindow(with: "sidebar.row.preview") {
+                previewWindow = presented
+                break
+            }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        guard let previewWindow else {
+            preconditionFailure("Hovering a session row must open the styled preview after its delay; row=\(rowPoint), pointer=\(NSEvent.mouseLocation), local=\(window.mouseLocationOutsideOfEventStream), key=\(window.isKeyWindow), active=\(NSApp.isActive), windows=\(NSApp.windows)")
         }
         precondition(previewWindow.contentView?.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .aqua,
                      "Session previews must follow the workspace's light appearance")
