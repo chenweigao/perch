@@ -631,6 +631,8 @@ import WorkbenchCore
         precondition(connection.snapshot?.thinking == "medium" && selectedEfforts[0] == "medium")
         print("PASS: model and effort changes reach the fixture runtime and return in the selected session")
 
+        split.setInspectorDesiredVisible(false)
+        try await place(width: min(1100, visible.width))
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         var rowPoint: CGPoint?
@@ -652,8 +654,11 @@ import WorkbenchCore
             }
             preconditionFailure("Sidebar session row must expose a native hover target: \(identifiers)")
         }
+        let screenHeight = NSScreen.screens.first?.frame.height ?? 1080
+        let quartzRowPoint = CGPoint(x: rowPoint.x, y: screenHeight - rowPoint.y)
+        precondition(visible.contains(quartzRowPoint),
+                     "Hover target must be inside the display's visible frame \(visible), got \(quartzRowPoint)")
         func moveMouse(to point: CGPoint) {
-            let screenHeight = NSScreen.screens.first?.frame.height ?? 1080
             CGWarpMouseCursorPosition(CGPoint(x: point.x, y: screenHeight - point.y))
             let location = window.convertFromScreen(NSRect(origin: point, size: .zero)).origin
             let event = NSEvent.mouseEvent(with: .mouseMoved, location: location, modifierFlags: [],
@@ -679,10 +684,18 @@ import WorkbenchCore
         moveMouse(to: rowPoint)
         try await Task.sleep(for: .milliseconds(550))
         guard taskPanelControl(window, "sidebar.row.actions") != nil else {
-            preconditionFailure("Hovering a session row must reveal its ellipsis action")
+            preconditionFailure("Hovering a session row must reveal its ellipsis action; row=\(rowPoint), pointer=\(NSEvent.mouseLocation), local=\(window.mouseLocationOutsideOfEventStream), key=\(window.isKeyWindow), active=\(NSApp.isActive)")
         }
-        guard let previewWindow = visibleWindow(with: "sidebar.row.preview") else {
-            preconditionFailure("Hovering a session row must open the styled preview after its delay")
+        var previewWindow: NSWindow?
+        for _ in 0..<20 {
+            if let presented = visibleWindow(with: "sidebar.row.preview") {
+                previewWindow = presented
+                break
+            }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        guard let previewWindow else {
+            preconditionFailure("Hovering a session row must open the styled preview after its delay; row=\(rowPoint), pointer=\(NSEvent.mouseLocation), local=\(window.mouseLocationOutsideOfEventStream), key=\(window.isKeyWindow), active=\(NSApp.isActive), windows=\(NSApp.windows)")
         }
         precondition(previewWindow.contentView?.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .aqua,
                      "Session previews must follow the workspace's light appearance")

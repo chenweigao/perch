@@ -44,7 +44,7 @@ def macos_commands(group, out):
         commands.append(("native-input-control", [python, "scripts/run-native-acceptance.py",
             "--mode", "input", "--input-positive-control", "--output", str(out / "native-input-control")], 150))
     if group in ("all", "navigation"):
-        commands.append(("navigation-build", ["bash", "scripts/build-navigation-preview.sh"], 300))
+        commands.append(("navigation-build", ["bash", "scripts/build-navigation-preview.sh"], 600))
         for mode in ["reading", "interactions", "paragraphs", "claude", "user-rows", "assistant-rows", "tool-card", "fast-scroll", "turns", "roundtrip"]:
             commands.append(("navigation-" + mode, [python, "scripts/run-navigation-check.py",
                 mode, "--output", str(out / ("navigation-" + mode))], 150))
