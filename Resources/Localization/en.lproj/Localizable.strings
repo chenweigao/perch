@@ -2135,6 +2135,11 @@
 "正在思考" = "Thinking";
 "正在处理" = "Working";
 "正在执行" = "Executing";
+"正在回复" = "Responding";
 "等待你确认" = "Waiting for your confirmation";
 "等待你回答" = "Waiting for your answer";
 "正在停止" = "Stopping";
+"更新计划" = "Update plan";
+"读取网页" = "Fetch page";
+"技能" = "Skill";
+"%lld/%lld 项已完成" = "%lld/%lld completed";

@@ -511,7 +511,7 @@ private struct ActivityBarCheckFixture: View {
     try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
     for (suffix, width, appearance) in [("light", 700.0, NSAppearance.Name.aqua), ("narrow-dark", 340.0, .darkAqua)] {
         window.appearance = NSAppearance(named: appearance); window.setContentSize(NSSize(width: width, height: 180))
-        for (phase, label) in [(ConversationRunPhase.thinking, "运行中"), (.executing, "运行中"), (.running, "运行中"), (.waitingForConfirmation, "等待你确认"), (.waitingForAnswer, "等待你回答"), (.stopping, "正在停止")] {
+        for (phase, label) in [(ConversationRunPhase.thinking, "正在思考"), (.executing, "正在执行"), (.responding, "正在回复"), (.running, "正在处理"), (.waitingForConfirmation, "等待你确认"), (.waitingForAnswer, "等待你回答"), (.stopping, "正在停止")] {
             host.rootView = root(phase)
             try await settle()
             precondition(accessibleStatus().contains(label),
@@ -537,7 +537,7 @@ private struct ActivityBarCheckFixture: View {
     host.rootView = root(.thinking, reduced: true); try await settle()
     precondition(glow(host)!.motionLayer.animationKeys()?.isEmpty != false, "Reduce Motion stops the same mounted caption")
     host.rootView = root(.thinking, locale: "en"); try await settle()
-    precondition(accessibleStatus().contains("Running"), "An unchanged phase follows the app language: \(accessibleStatus())")
+    precondition(accessibleStatus().contains("Thinking"), "An unchanged phase follows the app language: \(accessibleStatus())")
     host.rootView = root(.executing, summary: action); try await settle()
     precondition(accessibleStatus().contains("检查流式渲染") && !accessibleStatus().contains("正在执行"),
                  "A real action replaces the abstract phase wording")

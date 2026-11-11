@@ -401,7 +401,13 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
         card.setClip()
         WorkbenchTheme.replyBannerNS.setFill()
         NSBezierPath.fill(CGRect(x: 0, y: 0, width: bounds.width, height: ReplyStyle.Code.headerHeight))
+        WorkbenchTheme.codeHeaderDividerNS.setFill()
+        NSBezierPath.fill(CGRect(x: 0, y: ReplyStyle.Code.headerHeight - 0.5, width: bounds.width, height: 0.5))
         NSGraphicsContext.restoreGraphicsState()
+        let border = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: max(0, radius - 0.5), yRadius: max(0, radius - 0.5))
+        border.lineWidth = 1
+        WorkbenchTheme.Stroke.hairlineNS.setStroke()
+        border.stroke()
     }
 }
 

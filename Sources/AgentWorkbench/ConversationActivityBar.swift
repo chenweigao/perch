@@ -29,17 +29,18 @@ struct ConversationLiveStatus: View, Equatable {
     var body: some View {
         let _ = countBody()
         if let phase {
-            let title = phase.animates ? (summary ?? L("运行中")) : L(key: phase.titleKey)
+            let title = phase.animates ? (summary ?? L(key: phase.titleKey)) : L(key: phase.titleKey)
             HStack(spacing: 8) {
                 ConversationWorkIndicator(phase: phase, animated: !reduceMotion) { clockVisible = $0 }
-                    .frame(width: 12, height: 12).accessibilityHidden(true)
+                    .frame(width: 13, height: 13).accessibilityHidden(true)
                 Text(verbatim: title)
-                    .font(.system(size: 13))
+                    .font(.system(size: 13, weight: phase.needsInput ? .medium : .regular))
                     .foregroundStyle(phase.needsInput ? Color.orange : WorkbenchTheme.quiet)
                     .lineLimit(1)
+                    .truncationMode(.tail)
                     .help(Text(verbatim: title))
                 if let timing {
-                    Text("·").foregroundStyle(WorkbenchTheme.quiet.opacity(0.5))
+                    Text(verbatim: "·").font(.system(size: 12)).foregroundStyle(WorkbenchTheme.quiet.opacity(0.45))
                     ConversationWorkClock(timing: timing, visible: clockVisible)
                         .fixedSize(horizontal: true, vertical: false).accessibilityHidden(true)
                 }
@@ -61,14 +62,16 @@ struct ConversationLiveStatus: View, Equatable {
 private struct ConversationWorkClock: View {
     let timing: ConversationTiming
     let visible: Bool
-    @UILocalization private var L
     @Environment(\.locale) private var locale
     var body: some View {
         TimelineView(ConversationWorkClockSchedule(active: visible)) { context in
-            let duration = ConversationTiming.duration(timing.elapsed(at: context.date),
-                chinese: locale.language.languageCode?.identifier == "zh")
-            Text(verbatim: timing.observedOnly ? L("观察时长 \(duration)") : duration)
-                .font(.system(size: 12)).monospacedDigit().foregroundStyle(WorkbenchTheme.quiet.opacity(0.7))
+            let isZh = locale.language.languageCode?.identifier.hasPrefix("zh") ?? true
+            let duration = ConversationTiming.duration(timing.elapsed(at: context.date), chinese: isZh)
+            Text(verbatim: duration)
+                .font(.system(size: 12)).monospacedDigit().foregroundStyle(WorkbenchTheme.quiet.opacity(0.75))
+                .help(timing.observedOnly
+                      ? Text("从客户端首次观察到本轮开始计时，包含等待；此前用时未知。")
+                      : Text("从提交本轮请求到现在的经过时间，包含通信、工具调用和等待。"))
         }.id(visible)
     }
 }
@@ -102,11 +105,23 @@ enum ConversationWorkSummary {
     }
     private static func tool(name: String, input: JSONValue?) -> String {
         if let description = input?["description"].string.flatMap(firstLine) { return description }
-        if let command = input?["command"].string.flatMap(firstLine) { return "\(name) · \(command)" }
-        if let path = (input?["file_path"].string ?? input?["path"].string).flatMap(firstLine) {
-            return "\(name) · \((path as NSString).lastPathComponent)"
+        let visible = VisibleTool(id: "live", name: name, input: input, status: .running)
+        let action = ToolPresentation.action(name)
+        if let path = ToolPresentation.path(visible).flatMap(firstLine) {
+            return "\(action) \((path as NSString).lastPathComponent)"
         }
-        return name
+        if let command = (input?["command"].string ?? input?["cmd"].string) {
+            let cleaned = firstLine(ToolPresentation.cleanShellCommand(command))
+            let compact = ToolPresentation.compactTarget(visible)
+            if !compact.isEmpty, compact != L("执行命令"), compact != name {
+                return compact
+            }
+            if let cleaned { return "\(action) · \(cleaned)" }
+        }
+        if let detail = firstLine(ToolPresentation.rowSummary(visible)), detail != action {
+            return "\(action) · \(detail)"
+        }
+        return action
     }
     private static func firstLine(_ source: String) -> String? {
         guard let line = source.split(whereSeparator: \.isNewline).first?
@@ -644,7 +659,7 @@ struct RecapActionButton: View {
             }.font(.system(size: WorkbenchTheme.Reading.captionSize, weight: .medium))
                 .padding(.horizontal, 6).frame(height: 24).contentShape(Rectangle())
         }.buttonStyle(WorkbenchDisclosureButtonStyle())
-            .foregroundStyle(.secondary)
+            .foregroundStyle(WorkbenchTheme.quiet)
             .help("总结本次任务，不会向 Agent 发送消息")
             .accessibilityLabel(Text("Recap"))
             .popover(isPresented: $presented, arrowEdge: .top) {

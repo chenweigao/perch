@@ -32,8 +32,8 @@ extension ReplyStyle {
     }
 }
 
-/// A tool's compact outcome stays visible beside its label. User preference:
-/// yellow for live work and green for a recorded completed result.
+/// A tool's compact outcome stays visible beside its label: tuned warm amber
+/// with a gentle soft halo while running, and calm emerald once completed.
 struct ProcessStatusDot: View {
     let status: VisibleTool.Status
     @State private var pulsing = false
@@ -42,30 +42,36 @@ struct ProcessStatusDot: View {
     private var active: Bool { status == .running }
     private var color: Color {
         switch status {
-        case .running, .awaitingApproval: return Color(nsColor: .systemYellow)
-        case .succeeded, .returned: return Color(nsColor: .systemGreen)
+        case .running, .awaitingApproval: return Color(nsColor: WorkbenchTheme.statusRunningNS)
+        case .succeeded, .returned: return Color(nsColor: WorkbenchTheme.statusSuccessNS)
         case .failed: return Color(nsColor: .systemRed)
         case .missingResult, .disconnected: return WorkbenchTheme.quiet
         }
     }
     var body: some View {
+        let canAnimate = active && !(systemReduceMotion || conversationReduceMotion)
         Circle().fill(color).frame(width: 6, height: 6)
-            .opacity(active && pulsing ? 0.55 : 1)
-            .animation(active && !(systemReduceMotion || conversationReduceMotion)
-                       ? .easeInOut(duration: 0.55).repeatForever(autoreverses: true) : nil, value: pulsing)
+            .opacity(active && pulsing ? 0.62 : 1)
+            .overlay {
+                if active {
+                    Circle().fill(color.opacity(pulsing ? 0.22 : 0.10))
+                        .frame(width: 11, height: 11)
+                }
+            }
+            .animation(canAnimate ? .easeInOut(duration: 0.9).repeatForever(autoreverses: true) : nil, value: pulsing)
             .onAppear { pulsing = true }
             .accessibilityHidden(true)
     }
 }
 
-/// PI's activity-marker geometry, using the requested yellow live color.
+/// PI's activity-marker geometry, using the tuned warm amber live color.
 struct ProcessLivePulse: View {
     @State private var pulsing = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
-        Circle().fill(Color(nsColor: .systemYellow)).frame(width: 4, height: 4)
+        Circle().fill(Color(nsColor: WorkbenchTheme.statusRunningNS)).frame(width: 4, height: 4)
             .opacity(pulsing ? 1 : 0.35)
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.5).repeatForever(autoreverses: true),
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.85).repeatForever(autoreverses: true),
                        value: pulsing)
             .onAppear { pulsing = true }
             .accessibilityHidden(true)
