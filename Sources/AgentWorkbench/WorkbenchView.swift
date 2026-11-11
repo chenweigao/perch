@@ -85,7 +85,7 @@ private struct WorkbenchWorkspace: View, Equatable {
             commandLineVisible: island.visible && model.commandLineTarget != nil,
             commandLine: commandLine,
             sidebar: { WorkbenchSidebar(model: model) },
-            header: { WorkbenchHeader(model: model) },
+            header: { WorkbenchHeader(model: model, kimi: model.kimi, native: model.native) },
             actions: { WorkbenchHeaderActions(model: model, kimi: model.kimi, native: model.native) },
             inspector: { WorkspaceInspector(model: model) },
             content: { WorkbenchDetail(model: model) }

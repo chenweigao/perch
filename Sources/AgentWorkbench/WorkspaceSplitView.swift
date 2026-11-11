@@ -5,9 +5,9 @@ import WorkbenchCore
 enum WorkbenchChrome {
     /// Compact native toolbar, with a small gutter above the reading sheet.
     static let headerHeight: CGFloat = 40
-    static let symbolSize: CGFloat = 14
+    static let symbolSize: CGFloat = 15
     static let controlSize: CGFloat = 32
-    static let controlSpacing: CGFloat = 16
+    static let controlSpacing: CGFloat = 6
     static let labelSpacing: CGFloat = 8
     static let sidebarSymbolWidth: CGFloat = 17
 }
@@ -939,7 +939,7 @@ final class WorkbenchSplitController: NSSplitViewController {
         updateWorkspaceLayout()
     }
 
-    /// The inspector is an internal lane of the conversation sheet, with one separator.
+    /// The inspector is an internal lane of the conversation sheet, separated by whitespace.
     func installFloatingInspector(_ inspector: NSView, visible: Bool) {
         let (panel, width) = detailController!.installInspector(inspector)
         let handle = WorkspaceSidebarResizeHandle()

@@ -136,6 +136,18 @@ private final class SelectionProtocol: URLProtocol {
     }
 }
 
+private actor TranscriptDecodeGate {
+    private(set) var suspended = false
+    private var continuation: CheckedContinuation<Void, Never>?
+    func pause() async {
+        await withCheckedContinuation { continuation in
+            self.continuation = continuation
+            suspended = true
+        }
+    }
+    func release() { continuation?.resume(); continuation = nil }
+}
+
 @MainActor
 func selectionClient() -> KimiConnection {
     SelectionProtocol.reset()
@@ -148,7 +160,7 @@ func selectionClient() -> KimiConnection {
 @MainActor
 func checkKimiSelectionIsolation() async throws {
     var failures: [String] = []
-    for scenario in ["background after completion", "catalog callback", "cached retry", "manual refresh", "older snapshot", "older history", "full history", "send failure", "commands", "command isolation", "goal starter failure", "goal status", "goal header controls", "goal read ordering", "task board", "subagent transcript", "disconnect"] {
+    for scenario in ["background after completion", "catalog callback", "cached retry", "manual refresh", "older snapshot", "older history", "full history", "send failure", "commands", "command isolation", "goal starter failure", "goal status", "goal header controls", "goal read ordering", "task board", "subagent transcript", "transcript decode isolation", "disconnect"] {
         let client = selectionClient()
         defer {
             client.disconnect()
@@ -384,6 +396,55 @@ func checkKimiSelectionIsolation() async throws {
                 precondition(client.subagentTranscriptError != nil && client.actionError == nil,
                              "A failed transcript read stays out of the session error banner")
                 precondition(client.subagentTranscript == nil)
+            case "transcript decode isolation":
+                client.select("a")
+                await ConnectionChecks.settle { client.snapshotReady && !client.loading }
+                await client.openSubagentTranscript("agent_01")
+                let data = Data(#"{"type":"transcript.ops","session_id":"a","epoch":"e1","seq":42,"payload":{"agent_id":"agent_01","seq":42,"ops":[{"op":"turn.upsert","turn":{"kind":"turn","turn_id":"t3","ordinal":3}}]}}"#.utf8)
+                let event = try KimiWire.decodeEvent(from: data)
+                let olderGate = TranscriptDecodeGate()
+                client.beforeTranscriptDecode = { await olderGate.pause() }
+                let updating = Task { await client.applyTranscript(event, data: data) }
+                for _ in 0..<100 {
+                    if await olderGate.suspended { break }
+                    try await Task.sleep(for: .milliseconds(10))
+                }
+                let olderSuspended = await olderGate.suspended
+                precondition(olderSuspended)
+                await client.loadOlderSubagentTurns()
+                await olderGate.release()
+                await updating.value
+                precondition(client.subagentTranscript?.turns.map(\.turnId) == ["t0", "t1", "t2", "t3"],
+                             "An event decoded after paging must merge into the current transcript")
+                for action in ["close", "reopen", "switch", "error after close"] {
+                    client.beforeTranscriptDecode = {}
+                    if client.selectedId != "a" {
+                        client.select("a")
+                        await ConnectionChecks.settle { client.snapshotReady && !client.loading }
+                    }
+                    await client.openSubagentTranscript("agent_01")
+                    let gate = TranscriptDecodeGate()
+                    client.beforeTranscriptDecode = { await gate.pause() }
+                    let pending = Task { await client.applyTranscript(event, data: action == "error after close" ? Data() : data) }
+                    for _ in 0..<100 {
+                        if await gate.suspended { break }
+                        try await Task.sleep(for: .milliseconds(10))
+                    }
+                    let suspended = await gate.suspended
+                    precondition(suspended)
+                    if action == "switch" {
+                        client.select("b")
+                        await ConnectionChecks.settle { client.snapshotReady && !client.loading }
+                    } else {
+                        client.closeSubagentTranscript()
+                        if action == "reopen" { await client.openSubagentTranscript("agent_01") }
+                    }
+                    let expected = client.subagentTranscript
+                    await gate.release()
+                    await pending.value
+                    precondition(client.subagentTranscript == expected && client.subagentTranscriptError == nil,
+                                 "Late transcript decode must not publish after \(action)")
+                }
             case "catalog callback":
                 try await client.refreshSessions()
                 SelectionProtocol.hold("/api/v1/sessions/b/snapshot")

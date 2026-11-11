@@ -1,10 +1,12 @@
 import SwiftUI
 import WorkbenchCore
 
-/// A quiet, text-only title follows selection independently of streaming state.
+/// The Agent mark, title and session menu form one group beside the page actions.
 struct WorkbenchHeader: View {
     @UILocalization private var L
     @Bindable var model: WorkbenchModel
+    let kimi: KimiConnection
+    let native: NativeAgentConnection
     private var item: WorkspaceSession? { model.showDashboard ? nil : model.selectedItem }
     private var title: String {
         if model.showDashboard { return model.showArchived ? L("已归档") : model.onlyAttention ? L("待处理") : model.showSessionDirectory ? L("全部会话") : model.selectedGroup?.name ?? L("工作台") }
@@ -18,8 +20,18 @@ struct WorkbenchHeader: View {
             }
             Text(title).font(.system(size: WorkbenchTheme.Typography.title, weight: .medium))
                 .lineLimit(1).truncationMode(.tail)
+            if !model.showDashboard {
+                Menu {
+                    if model.showKimi { Button("同步会话") { kimi.reloadSelected() }.disabled(!kimi.online || kimi.loading) }
+                    else if model.showNative { Button("重新连接") { native.connect() } }
+                    if let item { Divider(); SessionActionsMenu(model: model, item: item) }
+                } label: { WorkbenchToolbarSymbol(name: "ellipsis") }
+                    .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                    .frame(width: 28, height: WorkbenchChrome.controlSize)
+                    .help("会话操作").accessibilityLabel("会话操作")
+            }
         }
-        .frame(minWidth: 80, maxWidth: 380, alignment: .leading)
+        .frame(minWidth: 80, maxWidth: 440, alignment: .leading)
         .help(item.map { "\($0.title)\n\($0.reference.kind.label) · \($0.hostName)\n\($0.directory)" } ?? title)
     }
 }
@@ -48,7 +60,7 @@ struct WorkbenchHeaderActions: View {
     var body: some View {
         HStack(spacing: WorkbenchChrome.controlSpacing) {
             if !model.showDashboard {
-                HStack(spacing: 2) {
+                HStack(spacing: 6) {
                     if model.selectedHost != nil {
                         ChangesButton(model: model)
                         Button { model.toggleFileViewer() } label: {
@@ -66,13 +78,6 @@ struct WorkbenchHeaderActions: View {
                             .accessibilityValue(model.commandLineIsland.visible ? "已展开" : "已收起")
                             .disabled(model.commandLineTarget == nil)
                     }
-                    Menu {
-                        if model.showKimi { Button("同步会话") { kimi.reloadSelected() }.disabled(!kimi.online || kimi.loading) }
-                        else if model.showNative { Button("重新连接") { native.connect() } }
-                        if let item { Divider(); SessionActionsMenu(model: model, item: item) }
-                    } label: { WorkbenchToolbarSymbol(name: "ellipsis") }
-                        .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
-                        .frame(width: WorkbenchChrome.controlSize, height: WorkbenchChrome.controlSize).help("会话操作").accessibilityLabel("会话操作")
                 }
             } else {
                 HStack(spacing: 2) {
