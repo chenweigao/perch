@@ -86,6 +86,13 @@ final class NativeAgentConnection {
     /// Idle snapshot reads double their interval while nothing changes (2s → 4s → 8s).
     @ObservationIgnored private var idleSnapshotInterval: TimeInterval = 2
     @ObservationIgnored private var pendingWake: CheckedContinuation<Void, Never>?
+    /// Long-poll push (bridge advertises `watch` in /health). While work is active
+    /// one held request replaces the 400 ms tick; older bridges keep the tick.
+    @ObservationIgnored private var watchSupported = false
+    @ObservationIgnored private var watchCursor = ""
+    @ObservationIgnored private var watchWake: CheckedContinuation<Bool, Never>?
+    @ObservationIgnored private var watchTask: Task<Void, Never>?
+    @ObservationIgnored private var watchGeneration = UUID()
     private var selectionGeneration: UUID { conversation.generation }
     @ObservationIgnored private var generation = UUID()
     private let requestTransport: ((String, JSONValue?) async throws -> Data)?
@@ -148,7 +155,8 @@ final class NativeAgentConnection {
                     online = true; error = nil; onSessionsChanged?()
                     while !Task.isCancelled && generation == token {
                         try await poll()
-                        await sleepUntilNextPoll()
+                        if needsFastTick { await waitForRemoteChange() }
+                        else { await sleepUntilNextPoll() }
                     }
                 } catch is CancellationError { return }
                 catch {
@@ -166,6 +174,7 @@ final class NativeAgentConnection {
         nextIdleSnapshotRefresh = .distantPast
         nextBridgeRecheck = .distantPast
         idleSnapshotInterval = 2
+        watchCursor = ""
         wakePolling()
         online = false; catalogSynced = false; wantsConnection = false; error = nil; bridgeTransition = nil; closeTunnel()
     }
@@ -173,9 +182,39 @@ final class NativeAgentConnection {
     /// before its next scheduled deadline.
     private func wakePolling() {
         pendingWake?.resume(); pendingWake = nil
+        if let continuation = watchWake { watchWake = nil; continuation.resume(returning: true) }
+        watchTask?.cancel()
     }
     private func completeWake() {
         pendingWake?.resume(); pendingWake = nil
+    }
+    /// Holds one long-poll request while work is active, so a change costs a single
+    /// SSH round trip instead of a 400 ms tick. A wake (selection, send) cancels the
+    /// held read; a failed read falls back to the timed tick and let `poll` surface
+    /// any real transport failure through the reconnect loop.
+    private func waitForRemoteChange() async {
+        guard watchSupported else { await sleepUntilNextPoll(); return }
+        let cursor = watchCursor
+        let generation = UUID(); watchGeneration = generation
+        let changed: Bool = await withCheckedContinuation { continuation in
+            watchWake = continuation
+            watchTask = Task { [weak self] in
+                guard let self else { return }
+                do {
+                    let value: JSONValue = try await self.request("/watch?since=\(cursor)&timeout=20")
+                    self.watchCursor = value["revision"].string ?? cursor
+                    self.finishWatch(generation, changed: true)
+                } catch {
+                    self.finishWatch(generation, changed: false)
+                }
+            }
+        }
+        if !changed { await sleepUntilNextPoll() }
+    }
+    private func finishWatch(_ generation: UUID, changed: Bool) {
+        guard generation == watchGeneration, let continuation = watchWake else { return }
+        watchWake = nil
+        continuation.resume(returning: changed)
     }
     /// Idle connections wait for the next due read instead of waking every 400ms.
     /// Busy sessions, pending interactions and in-flight sends keep the fast tick.
@@ -281,6 +320,7 @@ final class NativeAgentConnection {
     /// hand-bumped version number does not say which source it is executing.
     private func readBridgeHealth(restartPending: Int? = nil) async throws {
         let health: JSONValue = try await request("/health")
+        watchSupported = health["watch"] == .bool(true)
         let expected = RemoteSetup.bridgeServiceVersion
         guard let version = health["version"].int else {
             throw WorkbenchError(L("无法读取远端桥接服务的版本。请重新安装桥接组件后重试。"))

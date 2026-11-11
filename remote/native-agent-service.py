@@ -61,6 +61,16 @@ SOURCE_FINGERPRINT = source_fingerprint()
 STARTED_AT = datetime.datetime.now().astimezone().isoformat(timespec='seconds')
 LOCK = threading.RLock()
 SESSIONS = {}
+# Long-poll wakeups: touch() notifies under LOCK; watchers never hold WATCH while
+# taking LOCK, so the lock order is one-way.
+WATCH = threading.Condition()
+def watch_revision():
+    with LOCK:
+        parts=[]
+        for s in SESSIONS.values():
+            st=s.state
+            parts.append((st['id'],st.get('revision',0),st.get('updated'),st.get('busy'),st.get('archived'),st.get('completed'),st.get('turnId'),st.get('turnState'),st.get('error'),st.get('title'),len(st.get('interactions') or ()),tuple(sorted((r.get('id'),r.get('status')) for r in (st.get('requests') or {}).values()))))
+        return format(hash(tuple(parts)) & 0xffffffffffffffff,'x')
 MODELS = None
 CODEX_MODELS = None
 QODER_MODELS = {}
@@ -1985,6 +1995,7 @@ class Session:
     def touch(self, durable=False):
         self.state['revision'] += 1
         if durable or time.monotonic()-self.last_save > 1: self.persist()
+        with WATCH: WATCH.notify_all()
     def summary(self):
         return {k:self.state[k] for k in ('id','provider','title','cwd','busy','archived','updated','revision','completed','model','error')} | {
             'pending':len(self.state['interactions']), 'cancelled':self.state.get('cancelled',False),
@@ -2599,6 +2610,20 @@ class Handler(BaseHTTPRequestHandler):
             if urlparse(self.path).path == '/setup' and not post:
                 provider = parse_qs(urlparse(self.path).query).get('provider', [''])[0]
                 return self.respond(200, setup_status(provider))
+            if urlparse(self.path).path == '/watch' and not post:
+                # Long-poll: block until the polled state changes or the deadline
+                # passes. Runs outside LOCK so normal requests are never delayed.
+                query=parse_qs(urlparse(self.path).query)
+                since=query.get('since',[''])[0]
+                try: timeout=min(25.0,max(1.0,float(query.get('timeout',['20'])[0])))
+                except ValueError: timeout=20.0
+                deadline=time.monotonic()+timeout
+                while True:
+                    revision=watch_revision()
+                    if revision!=since: return self.respond(200,{'revision':revision})
+                    remaining=deadline-time.monotonic()
+                    if remaining<=0: return self.respond(200,{'revision':revision,'timeout':True})
+                    with WATCH: WATCH.wait(min(remaining,0.2))
             if self.path=='/models' and not post:
                 return self.respond(200,{'models':combined_catalog()})
             codex_models=None; selected_home=None; qoder_models=None; qoder_agent=None; qoder_has_model=False; claude_models=None
@@ -2628,7 +2653,7 @@ class Handler(BaseHTTPRequestHandler):
                 if backfill: target.codex_adapter.backfill(backfill)
             with LOCK:
                 if self.path=='/health':
-                    result={'version':SERVICE_VERSION,'implementation':SOURCE_FINGERPRINT,'startedAt':STARTED_AT,'pid':os.getpid()}
+                    result={'version':SERVICE_VERSION,'implementation':SOURCE_FINGERPRINT,'startedAt':STARTED_AT,'pid':os.getpid(),'watch':True}
                     if os.environ.get('PERCH_LOCAL_CODEX'):
                         result['localCodexBinary']=str(pathlib.Path(os.environ['PERCH_LOCAL_CODEX']).resolve())
                 elif self.path=='/sessions' and not post: result={'sessions':[s.summary() for s in SESSIONS.values()]}
