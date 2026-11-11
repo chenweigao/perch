@@ -27,33 +27,30 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 8) {
-                // Content-hosted controls stay below the native toolbar,
-                // where both mouse clicks and accessibility can reach them.
-                Button(action: onNew) {
-                    Label("新建会话", systemImage: "plus")
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, SidebarMetrics.rowInset)
-                        .frame(height: SidebarMetrics.navigationHeight).contentShape(Rectangle())
-                }.buttonStyle(SidebarNavigationStyle()).help("新建会话 · ⌘N")
+            // Qoder-style navigation: one vertical list of page entries above the
+            // sessions. Content-hosted controls stay below the native toolbar,
+            // where both mouse clicks and accessibility can reach them.
+            VStack(alignment: .leading, spacing: SidebarMetrics.rowSpacing) {
+                navigation("新建会话", symbol: "square.and.pencil", action: onNew)
+                    .help("新建会话 · ⌘N")
                     .accessibilityLabel("新建会话").accessibilityIdentifier("sidebar.new")
-                Button(action: onSearch) {
-                    Label("搜索", systemImage: "magnifyingglass")
-                        .fixedSize(horizontal: true, vertical: false)
-                        .padding(.horizontal, SidebarMetrics.rowInset)
-                        .frame(height: SidebarMetrics.navigationHeight).contentShape(Rectangle())
-                }.buttonStyle(SidebarNavigationStyle()).help("搜索项目与会话 · ⌘K")
-                    .accessibilityLabel("搜索项目与会话")
-                    .accessibilityIdentifier("sidebar.search")
-            }.font(.system(size: SidebarMetrics.navigationSize))
-                .padding(.horizontal, 10).padding(.top, 0).padding(.bottom, 2)
+                navigation("工作台", symbol: "square.grid.2x2", selected: page == .home, action: onHome)
+                    .help("工作台").accessibilityIdentifier("sidebar.home")
+                navigation("待处理", symbol: "tray", selected: page == .inbox, count: attentionCount, action: onInbox)
+                    .help("待处理")
+                    .accessibilityValue(attentionCount > 0 ? Text("\(attentionCount) 项待处理") : Text(""))
+                    .accessibilityIdentifier("sidebar.inbox")
+                navigation("搜索", symbol: "magnifyingglass", action: onSearch)
+                    .help("搜索项目与会话 · ⌘K")
+                    .accessibilityLabel("搜索项目与会话").accessibilityIdentifier("sidebar.search")
+            }.padding(.horizontal, SidebarMetrics.listInset).padding(.bottom, 4)
             if scrollRows {
             ScrollViewReader { proxy in
             ScrollView {
                 // Project rows are bounded until explicitly expanded. Keep stable
                 // eager layout when selection and catalog order change together.
-                VStack(alignment: .leading, spacing: 1) { rows }
-                    .padding(.horizontal, 10).padding(.bottom, 8)
+                VStack(alignment: .leading, spacing: SidebarMetrics.rowSpacing) { rows }
+                    .padding(.horizontal, SidebarMetrics.listInset).padding(.bottom, 8)
             }.scrollIndicators(.hidden)
                 // Rows fade out at the edges instead of being cut off mid-line.
                 .scrollEdgeEffectStyle(.soft, for: [.top, .bottom])
@@ -64,80 +61,83 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                     if let target { proxy.scrollTo(target) }
                 }
             }
-            } else { rows.padding(.horizontal, 10).padding(.bottom, 10) }
-            // No rule above the footer: the list's soft bottom edge already separates
-            // it, and a hard line reads as a seam on the window glass. Shortcuts live
-            // in the rows' tooltips; only the menu-like popover lists them.
-            VStack(spacing: 2) {
+            } else { rows.padding(.horizontal, SidebarMetrics.listInset).padding(.bottom, 10) }
+            // A faint rule sets the fixed entries apart from the scrolling list,
+            // inset to the title column like Qoder's. Shortcuts live in tooltips.
+            VStack(alignment: .leading, spacing: SidebarMetrics.rowSpacing) {
+                Rectangle().fill(WorkbenchTheme.Stroke.hairline).frame(height: 1)
+                    .padding(.horizontal, SidebarMetrics.rowInset).padding(.bottom, 4)
+                    .accessibilityHidden(true)
                 if let onAddMachine {
                     // First run: adding a machine is one visible row, not only ⚙ → 环境管理 → +.
                     navigation("添加机器…", symbol: "server.rack", action: onAddMachine)
                         .help("添加机器… · ⇧⌘N")
                         .accessibilityIdentifier("sidebar.addMachine")
                 }
-                // Page entries dock as one icon strip so the middle column belongs to
-                // sessions; titles move to tooltips and accessibility labels.
-                HStack(spacing: 4) {
-                    iconNavigation("工作台", symbol: "square.grid.2x2", page: .home,
-                                   identifier: "sidebar.home", action: onHome)
-                    iconNavigation("待处理", symbol: "tray", page: .inbox, count: attentionCount,
-                                   identifier: "sidebar.inbox", action: onInbox)
-                    if let onAllSessions {
-                        iconNavigation("全部会话", symbol: "bubble.left.and.bubble.right", page: .sessions,
-                                       identifier: "sidebar.allSessions", action: onAllSessions)
-                    }
-                    Spacer(minLength: 0)
-                    Button {
-                        showEnvironments = false
-                        showSettings.toggle()
-                    } label: {
-                        Image(systemName: "gearshape").font(.system(size: SidebarMetrics.iconSize, weight: .regular)).imageScale(.medium)
-                            .frame(width: 28, height: 28).contentShape(Rectangle())
-                            .overlay(alignment: .topTrailing) {
-                                if environmentNeedsAttention {
-                                    Circle().fill(.orange).frame(width: 6, height: 6).offset(x: 2, y: -2)
-                                }
-                            }
-                    }.buttonStyle(SidebarNavigationStyle())
-                        .help("设置与环境 · ⌘,").accessibilityLabel("设置与环境")
-                        .accessibilityIdentifier("sidebar.settings")
-                        .accessibilityValue(environmentNeedsAttention ? Text("环境需要处理") : Text(""))
-                        .popover(isPresented: $showSettings, arrowEdge: .trailing) {
-                            if showEnvironments {
-                                // The environments page replaces the menu in place, so it
-                                // leads back to it like any pushed page.
-                                VStack(alignment: .leading, spacing: 0) {
-                                    navigation("设置与环境", symbol: "chevron.left") { showEnvironments = false }
-                                        .accessibilityIdentifier("sidebar.settings.back")
-                                        .padding([.horizontal, .top], 10)
-                                    environments
-                                }.font(.system(size: WorkbenchTheme.Typography.body))
-                            } else {
-                                VStack(spacing: 3) {
-                                    navigation("环境管理", symbol: "server.rack") { showEnvironments = true }
-                                        .help(environmentSummary)
-                                    if environmentNeedsAttention {
-                                        Text("环境需要处理").font(.subheadline).foregroundStyle(.orange)
-                                            .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 10)
-                                    }
-                                    navigation("已归档会话", symbol: "archivebox", selected: page == .archive) {
-                                        showSettings = false
-                                        onArchive()
-                                    }
-                                    Divider().padding(.vertical, 3)
-                                    navigation("通用设置", symbol: "gearshape", shortcut: "⌘,") {
-                                        showSettings = false
-                                        openSettings()
-                                    }
-                                }.font(.system(size: WorkbenchTheme.Typography.body)).padding(10).frame(width: 220)
-                            }
-                        }
+                if let onAllSessions {
+                    navigation("全部会话", symbol: "bubble.left.and.bubble.right", selected: page == .sessions,
+                               action: onAllSessions)
+                        .help("全部会话").accessibilityIdentifier("sidebar.allSessions")
                 }
-            }.font(.system(size: SidebarMetrics.navigationSize)).foregroundStyle(.secondary)
-                .padding(.horizontal, 10).padding(.top, 4).padding(.bottom, 10)
+                settingsRow
+            }.padding(.horizontal, SidebarMetrics.listInset).padding(.top, 4).padding(.bottom, 8)
         }.font(.system(size: WorkbenchTheme.Typography.body)).frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    private var settingsRow: some View {
+        Button {
+            showEnvironments = false
+            showSettings.toggle()
+        } label: {
+            HStack(spacing: SidebarMetrics.labelSpacing) {
+                Image(systemName: "gearshape").font(.system(size: SidebarMetrics.iconSize, weight: .regular)).imageScale(.medium)
+                    .frame(width: SidebarMetrics.iconWidth)
+                Text("设置与环境").lineLimit(1)
+                Spacer(minLength: 4)
+                if environmentNeedsAttention {
+                    Circle().fill(.orange).frame(width: 6, height: 6)
+                }
+            }.font(.system(size: SidebarMetrics.navigationSize)).foregroundStyle(WorkbenchTheme.ink)
+                .padding(.horizontal, SidebarMetrics.rowInset).frame(height: SidebarMetrics.navigationHeight)
+                .contentShape(Rectangle())
+        }.buttonStyle(SidebarNavigationStyle(selected: showSettings))
+            .help("设置与环境 · ⌘,").accessibilityLabel("设置与环境")
+            .accessibilityIdentifier("sidebar.settings")
+            .accessibilityValue(environmentNeedsAttention ? Text("环境需要处理") : Text(""))
+            .popover(isPresented: $showSettings, arrowEdge: .trailing) {
+                if showEnvironments {
+                    // The environments page replaces the menu in place, so it
+                    // leads back to it like any pushed page.
+                    VStack(alignment: .leading, spacing: 0) {
+                        navigation("设置与环境", symbol: "chevron.left") { showEnvironments = false }
+                            .accessibilityIdentifier("sidebar.settings.back")
+                            .padding([.horizontal, .top], 10)
+                        environments
+                    }.font(.system(size: WorkbenchTheme.Typography.body))
+                } else {
+                    VStack(spacing: 3) {
+                        navigation("环境管理", symbol: "server.rack") { showEnvironments = true }
+                            .help(environmentSummary)
+                        if environmentNeedsAttention {
+                            Text("环境需要处理").font(.subheadline).foregroundStyle(.orange)
+                                .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 10)
+                        }
+                        navigation("已归档会话", symbol: "archivebox", selected: page == .archive) {
+                            showSettings = false
+                            onArchive()
+                        }
+                        Divider().padding(.vertical, 3)
+                        navigation("通用设置", symbol: "gearshape", shortcut: "⌘,") {
+                            showSettings = false
+                            openSettings()
+                        }
+                    }.font(.system(size: WorkbenchTheme.Typography.body)).padding(10).frame(width: 220)
+                }
+            }
+    }
+
+    /// One page entry: icon and title in ink, the orange attention count trailing.
+    /// The selected page carries the row wash, like a selected session.
     private func navigation(_ title: LocalizedStringKey, symbol: String, selected: Bool = false,
                             count: Int = 0, shortcut: String? = nil, action: @escaping () -> Void) -> some View {
         Button(action: action) {
@@ -152,7 +152,7 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                 }
                 if let shortcut { shortcutHint(shortcut) }
             }.font(.system(size: SidebarMetrics.navigationSize))
-                .foregroundStyle(selected ? WorkbenchTheme.ink : Color.secondary)
+                .foregroundStyle(WorkbenchTheme.ink)
                 .padding(.horizontal, SidebarMetrics.rowInset).frame(height: SidebarMetrics.navigationHeight).contentShape(Rectangle())
         }.buttonStyle(SidebarNavigationStyle(selected: selected)).accessibilityAddTraits(selected ? .isSelected : [])
     }
@@ -160,27 +160,6 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
     /// ⌘K, ⌘, and the like: verbatim, one size and tone in every row.
     private func shortcutHint(_ shortcut: String) -> some View {
         Text(shortcut).font(.system(size: SidebarMetrics.shortcutSize)).foregroundStyle(.tertiary).fixedSize()
-    }
-
-    /// One dock icon: the title moves to the tooltip and accessibility label, the
-    /// orange attention count rides the top-trailing corner like it did in the row.
-    private func iconNavigation(_ title: LocalizedStringKey, symbol: String, page target: SidebarPage,
-                                count: Int = 0, identifier: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol).font(.system(size: SidebarMetrics.iconSize, weight: .regular)).imageScale(.medium)
-                .foregroundStyle(page == target ? WorkbenchTheme.ink : Color.secondary)
-                .frame(width: 28, height: 28).contentShape(Rectangle())
-                .overlay(alignment: .topTrailing) {
-                    if count > 0 {
-                        Text("\(count)").font(.system(size: 9, weight: .medium)).monospacedDigit()
-                            .foregroundStyle(Color.orange).fixedSize().offset(x: 7, y: -4)
-                    }
-                }
-        }.buttonStyle(SidebarNavigationStyle(selected: page == target))
-            .help(title).accessibilityLabel(Text(title))
-            .accessibilityValue(count > 0 ? Text("\(count) 项待处理") : Text(""))
-            .accessibilityIdentifier(identifier)
-            .accessibilityAddTraits(page == target ? .isSelected : [])
     }
 }
 

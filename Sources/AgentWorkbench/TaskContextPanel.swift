@@ -317,7 +317,7 @@ struct TaskContextView: View {
                             source: item.reference, path: file.reference, name: file.name)
                     } label: {
                         HStack(spacing: 10) {
-                            Image(systemName: TaskContextFileIcon.name(file.name)).foregroundStyle(WorkbenchTheme.quiet).frame(width: 16)
+                            TaskContextIconTile(systemName: TaskContextFileIcon.name(file.name))
                             Text(file.name).lineLimit(2).multilineTextAlignment(.leading)
                                 .fixedSize(horizontal: false, vertical: true)
                                 .foregroundStyle(missing ? WorkbenchTheme.quiet : .primary)
@@ -329,7 +329,7 @@ struct TaskContextView: View {
                                     .foregroundStyle(WorkbenchTheme.quiet).padding(.horizontal, 6).frame(minHeight: 18)
                                     .background(WorkbenchTheme.Fill.surface, in: Capsule())
                             }
-                        }.frame(minHeight: 44).contentShape(Rectangle())
+                        }.frame(minHeight: 36).contentShape(Rectangle())
                     }.buttonStyle(TaskContextRowStyle())
                         .help(missing ? "\(file.path)（文件已不在会话主机上）" : file.path)
                         .disabled(!item.online || missing)
@@ -383,7 +383,8 @@ struct TaskContextView: View {
     }
     private func sectionTitle(_ title: LocalizedStringKey, icon: String, count: Int) -> some View {
         HStack(spacing: 6) {
-            Text(title).font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
+            // Qoder's inspector headers: regular weight, a step under the rows, quiet.
+            Text(title).font(.system(size: TaskContextIconTile.headerSize))
                 .foregroundStyle(WorkbenchTheme.quiet)
             if count > 0 {
                 Text(count.formatted()).font(.system(size: WorkbenchTheme.Typography.caption))
@@ -571,6 +572,23 @@ struct TaskContextRowStyle: ButtonStyle {
                             in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row))
                 .contentShape(Rectangle()).onHover { hovered = $0 }
         }
+    }
+}
+
+/// An artifact's kind glyph on a small outlined tile, as Qoder lists outputs.
+struct TaskContextIconTile: View {
+    let systemName: String
+    static let size: CGFloat = 24
+    static let headerSize: CGFloat = 13
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.chip, style: .continuous)
+        Image(systemName: systemName)
+            .font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
+            .foregroundStyle(WorkbenchTheme.quiet)
+            .frame(width: Self.size, height: Self.size)
+            .background(WorkbenchTheme.Fill.surface, in: shape)
+            .overlay(shape.strokeBorder(WorkbenchTheme.Stroke.hairline, lineWidth: 1))
+            .accessibilityHidden(true)
     }
 }
 

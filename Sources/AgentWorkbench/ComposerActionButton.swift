@@ -200,31 +200,37 @@ struct ComposerEnvironmentBar: View {
         let branch = branchCache.branch(hostID: host.id, directory: directory)
         HStack(spacing: 10) {
             Button { presented.toggle() } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: host.isLocal ? "desktopcomputer" : "server.rack")
-                        .font(.system(size: WorkbenchTheme.Composer.metadata))
-                    Text(host.name)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
+                // Qoder's footer: folder, machine, branch as separate icon-led
+                // items with open space between them instead of dots.
+                HStack(spacing: 16) {
                     if !shortDirectory.isEmpty {
-                        Text(verbatim: "·").foregroundStyle(.tertiary)
-                        Image(systemName: "folder")
-                            .font(.system(size: WorkbenchTheme.Composer.metadata))
-                        Text(shortDirectory)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
+                        HStack(spacing: 5) {
+                            Image(systemName: "folder")
+                                .font(.system(size: WorkbenchTheme.Composer.metadata + 1))
+                            Text(shortDirectory)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        }
                     }
-                    if let branch, !branch.isEmpty {
-                        Text(verbatim: "·").foregroundStyle(.tertiary)
-                        Image(systemName: "arrow.triangle.branch")
-                            .font(.system(size: WorkbenchTheme.Composer.metadata))
-                        Text(verbatim: branch)
+                    HStack(spacing: 5) {
+                        Image(systemName: host.isLocal ? "desktopcomputer" : "server.rack")
+                            .font(.system(size: WorkbenchTheme.Composer.metadata + 1))
+                        Text(host.name)
                             .lineLimit(1)
                             .truncationMode(.tail)
-                            .frame(maxWidth: 140, alignment: .leading)
+                    }
+                    if let branch, !branch.isEmpty {
+                        HStack(spacing: 5) {
+                            Image(systemName: "arrow.triangle.branch")
+                                .font(.system(size: WorkbenchTheme.Composer.metadata + 1))
+                            Text(verbatim: branch)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                                .frame(maxWidth: 140, alignment: .leading)
+                        }
                     }
                 }
-                .font(.system(size: WorkbenchTheme.Composer.text))
+                .font(.system(size: WorkbenchTheme.Composer.text + 1))
                 .foregroundStyle(WorkbenchTheme.quiet)
                 .padding(.horizontal, 6)
                 .frame(minHeight: 24)

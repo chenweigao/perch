@@ -2,7 +2,6 @@
   "comment": "Pinned numeric corner-radius literals. Each entry must match exactly one live line (file + stripped line text). Stale entries and unpinned literals both fail scripts/check-radius-tokens.py. See docs/UI-RADIUS.md.",
   "exceptions": [
     { "file": "Sources/AgentWorkbench/ReplyMarkdownView.swift", "line": "static let cornerRadius: CGFloat = 16", "reason": "ReplyStyle.Code block family: DSH radius-lg" },
-    { "file": "Sources/AgentWorkbench/ReplyMarkdownView.swift", "line": "static let cornerRadius: CGFloat = 20", "reason": "UserMessageStyle bubble family: DSH user bubble" },
     { "file": "Sources/AgentWorkbench/ReplyMarkdownView.swift", "line": "RoundedRectangle(cornerRadius: 1).fill(.primary.opacity(ReplyStyle.Quote.barOpacity)).frame(width: ReplyStyle.Quote.barWidth)", "reason": "Quote bar, a drawn detail" },
     { "file": "Sources/AgentWorkbench/ReplyMarkdownView.swift", "line": "RoundedRectangle(cornerRadius: 1).fill(kind.tint.opacity(0.7)).frame(width: ReplyStyle.Quote.barWidth)", "reason": "Alert bar, a drawn detail" },
     { "file": "Sources/AgentWorkbench/WorkbenchTheme.swift", "line": "static let cornerRadius: CGFloat = 6", "reason": "Composer.CompactShape: PI radius-2xs model/source rows and raised reasoning segment" },

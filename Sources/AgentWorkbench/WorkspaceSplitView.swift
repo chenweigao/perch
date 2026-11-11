@@ -13,17 +13,18 @@ enum WorkbenchChrome {
 }
 
 enum WorkspaceLayoutMetrics {
-    /// The reading sheet floats just below the unified window toolbar.
-    static let frameInset: CGFloat = 12
+    /// The reading sheet nearly fills the window: a thin band of window glass on
+    /// its top, trailing and bottom edges (Qoder's integrated canvas).
+    static let frameInset: CGFloat = 6
     static let contentTopInset: CGFloat = WorkbenchChrome.headerHeight + 4
     /// The gap between the reading sheet and its subordinate command-line sheet.
     static let sheetGutter: CGFloat = 6
     /// Keep a usable reading lane beside the integrated inspector in narrow windows.
     static let inspectorReadingMinimumWidth: CGFloat = 320
     static let sidebarInset: CGFloat = frameInset
-    static let sidebarGap: CGFloat = 12
-    static let sidebarDefaultWidth: CGFloat = 304
-    static let sidebarMinimumWidth: CGFloat = 280
+    static let sidebarGap: CGFloat = 10
+    static let sidebarDefaultWidth: CGFloat = 260
+    static let sidebarMinimumWidth: CGFloat = 220
     static let sidebarMaximumWidth: CGFloat = 400
     static let contentMinimumWidth: CGFloat = 600
     static let inspectorDefaultWidth: CGFloat = 312
@@ -706,9 +707,11 @@ private final class WorkbenchPanelShadowView: NSView {
             layer?.backgroundColor = WorkbenchTheme.contentBackgroundNS.cgColor
             let elevation = NSShadow()
             elevation.shadowColor = NSColor.black.withAlphaComponent(
-                effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? 0.38 : 0.16)
-            elevation.shadowBlurRadius = 20
-            elevation.shadowOffset = NSSize(width: 0, height: -6)
+                effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? 0.30 : 0.08)
+            // A thin glass band surrounds the sheet now; a soft contact shadow
+            // reads in it without spilling a gray halo over the sidebar.
+            elevation.shadowBlurRadius = 10
+            elevation.shadowOffset = NSSize(width: 0, height: -2)
             shadow = elevation
         }
     }
@@ -779,7 +782,8 @@ private final class WorkbenchOuterShadowView: NSView {
 
 final class WorkbenchSplitController: NSSplitViewController {
     static let sidebarVisibilityDefaultsKey = "perch.workspace.sidebar.visible.v3"
-    static let sidebarWidthDefaultsKey = "perch.workspace.sidebar.width.v5"
+    /// v6: the narrower Qoder-style sidebar starts every reader at its new default.
+    static let sidebarWidthDefaultsKey = "perch.workspace.sidebar.width.v6"
     static let inspectorWidthDefaultsKey = "perch.workspace.inspector.width.v2"
 
     var workspaceToolbar: NSToolbar?
