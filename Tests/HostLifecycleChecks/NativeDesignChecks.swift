@@ -643,7 +643,16 @@ import WorkbenchCore
         let localAction = window.convertFromScreen(NSRect(x: actionPoint.x, y: actionPoint.y, width: 1, height: 1)).origin
         let actionMouse = window.mouseLocationOutsideOfEventStream
         FileHandle.standardError.write(Data("ACTION-DIAG: point=\(actionPoint), localAction=\(localAction), localMouse=\(actionMouse), hit=\(String(describing: window.contentView?.hitTest(actionMouse))), windows=\(NSApp.windows.map { String(describing: $0) })\n".utf8))
-        guard let menuWindow = NSApp.windows.first(where: { taskPanelLabel($0, "重命名…") != nil }) else {
+        func accessibilityLabels(_ target: NSWindow) -> [String] {
+            taskPanelElements(target).compactMap { element in
+                let node = element.node
+                let selector = NSSelectorFromString("accessibilityLabel")
+                guard node.responds(to: selector) else { return nil }
+                return node.perform(selector)?.takeUnretainedValue() as? String
+            }
+        }
+        FileHandle.standardError.write(Data("ACTION-LABELS: \(NSApp.windows.map { accessibilityLabels($0) })\n".utf8))
+        guard let menuWindow = NSApp.windows.first(where: { accessibilityLabels($0).contains(where: { $0.contains("重命名") }) }) else {
             preconditionFailure("The ellipsis action must open the same session actions as the context menu")
         }
         if let folder = ProcessInfo.processInfo.environment["PERCH_DESIGN_CAPTURES"],
