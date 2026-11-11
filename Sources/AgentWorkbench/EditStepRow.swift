@@ -22,7 +22,7 @@ struct EditStepRow: View {
             }
             Spacer(minLength: 6)
             ProcessStatusDot(status: tool.status)
-            if tool.status != .succeeded {
+            if tool.status != .succeeded && tool.status != .running {
                 Text(ConversationActivity.status(of: tool, exitCode: tool.exitCodeReport))
                     .font(.system(size: ReplyStyle.captionSize))
                     .foregroundStyle(tool.status == .awaitingApproval ? Color.orange : WorkbenchTheme.quiet)

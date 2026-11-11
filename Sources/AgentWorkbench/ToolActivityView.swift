@@ -151,7 +151,6 @@ struct KimiActivityView: View {
                         .padding(.leading, standaloneTool ? 0 : ReplyStyle.Process.nestedIndent).padding(.top, 4)
                 }
             }
-            let mergedRanges = Self.mergedReadRangesByPath(items)
             ForEach(entry.messages.indices.map { (id: partIDs[$0], index: $0) }, id: \.id) { part in
                 let index = part.index
                 let message = entry.messages[index]
@@ -161,10 +160,10 @@ struct KimiActivityView: View {
                     let alwaysVisible = edit == nil && ToolPresentation.showsResultOutsideStage(
                         tool, isLive: isLive, lastPartToolID: entry.messages.last?.content.last?.toolCallId)
                     if standaloneTool {
-                        toolRow(tool, mergedRanges: mergedRanges, nested: false)
+                        toolRow(tool, nested: false)
                     } else {
                         WorkbenchDisclosureContent(expanded: expanded || alwaysVisible) {
-                            toolRow(tool, mergedRanges: mergedRanges, nested: true)
+                            toolRow(tool, nested: true)
                         }
                     }
                 } else {
@@ -187,28 +186,11 @@ struct KimiActivityView: View {
         }
     }
 
-    private func toolRow(_ tool: VisibleTool, mergedRanges: [String: String], nested: Bool) -> some View {
-        KimiToolCard(tool: tool, mergedReadRange: ToolPresentation.path(tool).flatMap { mergedRanges[$0] })
+    private func toolRow(_ tool: VisibleTool, nested: Bool) -> some View {
+        KimiToolCard(tool: tool)
             .environment(\.conversationMemoryKey, memoryKey + ":tool:" + tool.id)
             .background(ProcessFindAnchor(id: "tool:" + tool.id))
             .padding(.leading, nested ? ReplyStyle.Process.nestedIndent : 0).padding(.top, nested ? 4 : 0)
-    }
-
-    private static func mergedReadRangesByPath(_ tools: [VisibleTool]) -> [String: String] {
-        var rangesByPath: [String: [String]] = [:]
-        var countsByPath: [String: Int] = [:]
-        for tool in tools where ["read", "read_file", "readfile"].contains(tool.name.lowercased()) {
-            guard let path = ToolPresentation.path(tool), !path.isEmpty else { continue }
-            countsByPath[path, default: 0] += 1
-            if let range = ToolPresentation.readRange(tool) {
-                rangesByPath[path, default: []].append(range)
-            }
-        }
-        var result: [String: String] = [:]
-        for (path, ranges) in rangesByPath where (countsByPath[path] ?? 0) > 1 && !ranges.isEmpty {
-            result[path] = ToolPresentation.formatMergedReadRanges(ranges)
-        }
-        return result
     }
 
     private func trailingMetadata(planProgress: TurnStatus.Progress) -> some View {
@@ -390,7 +372,9 @@ struct KimiToolCard: View {
     }
     var body: some View {
         let exitReport = resolvedExitReport()
-        let summary = ToolPresentation.rowSummary(tool)
+        let rawSummary = ToolPresentation.rowSummary(tool)
+        let summary = (tool.input?["command"].string ?? tool.input?["cmd"].string) != nil
+            ? ToolPresentation.cleanShellCommand(rawSummary) : rawSummary
         let filePath = ToolPresentation.path(tool)
         // Named apart from the method so the local never shadows its own initializer.
         let showsAttention = attention()
@@ -465,10 +449,7 @@ struct KimiToolCard: View {
                             .fixedSize()
                             .help(Text("展开查看失败记录"))
                     } else if tool.status == .succeeded || tool.status == .returned {
-                        HStack(spacing: 4) {
-                            ProcessStatusDot(status: tool.status)
-                            Text(L("已完成")).font(.system(size: ReplyStyle.captionSize))
-                        }.fixedSize()
+                        ProcessStatusDot(status: tool.status).fixedSize()
                     }
                 }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(showsAttention ? Color.orange : WorkbenchTheme.quiet)
                     .accessibilityElement(children: .combine)
@@ -521,6 +502,7 @@ struct KimiToolCard: View {
         }.font(.system(size: ReplyStyle.captionSize, design: .monospaced)).frame(maxWidth: .infinity, alignment: .leading)
             .padding(10)
             .background(ReplyStyle.paper, in: RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: ReplyStyle.Code.cornerRadius, style: .continuous).strokeBorder(WorkbenchTheme.Stroke.hairline, lineWidth: 1))
             .padding(.leading, ReplyStyle.Process.nestedIndent).padding(.top, 5)
     }
 }
