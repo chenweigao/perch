@@ -654,6 +654,7 @@ import WorkbenchCore
             let screenHeight = NSScreen.screens.first?.frame.height ?? 1080
             CGWarpMouseCursorPosition(CGPoint(x: point.x, y: screenHeight - point.y))
             let location = window.convertFromScreen(NSRect(origin: point, size: .zero)).origin
+            FileHandle.standardError.write(Data("HOVER-MOVE point=\(point) local=\(location) actual=\(NSEvent.mouseLocation) key=\(window.isKeyWindow) active=\(NSApp.isActive)\n".utf8))
             let event = NSEvent.mouseEvent(with: .mouseMoved, location: location, modifierFlags: [],
                 timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
                 context: nil, eventNumber: 0, clickCount: 0, pressure: 0)!
@@ -676,6 +677,7 @@ import WorkbenchCore
                      "Leaving a row must cancel its pending preview")
         moveMouse(to: rowPoint)
         try await Task.sleep(for: .milliseconds(550))
+        FileHandle.standardError.write(Data("HOVER-CHECK actual=\(NSEvent.mouseLocation) local=\(window.mouseLocationOutsideOfEventStream) key=\(window.isKeyWindow) active=\(NSApp.isActive) action=\(String(describing: taskPanelControl(window, "sidebar.row.actions"))) hit=\(String(describing: window.contentView?.hitTest(window.mouseLocationOutsideOfEventStream)))\n".utf8))
         guard taskPanelControl(window, "sidebar.row.actions") != nil else {
             preconditionFailure("Hovering a session row must reveal its ellipsis action")
         }

@@ -1,0 +1,31 @@
+name: Hover diagnostic
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hover:
+    runs-on: xcode-27
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - run: ./scripts/build.sh
+      - run: |
+          mkdir -p .local/hover-captures
+          PERCH_DESIGN_CAPTURES="$PWD/.local/hover-captures" \
+          PERCH_TASK_PANEL_CAPTURES="$PWD/.local/hover-captures" \
+          python3 scripts/check-host-lifecycle.py --phase native-design
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: hover-diagnostic-captures
+          path: .local/hover-captures/
+          include-hidden-files: true
+          retention-days: 3
+          if-no-files-found: ignore

@@ -270,6 +270,11 @@ private final class SessionHoverTrackingView: NSView {
     var onChange: ((Bool) -> Void)?
     private var area: NSTrackingArea?
 
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        FileHandle.standardError.write(Data("HOVER-TRACK window=\(String(describing: window)) bounds=\(bounds)\n".utf8))
+    }
+
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         if let area { removeTrackingArea(area) }
@@ -277,12 +282,19 @@ private final class SessionHoverTrackingView: NSView {
             options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self, userInfo: nil)
         addTrackingArea(next)
         area = next
+        FileHandle.standardError.write(Data("HOVER-TRACK area bounds=\(bounds) visible=\(visibleRect) key=\(window?.isKeyWindow == true) active=\(NSApp.isActive)\n".utf8))
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
-    override func mouseEntered(with event: NSEvent) { onChange?(true) }
-    override func mouseExited(with event: NSEvent) { onChange?(false) }
+    override func mouseEntered(with event: NSEvent) {
+        FileHandle.standardError.write(Data("HOVER-TRACK entered \(event.locationInWindow) bounds=\(bounds)\n".utf8))
+        onChange?(true)
+    }
+    override func mouseExited(with event: NSEvent) {
+        FileHandle.standardError.write(Data("HOVER-TRACK exited \(event.locationInWindow) bounds=\(bounds)\n".utf8))
+        onChange?(false)
+    }
 }
 
 enum SessionActionPresentation {
