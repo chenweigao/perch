@@ -347,6 +347,7 @@ struct KimiToolCard: View {
     var body: some View {
         let exitReport = resolvedExitReport()
         let summary = ToolPresentation.rowSummary(tool)
+        let filePath = ToolPresentation.path(tool)
         // Named apart from the method so the local never shadows its own initializer.
         let showsAttention = attention()
         // The activity details name the same states with the same words.
@@ -380,15 +381,23 @@ struct KimiToolCard: View {
                     Text(ToolPresentation.action(tool.name)).font(.system(size: ReplyStyle.Process.labelSize)).lineLimit(1)
                     if !summary.isEmpty {
                         HStack(spacing: 0) {
-                            Text(summary).font(.system(size: ReplyStyle.captionSize, design: .monospaced))
-                                .lineLimit(1).truncationMode(.tail)
+                            if let filePath, summary == filePath, let slash = filePath.lastIndex(of: "/") {
+                                // Give the basename width before eliding its directories.
+                                Text(verbatim: String(filePath[...slash]))
+                                    .lineLimit(1).truncationMode(.middle).layoutPriority(-1)
+                                Text(verbatim: String(filePath[filePath.index(after: slash)...]))
+                                    .lineLimit(1).truncationMode(.middle).layoutPriority(1)
+                            } else {
+                                Text(verbatim: summary)
+                                    .lineLimit(1).truncationMode(filePath == summary ? .middle : .tail)
+                            }
                             if let rangeSuffix {
                                 Text(verbatim: rangeSuffix)
                                     .font(.system(size: ReplyStyle.captionSize, design: .monospaced))
                                     .foregroundStyle(WorkbenchTheme.quiet)
                                     .fixedSize()
                             }
-                        }
+                        }.font(.system(size: ReplyStyle.captionSize, design: .monospaced))
                     }
                     Spacer(minLength: 0)
                     // The requested yellow live dot, a red exit-code capsule
@@ -420,7 +429,7 @@ struct KimiToolCard: View {
                 }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(showsAttention ? Color.orange : WorkbenchTheme.quiet)
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel(Text(verbatim: "\(tool.name) · \(summary) · \(statusLabel)"))
-                    .help(Text(verbatim: [tool.input?["command"].string ?? ToolPresentation.path(tool), statusLabel].compactMap { $0 }.joined(separator: "\n")))
+                    .help(Text(verbatim: [tool.input?["command"].string ?? filePath, statusLabel].compactMap { $0 }.joined(separator: "\n")))
             }.disclosureGroupStyle(ProcessDisclosureStyle())
                 .accessibilityIdentifier("tool-call:" + tool.id)
                 .onChange(of: expanded) { _, value in if value { onExpand?() } }
