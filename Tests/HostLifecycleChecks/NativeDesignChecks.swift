@@ -607,10 +607,7 @@ import WorkbenchCore
             event.post(tap: .cghidEventTap)
         }
         func moveMouse(to point: CGPoint) {
-            let event = NSEvent.mouseEvent(with: .mouseMoved, location: point, modifierFlags: [],
-                timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
-                context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!
-            window.sendEvent(event)
+            CGWarpMouseCursorPosition(point)
         }
         moveMouse(to: CGPoint(x: 600, y: 500))
         try await Task.sleep(for: .milliseconds(100))
