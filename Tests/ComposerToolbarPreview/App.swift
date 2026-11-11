@@ -15,7 +15,7 @@ private struct ToolbarPreview: View {
     @State private var effort: ThinkingLevel? = .xhigh
     @State private var usesSessionModel = true
     @State private var permissionProvider = ProcessInfo.processInfo.environment["COMPOSER_PREVIEW_AGENT"] ?? SessionKind.kimi.rawValue
-    @State private var permissionMode = "manual"
+    @State private var permissionMode = "default"
     @State private var narrow = false
     @State private var low = false
     @State private var running = false
@@ -40,7 +40,7 @@ private struct ToolbarPreview: View {
     private var usesRuntimeDefault: Bool { [.qoder, .qoderintl].contains(selectedProvider) || (newTask && selectedProvider == .claude) }
     private var disabledReason: String? {
         if offline { return L("连接恢复后可修改设置。") }
-        if running && selectedProvider != .kimi { return L("任务运行中，完成或停止后可修改。") }
+        if running { return L("任务运行中，完成或停止后可修改。") }
         return nil
     }
     private func send() {
@@ -109,7 +109,7 @@ private struct ToolbarPreview: View {
                                         }, layout: combinedPicker ? .combined : .split, usesDefaultModel: usesRuntimeDefault && model.isEmpty,
                                         onUseDefaultModel: usesRuntimeDefault ? {
                                             usesSessionModel = false; model = ""; effort = nil
-                                        } : nil, scope: L(newTask ? "首条消息生效" : selectedProvider == .kimi ? "下一条消息生效" : "下一轮生效"),
+                                        } : nil, scope: L(newTask ? "首条消息生效" : "下一轮生效"),
                                         onSelectModel: { usesSessionModel = false; model = $0.id; effort = $0.resolve(effort) },
                                         onSelectThinking: { effort = $0 })
                         .background(ToolbarButtonProbe())

@@ -45,7 +45,7 @@ public struct SSHHost: Codable, Identifiable, Equatable, Sendable {
         kimiManaged = try c.decodeIfPresent(Bool.self, forKey: .kimiManaged) ?? false
         kimiEnvironment = try c.decodeIfPresent([String: String].self, forKey: .kimiEnvironment) ?? [:]
     }
-    public var hasNativeAgents: Bool { enabledAgents.contains { [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains($0) } }
+    public var hasNativeAgents: Bool { enabledAgents.contains { [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains($0) } }
     /// Inert view state for an empty workspace; never listed, saved or connected.
     public static let unconfigured = SSHHost(id: UUID(uuidString: "00000000-0000-4000-8000-000000000000")!,
                                             name: "", destination: "", enabledAgents: [])

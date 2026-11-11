@@ -43,7 +43,7 @@ struct WorkbenchView: View {
                 Button("取消", role: .cancel) { model.pendingDeletion = nil }
                 Button(L("删除会话"), role: .destructive) { model.pendingDeletion = nil; model.deleteConfirmed(item) }
             } message: { item in
-                Text(item.reference.kind == .kimi ? L("将从 Kimi 服务删除「\(item.title)」及其历史，无法撤销。只想收起时，请使用归档。") : L("将删除工作台中的「\(item.title)」及对话记录。Agent 自身保存的历史仍保留。"))
+                Text(model.usesLegacyKimiConnection(item.reference) ? L("将从 Kimi 服务删除「\(item.title)」及其历史，无法撤销。只想收起时，请使用归档。") : L("将删除工作台中的「\(item.title)」及对话记录。Agent 自身保存的历史仍保留。"))
             }
             .alert("移除机器？", isPresented: Binding(get: { model.pendingHostRemoval != nil }, set: { if !$0 { model.pendingHostRemoval = nil } }), presenting: model.pendingHostRemoval) { host in
                 Button("取消", role: .cancel) { model.pendingHostRemoval = nil }

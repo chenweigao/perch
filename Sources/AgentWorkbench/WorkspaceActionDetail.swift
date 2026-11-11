@@ -21,7 +21,7 @@ struct WorkspaceActionDetail: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     if let agents = model.agentConnections(for: item.reference.hostID) {
-                        if item.reference.kind == .kimi {
+                        if model.usesLegacyKimiConnection(item.reference) {
                             KimiActionDetail(model: model, item: item, connection: agents.kimi).id(item.id)
                         } else if item.reference.kind != .terminal {
                             NativeActionDetail(model: model, item: item, connection: agents.native).id(item.id)

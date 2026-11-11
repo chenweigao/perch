@@ -228,7 +228,7 @@ private struct NativeComposerView: View {
     @State private var palette = CommandPaletteState()
     @State private var recall = ComposerRecall()
     @State private var chooseFiles = false
-    private var supportsAttachments: Bool { [.claude, .codex].contains(s.provider) }
+    private var supportsAttachments: Bool { [.kimi, .claude, .codex].contains(s.provider) }
     var body: some View {
         VStack(spacing: 8) {
             if let completion = palette.completion(for: connection.drafts[s.id] ?? "", in: s.commands) {
@@ -269,7 +269,7 @@ private struct NativeComposerView: View {
                                 ?? s.permission
                                 ?? PermissionCatalog.capability(for: s.provider),
                             disabled: !connection.online,
-                            allowsSelection: [.qoder, .qoderintl, .claude].contains(s.provider)
+                            allowsSelection: [.kimi, .qoder, .qoderintl, .claude].contains(s.provider)
                         ) { mode in
                             connection.setPermission(mode, for: s.id)
                         }
@@ -379,7 +379,7 @@ struct NativeModelControls: View {
     let connection: NativeAgentConnection
     let snapshot: NativeAgentSnapshot
     private var session: NativeAgentSession? { connection.sessions.first { $0.id == snapshot.id } }
-    private var editable: Bool { [.omp, .qoder, .qoderintl, .dsh, .codex].contains(snapshot.provider) }
+    private var editable: Bool { [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex].contains(snapshot.provider) }
     private var currentModel: String {
         session?.qoderRequestedModel ?? snapshot.qoderRequestedModel ?? session?.model ?? snapshot.model
     }

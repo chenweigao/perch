@@ -51,7 +51,8 @@ final class WorkbenchRestorationState {
         var entries: [RestoredSession] = []
         for (id, observation) in workspace.dashboardSeen {
             guard observation.state == "running", let reference = SessionReference(restoreID: id),
-                  reference.hostID == hostID, reference.kind != .kimi else { continue }
+                  reference.hostID == hostID, reference.kind != .terminal,
+                  reference.kind != .kimi || observation.revision.contains(":") else { continue }
             let session = sessions.first { $0.id == reference.terminalID && $0.provider == reference.kind }
             // Running baselines record "completed:pending:error" (see dashboardObservation),
             // so a completion is only claimed when the count provably advanced.

@@ -18,7 +18,7 @@ extension WorkbenchModel {
     func turnContext(_ source: SessionReference, busy: Bool) -> TaskTurnContext? {
         guard source.kind != .terminal, let agents = agentConnections(for: source.hostID) else { return nil }
         let id = source.terminalID
-        if source.kind == .kimi {
+        if usesLegacyKimiConnection(source) {
             let kimi = agents.kimi, key = "\(kimi.host.id):kimi:\(id)"
             var recap: String?
             if !busy, let conversation = kimi.conversation, conversation.snapshot.session.id == id {
@@ -53,7 +53,7 @@ struct TaskSessionOverviewSection: View {
     @State private var copied = false
 
     private var sessionScope: String {
-        "\(item.reference.hostID):\(item.reference.kind == .kimi ? "kimi" : "native"):\(item.reference.terminalID)"
+        "\(item.reference.hostID):\(model.usesLegacyKimiConnection(item.reference) ? "kimi" : "native"):\(item.reference.terminalID)"
     }
 
     private var context: TaskTurnContext? {
@@ -586,7 +586,7 @@ extension WorkbenchModel {
     func latestTurnEdits(_ source: SessionReference) -> (paths: [String], directory: String)? {
         guard source.kind != .terminal, let agents = agentConnections(for: source.hostID) else { return nil }
         let messages: [KimiMessage], directory: String
-        if source.kind == .kimi {
+        if usesLegacyKimiConnection(source) {
             guard let conversation = agents.kimi.conversation, conversation.snapshot.session.id == source.terminalID else { return nil }
             messages = conversation.displayMessages; directory = conversation.snapshot.session.cwd
         } else {

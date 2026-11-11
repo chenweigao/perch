@@ -336,9 +336,20 @@ final class WorkbenchModel {
         guard let kimi = kimiEnvironments[hostID], let native = nativeEnvironments[hostID] else { return nil }
         return (kimi, native)
     }
+    func usesLegacyKimiConnection(_ reference: SessionReference) -> Bool {
+        guard reference.kind == .kimi,
+              let kimi = kimiEnvironments[reference.hostID],
+              !(nativeEnvironments[reference.hostID]?.sessions.contains { $0.id == reference.terminalID } ?? false) else {
+            return false
+        }
+        return kimi.sessions.contains { $0.id == reference.terminalID }
+            || kimi.conversation?.snapshot.session.id == reference.terminalID
+    }
+    func isNativeSession(_ reference: SessionReference) -> Bool {
+        reference.kind != .terminal && !usesLegacyKimiConnection(reference)
+    }
     func connectSSH(_ hostID: UUID) {
         guard let agents = agentConnections(for: hostID) else { return }
-        if agents.kimi.host.enabledAgents.contains(.kimi), !agents.kimi.connecting { agents.kimi.connect() }
         if agents.native.host.hasNativeAgents, !agents.native.wantsConnection { agents.native.connect() }
     }
     func disconnectSSH(_ hostID: UUID) {
@@ -389,7 +400,7 @@ final class WorkbenchModel {
         if let connection = connections.first(where: { $0.id == host.id }) {
             connection.updateHost(host)
             kimiEnvironments[host.id]?.updateHost(host); nativeEnvironments[host.id]?.updateHost(host)
-            if !host.enabledAgents.contains(.kimi) { kimiEnvironments[host.id]?.disconnect() }
+            kimiEnvironments[host.id]?.disconnect()
             if !host.hasNativeAgents { nativeEnvironments[host.id]?.disconnect() }
         } else {
             let connection = HostConnection(host: host); connections.append(connection)
@@ -421,8 +432,8 @@ final class WorkbenchModel {
         else { selectedConnection?.connect() }
     }
     var selectedReference: SessionReference? { openedSessions.first { $0.session.id == tabs.selectedID }?.session }
-    var showNative: Bool { !showDashboard && [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(selectedReference?.kind) }
-    var showKimi: Bool { !showDashboard && selectedReference?.kind == .kimi }
+    var showNative: Bool { !showDashboard && (selectedReference.map(isNativeSession) ?? false) }
+    var showKimi: Bool { !showDashboard && (selectedReference.map(usesLegacyKimiConnection) ?? false) }
     var previewTerminalID: String? { tabs.previewID }
     var selectedConnection: HostConnection? { connections.first { $0.id == selectedHostID } }
     /// The quick shell follows the selected session's host and directory. The
@@ -492,7 +503,7 @@ final class WorkbenchModel {
         }
     }
     func sidebarProjectMessages(_ reference: SessionReference) async throws -> [KimiMessage] {
-        if reference.kind == .kimi, let connection = kimiEnvironments[reference.hostID] {
+        if usesLegacyKimiConnection(reference), let connection = kimiEnvironments[reference.hostID] {
             return try await connection.projectMessages(for: reference.terminalID)
         }
         if let connection = nativeEnvironments[reference.hostID] {
@@ -652,8 +663,8 @@ final class WorkbenchModel {
             selectedHostID = reference.hostID
             if let group = selectedGroup, !group.sessions.contains(reference) { selectedGroupID = nil }
             if let group = selectedGroup { workspace.lastSessionByGroup[group.id.uuidString] = reference.id }
-            if [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(reference.kind) { native.select(reference.terminalID) }
-            if reference.kind == .kimi, kimi.online { kimi.select(reference.terminalID) }
+            if isNativeSession(reference) { native.select(reference.terminalID) }
+            else if usesLegacyKimiConnection(reference), kimi.online { kimi.select(reference.terminalID) }
         }
         saveWorkspace()
     }
@@ -758,7 +769,7 @@ final class WorkbenchModel {
         inspectionOrder.update(dashboardProjection.attention.items.map(\.id))
         inspectingSession = item
         if let agents = agentConnections(for: item.reference.hostID) {
-            if item.reference.kind == .kimi { agents.kimi.select(item.reference.terminalID) }
+            if usesLegacyKimiConnection(item.reference) { agents.kimi.select(item.reference.terminalID) }
             else if item.reference.kind != .terminal { agents.native.select(item.reference.terminalID) }
         }
     }
@@ -772,7 +783,7 @@ final class WorkbenchModel {
     }
     func endInspection() {
         guard let ref = selectedReference, let agents = agentConnections(for: ref.hostID) else { return }
-        if ref.kind == .kimi { agents.kimi.select(ref.terminalID) }
+        if usesLegacyKimiConnection(ref) { agents.kimi.select(ref.terminalID) }
         else if ref.kind != .terminal { agents.native.select(ref.terminalID) }
     }
     func dashboardObservation(_ item: WorkspaceSession) -> DashboardObservation {
@@ -785,7 +796,7 @@ final class WorkbenchModel {
         case .running: state = "running"
         case .other: break
         }
-        if ref.kind == .kimi, let c = kimiEnvironments[ref.hostID], let session = c.sessions.first(where: { $0.id == ref.terminalID }) {
+        if usesLegacyKimiConnection(ref), let c = kimiEnvironments[ref.hostID], let session = c.sessions.first(where: { $0.id == ref.terminalID }) {
             revision = item.section == .review ? session.updatedAt : session.pendingInteraction ?? session.lastTurnReason ?? ""
         } else if let session = nativeEnvironments[ref.hostID]?.sessions.first(where: { $0.id == ref.terminalID }) {
             revision = item.section == .review ? String(session.completed) : "\(session.completed):\(session.pending):\(session.error ?? "")"
@@ -829,9 +840,9 @@ final class WorkbenchModel {
     func markReviewed(_ item: WorkspaceSession) {
         guard let kimi = kimiEnvironments[item.reference.hostID], let native = nativeEnvironments[item.reference.hostID] else { return }
         guard item.online else { return }
-        if [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(item.reference.kind), let session = native.sessions.first(where: { $0.id == item.reference.terminalID }) {
+        if isNativeSession(item.reference), let session = native.sessions.first(where: { $0.id == item.reference.terminalID }) {
             workspace.reviewedKimiUpdates[item.id] = String(session.completed)
-        } else if item.reference.kind == .kimi, let session = kimi.sessions.first(where: { $0.id == item.reference.terminalID }) {
+        } else if usesLegacyKimiConnection(item.reference), let session = kimi.sessions.first(where: { $0.id == item.reference.terminalID }) {
             workspace.markReviewed(session, on: kimi.host.id)
         }
         rebuildCatalog(); saveWorkspace()
@@ -878,7 +889,7 @@ final class WorkbenchModel {
         guard let kimi = kimiEnvironments[item.reference.hostID], let native = nativeEnvironments[item.reference.hostID] else { return ArchiveSubject(reference: item.reference, fingerprint: "missing", online: false) }
         let starred = workspace.starred.contains(item.reference)
         let queued = native.queue.items(for: item.reference).filter { $0.state != .delivered }.count
-        if [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(item.reference.kind) {
+        if isNativeSession(item.reference) {
             guard let session = native.sessions.first(where: { $0.id == item.reference.terminalID }) else {
                 return ArchiveSubject(reference: item.reference, fingerprint: "missing", online: false)
             }
@@ -891,7 +902,7 @@ final class WorkbenchModel {
                                   completedTurns: session.completed, reviewed: item.section != .review,
                                   queuedMessages: queued, hasCompletionSignal: true)
         }
-        if item.reference.kind == .kimi {
+        if usesLegacyKimiConnection(item.reference) {
             guard let session = kimi.sessions.first(where: { $0.id == item.reference.terminalID }) else {
                 return ArchiveSubject(reference: item.reference, fingerprint: "missing", online: false)
             }
@@ -993,8 +1004,8 @@ final class WorkbenchModel {
     }
     private func archiveRequest(_ reference: SessionReference, archived: Bool = true) async throws {
         guard let kimi = kimiEnvironments[reference.hostID], let native = nativeEnvironments[reference.hostID] else { throw WorkbenchError(L("当前会话没有可用的执行环境。")) }
-        if reference.kind == .kimi { try await kimi.setArchived(reference.terminalID, archived: archived, refresh: false) }
-        else if [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(reference.kind) {
+        if usesLegacyKimiConnection(reference) { try await kimi.setArchived(reference.terminalID, archived: archived, refresh: false) }
+        else if isNativeSession(reference) {
             try await native.setArchived(reference.terminalID, archived: archived)
         } else if archived { workspace.archivedTerminals.insert(reference) }
         else { workspace.archivedTerminals.remove(reference) }
@@ -1010,13 +1021,13 @@ final class WorkbenchModel {
     /// offered as a no-op.
     var canQuoteSelection: Bool {
         guard !showDashboard, let reference = selectedReference else { return false }
-        return reference.kind == .kimi ? kimi.online : [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(reference.kind) && native.online
+        return usesLegacyKimiConnection(reference) ? kimi.online : isNativeSession(reference) && native.online
     }
     /// Stage a compact citation; the original Markdown quote is restored on send.
     /// Existing draft text is kept: quoting is an addition, not a replacement.
     func quoteSelection(_ text: String) {
         guard canQuoteSelection, let reference = selectedReference else { return }
-        appendQuoteToDraft(text, kimi: kimi, native: native, isKimi: reference.kind == .kimi, id: reference.terminalID)
+        appendQuoteToDraft(text, kimi: kimi, native: native, isKimi: usesLegacyKimiConnection(reference), id: reference.terminalID)
         DispatchQueue.main.async { NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil) }
     }
     /// Message-level transcript actions (quote / edit-and-resend / resend /
@@ -1026,7 +1037,8 @@ final class WorkbenchModel {
         let kimi = kimiEnvironments[context.hostID]
         let native = nativeEnvironments[context.hostID]
         let id = context.sessionID
-        let isKimi = context.kind == .kimi
+        let reference = SessionReference(hostID: context.hostID, terminalID: id, kind: context.kind)
+        let isKimi = usesLegacyKimiConnection(reference)
         switch payload.action {
         case .quote(let text):
             appendQuoteToDraft(text, kimi: kimi, native: native, isKimi: isKimi, id: id)
@@ -1045,10 +1057,9 @@ final class WorkbenchModel {
             if !isKimi { native?.openSubagent(toolCallId, in: id) }
             return
         case .showTurnDetails:
-            showTurn(.task, of: SessionReference(hostID: context.hostID, terminalID: id, kind: context.kind))
+            showTurn(.task, of: reference)
             return
         case .showEdit(let tool, let messageID):
-            let reference = SessionReference(hostID: context.hostID, terminalID: id, kind: context.kind)
             guard selectedReference == reference else { return }
             let messages: [KimiMessage]
             if isKimi, let conversation = kimi?.conversation, conversation.snapshot.session.id == id {
@@ -1060,10 +1071,9 @@ final class WorkbenchModel {
             showTurn(.edits, of: reference)
             return
         case .showChanges:
-            showTurn(.changes, of: SessionReference(hostID: context.hostID, terminalID: id, kind: context.kind))
+            showTurn(.changes, of: reference)
             return
         case .turnStalled:
-            let reference = SessionReference(hostID: context.hostID, terminalID: id, kind: context.kind)
             if let item = allSessions.first(where: { $0.reference == reference }) {
                 taskNotifications.deliverStall(id: item.id, title: item.title,
                                                visibleSessionID: showDashboard ? nil : selectedReference?.id)
@@ -1105,9 +1115,10 @@ final class WorkbenchModel {
     /// the active connection's action line.
     func exportSelectedConversation(markdown: Bool) {
         guard let reference = selectedReference else { return }
+        let isKimi = usesLegacyKimiConnection(reference)
         let kimi = kimiEnvironments[reference.hostID]
         let native = nativeEnvironments[reference.hostID]
-        let messages = reference.kind == .kimi ? kimi?.conversation?.displayMessages : native?.snapshot?.messages
+        let messages = isKimi ? kimi?.conversation?.displayMessages : native?.snapshot?.messages
         guard let messages, !messages.isEmpty else { return }
         do {
             let data: Data
@@ -1122,7 +1133,7 @@ final class WorkbenchModel {
             guard panel.runModal() == .OK, let url = panel.url else { return }
             try data.write(to: url, options: .atomic)
         } catch {
-            if reference.kind == .kimi { kimi?.actionError = error.localizedDescription }
+            if isKimi { kimi?.actionError = error.localizedDescription }
             else { native?.actionError = error.localizedDescription }
         }
     }
@@ -1130,7 +1141,7 @@ final class WorkbenchModel {
     func appendReviewContext(_ text: String, to reference: SessionReference) {
         guard selectedReference == reference, canQuoteSelection else { return }
         let id = reference.terminalID
-        if reference.kind == .kimi {
+        if usesLegacyKimiConnection(reference) {
             let existing = kimi.drafts[id] ?? ""
             kimi.drafts[id] = existing + (existing.isEmpty ? "" : "\n\n") + text + "\n\n"
         } else {
@@ -1191,11 +1202,9 @@ final class WorkbenchModel {
     /// loaded locally; a session never opened this launch offers nothing.
     func namingExcerpt(for reference: SessionReference) -> String? {
         let messages: [KimiMessage]?
-        switch reference.kind {
-        case .kimi: messages = kimiEnvironments[reference.hostID]?.loadedMessages(for: reference.terminalID)
-        case .terminal: messages = nil
-        default: messages = nativeEnvironments[reference.hostID]?.loadedMessages(for: reference.terminalID)
-        }
+        if reference.kind == .terminal { messages = nil }
+        else if usesLegacyKimiConnection(reference) { messages = kimiEnvironments[reference.hostID]?.loadedMessages(for: reference.terminalID) }
+        else { messages = nativeEnvironments[reference.hostID]?.loadedMessages(for: reference.terminalID) }
         return messages.flatMap { SessionNaming.excerpt(from: $0) }
     }
     func automaticNamingStatus(for reference: SessionReference) -> String {
@@ -1236,11 +1245,11 @@ final class WorkbenchModel {
     /// could still be placeholders fetch, so named sessions never pay for it.
     private func loadHistoryForNaming(_ reference: SessionReference, remoteTitle: String) {
         guard SessionNaming.couldBePlaceholder(remoteTitle, kind: reference.kind) else { return }
-        if reference.kind == .kimi { kimiEnvironments[reference.hostID]?.loadAllHistoryForSearch() }
+        if usesLegacyKimiConnection(reference) { kimiEnvironments[reference.hostID]?.loadAllHistoryForSearch() }
         else { nativeEnvironments[reference.hostID]?.loadAllHistoryForSearch() }
     }
     private func namingRemoteTitle(for reference: SessionReference) -> String? {
-        if reference.kind == .kimi {
+        if usesLegacyKimiConnection(reference) {
             guard let connection = kimiEnvironments[reference.hostID] else { return nil }
             if connection.conversation?.snapshot.session.id == reference.terminalID { return connection.conversation?.snapshot.session.title }
             return connection.sessions.first { $0.id == reference.terminalID }?.title
@@ -1259,7 +1268,7 @@ final class WorkbenchModel {
     }
     func canArchive(_ item: WorkspaceSession) -> Bool {
         guard let kimi = kimiEnvironments[item.reference.hostID], let native = nativeEnvironments[item.reference.hostID] else { return false }
-        if [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(item.reference.kind) { return native.online && native.sessions.first(where: { $0.id == item.reference.terminalID })?.busy == false }
+        if isNativeSession(item.reference) { return native.online && native.sessions.first(where: { $0.id == item.reference.terminalID })?.busy == false }
         return kimi.online && kimi.sessions.first(where: { $0.id == item.reference.terminalID })?.busy == false
     }
     func setArchived(_ item: WorkspaceSession, archived: Bool) {
@@ -1274,7 +1283,7 @@ final class WorkbenchModel {
         Task {
             defer { managing.remove(item.id) }
             do {
-                if item.reference.kind == .kimi { try await kimi.setArchived(item.reference.terminalID, archived: archived) }
+                if usesLegacyKimiConnection(item.reference) { try await kimi.setArchived(item.reference.terminalID, archived: archived) }
                 else { try await native.action(item.reference.terminalID, "archive", ["archived": .bool(archived)]) }
                 archiveOverrides.removeValue(forKey: item.id)
                 if archived { workspace.starred.removeAll { $0 == item.reference } }
@@ -1289,15 +1298,16 @@ final class WorkbenchModel {
     func deleteConfirmed(_ item: WorkspaceSession) {
         guard let kimi = kimiEnvironments[item.reference.hostID], let native = nativeEnvironments[item.reference.hostID] else { return }
         guard item.online, !managing.contains(item.id) else { return }
+        let isKimi = usesLegacyKimiConnection(item.reference)
         managing.insert(item.id); managementError = nil
         Task {
             defer { managing.remove(item.id) }
             do {
-                if item.reference.kind == .kimi { try await kimi.deleteSession(item.reference.terminalID) }
-                else if [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(item.reference.kind) { try await native.action(item.reference.terminalID, "delete") }
+                if isKimi { try await kimi.deleteSession(item.reference.terminalID) }
+                else if item.reference.kind != .terminal { try await native.action(item.reference.terminalID, "delete") }
                 if tabs.ids.contains(item.id) { close(item.id) }
                 workspace.removeSession(item.reference)
-                let kind = item.reference.kind == .kimi ? "kimi" : "native"
+                let kind = isKimi ? "kimi" : "native"
                 conversationPresentations.remove("\(item.reference.hostID):\(kind):\(item.reference.terminalID)")
                 ConversationReadingMemory.shared.remove("\(item.reference.hostID):\(kind):\(item.reference.terminalID)")
                 rebuildCatalog(); saveWorkspace()
@@ -1365,13 +1375,13 @@ final class WorkbenchModel {
         var messages: [KimiMessage] = []
         var liveTools: [KimiLiveTool] = []
         let target = reference ?? selectedReference
-        if let target, target.kind == .kimi,
+        if let target, usesLegacyKimiConnection(target),
            let conversation = kimiEnvironments[target.hostID]?.conversation,
            conversation.snapshot.session.id == target.terminalID {
             messages = conversation.messages
             liveTools = conversation.live?.runningTools ?? []
         } else if let target,
-                  [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(target.kind),
+                  isNativeSession(target),
                   let snapshot = nativeEnvironments[target.hostID]?.snapshot,
                   snapshot.id == target.terminalID {
             messages = snapshot.messages

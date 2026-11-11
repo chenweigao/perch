@@ -81,7 +81,7 @@ extension WorkbenchModel {
             workspace.followUps[index].status = .needsReview
             do { try persistFollowUpIntent() }
             catch { workspaceError = error.localizedDescription; changed = true; continue }
-            let accepted = rule.session.kind == .kimi
+            let accepted = usesLegacyKimiConnection(rule.session)
                 ? agents.kimi.enqueueFollowUp(rule.prompt, for: rule.session.terminalID, messageID: rule.messageID)
                 : agents.native.enqueueFollowUp(rule.prompt, for: rule.session.terminalID, messageID: rule.messageID)
             if accepted { workspace.followUps[index].status = .queued }
@@ -93,7 +93,7 @@ extension WorkbenchModel {
         guard reference.kind != .terminal, let item = allSessions.first(where: { $0.reference == reference }), item.online, !item.archived,
               item.section != .attention, let agents = agentConnections(for: reference.hostID) else { return false }
         let id = "perch-companion-\(UUID().uuidString)"
-        return reference.kind == .kimi ? agents.kimi.enqueueFollowUp(text, for: reference.terminalID, messageID: id)
+        return usesLegacyKimiConnection(reference) ? agents.kimi.enqueueFollowUp(text, for: reference.terminalID, messageID: id)
             : agents.native.enqueueFollowUp(text, for: reference.terminalID, messageID: id)
     }
 }

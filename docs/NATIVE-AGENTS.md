@@ -136,7 +136,7 @@ HOME 的 app-server `account/read` 检查鉴权模式：官方供应商需要已
 
 | Agent | 模式（粗体为安全默认） | 传递方式 | 生效范围 |
 |---|---|---|---|
-| Kimi | **`manual`** / `yolo` / `auto` | prompt body 的 `permission_mode` | 下一条消息 |
+| Kimi | **`default`** / `plan` / `yolo` / `auto` | ACP `session/set_mode` | 下一轮 |
 | OMP | **`always-ask`** / `write` / `yolo` | `omp --approval-mode` | 创建会话时固定 |
 | Qoder CN | **`default`** / `acceptEdits` / `plan` / `dontAsk` / `auto` / `bypassPermissions` | 每次 SDK `query` 的 `permissionMode` | 下一轮 |
 | Qoder | **`default`** / `acceptEdits` / `plan` / `dontAsk` / `auto` / `bypassPermissions` | 每次 SDK `query` 的 `permissionMode` | 下一轮 |

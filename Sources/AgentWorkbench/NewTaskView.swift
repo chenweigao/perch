@@ -9,7 +9,7 @@ import WorkbenchCore
 struct NewTaskView: View {
     @Bindable var model: WorkbenchModel
     let native: NativeAgentConnection
-    let kimi: KimiConnection
+    var kimi: KimiConnection? = nil
     @StateObject var projectFiles = ProjectFileSuggestions()
     @State private var referenceBrowser = RemoteFileBrowser()
     @AppStorage("new.task.prompt") private var prompt = ""
@@ -26,18 +26,18 @@ struct NewTaskView: View {
     @State private var showDirectory = false
     @State private var showConnectionDetails = false
     @State private var showReference = false
-    @State private var permissionMode = PermissionDefaults.mode(for: .kimi) ?? "manual"
-    private var availableProviders: [SessionKind] { kimi.host.enabledAgents.filter { $0 != .terminal } }
+    @State private var permissionMode = PermissionDefaults.mode(for: .kimi) ?? "default"
+    private var availableProviders: [SessionKind] { native.host.enabledAgents.filter { $0 != .terminal } }
     private var permissionCapability: PermissionCapability {
         PermissionCatalog.capability(for: provider, selected: permissionMode)
     }
-    private var connectionError: String? { provider == .kimi ? kimi.error : native.error }
+    private var connectionError: String? { native.error }
     private var defaultsKey: String { "new.task.defaults." + (model.selectedGroupID?.uuidString ?? "global") }
-    private var recent: [String] { recentDirectories(for: kimi.host.id) }
-    private var isConnected: Bool { provider == .kimi ? kimi.online : native.online }
-    private var isConnecting: Bool { provider == .kimi ? kimi.connecting : native.wantsConnection }
+    private var recent: [String] { recentDirectories(for: native.host.id) }
+    private var isConnected: Bool { native.online }
+    private var isConnecting: Bool { native.wantsConnection }
     private var availableModels: [AgentModel] {
-        provider == .kimi ? kimi.catalog : native.models(for: provider)
+        native.models(for: provider)
     }
     private var selectedAgentModel: AgentModel? {
         availableModels.first { $0.id == agentModel }
@@ -50,9 +50,7 @@ struct NewTaskView: View {
         availableModels.map { "\($0.provider):\($0.id):\($0.thinking.map(\.rawValue).joined(separator: ","))" }.joined(separator: "|")
     }
     private var supportsAttachments: Bool { [.kimi, .claude, .codex].contains(provider) }
-    /// Claude and Codex take attachments inline, with tighter limits than Kimi's uploads.
-    private var inlineAttachments: Bool { [.claude, .codex].contains(provider) }
-    /// Files added under Kimi can exceed the inline limits after switching agents.
+    private var inlineAttachments: Bool { [.kimi, .claude, .codex].contains(provider) }
     private var inlineAttachmentBlocker: String? {
         guard inlineAttachments else { return nil }
         if attachments.count > InlineAttachments.maximumCount { return L("附件一次最多 5 个") }
@@ -137,14 +135,12 @@ struct NewTaskView: View {
     }
 
     @ViewBuilder private var modelControl: some View {
-        if supportsModelCatalog && !(availableModels.isEmpty && (provider == .omp || provider == .dsh)) {
+        if supportsModelCatalog && !(availableModels.isEmpty && (provider == .kimi || provider == .omp || provider == .dsh)) {
             ComposerModelPicker(models: availableModels, modelID: agentModel, thinking: thinking,
                 disabledReason: creating ? L("正在启动…") : nil,
-                catalogError: provider == .kimi ? nil : native.modelsError,
-                onRefreshCatalog: {
-                    if provider == .kimi { await kimi.refreshModels() }
-                    else { await native.loadModels() }
-                }, layout: .combined, usesDefaultModel: agentModel.isEmpty,
+                catalogError: native.modelsError,
+                onRefreshCatalog: { await native.loadModels() },
+                layout: .combined, usesDefaultModel: agentModel.isEmpty,
                 onUseDefaultModel: provider == .codex ? nil : { agentModel = ""; thinking = nil },
                 scope: L("首条消息生效"), onSelectModel: { option in
                     agentModel = option.id; thinking = option.resolve(thinking)
@@ -176,15 +172,15 @@ struct NewTaskView: View {
                     }
                 }.frame(maxWidth: .infinity).padding(.bottom, 18)
                 VStack(alignment: .leading, spacing: 8) {
-                    ProjectMessageComposer(text: $prompt, host: kimi.host, cwd: cwd, placeholder: L("描述你的任务，输入 @ 引用项目文件"),
+                    ProjectMessageComposer(text: $prompt, host: native.host, cwd: cwd, placeholder: L("描述你的任务，输入 @ 引用项目文件"),
                                     accessibilityLabel: L("任务描述"),
                                     canSend: canStart, onSend: start,
                                     onFiles: supportsAttachments ? addAttachments : nil,
                                     onError: { error = $0 }, onOpenReference: { path in
-                                        referenceBrowser.configure(host: kimi.host, cwd: cwd)
+                                        referenceBrowser.configure(host: native.host, cwd: cwd)
                                         referenceBrowser.open(path)
                                         showReference = true
-                                    }, pastes: provider == .kimi ? kimi.pastes : native.pastes, minimumEditorHeight: 96, referencesBelowEditor: true, files: projectFiles)
+                                    }, pastes: native.pastes, minimumEditorHeight: 96, referencesBelowEditor: true, files: projectFiles)
                     if !attachments.isEmpty {
                         ScrollView(.horizontal) {
                             HStack {
@@ -226,7 +222,7 @@ struct NewTaskView: View {
                         .font(.subheadline).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                if provider != .kimi && supportsModelCatalog, let modelsError = native.modelsError {
+                if supportsModelCatalog, let modelsError = native.modelsError {
                     Text(modelsError).font(.subheadline).foregroundStyle(.orange)
                 }
                 connectionStatus
@@ -252,9 +248,9 @@ struct NewTaskView: View {
                 do { addAttachments(try result.get()) } catch { self.error = error.localizedDescription }
             }
             .sheet(isPresented: $showSetup) {
-                if kimi.host.isLocal { LocalAgentSetupSheet(model: model) }
+                if native.host.isLocal { LocalAgentSetupSheet(model: model) }
                 else {
-                    AddHostSheet(model: model, host: kimi.host) { launch in
+                    AddHostSheet(model: model, host: native.host) { launch in
                         selectProvider(launch.provider); cwd = launch.directory; agentModel = launch.model
                         reconcileThinking()
                     }
@@ -270,12 +266,12 @@ struct NewTaskView: View {
             }
             .onChange(of: cwd) { _, _ in showReference = false; referenceBrowser.cancel() }
             #if PERCH_ACCEPTANCE
-            .background(NativeTaskProjectProbe(location: .init(hostID: kimi.host.id, directory: cwd, hostName: kimi.host.name)))
+            .background(NativeTaskProjectProbe(location: .init(hostID: native.host.id, directory: cwd, hostName: native.host.name)))
             #endif
             .onChange(of: model.newTaskProject) { _, project in
                 if let project { applyProject(project) }
             }
-            .onChange(of: kimi.host.id) { _, _ in
+            .onChange(of: native.host.id) { _, _ in
                 showReference = false; referenceBrowser.cancel()
                 showDirectory = false; showConnectionDetails = false
                 if !availableProviders.contains(provider) {
@@ -292,9 +288,7 @@ struct NewTaskView: View {
                 if let reference = model.selectedReference, reference.kind != .terminal { model.activateAgentEnvironment(reference.hostID) }
             }
             .task(id: catalogID) {
-                // Native catalogs are needed before a session exists; Kimi reads its
-                // own connection while the remaining catalog-backed agents use the bridge.
-                guard native.online && [.omp, .qoder, .qoderintl, .dsh, .codex].contains(provider) else { return }
+                guard native.online && supportsModelCatalog else { return }
                 await native.loadModels()
                 guard !Task.isCancelled else { return }
                 if provider == .codex { selectCodexModel() }
@@ -317,12 +311,12 @@ struct NewTaskView: View {
                     provider = groupItem?.reference.kind ?? model.selectedReference?.kind ?? .kimi
                     if provider == .terminal { provider = .kimi }
                     if let host = groupItem?.reference.hostID { model.activateAgentEnvironment(host) }
-                    cwd = groupItem?.directory ?? defaultDirectory(for: model.kimi.host.id)
+                    cwd = groupItem?.directory ?? defaultDirectory(for: model.native.host.id)
                     agentModel = UserDefaults.standard.string(forKey: "new.model.\(provider.rawValue)") ?? ""
                     thinking = savedThinking(for: provider)
                 }
-                if !model.kimi.host.enabledAgents.contains(provider) {
-                    selectProvider(model.kimi.host.enabledAgents.first(where: { $0 != .terminal }) ?? .kimi)
+                if !model.native.host.enabledAgents.contains(provider) {
+                    selectProvider(model.native.host.enabledAgents.first(where: { $0 != .terminal }) ?? .kimi)
                 } else {
                     permissionMode = PermissionDefaults.mode(for: provider) ?? PermissionCatalog.runtimeManaged
                     reconcileThinking()
@@ -332,7 +326,7 @@ struct NewTaskView: View {
     private func applyProject(_ project: SidebarProjectLocation) {
         model.activateAgentEnvironment(project.hostID)
         cwd = project.directory
-        provider = model.kimi.host.enabledAgents.first(where: { $0 != .terminal }) ?? .kimi
+        provider = model.native.host.enabledAgents.first(where: { $0 != .terminal }) ?? .kimi
         agentModel = UserDefaults.standard.string(forKey: "new.model.\(provider.rawValue)") ?? ""
         thinking = savedThinking(for: provider)
         permissionMode = PermissionDefaults.mode(for: provider) ?? PermissionCatalog.runtimeManaged
@@ -355,8 +349,8 @@ struct NewTaskView: View {
                 Button("配置其他 Agent…") { showSetup = true }
             } label: {
                 DraftMenuLabel {
-                    Label { Text(kimi.host.name).lineLimit(1).truncationMode(.middle) }
-                        icon: { HostIdentityIcon.menuImage(for: kimi.host.id) }
+                    Label { Text(native.host.name).lineLimit(1).truncationMode(.middle) }
+                        icon: { HostIdentityIcon.menuImage(for: native.host.id) }
                 }
             }.menuStyle(.borderlessButton).menuIndicator(.hidden)
                 .fixedSize(horizontal: false, vertical: true).accessibilityLabel("机器")
@@ -369,7 +363,7 @@ struct NewTaskView: View {
                 }
             }.buttonStyle(.plain).help(cwd).accessibilityLabel("项目目录")
                 .popover(isPresented: $showDirectory) {
-                    NewTaskDirectoryPicker(host: kimi.host, cwd: $cwd, recent: recent) { showDirectory = false }
+                    NewTaskDirectoryPicker(host: native.host, cwd: $cwd, recent: recent) { showDirectory = false }
                 }
             Spacer(minLength: 0)
             if !hasInitialContent && attachments.isEmpty {
@@ -399,7 +393,7 @@ struct NewTaskView: View {
                     } else {
                         Label("尚未连接所选 Agent。", systemImage: "wifi.slash")
                         Spacer(minLength: 0)
-                        Button("连接") { if provider == .kimi { kimi.connect() } else { native.connect() } }
+                        Button("连接") { native.connect() }
                     }
                 }.font(.system(size: 12)).foregroundStyle(.secondary).buttonStyle(.plain)
                 if showConnectionDetails, let connectionError {
@@ -456,39 +450,25 @@ struct NewTaskView: View {
         let text = prompt, selectedModel = agentModel, selectedProvider = provider, directory = cwd, files = attachments
         let selectedPermission = permissionMode
         let selectedThinking = selectedAgentModel?.resolve(thinking)
-        let selectedHost = kimi.host.id
+        let selectedHost = native.host.id
         let defaults = TaskLaunchDefaults(hostID: selectedHost, provider: selectedProvider, directory: directory,
                                           model: selectedModel, thinking: selectedThinking)
         Task {
             do {
-                if kimi.host.isLocal {
+                if native.host.isLocal {
                     var isDirectory: ObjCBool = false
                     guard FileManager.default.fileExists(atPath: directory, isDirectory: &isDirectory), isDirectory.boolValue else {
                         throw WorkbenchError(L("本机项目目录不存在"))
                     }
                 }
-                if selectedProvider == .kimi {
-                    let session = try await kimi.createSession(title: "", cwd: directory,
-                                                               initialPrompt: sendInitialPrompt ? text : nil,
-                                                               model: selectedModel.isEmpty ? nil : selectedModel,
-                                                               thinking: selectedThinking, permissionMode: selectedPermission)
-                    if sendInitialPrompt {
-                        if !files.isEmpty { kimi.attachments[session.id] = files }
-                        model.newKimiCreated(session)
-                        await kimi.sendPrompt(for: session.id)
-                    } else {
-                        model.newKimiCreated(session)
-                    }
-                } else {
-                    let session = try await native.create(provider: selectedProvider, cwd: directory, model: selectedModel,
-                                                          thinking: selectedThinking, permissionMode: selectedPermission)
-                    if sendInitialPrompt {
-                        native.drafts[session.id] = text
-                        if !files.isEmpty { native.attachments[session.id] = files }
-                    }
-                    model.newNativeCreated(session)
-                    if sendInitialPrompt { native.send() }
+                let session = try await native.create(provider: selectedProvider, cwd: directory, model: selectedModel,
+                                                      thinking: selectedThinking, permissionMode: selectedPermission)
+                if sendInitialPrompt {
+                    native.drafts[session.id] = text
+                    if !files.isEmpty { native.attachments[session.id] = files }
                 }
+                model.newNativeCreated(session)
+                if sendInitialPrompt { native.send() }
                 UserDefaults.standard.set(try JSONEncoder().encode(defaults), forKey: defaultsKey)
                 UserDefaults.standard.set(selectedModel, forKey: "new.model.\(selectedProvider.rawValue)")
                 let thinkingKey = "new.thinking.\(selectedProvider.rawValue)"

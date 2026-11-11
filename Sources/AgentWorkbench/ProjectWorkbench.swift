@@ -161,7 +161,7 @@ extension WorkbenchModel {
     func stageArtifactFeedback(_ text: String, to source: SessionReference) {
         guard let agents = agentConnections(for: source.hostID) else { return }
         let id = source.terminalID
-        if source.kind == .kimi {
+        if usesLegacyKimiConnection(source) {
             let draft = agents.kimi.drafts[id] ?? ""; agents.kimi.drafts[id] = draft + (draft.isEmpty ? "" : "\n\n") + text
         } else if source.kind != .terminal {
             let draft = agents.native.drafts[id] ?? ""; agents.native.drafts[id] = draft + (draft.isEmpty ? "" : "\n\n") + text

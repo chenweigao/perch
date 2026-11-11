@@ -62,7 +62,8 @@ public enum PermissionCatalog {
         switch provider {
         case .kimi:
             return [
-                PermissionOption(id: "manual", titleKey: "始终询问", detailKey: "每次工具执行前都请求你的批准。"),
+                PermissionOption(id: "default", titleKey: "始终询问", detailKey: "每次工具执行前都请求你的批准。"),
+                PermissionOption(id: "plan", titleKey: "仅规划", detailKey: "只规划任务，不直接执行修改。"),
                 PermissionOption(id: "yolo", titleKey: "需要时询问", detailKey: "由 Kimi 判断何时需要请求批准。", risk: .elevated),
                 PermissionOption(id: "auto", titleKey: "从不询问", detailKey: "Kimi 可直接执行工具，不再请求批准。", risk: .dangerous)
             ]
@@ -104,9 +105,8 @@ public enum PermissionCatalog {
 
     public static func safeDefault(for provider: SessionKind) -> String? {
         switch provider {
-        case .kimi: return "manual"
+        case .kimi, .qoder, .qoderintl, .claude: return "default"
         case .omp: return "always-ask"
-        case .qoder, .qoderintl, .claude: return "default"
         case .dsh: return runtimeManaged
         case .codex: return "workspace-ask"
         case .terminal: return nil
@@ -115,8 +115,7 @@ public enum PermissionCatalog {
 
     public static func scope(for provider: SessionKind) -> PermissionChangeScope {
         switch provider {
-        case .kimi: return .nextMessage
-        case .qoder, .qoderintl, .claude: return .nextTurn
+        case .kimi, .qoder, .qoderintl, .claude: return .nextTurn
         case .omp, .codex: return .newSession
         case .dsh, .terminal: return .runtimeManaged
         }

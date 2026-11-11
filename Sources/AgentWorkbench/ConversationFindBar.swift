@@ -96,7 +96,7 @@ struct ConversationFindBar: View {
     /// the outgoing session's transcript.
     private func sessionChanged(from old: SessionReference) {
         if pendingSearchSession != model.selectedReference { pendingSearchEntry = nil; pendingSearchSession = nil }
-        let kind = old.kind == .kimi ? "kimi" : "native"
+        let kind = model.usesLegacyKimiConnection(old) ? "kimi" : "native"
         let oldKey = "\(old.hostID.uuidString):\(kind):\(old.terminalID)"
         let clear = ConversationHighlightUpdate(session: oldKey, query: "", options: ConversationFindOptions())
         NotificationCenter.default.post(name: .init("PerchConversationHighlight"), object: clear)

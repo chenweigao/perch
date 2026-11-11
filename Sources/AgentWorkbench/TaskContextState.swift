@@ -100,19 +100,19 @@ import WorkbenchCore
 extension WorkbenchModel {
     func readTaskContext(_ source: SessionReference) async throws -> TaskContextSnapshot {
         guard let agents = agentConnections(for: source.hostID) else { throw WorkbenchError(L("状态未同步")) }
-        if source.kind == .kimi { return try await agents.kimi.readTaskContext(source.terminalID) }
+        if usesLegacyKimiConnection(source) { return try await agents.kimi.readTaskContext(source.terminalID) }
         return try await agents.native.readTaskContext(source.terminalID)
     }
     func taskContextOperation(_ task: KimiTask, source: SessionReference, stop: Bool) async throws -> String {
         guard let agents = agentConnections(for: source.hostID) else { throw WorkbenchError(L("状态未同步")) }
-        if source.kind == .kimi { return try await agents.kimi.taskContextOperation(task, session: source.terminalID, stop: stop) }
+        if usesLegacyKimiConnection(source) { return try await agents.kimi.taskContextOperation(task, session: source.terminalID, stop: stop) }
         guard stop, task.stoppable == true else { throw WorkbenchError(L("请在完整会话中查看")) }
         try await agents.native.stopTaskContextAgent(task.id, session: source.terminalID)
         return ""
     }
     /// One Kimi task with its output tail, read without selecting its session.
     func readTaskOutput(_ taskID: String, source: SessionReference) async throws -> KimiTask {
-        guard source.kind == .kimi, let agents = agentConnections(for: source.hostID) else {
+        guard usesLegacyKimiConnection(source), let agents = agentConnections(for: source.hostID) else {
             throw WorkbenchError(L("状态未同步"))
         }
         return try await agents.kimi.taskContextOutput(taskID, session: source.terminalID)
@@ -125,7 +125,7 @@ extension WorkbenchModel {
     /// shows; any other source opens nothing.
     func openTaskTranscript(_ task: KimiTask, source: SessionReference) {
         guard showsConversation(source), let agents = agentConnections(for: source.hostID) else { return }
-        if source.kind == .kimi { agents.kimi.presentTranscript(task, in: source.terminalID) }
+        if usesLegacyKimiConnection(source) { agents.kimi.presentTranscript(task, in: source.terminalID) }
         else { agents.native.openSubagent(task.id, in: source.terminalID) }
     }
 }
