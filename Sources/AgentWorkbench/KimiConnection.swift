@@ -6,6 +6,9 @@ import WorkbenchCore
 @MainActor @Observable
 final class KimiConnection {
     private(set) var host: SSHHost
+    /// The host's shared SSH master. When online, the conversation forward
+    /// multiplexes over it instead of dialing a private master.
+    @ObservationIgnored weak var hostConnection: HostConnection?
     @ObservationIgnored var onSessionsChanged: (() -> Void)?
     @ObservationIgnored var onOnlineChanged: (() -> Void)?
     @ObservationIgnored var onConversationChanged: ((KimiConversation?) -> Void)?
@@ -404,6 +407,16 @@ final class KimiConnection {
             guard !secret.isEmpty else { throw WorkbenchError(L("远端 Kimi Web 凭证为空")) }
         }
         let localPort = try KimiAPI.availableLoopbackPort()
+        // Reuse the host's shared master when it is up: one handshake serves the
+        // command-line island and every conversation tunnel. A private master
+        // below remains the fallback whenever the shared one is not usable.
+        if let shared = await openSharedForward(localPort: localPort, remotePort: remotePort, secret: secret, token: token) {
+            tunnel = shared.process
+            api = shared.client
+            runtime = shared.runtime
+            if let managedService { staleRuntimeNotice = RuntimeVersion.managedNotice(managedService) }
+            return
+        }
         let directory = URL(fileURLWithPath: "/tmp/awb-kimi-\(UUID().uuidString.prefix(10))")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
         folder = directory
@@ -425,6 +438,32 @@ final class KimiConnection {
             try await Task.sleep(for: .milliseconds(100))
         }
         throw WorkbenchError(L("Kimi SSH 转发建立超时"))
+    }
+
+    /// Forwards over the host's shared master and proves the forward with a meta
+    /// read. Returns nil on any failure so the caller dials a private master; the
+    /// shared master dying later surfaces through the normal reconnect loop.
+    private func openSharedForward(localPort: UInt16, remotePort: Int, secret: String, token: UUID) async -> (process: Process, client: KimiAPI, runtime: RunningRuntime)? {
+        guard let hostConnection, !host.isLocal else { return nil }
+        hostConnection.connectIfNeeded()
+        for _ in 0..<50 {
+            guard generation == token, !Task.isCancelled else { return nil }
+            if hostConnection.online { break }
+            do { try await Task.sleep(for: .milliseconds(100)) } catch { return nil }
+        }
+        guard hostConnection.online,
+              let process = hostConnection.multiplexedForward(localPort: localPort, remotePort: remotePort) else { return nil }
+        let client = KimiAPI(baseURL: URL(string: "http://127.0.0.1:\(localPort)")!, token: secret)
+        for _ in 0..<50 {
+            guard generation == token, !Task.isCancelled else { process.terminate(); return nil }
+            if !process.isRunning { process.terminate(); return nil }
+            if let meta = try? await client.get(KimiServerMeta.self, "/api/v1/meta") {
+                return (process, client, meta.runtime)
+            }
+            do { try await Task.sleep(for: .milliseconds(100)) } catch { process.terminate(); return nil }
+        }
+        process.terminate()
+        return nil
     }
 
     /// Compares the package installed on the host with the process that is serving

@@ -24,6 +24,33 @@ final class HostConnection: ObservableObject, Identifiable {
     init(host: SSHHost) { self.host = host; self.id = host.id }
     func updateHost(_ host: SSHHost) { self.host = host }
 
+    /// Starts the master only when nothing already wants it; calling `connect()`
+    /// on a live master would tear down every multiplexed client.
+    func connectIfNeeded() {
+        guard !host.isLocal, !wantsConnection else { return }
+        connect()
+    }
+
+    /// Opens a local forward multiplexed over this host's master, so conversation
+    /// tunnels reuse one handshake instead of dialing their own. The caller owns
+    /// the returned process and must terminate it. Returns nil when the master is
+    /// not usable, letting the caller fall back to a private master.
+    func multiplexedForward(localPort: UInt16, remotePort: Int) -> Process? {
+        guard online, !controlPath.isEmpty, !host.isLocal else { return nil }
+        let slave = Process()
+        slave.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
+        slave.arguments = ["-N", "-T", "-S", controlPath, "-o", "ControlMaster=no",
+                           "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
+                           "-o", "ExitOnForwardFailure=yes",
+                           "-o", "ServerAliveInterval=10", "-o", "ServerAliveCountMax=2",
+                           "-L", "127.0.0.1:\(localPort):127.0.0.1:\(remotePort)", host.destination]
+        slave.standardInput = FileHandle.nullDevice
+        slave.standardOutput = FileHandle.nullDevice
+        slave.standardError = Pipe()
+        do { try slave.run() } catch { return nil }
+        return slave
+    }
+
     func connect() {
         guard !host.isLocal else { return }
         disconnect()

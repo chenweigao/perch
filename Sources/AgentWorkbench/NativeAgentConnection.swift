@@ -9,6 +9,9 @@ final class NativeAgentConnection {
     /// The open subagent sheet and the roster's stop state (bridge protocol 7).
     let subagents = NativeSubagentState()
     private(set) var host: SSHHost
+    /// The host's shared SSH master; the conversation forward multiplexes over it
+    /// when online, falling back to a private master otherwise.
+    @ObservationIgnored weak var hostConnection: HostConnection?
     private(set) var sessions: [NativeAgentSession] = []
     private(set) var snapshot: NativeAgentSnapshot? {
         get { conversation.snapshot }
@@ -297,6 +300,11 @@ final class NativeAgentConnection {
             return
         }
         let local = try KimiAPI.availableLoopbackPort()
+        // Reuse the host's shared master when usable; a private master below is
+        // the fallback. A protocol-gate failure propagates rather than falling back.
+        if try await openSharedForward(localPort: local, remotePort: port, secret: secret, restartPending: restartPending) {
+            return
+        }
         let folder = URL(fileURLWithPath: "/tmp/awb-native-\(UUID().uuidString.prefix(10))")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700]); directory = folder
         let control = folder.appendingPathComponent("ssh").path
@@ -315,6 +323,34 @@ final class NativeAgentConnection {
             try await Task.sleep(for: .milliseconds(100))
         }
         throw WorkbenchError(L("原生对话 SSH 转发超时"))
+    }
+    /// Forwards over the host's shared master, wiring `api`/`tunnel` and applying
+    /// the protocol gate once the forward carries traffic. Returns false when the
+    /// shared master is not usable so the caller dials a private master; a gate
+    /// failure throws instead, since a private master would hit the same gate.
+    private func openSharedForward(localPort: UInt16, remotePort: Int, secret: String, restartPending: Int?) async throws -> Bool {
+        guard let hostConnection, !host.isLocal else { return false }
+        hostConnection.connectIfNeeded()
+        for _ in 0..<50 {
+            try Task.checkCancellation()
+            if hostConnection.online { break }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        guard hostConnection.online,
+              let process = hostConnection.multiplexedForward(localPort: localPort, remotePort: remotePort) else { return false }
+        let client = KimiAPI(baseURL: URL(string: "http://127.0.0.1:\(localPort)")!, token: secret)
+        for _ in 0..<50 {
+            try Task.checkCancellation()
+            if !process.isRunning { process.terminate(); return false }
+            if (try? await client.request("/health")) != nil {
+                api = client; tunnel = process
+                try await readBridgeHealth(restartPending: restartPending)
+                return true
+            }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        process.terminate()
+        return false
     }
     /// The protocol gate plus the identity of the process actually serving: a
     /// hand-bumped version number does not say which source it is executing.
