@@ -63,7 +63,7 @@ struct SessionRowChrome<Indicator: View>: View {
     }
 
     /// Compact single-line rows prioritize the title and essential status;
-    /// the trailing menu and full preview appear only while hovered.
+    /// the trailing menu and delayed preview expose details on demand.
     private var conversationRow: some View {
         HStack(spacing: 0) {
             Button {
@@ -75,11 +75,11 @@ struct SessionRowChrome<Indicator: View>: View {
                         .lineLimit(1).truncationMode(.tail)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     if running {
-                        ConversationBusyIndicator().accessibilityIdentifier("sidebar.running")
+                        ConversationBusyIndicator().help("运行中").accessibilityIdentifier("sidebar.running")
                             .frame(width: 18, height: 18)
                     } else if offline {
                         Image(systemName: "wifi.slash").font(.system(size: WorkbenchTheme.Typography.caption))
-                            .foregroundStyle(WorkbenchTheme.quiet)
+                            .foregroundStyle(WorkbenchTheme.quiet).help("离线 · 状态未同步")
                             .accessibilityHidden(true)
                             .frame(width: 18, height: 18)
                     } else {
@@ -88,12 +88,15 @@ struct SessionRowChrome<Indicator: View>: View {
                                 Image(systemName: "exclamationmark.circle.fill")
                                     .font(.system(size: 11))
                                     .foregroundStyle(.red)
+                                    .help(detail ?? L("运行出错"))
                                     .accessibilityHidden(true)
                             } else if waiting {
                                 Circle().fill(Color.orange).frame(width: 6, height: 6)
+                                    .help(detail ?? L("等你处理"))
                                     .accessibilityHidden(true)
                             } else if unread {
                                 Circle().fill(Color.blue).frame(width: 6, height: 6)
+                                    .help("有未读结果")
                                     .accessibilityHidden(true)
                             }
                         }
