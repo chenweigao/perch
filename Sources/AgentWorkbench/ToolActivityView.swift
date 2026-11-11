@@ -347,6 +347,7 @@ struct KimiToolCard: View {
     var body: some View {
         let exitReport = resolvedExitReport()
         let summary = ToolPresentation.rowSummary(tool)
+        let filePath = ToolPresentation.path(tool)
         // Named apart from the method so the local never shadows its own initializer.
         let showsAttention = attention()
         // The activity details name the same states with the same words.
@@ -381,7 +382,7 @@ struct KimiToolCard: View {
                     if !summary.isEmpty {
                         HStack(spacing: 0) {
                             Text(summary).font(.system(size: ReplyStyle.captionSize, design: .monospaced))
-                                .lineLimit(1).truncationMode(.tail)
+                                .lineLimit(1).truncationMode(filePath == nil ? .tail : .middle)
                             if let rangeSuffix {
                                 Text(verbatim: rangeSuffix)
                                     .font(.system(size: ReplyStyle.captionSize, design: .monospaced))
@@ -420,7 +421,7 @@ struct KimiToolCard: View {
                 }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(showsAttention ? Color.orange : WorkbenchTheme.quiet)
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel(Text(verbatim: "\(tool.name) · \(summary) · \(statusLabel)"))
-                    .help(Text(verbatim: [tool.input?["command"].string ?? ToolPresentation.path(tool), statusLabel].compactMap { $0 }.joined(separator: "\n")))
+                    .help(Text(verbatim: [tool.input?["command"].string ?? filePath, statusLabel].compactMap { $0 }.joined(separator: "\n")))
             }.disclosureGroupStyle(ProcessDisclosureStyle())
                 .accessibilityIdentifier("tool-call:" + tool.id)
                 .onChange(of: expanded) { _, value in if value { onExpand?() } }
