@@ -150,6 +150,22 @@ extension WorkbenchTheme {
         static let sliderHeight: CGFloat = 24
         static let motion = 0.2
         static let raised = WorkbenchTheme.color(light: (1, 1, 1), dark: (40/255, 40/255, 40/255))
+        /// PI composer.css .composer-chip and tokens.css radius-md/text-xs-plus.
+        enum Citation {
+            static let cornerRadius: CGFloat = 12
+            static let height: CGFloat = 20
+            static let maximumWidth: CGFloat = 240
+            static let textSize: CGFloat = 11.5
+            static let fill = WorkbenchTheme.nsColor(
+                light: NSColor(srgbRed: 26/255, green: 28/255, blue: 31/255, alpha: 0.08),
+                dark: NSColor(white: 1, alpha: 0.08))
+            static let text = WorkbenchTheme.nsColor(
+                light: NSColor(srgbRed: 26/255, green: 28/255, blue: 31/255, alpha: 0.74),
+                dark: NSColor(white: 1, alpha: 0.70))
+            static let muted = WorkbenchTheme.nsColor(
+                light: NSColor(srgbRed: 93/255, green: 93/255, blue: 93/255, alpha: 1),
+                dark: NSColor(white: 1, alpha: 0.52))
+        }
         /// PI's radius-2xs: model/source rows and the raised reasoning segment.
         enum CompactShape {
             static let cornerRadius: CGFloat = 6

@@ -117,6 +117,11 @@ for target in Markdown CAtomic cmark_gfm cmark_gfm_extensions SwiftMath; do
     while IFS= read -r file; do objects+=("$file"); done < <(rg --files --hidden --no-ignore "$bin_dir/$target.build" | rg '\.o$' | sort)
 done
 compile_flags=( -D PERFORMANCE_CURRENT )
+if [[ -z "$theme_ref" && -f Sources/WorkbenchCore/ConversationRunPhase.swift ]]; then
+    compile_flags+=( -D PERFORMANCE_LIVE_STATUS )
+elif [[ -n "$theme_ref" ]] && git cat-file -e "$theme_ref:Sources/WorkbenchCore/ConversationRunPhase.swift" 2>/dev/null; then
+    compile_flags+=( -D PERFORMANCE_LIVE_STATUS )
+fi
 if [[ "$variant" == baseline ]]; then
     compile_flags=( -D PERFORMANCE_BASELINE )
     # The historical compile path fits only the pinned September baseline.
@@ -124,6 +129,9 @@ if [[ "$variant" == baseline ]]; then
     # compile them through the current fixture path (variant stays "baseline").
     if git cat-file -p "$baseline_ref:Sources/AgentWorkbench/WorkspaceSplitView.swift" 2>/dev/null | grep -q "newConversation"; then
         compile_flags=( -D PERFORMANCE_CURRENT )
+    fi
+    if git cat-file -e "$baseline_ref:Sources/WorkbenchCore/ConversationRunPhase.swift" 2>/dev/null; then
+        compile_flags+=( -D PERFORMANCE_LIVE_STATUS )
     fi
 fi
 copied_app_files=()

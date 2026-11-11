@@ -1,6 +1,111 @@
 import AppKit
 import QuartzCore
 import SwiftUI
+import WorkbenchCore
+
+/// A small monochrome progress mark. Its layer rotates independently of
+/// SwiftUI; visibility also pauses the work line's separate elapsed clock.
+struct ConversationWorkIndicator: NSViewRepresentable {
+    let phase: ConversationRunPhase
+    let animated: Bool
+    let visibilityChanged: (Bool) -> Void
+    func makeNSView(context: Context) -> ConversationWorkIndicatorView { ConversationWorkIndicatorView() }
+    func updateNSView(_ view: ConversationWorkIndicatorView, context: Context) {
+        view.visibilityChanged = visibilityChanged
+        view.update(phase: phase, animated: animated)
+    }
+    static func dismantleNSView(_ view: ConversationWorkIndicatorView, coordinator: ()) { view.stop() }
+}
+
+final class ConversationWorkIndicatorView: NSView {
+    private let track = CAShapeLayer()
+    private let arc = CAShapeLayer()
+    private var phase: ConversationRunPhase = .running
+    private var animated = false
+    private var playing = false
+    private var reportedVisible: Bool?
+    private var observers: [NSObjectProtocol] = []
+    var visibilityChanged: ((Bool) -> Void)?
+    var motionLayer: CALayer { arc }
+    override var isFlipped: Bool { true }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    init() {
+        super.init(frame: .zero)
+        wantsLayer = true
+        identifier = NSUserInterfaceItemIdentifier("conversation-work-indicator")
+        setAccessibilityElement(false)
+        for shape in [track, arc] {
+            shape.fillColor = nil; shape.lineCap = .round; shape.lineWidth = 1.35
+            layer?.addSublayer(shape)
+        }
+        arc.strokeEnd = 0.72
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+    func update(phase: ConversationRunPhase, animated: Bool) {
+        self.phase = phase; self.animated = animated
+        render(); refreshMotion()
+    }
+    override func layout() { super.layout(); render(); refreshMotion() }
+    override func viewDidChangeEffectiveAppearance() { super.viewDidChangeEffectiveAppearance(); render() }
+    override func viewDidChangeBackingProperties() { super.viewDidChangeBackingProperties(); render() }
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        for observer in observers { NotificationCenter.default.removeObserver(observer) }
+        observers.removeAll()
+        if let window {
+            for name in [NSWindow.didChangeOcclusionStateNotification, NSWindow.didMiniaturizeNotification,
+                         NSWindow.didDeminiaturizeNotification, NSWindow.didResignKeyNotification, NSWindow.didResignMainNotification] {
+                observers.append(NotificationCenter.default.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
+                    DispatchQueue.main.async { [weak self] in self?.refreshMotion() }
+                })
+            }
+        }
+        render(); refreshMotion()
+    }
+    private func render() {
+        guard bounds.width > 0, bounds.height > 0 else { return }
+        var ink = phase.needsInput ? NSColor.systemOrange : WorkbenchTheme.quietNS
+        effectiveAppearance.performAsCurrentDrawingAppearance { ink = ink.usingColorSpace(.sRGB) ?? ink }
+        let radius = max(1, min(bounds.width, bounds.height) / 2 - 1.25)
+        let path = CGPath(ellipseIn: CGRect(x: bounds.midX-radius, y: bounds.midY-radius, width: radius*2, height: radius*2), transform: nil)
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        for shape in [track, arc] {
+            shape.frame = bounds; shape.path = path; shape.contentsScale = window?.backingScaleFactor ?? 2
+        }
+        track.strokeColor = ink.withAlphaComponent(0.16).cgColor
+        arc.strokeColor = ink.cgColor
+        CATransaction.commit()
+    }
+    private func refreshMotion() {
+        let visible = window?.isVisible == true && window?.isMiniaturized == false
+            && window?.occlusionState.contains(.visible) == true && !isHiddenOrHasHiddenAncestor && !visibleRect.isEmpty
+        if reportedVisible != visible {
+            reportedVisible = visible
+            let callback = visibilityChanged
+            DispatchQueue.main.async { callback?(visible) }
+        }
+        let shouldPlay = visible && animated && phase.animates
+        guard shouldPlay != playing else { return }
+        playing = shouldPlay
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        arc.removeAllAnimations(); arc.transform = CATransform3DIdentity
+        if shouldPlay {
+            let rotation = CABasicAnimation(keyPath: "transform.rotation.z")
+            rotation.fromValue = 0; rotation.toValue = 2 * CGFloat.pi
+            rotation.duration = 1.05; rotation.repeatCount = .infinity
+            rotation.timingFunction = CAMediaTimingFunction(name: .linear)
+            arc.add(rotation, forKey: "work-rotation")
+        }
+        CATransaction.commit()
+    }
+    func stop() {
+        visibilityChanged = nil; arc.removeAllAnimations(); playing = false
+        for observer in observers { NotificationCenter.default.removeObserver(observer) }
+        observers.removeAll()
+    }
+    deinit { for observer in observers { NotificationCenter.default.removeObserver(observer) } }
+}
 
 /// The running sun of list rows and the Goal header on the 24-unit glyph grid:
 /// a ring that chases. The composer uses the same mark around its stop glyph.

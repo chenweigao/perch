@@ -144,6 +144,43 @@ import WorkbenchCore
     func descendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
     let draft = descendants(window.contentView!).compactMap { $0 as? DraftTextView }.first!
     precondition(draft.font?.pointSize == 14, "The mounted composer shares the default 14 pt reading size")
+    func checkStatusOutsideComposer() {
+        let caption = descendants(window.contentView!).compactMap { $0 as? ConversationWorkIndicatorView }.first!
+        let captionFrame = caption.convert(caption.bounds, to: nil)
+        let draftFrame = draft.convert(draft.bounds, to: nil)
+        precondition(captionFrame.minY >= draftFrame.maxY + ReplyStyle.composerInset + 8 - 1,
+                     "The live status must sit above the composer's surface with a visible gap: status=\(captionFrame), draft=\(draftFrame)")
+        precondition(abs(captionFrame.minX - draftFrame.minX) < 1,
+                     "The separate live status and input text must share their leading rail")
+    }
+    checkStatusOutsideComposer()
+    let citedContext = "整轮只有一个执行中的过程头。\n工具与思考留在过程内，最终回答在外。"
+    connection.drafts["design-0"] = "原有草稿"
+    model.quoteSelection(citedContext)
+    for _ in 0..<40 where draft.citationFrames.isEmpty { try await Task.sleep(for: .milliseconds(25)) }
+    let citedDraft = connection.drafts["design-0"]!
+    precondition(DraftPaste.references(in: citedDraft).map(\.kind) == [.cite])
+    precondition(draft.draftString == citedDraft && draft.citationFrames.count == 1 && !draft.string.contains("@cite"),
+                 "The production quote action mounts an inline citation in the selected composer")
+    precondition(connection.pastes.expand(citedDraft).text == "原有草稿\n\n\(DraftPaste.quote(citedContext))\n\n",
+                 "Citing preserves the existing draft and the full prompt's quote formatting")
+    let otherContext = ConversationActionContext(hostID: host.id, kind: .codex, sessionID: "design-1")
+    model.handleConversationAction(.init(context: otherContext, action: .quote("另一个会话的上下文")))
+    precondition(connection.drafts["design-0"] == citedDraft &&
+                 connection.pastes.expand(connection.drafts["design-1"]!).text == "> 另一个会话的上下文\n\n",
+                 "A message quote stays with its originating session")
+    let kimi = model.agentConnections(for: host.id)!.kimi
+    let kimiContext = ConversationActionContext(hostID: host.id, kind: .kimi, sessionID: "kimi-cite-fixture")
+    model.handleConversationAction(.init(context: kimiContext, action: .quote("Kimi 上下文")))
+    precondition(kimi.pastes.expand(kimi.drafts["kimi-cite-fixture"]!).text == "> Kimi 上下文\n\n" &&
+                 connection.drafts["design-0"] == citedDraft,
+                 "Kimi citations use the owning Kimi store without changing the native draft")
+    connection.drafts["design-0"] = ""; connection.drafts["design-1"] = nil
+    kimi.drafts["kimi-cite-fixture"] = nil
+    for _ in 0..<40 where !draft.draftString.isEmpty { try await Task.sleep(for: .milliseconds(25)) }
+    precondition(draft.draftString.isEmpty)
+    checkStatusOutsideComposer()
+    print("PASS: production context citation chip, exact prompt expansion and native/Kimi session ownership")
     let reply = descendants(window.contentView!).compactMap { $0 as? ReplyTextView }.first { $0.string.contains("初步发现") }!
     func splitController(_ view: NSView) -> WorkbenchSplitController? {
         var responder: NSResponder? = view
@@ -398,6 +435,17 @@ import WorkbenchCore
     precondition(window.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua,
                  "The appearance setting must reach the native window and every floating host")
     try await capture("native-dark")
+    if ProcessInfo.processInfo.environment["PERCH_DESIGN_CAPTURES"] != nil {
+        UserDefaults.standard.set(AppAppearance.light.rawValue, forKey: AppAppearance.defaultsKey)
+        model.quoteSelection(citedContext)
+        for _ in 0..<40 where draft.citationFrames.isEmpty { try await Task.sleep(for: .milliseconds(25)) }
+        try await capture("native-cite-light")
+        UserDefaults.standard.set(AppAppearance.dark.rawValue, forKey: AppAppearance.defaultsKey)
+        try await Task.sleep(for: .milliseconds(200))
+        try await capture("native-cite-dark")
+        connection.drafts["design-0"] = ""
+        for _ in 0..<40 where !draft.draftString.isEmpty { try await Task.sleep(for: .milliseconds(25)) }
+    }
     UserDefaults.standard.set(AppAppearance.light.rawValue, forKey: AppAppearance.defaultsKey)
     try await Task.sleep(for: .milliseconds(200))
     precondition(window.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .aqua)

@@ -39,6 +39,7 @@ struct MessageComposer: View {
     /// Long plain-text pastes hand their content here; a returned token is
     /// inserted instead of the full text.
     var onLongPaste: ((String) -> String?)? = nil
+    var citations: [ComposerCitation] = []
     var onEditSelection: ((String, NSRange) -> Void)? = nil
     var selectionAfterReplacement: NSRange? = nil
     var minimumHeight: CGFloat = 52
@@ -47,7 +48,7 @@ struct MessageComposer: View {
     var body: some View {
         ComposerEditor(text: $text, height: $height, placeholder: placeholder,
                        accessibilityLabel: accessibilityLabel, canSend: canSend,
-                       onSend: onSend, onFiles: onFiles, onError: onError, onKey: onKey, onQueue: onQueue, onLongPaste: onLongPaste, fileReference: fileReference, onEditSelection: onEditSelection, selectionAfterReplacement: selectionAfterReplacement, minimumHeight: minimumHeight)
+                       onSend: onSend, onFiles: onFiles, onError: onError, onKey: onKey, onQueue: onQueue, onLongPaste: onLongPaste, fileReference: fileReference, citations: citations, onEditSelection: onEditSelection, selectionAfterReplacement: selectionAfterReplacement, minimumHeight: minimumHeight)
             .frame(height: max(minimumHeight, height))
     }
 }
@@ -66,6 +67,7 @@ struct ComposerEditor: NSViewRepresentable {
     var onQueue: (() -> Void)? = nil
     var onLongPaste: ((String) -> String?)? = nil
     var fileReference: ((URL) -> String?)? = nil
+    var citations: [ComposerCitation] = []
 
     var onEditSelection: ((String, NSRange) -> Void)? = nil
     var selectionAfterReplacement: NSRange? = nil
@@ -80,7 +82,8 @@ struct ComposerEditor: NSViewRepresentable {
         scroll.autohidesScrollers = true
         scroll.borderType = .noBorder
         let editor = DraftTextView(frame: .zero)
-        editor.isRichText = false
+        editor.isRichText = true
+        editor.importsGraphics = false
         editor.allowsUndo = true
         editor.isAutomaticQuoteSubstitutionEnabled = false
         editor.isAutomaticDashSubstitutionEnabled = false
@@ -97,6 +100,7 @@ struct ComposerEditor: NSViewRepresentable {
         editor.textContainer?.containerSize = NSSize(width: 0, height: CGFloat.greatestFiniteMagnitude)
         editor.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         editor.delegate = context.coordinator
+        editor.citations = citations
         editor.syncDraft(text)
         editor.placeholder = placeholder
         editor.setAccessibilityLabel(accessibilityLabel)
@@ -134,6 +138,7 @@ struct ComposerEditor: NSViewRepresentable {
         editor.onQueue = onQueue
         editor.onLongPaste = onLongPaste
         editor.fileReference = fileReference
+        editor.citations = citations
         editor.syncDraft(text, selection: selectionAfterReplacement)
         coordinator.measure()
     }
@@ -154,7 +159,7 @@ struct ComposerEditor: NSViewRepresentable {
             guard let editor else { return }
             // Only committed input enters SwiftUI's draft. The marked range stays
             // entirely inside NSTextView until the input method finishes it.
-            if !editor.hasMarkedText(), parent.text != editor.string { parent.text = editor.string }
+            if !editor.hasMarkedText(), parent.text != editor.draftString { parent.text = editor.draftString }
             editor.needsDisplay = true
             publishSelection()
             measure()
@@ -162,7 +167,7 @@ struct ComposerEditor: NSViewRepresentable {
         func textViewDidChangeSelection(_ notification: Notification) { publishSelection() }
         private func publishSelection() {
             guard let editor, !editor.hasMarkedText(), let callback = parent.onEditSelection else { return }
-            let text = editor.string, range = editor.selectedRange()
+            let text = editor.draftString, range = editor.draftSelection
             DispatchQueue.main.async { callback(text, range) }
         }
         func measure() {
@@ -203,19 +208,33 @@ final class DraftTextView: NSTextView {
     /// instead of an attachment (local projects); nil keeps everything as
     /// attachments (remote hosts, where a local path is meaningless).
     var fileReference: ((URL) -> String?)?
+    var citations: [ComposerCitation] = []
 
     func syncDraft(_ value: String, selection: NSRange? = nil) {
-        guard !hasMarkedText(), string != value else { return }
-        string = value
+        guard !hasMarkedText() else { return }
+        refreshCitationLabels()
+        guard draftString != value else { return }
+        textStorage?.setAttributedString(renderDraft(value))
+        typingAttributes = [.font: font ?? NSFont.systemFont(ofSize: WorkbenchTheme.Reading.bodySize), .foregroundColor: NSColor.labelColor]
+        updateCitationWidths()
         // Programmatic replacements are a completed send, quote, or completion.
         // Resume typing after the replacement; undo must not revive a sent draft.
-        setSelectedRange(selection ?? NSRange(location: (value as NSString).length, length: 0))
+        setSelectedRange(displaySelection(selection ?? NSRange(location: (value as NSString).length, length: 0)))
         undoManager?.removeAllActions()
         needsDisplay = true
     }
     override func setFrameSize(_ newSize: NSSize) {
         super.setFrameSize(newSize)
+        updateCitationWidths()
         onLayout?()
+    }
+    override func mouseDown(with event: NSEvent) {
+        if activateCitation(at: convert(event.locationInWindow, from: nil)) { return }
+        super.mouseDown(with: event)
+    }
+    override func resetCursorRects() {
+        super.resetCursorRects()
+        if isEditable { for (_, frame) in citationFrames { addCursorRect(frame, cursor: .pointingHand) } }
     }
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
@@ -290,8 +309,13 @@ final class DraftTextView: NSTextView {
     // AppKit validates Paste before dispatching it. Plain-text editors must
     // advertise attachment types as well as implement how to read them.
     override var readablePasteboardTypes: [NSPasteboard.PasteboardType] {
-        guard isEditable, onFiles != nil else { return super.readablePasteboardTypes }
-        return [.fileURL, .png, .tiff] + super.readablePasteboardTypes
+        guard isEditable, onFiles != nil else { return [.string] }
+        return [.fileURL, .png, .tiff, .string]
+    }
+    override var writablePasteboardTypes: [NSPasteboard.PasteboardType] { [.string] }
+    override func writeSelection(to board: NSPasteboard, type: NSPasteboard.PasteboardType) -> Bool {
+        if type == .string { return board.setString(citationSelectionText(), forType: .string) }
+        return super.writeSelection(to: board, type: type)
     }
     override func readSelection(from board: NSPasteboard, type: NSPasteboard.PasteboardType) -> Bool {
         guard isEditable else { return false }

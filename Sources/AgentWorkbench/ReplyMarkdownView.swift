@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import Observation
+import QuartzCore
 import WorkbenchCore
 
 /// The reading scale. Kimi, OMP, Qoder and the other native agents share it with
@@ -179,7 +180,14 @@ enum DocumentTypography {
     }
 }
 private struct ReplyToneKey: EnvironmentKey { static let defaultValue = ReplyTone.body }
+private struct StreamingReduceMotionKey: EnvironmentKey { static let defaultValue: Bool? = nil }
 extension EnvironmentValues {
+    /// Stream fixtures can pin motion without changing the reader's system
+    /// accessibility preference. Ordinary views leave this unset.
+    var streamingReduceMotionOverride: Bool? {
+        get { self[StreamingReduceMotionKey.self] }
+        set { self[StreamingReduceMotionKey.self] = newValue }
+    }
     /// `.quiet` sets `ReplyText` (and list markers) at `ReplyStyle.quietSize` on
     /// `quietLineHeight` in `quietInk`. SwiftUI rows only: native rows never admit
     /// quiet content. Set with `.environment(\.replyTone, .quiet)`.
@@ -261,6 +269,137 @@ enum ReplyMarkdownPreparation: Equatable {
     }
 }
 
+/// Each live text surface owns its display prefix. Timed writes are observed by
+/// that surface alone; the authoritative transcript and drafts stay unchanged.
+@MainActor @Observable final class StreamingReplyState {
+    private(set) var text: String
+    @ObservationIgnored private var reveal: StreamingTextReveal
+    @ObservationIgnored private var lastFrame: TimeInterval = 0
+    @ObservationIgnored private weak var frameOwner: NSView?
+    @ObservationIgnored private var requestFrame: (() -> Void)?
+    var hasBacklog: Bool { reveal.hasBacklog }
+
+    init(_ source: String) { text = source; reveal = StreamingTextReveal(source) }
+
+    func update(_ source: String, smoothing: Bool, receivedAt: TimeInterval? = nil) {
+        let wasPending = reveal.hasBacklog
+        if reveal.update(source, smoothing: smoothing) { text = reveal.text }
+        if !wasPending && reveal.hasBacklog { lastFrame = receivedAt ?? CACurrentMediaTime() }
+        requestFrame?()
+    }
+    @discardableResult func advance() -> Bool {
+        let now = CACurrentMediaTime()
+        let changed = reveal.advance(elapsed: now - lastFrame)
+        lastFrame = now
+        if changed { text = reveal.text }
+        return changed
+    }
+    func flush() { if reveal.flush() { text = reveal.text }; requestFrame?() }
+    func bindFrames(to owner: NSView, request: @escaping () -> Void) {
+        frameOwner = owner; requestFrame = request
+    }
+    func unbindFrames(from owner: NSView) {
+        guard frameOwner === owner else { return }
+        frameOwner = nil; requestFrame = nil
+    }
+}
+
+/// The native equivalent of PI's requestAnimationFrame: one persistent display
+/// clock, capped at 60 Hz, which new source snapshots cannot postpone.
+@MainActor final class ReplyFrameClock {
+    @MainActor private final class Target: NSObject {
+        weak var clock: ReplyFrameClock?
+        @objc func tick(_ link: CADisplayLink) { clock?.tick(link) }
+    }
+    private let target = Target()
+    private var link: CADisplayLink?
+    private weak var screen: NSScreen?
+    private var lastTick: CFTimeInterval = 0
+    private let frame: () -> Bool
+
+    init(frame: @escaping () -> Bool) { self.frame = frame; target.clock = self }
+    func start(screen requested: NSScreen?) {
+        guard let screen = requested ?? NSScreen.main ?? NSScreen.screens.first else { return }
+        guard link == nil || self.screen !== screen else { return }
+        stop()
+        let link = screen.displayLink(target: target, selector: #selector(Target.tick(_:)))
+        link.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
+        self.screen = screen; self.link = link
+        lastTick = CACurrentMediaTime()
+        link.add(to: .main, forMode: .common)
+    }
+    private func tick(_ link: CADisplayLink) {
+        let now = CACurrentMediaTime()
+        // A little timestamp jitter must not halve a nominal 60 Hz display.
+        guard now - lastTick >= StreamingTextReveal.frameInterval - 0.0005 else { return }
+        lastTick = now
+        if !frame() { stop() }
+    }
+    func stop() { link?.invalidate(); link = nil; screen = nil; lastTick = 0 }
+    deinit { link?.invalidate() }
+}
+
+private final class SmoothReplyFrameView: NSView {
+    weak var state: StreamingReplyState?
+    private lazy var clock = ReplyFrameClock { [weak self] in self?.step() ?? false }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); refresh() }
+    func bind(_ state: StreamingReplyState) {
+        if self.state !== state { self.state?.unbindFrames(from: self) }
+        self.state = state
+        state.bindFrames(to: self) { [weak self] in self?.refresh() }
+        refresh()
+    }
+    private var visible: Bool {
+        window?.isVisible == true && window?.isMiniaturized == false
+            && !isHiddenOrHasHiddenAncestor && !visibleRect.isEmpty
+    }
+    func refresh() {
+        guard state?.hasBacklog == true else { clock.stop(); return }
+        clock.start(screen: window?.screen)
+    }
+    private func step() -> Bool {
+        guard let state else { return false }
+        guard visible else { state.flush(); return false }
+        state.advance()
+        return state.hasBacklog
+    }
+    func stop() { clock.stop(); state?.unbindFrames(from: self) }
+}
+private struct SmoothReplyFrameAnchor: NSViewRepresentable {
+    let state: StreamingReplyState
+    func makeNSView(context: Context) -> SmoothReplyFrameView { SmoothReplyFrameView() }
+    func updateNSView(_ view: SmoothReplyFrameView, context: Context) { view.bind(state) }
+    static func dismantleNSView(_ view: SmoothReplyFrameView, coordinator: ()) { view.stop() }
+}
+
+/// Hosted Markdown and expanded thoughts use the same release as native prose.
+/// The native anchor owns its display clock; input changes only replace the
+/// target, and dismantling the surface stops the clock.
+struct SmoothReplyText<Content: View>: View {
+    let source: String
+    let streaming: Bool
+    let content: (String) -> Content
+    @State private var state: StreamingReplyState
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @Environment(\.conversationReduceMotion) private var conversationReduceMotion
+    @Environment(\.streamingReduceMotionOverride) private var motionOverride
+    private struct Input: Equatable { let source: String; let smoothing: Bool }
+
+    init(source: String, streaming: Bool, @ViewBuilder content: @escaping (String) -> Content) {
+        self.source = source; self.streaming = streaming; self.content = content
+        _state = State(initialValue: StreamingReplyState(source))
+    }
+    var body: some View {
+        let reduced = motionOverride ?? (systemReduceMotion || conversationReduceMotion)
+        let input = Input(source: source, smoothing: streaming && !reduced)
+        content(input.smoothing && source.utf16.starts(with: state.text.utf16) ? state.text : source)
+            .background(SmoothReplyFrameAnchor(state: state).allowsHitTesting(false))
+            .onChange(of: input, initial: true) { _, next in state.update(next.source, smoothing: next.smoothing) }
+            .onDisappear { state.flush() }
+    }
+}
+
 struct KimiMarkdown: View {
     let text: String
     var sessionID: String? = nil
@@ -270,6 +409,34 @@ struct KimiMarkdown: View {
     var body: some View {
         ReplyContent(text: text, sessionID: sessionID, messageID: messageID, preparation: preparation,
                      coalescesParagraphs: coalescesParagraphs).equatable()
+    }
+}
+
+/// Mixed-content hosted replies use the same parsed-block release as native
+/// rows. Keep the raw source for copying while only the visible blocks change.
+struct SmoothReplyMarkdown: View {
+    let source: String
+    let streaming: Bool
+    let sessionID: String?
+    let messageID: String?
+    let preparation: ReplyMarkdownPreparation?
+
+    private var blocks: [ReplyBlock] {
+        if case .reuse(let session, let message, let expected, let blocks)? = preparation,
+           session == sessionID, message == messageID, expected == source { return blocks }
+        return ReplyDocument.parse(source)
+    }
+    var body: some View {
+        if streaming && source.utf16.count <= StreamingTextReveal.maximumLength {
+            let snapshot = ReplyStreamSnapshot(blocks: blocks)
+            SmoothReplyText(source: snapshot.text, streaming: true) { visible in
+                ReplyBlocks(blocks: snapshot.prefix(utf16Length: visible.utf16.count))
+                    .foregroundStyle(ReplyStyle.ink)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        } else {
+            KimiMarkdown(text: source, sessionID: sessionID, messageID: messageID, preparation: preparation)
+        }
     }
 }
 
@@ -822,8 +989,11 @@ struct SelectableReplyText: NSViewRepresentable {
     /// Gutter-style rows opt out of selection.
     var selectable = true
     var codeLanguage: String?
-    init(attributed: NSAttributedString, preservesSelectionOnAppend: Bool = false, selectable: Bool = true, codeLanguage: String? = nil) {
+    var usesViewportLayout = false
+    init(attributed: NSAttributedString, preservesSelectionOnAppend: Bool = false, selectable: Bool = true,
+         codeLanguage: String? = nil, usesViewportLayout: Bool = false) {
         self.codeLanguage = codeLanguage
+        self.usesViewportLayout = usesViewportLayout
         self.attributed = attributed
         self.preservesSelectionOnAppend = preservesSelectionOnAppend
         self.selectable = selectable
@@ -868,8 +1038,8 @@ struct SelectableReplyText: NSViewRepresentable {
         if recycled.count < 64 { recycled.append(view) }
     }
     func makeCoordinator() -> Coordinator { Coordinator() }
-    func makeNSView(context: Context) -> ReplyTextView { Self.acquire(delegate: context.coordinator) }
-    static func acquire(delegate: NSTextViewDelegate) -> ReplyTextView {
+    func makeNSView(context: Context) -> ReplyTextView { Self.acquire(delegate: context.coordinator, usesViewportLayout: usesViewportLayout) }
+    static func acquire(delegate: NSTextViewDelegate, usesViewportLayout: Bool = false) -> ReplyTextView {
         #if TRANSCRIPT_CHECKS
         let start = CACurrentMediaTime()
         defer { NavigationRenderMetrics.record("text_create", since: start) }
@@ -877,7 +1047,9 @@ struct SelectableReplyText: NSViewRepresentable {
         // The enclosing conversation owns viewport layout; each short paragraph
         // needs selection and drawing, not another TextKit 2 viewport controller.
         let view: ReplyTextView
-        if let index = Self.recycled.firstIndex(where: { $0.superview == nil && $0.window == nil }) {
+        if let index = Self.recycled.firstIndex(where: {
+            $0.superview == nil && $0.window == nil && ($0.textLayoutManager != nil) == usesViewportLayout
+        }) {
             view = Self.recycled.remove(at: index)
             #if TRANSCRIPT_CHECKS
             precondition(view.string.isEmpty && view.delegate == nil && view.selectedRange().length == 0,
@@ -885,7 +1057,7 @@ struct SelectableReplyText: NSViewRepresentable {
             NavigationRenderMetrics.record("text_reuse", since: CACurrentMediaTime())
             #endif
         } else {
-            view = ReplyTextView(usingTextLayoutManager: false)
+            view = ReplyTextView(usingTextLayoutManager: usesViewportLayout)
         }
         view.isEditable = false
         view.delegate = delegate
@@ -1314,12 +1486,31 @@ final class ReplyTextView: NSTextView {
         super.draw(dirtyRect)
     }
     private func paintChips() {
-        guard let storage = textStorage, let manager = layoutManager, let container = textContainer else { return }
+        guard let storage = textStorage else { return }
         var runs: [(color: NSColor, range: NSRange)] = []
         storage.enumerateAttribute(.replyChip, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
             if let color = value as? NSColor, range.length > 0 { runs.append((color, range)) }
         }
         guard !runs.isEmpty else { return }
+        // Asking a TextKit 2 view for layoutManager silently converts it to
+        // TextKit 1 and restores synchronous layout of the entire tall thought.
+        if let layout = textLayoutManager, let content = layout.textContentManager {
+            for run in runs {
+                guard let start = content.location(content.documentRange.location, offsetBy: run.range.location),
+                      let end = content.location(start, offsetBy: run.range.length),
+                      let range = NSTextRange(location: start, end: end),
+                      let font = storage.attribute(.font, at: run.range.location, effectiveRange: nil) as? NSFont else { continue }
+                layout.enumerateTextSegments(in: range, type: .standard, options: [.rangeNotRequired]) { _, segment, baseline, _ in
+                    let rect = CGRect(x: segment.minX + self.textContainerOrigin.x,
+                                      y: baseline - font.ascender + self.textContainerOrigin.y,
+                                      width: segment.width, height: font.ascender - font.descender)
+                    self.paintChip(rect, color: run.color)
+                    return true
+                }
+            }
+            return
+        }
+        guard let manager = layoutManager, let container = textContainer else { return }
         if ProcessInfo.processInfo.environment["CHIP_TRACE"] != nil {
             let snippet = storage.string.count > 30 ? String(storage.string.prefix(30)) : storage.string
             print("CHIP-PAINT view=\(Unmanaged.passUnretained(self).toOpaque()) runs=\(runs.count) bounds=\(NSStringFromRect(bounds)) text=«\(snippet)»")
@@ -1353,22 +1544,21 @@ final class ReplyTextView: NSTextView {
                                   width: right - left, height: runFont.ascender - runFont.descender)
                 rect.origin.x += self.textContainerInset.width
                 rect.origin.y += self.textContainerInset.height
-                rect = rect.insetBy(dx: -4, dy: -2.5)
-                // Crisp hairline at any backing scale: a fractional 0.5 pt stroke
-                // reads as a double edge on Retina.
-                rect = self.backingAlignedRect(rect, options: .alignAllEdgesNearest)
                 if ProcessInfo.processInfo.environment["CHIP_DEBUG"] != nil {
                     print("CHIP-DRAW range=\(run.range) rect=\(rect) lineGlyphs=\(lineGlyphs) segment=\(segment)")
                 }
-                let radius = min(7, rect.height / 2)
-                let path = NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
-                path.fill()
-                // DSH's hairline chip border (4% ink), now feasible self-drawn.
-                NSColor.separatorColor.withAlphaComponent(0.35).setStroke()
-                path.lineWidth = 0.5
-                path.stroke()
+                self.paintChip(rect, color: run.color)
             }
         }
+    }
+    private func paintChip(_ glyphBounds: CGRect, color: NSColor) {
+        let rect = backingAlignedRect(glyphBounds.insetBy(dx: -4, dy: -2.5), options: .alignAllEdgesNearest)
+        (ProcessInfo.processInfo.environment["CHIP_RED"] != nil ? NSColor.red : color).setFill()
+        let radius = min(7, rect.height / 2)
+        let path = NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
+        path.fill()
+        NSColor.separatorColor.withAlphaComponent(0.35).setStroke()
+        path.lineWidth = 0.5; path.stroke()
     }
     var isConversationBodyText = false
     /// Extra context-menu items (message-level actions) supplied by the row.
@@ -1468,7 +1658,9 @@ final class ReplyTextView: NSTextView {
         guard let storage = textStorage, !storage.isEqual(to: value) else { return }
         let appending = value.string.hasPrefix(storage.string)
         let retainedSelection = (preservingSelectionOnAppend || replacingAttributes) && appending ? selectedRange() : nil
-        if appending && !replacingAttributes {
+        let unchangedPrefix = appending && !replacingAttributes
+            && storage.isEqual(to: value.attributedSubstring(from: NSRange(location: 0, length: storage.length)))
+        if unchangedPrefix {
             // Streaming prefix growth appends only the delta so TextKit layout
             // invalidates the tail, not the whole paragraph.
             storage.append(value.attributedSubstring(from: NSRange(location: storage.length, length: value.length - storage.length)))
@@ -1501,10 +1693,24 @@ final class ReplyTextView: NSTextView {
             NavigationRenderMetrics.record(width >= 1_000_000 ? "text_measure_unwrapped" : "text_measure_wrapped", since: start)
         }
         #endif
-        // Measure independently from NSTextView's drawing container: Grid probes
-        // multiple widths, and those probes must never reflow the displayed text.
-        let used = storage.boundingRect(with: NSSize(width: width, height: .greatestFiniteMagnitude),
+        // Plain prose and ideal/minimum probes stay independent of the drawing
+        // container. Wrapped thoughts use their actual TextKit 2 glyph layout.
+        let used: CGRect
+        if let layout = textLayoutManager, let content = layout.textContentManager,
+           let container = textContainer, proposed != nil, width >= 32, width < 1_000_000 {
+            // A thought's final wrapped proposal must match the text system's
+            // real glyph layout, including its paragraph rendering attributes.
+            // Ideal/minimum probes keep the independent boundingRect path.
+            if container.size.width != width {
+                container.size = CGSize(width: width, height: 10_000_000)
+                layout.invalidateLayout(for: content.documentRange)
+            }
+            layout.ensureLayout(for: content.documentRange)
+            used = layout.usageBoundsForTextContainer
+        } else {
+            used = storage.boundingRect(with: NSSize(width: width, height: .greatestFiniteMagnitude),
                                         options: [.usesLineFragmentOrigin, .usesFontLeading])
+        }
         let size = CGSize(width: min(width, ceil(used.width)), height: ceil(used.height))
         if measurements.count == 8 { measurements.removeFirst() }
         measurements.append((width, size))
