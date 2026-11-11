@@ -1539,20 +1539,23 @@ class ACPSessionAdapter:
         self.session = session
         self.pending = {}; self.next_id = 0; self.pending_prompt = None
         self.blocks = {}; self.permission_options = {}
-        self.live_id = None; self.stream_seq = 0; self.tools = {}; self.syncing = False
+        self.live_id = None; self.stream_seq = 0; self.tools = {}; self.syncing = False; self.pending_config_syncs = 0
 
     def reset(self):
         self.pending = {}; self.next_id = 0; self.pending_prompt = None
         self.blocks = {}; self.permission_options = {}
-        self.live_id = None; self.stream_seq = 0; self.tools = {}; self.syncing = False
+        self.live_id = None; self.stream_seq = 0; self.tools = {}; self.syncing = False; self.pending_config_syncs = 0
     def request(self, method, params, kind):
         self.next_id += 1
         request_id = self.next_id
         self.pending[request_id] = kind
+        if kind == 'set_config': self.pending_config_syncs += 1
         self.session.send({'jsonrpc':'2.0','id':request_id,'method':method,'params':params})
         return request_id
     def notify(self, method, params):
         self.session.send({'jsonrpc':'2.0','method':method,'params':params})
+    def can_flush_prompt(self):
+        return self.session.ready.is_set() and not self.syncing and self.pending_config_syncs == 0
     def flush_prompt(self):
         # session/prompt settles only when the whole turn does, so its response — not
         # a separate event — is the turn's terminal signal.
@@ -1652,7 +1655,9 @@ class ACPSessionAdapter:
                     if option.get('id') == 'mode': option['currentValue'] = s['permissionMode']
                 return
         self.syncing = False
-        self.flush_prompt()
+        self.session.ready.set()
+        if self.pending_config_syncs == 0:
+            self.flush_prompt()
     def resolve_tool_name(self, update, previous=None):
         title = update.get('title')
         raw_input = update.get('rawInput')
@@ -2218,7 +2223,7 @@ class Session:
         if s['provider'] in ACP_PROVIDERS:
             self.acp_adapter.pending_prompt=(request_id,text,stored)
             try:
-                if self.ready.is_set(): self.acp_adapter.flush_prompt()
+                if self.acp_adapter.can_flush_prompt(): self.acp_adapter.flush_prompt()
             except Exception as e:
                 s['busy']=False; s['error']=str(e); self.finish('unknown')
             self.touch(True)
@@ -2590,14 +2595,16 @@ class Session:
                 if result.get('sessionId'): s['resume'] = result['sessionId']
                 self.acp_adapter.syncing = True
                 self.acp_adapter.apply_options(result.get('configOptions') or [], preserve_desired=True)
-                self.ready.set()
                 self.acp_adapter.sync_config()
             durable=True
         elif provider in ACP_PROVIDERS and t == 'acp_response' and e['kind'] == 'set_config':
             label = ACP_LABELS.get(provider, provider)
+            self.acp_adapter.pending_config_syncs = max(0, self.acp_adapter.pending_config_syncs - 1)
             if e.get('error'):
                 self.acp_adapter.syncing = False
                 s['error']='%s 设置被拒绝：%s' % (label, str(e['error'].get('message','未知错误')))
+                if self.acp_adapter.pending_prompt: self.acp_adapter.fail_prompt(s['error'])
+                self.ready.set()
             else:
                 updated = (e.get('result') or {}).get('configOptions')
                 if updated: self.acp_adapter.apply_options(updated, preserve_desired=self.acp_adapter.syncing)

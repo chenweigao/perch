@@ -3346,5 +3346,38 @@ class KimiAcpProtocolTests(unittest.TestCase):
         with patch.dict(broker.os.environ, {'PERCH_LOCAL_KIMI':'/opt/b/kimi'}, clear=False):
             self.assertFalse(broker.serves_current_code(health))
 
+    def test_prompt_arriving_during_config_sync_waits_for_mode_and_thinking(self):
+        s = self.make_session(model='aone/qwen3.8-max', thinking='low', mode='plan')
+        # Session opens first (launched on create), then the client's prompt arrives
+        # while the model-setting request is still awaiting its acknowledgement.
+        s.event({'type':'acp_response','kind':'session_open','result':{'sessionId':'session_race','configOptions':broker.copy.deepcopy(self.OPTIONS)},'error':None})
+        self.assertFalse(s.ready.is_set())
+        self.assertEqual([f['method'] for f in self.sent], ['session/set_config_option'])
+        receipt = s.prompt({'requestId':'race-1','text':'plan this refactor'})
+        self.assertEqual(receipt['status'], 'submitting')
+        self.assertEqual([f for f in self.sent if f['method'] == 'session/prompt'], [])
+        updated = broker.copy.deepcopy(self.OPTIONS)
+        updated[0]['currentValue'] = 'aone/qwen3.8-max'
+        s.event({'type':'acp_response','kind':'set_config','result':{'configOptions':updated},'error':None})
+        self.assertEqual([f for f in self.sent if f['method'] == 'session/prompt'], [])
+        updated[1]['currentValue'] = 'low'
+        s.event({'type':'acp_response','kind':'set_config','result':{'configOptions':updated},'error':None})
+        self.assertEqual(self.sent[-1]['method'], 'session/set_mode')
+        self.assertEqual(self.sent[-1]['params'], {'sessionId':'session_race','modeId':'plan'})
+        self.assertEqual([f for f in self.sent if f['method'] == 'session/prompt'], [])
+        s.event({'type':'acp_response','kind':'set_config','result':{},'error':None})
+        self.assertTrue(s.ready.is_set())
+        self.assertEqual(self.sent[-1]['method'], 'session/prompt')
+        self.assertEqual(s.state['requests']['race-1']['status'], 'submitted')
+
+    def test_rejected_config_sync_fails_parked_prompt(self):
+        s = self.make_session(mode='plan')
+        s.event({'type':'acp_response','kind':'session_open','result':{'sessionId':'session_reject','configOptions':broker.copy.deepcopy(self.OPTIONS)},'error':None})
+        s.prompt({'requestId':'reject-1','text':'do not execute in default mode'})
+        s.event({'type':'acp_response','kind':'set_config','result':None,'error':{'message':'mode rejected'}})
+        self.assertFalse(s.state['busy'])
+        self.assertEqual(s.state['requests']['reject-1']['status'], 'failed')
+        self.assertEqual([f for f in self.sent if f['method'] == 'session/prompt'], [])
+
 
 if __name__=='__main__': unittest.main()
