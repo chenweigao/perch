@@ -4,9 +4,9 @@ public struct ConversationSearchHit: Identifiable, Equatable, Sendable {
     public let entryID: String
     public let occurrence: Int
     public let excerpt: String
-    /// Routes a tool hit to its record page inside a long stage.
+    /// Routes a tool hit to its record inside a continuous stage.
     public let toolID: String?
-    /// Selection counts only this record; preceding pages may not be mounted.
+    /// Selection counts only this record, independently of earlier stage records.
     public let toolOccurrence: Int?
     public init(entryID: String, occurrence: Int, excerpt: String, toolID: String? = nil, toolOccurrence: Int? = nil) {
         self.entryID = entryID; self.occurrence = occurrence; self.excerpt = excerpt; self.toolID = toolID

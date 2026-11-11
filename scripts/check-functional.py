@@ -89,6 +89,7 @@ def main():
               "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
               "dirty": bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT)), "checks": []}
     env = dict(os.environ)
+    env.pop("PERCH_CADENCE_ALLOW_BASELINE_FAILURE", None)
     # A developer's optional live SSH target must never turn these into online checks.
     env.pop("WORKBENCH_LIVE_HOST", None)
     env.pop("WORKBENCH_GIT_WRITE_HOST", None)

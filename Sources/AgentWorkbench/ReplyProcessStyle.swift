@@ -1,4 +1,5 @@
 import SwiftUI
+import WorkbenchCore
 
 extension ReplyStyle {
     /// Process rows: thoughts, tools, activity groups, progress notes, runtime
@@ -31,12 +32,38 @@ extension ReplyStyle {
     }
 }
 
-/// PI's activity-marker: a 4 pt dot pulsing beside the live status label.
+/// A tool's compact outcome stays visible beside its label. User preference:
+/// yellow for live work and green for a recorded completed result.
+struct ProcessStatusDot: View {
+    let status: VisibleTool.Status
+    @State private var pulsing = false
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @Environment(\.conversationReduceMotion) private var conversationReduceMotion
+    private var active: Bool { status == .running }
+    private var color: Color {
+        switch status {
+        case .running, .awaitingApproval: return Color(nsColor: .systemYellow)
+        case .succeeded, .returned: return Color(nsColor: .systemGreen)
+        case .failed: return Color(nsColor: .systemRed)
+        case .missingResult, .disconnected: return WorkbenchTheme.quiet
+        }
+    }
+    var body: some View {
+        Circle().fill(color).frame(width: 6, height: 6)
+            .opacity(active && pulsing ? 0.55 : 1)
+            .animation(active && !(systemReduceMotion || conversationReduceMotion)
+                       ? .easeInOut(duration: 0.55).repeatForever(autoreverses: true) : nil, value: pulsing)
+            .onAppear { pulsing = true }
+            .accessibilityHidden(true)
+    }
+}
+
+/// PI's activity-marker geometry, using the requested yellow live color.
 struct ProcessLivePulse: View {
     @State private var pulsing = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
-        Circle().fill(WorkbenchTheme.quiet).frame(width: 4, height: 4)
+        Circle().fill(Color(nsColor: .systemYellow)).frame(width: 4, height: 4)
             .opacity(pulsing ? 1 : 0.35)
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.5).repeatForever(autoreverses: true),
                        value: pulsing)

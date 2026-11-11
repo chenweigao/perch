@@ -100,6 +100,19 @@ func checkWorkflow() throws {
     let secondPaste = try pasteStore.save("第二段")
     precondition(pasteStore.expand("\(DraftPaste.token(id: pasteID))|\(DraftPaste.token(id: secondPaste))").text == "\(longPaste)|第二段")
     precondition(DraftPaste.references(in: pasteDraft).map(\.id) == [pasteID])
+    let quote = DraftPaste.quote("会话片段 👩🏽‍💻\n\n第二行 `code` 不丢失")
+    let quoteID = try pasteStore.save(quote)
+    let quoteToken = DraftPaste.token(id: quoteID, kind: .cite)
+    let mixedDraft = "中文前缀 👩🏽‍💻 \(quoteToken) 与 \(DraftPaste.token(id: secondPaste)) 后续问题"
+    let restoredStore = DraftPasteStore(directory: directory.appendingPathComponent("pastes"))
+    let restoredDraft = try JSONDecoder().decode(SavedDrafts.self, from: JSONEncoder().encode(SavedDrafts(text: ["cite": mixedDraft]))).text["cite"]!
+    precondition(restoredStore.expand(restoredDraft).text == "中文前缀 👩🏽‍💻 \(quote) 与 第二段 后续问题")
+    precondition(restoredStore.expand(restoredDraft).missing.isEmpty, "Citation contents survive draft and store restart")
+    let quoteReference = DraftPaste.references(in: mixedDraft).first!
+    precondition(quoteReference.kind == .cite && (mixedDraft as NSString).substring(with: quoteReference.range) == quoteToken,
+                 "Citation ranges use UTF-16 even after emoji and Chinese text")
+    precondition(restoredStore.expand(DraftPaste.token(id: "00000000", kind: .cite)).missing == ["00000000"],
+                 "Missing citation content is reported before a prompt can be sent")
 
     let reference = ConversationFileReference(text: "src/foo.swift:42:7")!
     precondition(reference.path == "src/foo.swift" && reference.line == 42)

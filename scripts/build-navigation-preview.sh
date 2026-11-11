@@ -26,6 +26,7 @@ app_files=(
     Sources/AgentWorkbench/WorkbenchGlass.swift
 
     Sources/AgentWorkbench/MessageComposer.swift
+    Sources/AgentWorkbench/ComposerCitation.swift
     Sources/AgentWorkbench/AttachmentImageDecoder.swift
 )
 includes=( -I "$bin_dir/Modules" -I .build/checkouts/swift-markdown/Sources/CAtomic/include

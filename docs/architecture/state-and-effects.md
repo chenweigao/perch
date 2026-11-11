@@ -431,6 +431,21 @@ alone do not establish a performance improvement.
 
 ## Native completed assistant rich blocks
 
+Live assistant rows retain the latest incoming source and prepare one
+`ReplyStreamSnapshot` on a display frame. Raw append updates do not invalidate
+unchanged visible text or its measured height. A persistent native display link
+projects parsed blocks at at most 60 Hz; incoming source changes cannot restart
+or postpone that clock. It does not parse a new Markdown prefix on every frame.
+The release speed follows PI's fixed `max(60, backlog / 0.5)` horizon, without a
+shrinking deadline or periodic flush. Native and hosted renderers retain
+the authoritative source for copy/actions, and flush on completion or replacement.
+Expanded thoughts use TextKit 2 inside the full conversation row, without an inner
+scroll viewport; chip drawing must not request `layoutManager`, which would
+silently convert that view back to synchronous TextKit 1 layout.
+Wrapped thought measurements use their live TextKit 2 layout. Core Text bounds
+can disagree with that layout for mixed paragraph styles and leave an empty tail
+when the conversation follows the estimated bottom.
+
 The native assistant row also admits headings, code cards, rules, paragraph-only
 quotes and paragraph/list items (nested lists to depth four). Tables, attachments
 and deeper nesting keep the SwiftUI renderer. `NativeAssistantContent.prepare`
