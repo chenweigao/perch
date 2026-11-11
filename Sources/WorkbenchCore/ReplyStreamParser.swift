@@ -13,6 +13,9 @@ public struct ReplyStreamParser {
     private var tail: String.Index
     private var tailBlockCount: Int
     private var documentWideSyntax: Bool
+    /// Prefix blocks unchanged by the latest append. A replacement invalidates
+    /// the whole prefix; an unchanged update keeps every block stable.
+    public private(set) var stableBlockCount: Int
 
     public init(documentLinks: Bool = false) {
         self.documentLinks = documentLinks
@@ -21,10 +24,14 @@ public struct ReplyStreamParser {
         tail = source.startIndex
         tailBlockCount = 0
         documentWideSyntax = false
+        stableBlockCount = 0
     }
 
     public mutating func update(_ next: String) -> [ReplyBlock] {
-        if next.utf8.count == source.utf8.count && next == source { return blocks }
+        if next.utf8.count == source.utf8.count && next == source {
+            stableBlockCount = blocks.count
+            return blocks
+        }
         // Indices of `source` stay valid in `next` once the prefix is verified.
         guard !documentWideSyntax, next.utf8.count > source.utf8.count, next.hasPrefix(source) else {
             return fullParse(next)
@@ -36,6 +43,7 @@ public struct ReplyStreamParser {
         blocks.append(contentsOf: parsed.blocks)
         tailBlockCount = parsed.tailBlockCount
         if let line = parsed.tailLine { tail = Self.index(ofLine: line, in: next, from: tail) }
+        stableBlockCount = max(0, blocks.count - tailBlockCount)
         source = next
         return blocks
     }
@@ -46,6 +54,7 @@ public struct ReplyStreamParser {
         tailBlockCount = parsed.tailBlockCount
         tail = parsed.tailLine.map { Self.index(ofLine: $0, in: next, from: next.startIndex) } ?? next.startIndex
         documentWideSyntax = Self.documentWideSyntax(in: next[...])
+        stableBlockCount = 0
         source = next
         return blocks
     }
