@@ -652,7 +652,7 @@ import WorkbenchCore
             }
             preconditionFailure("Sidebar session row must expose a native hover target: \(identifiers)")
         }
-        let screenHeight = window.screen?.frame.height ?? NSScreen.screens.first?.frame.height ?? 1080
+        let screenHeight = NSScreen.screens.first?.frame.height ?? 1080
         let quartzRowPoint = CGPoint(x: rowPoint.x, y: screenHeight - rowPoint.y)
         precondition(visible.contains(quartzRowPoint),
                      "Hover target must be inside the display's visible frame \(visible), got \(quartzRowPoint)")
