@@ -583,14 +583,10 @@ import WorkbenchCore
         NSApp.activate(ignoringOtherApps: true)
         var rowPoint: CGPoint?
         let sidebarMaxX = split.floatingSidebarView!.convert(split.floatingSidebarView!.bounds, to: nil).maxX
-        for element in taskPanelElements(window) {
+        for element in taskPanelElements(window) where element.identifier == "sidebar.row" {
             let node = element.node
-            func attribute(_ name: String) -> Any? {
-                let selector = NSSelectorFromString(name)
-                return node.responds(to: selector) ? node.perform(selector)?.takeUnretainedValue() : nil
-            }
-            guard attribute("accessibilityLabel") as? String == first.title,
-                  let frame = (attribute("accessibilityFrame") as? NSValue)?.rectValue,
+            guard node.responds(to: NSSelectorFromString("accessibilityFrame")),
+                  let frame = (node.value(forKey: "accessibilityFrame") as? NSValue)?.rectValue,
                   frame.minX < sidebarMaxX, frame.height >= 20, frame.height <= 40 else { continue }
             rowPoint = CGPoint(x: frame.midX, y: frame.midY)
             break
