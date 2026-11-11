@@ -137,7 +137,7 @@ def model_catalog():
             if out.returncode!=0: raise ValueError('读取 omp 模型列表失败：'+(out.stderr or '').strip()[:200])
             payload=json.loads(out.stdout)
             items=payload['models'] if isinstance(payload,dict) else payload
-            MODELS=[{k:m[k] for k in ('id','provider','name','contextWindow','thinking') if k in m} for m in items]
+            MODELS=[{k:m[k] for k in ('id','provider','name','contextWindow','thinking','defaultThinking','reasoning','input') if k in m} for m in items]
         return MODELS
 
 def qoder_public_model(entry):
@@ -589,6 +589,13 @@ def codex_selection(model, thinking=None, catalog=None):
     if thinking and thinking not in entry.get('thinking',[]): raise ValueError('当前 Codex 模型不支持该思考强度')
     return entry, thinking or entry.get('defaultThinking')
 
+def codex_turn_error(message):
+    # Codex fails the whole turn when the thread no longer fits the model window.
+    # The thread still answers thread/compact, so the error names that way out.
+    if isinstance(message, str) and 'out of room in the model' in message:
+        return message+'\n可以发送 /compact 压缩上下文后继续；若压缩仍失败，请新建会话。'
+    return message
+
 def catalog_entries(value, agent):
     # OMP emits {"models": [...]}; the other adapters provide normalized lists.
     if isinstance(value, dict):
@@ -809,6 +816,7 @@ class CodexSessionAdapter:
         self.attached = False
         self.parts = {}; self.outputs = {}; self.interactions = {}
         self.child_parts = {}; self.pending = []; self.backfills = {}
+        self.compact_command = None; self.compact_turn = None
 
     def open_params(self):
         params={'cwd':self.session.state['cwd']} | codex_permission_params(self.session.state['permissionMode'])
@@ -855,6 +863,23 @@ class CodexSessionAdapter:
         self.apply_thread(result); self.attached=True; self.session.persist()
         if old_path != self.session.path and old_path.exists(): old_path.unlink()
         return native_id
+    def compact(self, command_id):
+        # thread/compact/start only acknowledges; the compaction then runs as its
+        # own turn, whose contextCompaction item (or the deprecated
+        # thread/compacted notification) settles the pending command.
+        self.compact_command=command_id; self.compact_turn=None
+        try: self.ensure(True).request('thread/compact/start',{'threadId':self.session.state.get('resume')})
+        except Exception:
+            self.compact_command=None
+            raise
+    def settle_compact(self, status, error=None):
+        # The compaction turn tag stays until its turn/completed, which still
+        # needs it to keep the bookkeeping turn out of the review queue.
+        command_id=self.compact_command
+        if command_id is None: return
+        self.compact_command=None
+        if self.session.command_id==command_id: self.session.command_id=None
+        self.session.state['commandResult']={'id':command_id,'status':status,'error':error}
     def apply_thread(self, result):
         s=self.session.state; thread=result.get('thread') or {}
         if thread.get('id') and s.get('resume') and thread['id']!=s['resume']:
@@ -1091,12 +1116,20 @@ class CodexSessionAdapter:
                 if name and name!=self.session.state.get('title'):
                     self.session.state['title']=name; self.session.touch(True)
                 return
+            if method=='thread/compacted':
+                # Deprecated completion signal; current versions send a
+                # contextCompaction item instead, which settles the command there.
+                if self.compact_command is not None and params.get('turnId'): self.compact_turn=params['turnId']
+                self.settle_compact('completed'); self.session.touch(True); return
             if method=='turn/started':
                 turn=params.get('turn') or {}; turn_id=turn.get('id')
                 if turn_id: self.session.state['turnId']=turn_id
+                if self.compact_command is not None and self.compact_turn is None: self.compact_turn=turn_id
                 self.session.state['busy']=True; self.session.state['error']=None; self.session.state['updated']=time.time(); self.session.finish('running'); self.session.touch(True); return
             if method=='turn/completed':
                 turn=params.get('turn') or {}; status=turn.get('status'); error=turn.get('error') or {}
+                compact_turn=self.compact_turn is not None and self.compact_turn==turn.get('id')
+                if compact_turn: self.compact_turn=None
                 # Children run their own turns, so their pending requests stay; an
                 # async question is not turn-bound either and waits for its reply.
                 self.session.state['busy']=False; self.session.state['updated']=time.time()
@@ -1104,16 +1137,24 @@ class CodexSessionAdapter:
                 self.interactions={k:v for k,v in self.interactions.items() if v.get('thread') or v.get('method')=='asyncUserInput'}
                 self.session.subagents.guard(self.session.subagents.flush)
                 if status=='interrupted': self.session.state['cancelled']=True; self.session.state['stopAcknowledged']=True
-                elif status=='failed': self.session.state['error']=error.get('message') if isinstance(error,dict) else str(error)
-                elif not self.session.state.get('cancelled') and not self.session.state.get('error'): self.session.state['completed']+=1
+                elif status=='failed': self.session.state['error']=codex_turn_error(error.get('message') if isinstance(error,dict) else str(error))
+                elif not compact_turn and not self.session.state.get('cancelled') and not self.session.state.get('error'): self.session.state['completed']+=1
+                if compact_turn:
+                    # The compaction turn is bookkeeping, not a result to review;
+                    # it settles the command and never bumps the completed count.
+                    self.settle_compact('completed' if status=='completed' else 'failed',
+                                        None if status=='completed' else self.session.state.get('error') or '压缩已停止')
                 self.session.finish('stopped' if status=='interrupted' else 'failed' if status=='failed' else 'completed')
                 for receipt in self.session.state.get('requests',{}).values():
                     if receipt.get('mode')=='steer' and receipt.get('turnId')==turn.get('id') and receipt['status'] in ('submitted','accepted'):
                         receipt.update(status='unknown',error='本轮已结束，尚未观察到引导消息进入上下文')
                 self.session.touch(True); return
             if method in ('item/started','item/completed'):
-                if method == 'item/started' and (params.get('item') or {}).get('type') == 'contextCompaction':
-                    self.session.state['context'] = None
+                if (params.get('item') or {}).get('type') == 'contextCompaction':
+                    if method=='item/started':
+                        self.session.state['context'] = None
+                        if self.compact_command is not None and params.get('turnId'): self.compact_turn=params['turnId']
+                    else: self.settle_compact('completed')
                 key='completedAtMs' if method=='item/completed' else 'startedAtMs'
                 # The turn only places the children an item names in the roster.
                 self.item(params.get('item') or {},method=='item/completed',params.get(key),
@@ -1983,6 +2024,10 @@ class Session:
         if isinstance(previous,str):
             state['commandResult']={'id':'restored-command','status':'completed' if previous=='已完成' else 'unknown',
                                     'error':None if previous=='已完成' else '此前命令结果：'+previous}
+        if provider == 'codex' and not state.get('commands'):
+            # Codex has no available_commands event; the bridge runs /compact
+            # itself, so the session declares it for the composer palette.
+            state['commands']=[{'name':'compact','description':'压缩上下文，腾出模型上下文窗口'}]
     def reset_history_index(self):
         # Epoch changes when history is replaced or the bridge restarts. Never
         # apply positions from a different history, even if revisions coincide.
@@ -2790,18 +2835,20 @@ class Handler(BaseHTTPRequestHandler):
                                     s.send({'id':'state','type':'get_state'})
                                 s.state['thinking']=level; s.touch(True)
                         elif action=='command':
-                            if s.state['provider']!='omp': raise ValueError('当前 Agent 不支持命令')
+                            if s.state['provider'] not in ('omp','codex'): raise ValueError('当前 Agent 不支持命令')
                             if s.state['busy']: raise ValueError('请先停止或完成当前任务')
                             name=body.get('name','')
-                            # The runtime has no generic command verb: probing
+                            # The omp runtime has no generic command verb: probing
                             # execute_command/run_command/slash_command all returned
                             # "Unknown command". Only compact has its own RPC.
                             if name!='compact': raise ValueError('暂不支持在 Perch 中执行 /'+(name or '?')+'，请在终端使用')
                             if body.get('arguments'): raise ValueError('当前版本不支持 /compact 参数')
-                            if not s.process or s.process.poll() is not None: raise ValueError('会话未在运行，请先发送一条消息')
+                            if s.state['provider']=='omp' and (not s.process or s.process.poll() is not None): raise ValueError('会话未在运行，请先发送一条消息')
                             if s.command_id: raise ValueError('上一条命令仍在执行')
                             s.command_id=str(uuid.uuid4()); s.state['commandResult']={'id':s.command_id,'status':'running'}
-                            try: s.send({'id':s.command_id,'type':'compact'})
+                            try:
+                                if s.state['provider']=='codex': s.codex_adapter.compact(s.command_id)
+                                else: s.send({'id':s.command_id,'type':'compact'})
                             except Exception as e:
                                 s.state['commandResult'].update(status='failed',error=str(e)); s.command_id=None
                                 s.touch(True); raise
