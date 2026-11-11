@@ -256,11 +256,6 @@ private struct NativeComposerView: View {
                         ) { mode in
                             connection.setPermission(mode, for: s.id)
                         }
-                        ComposerTemplatesMenu(draft: connection.drafts[s.id] ?? "") { template in
-                            let existing = connection.drafts[s.id] ?? ""
-                            connection.drafts[s.id] = existing.isEmpty ? template : existing + "\n\n" + template
-                            NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil)
-                        }
                         ContextMeter(budget: s.provider == .codex && s.context?.reportedAt == nil ? nil : s.budget,
                                      reportedAt: s.context?.reportedAt, isStale: !connection.online)
                     }.foregroundStyle(.secondary)

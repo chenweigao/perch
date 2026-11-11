@@ -89,6 +89,7 @@ struct SessionRowChrome<Indicator: View>: View {
                 .frame(maxWidth: .infinity, minHeight: SidebarMetrics.rowHeight, maxHeight: SidebarMetrics.rowHeight, alignment: .leading)
                 .contentShape(Rectangle())
         }.buttonStyle(.plain).disabled(!canOpen)
+            .help(Text(verbatim: tooltip))
             .accessibilityLabel(title)
             .accessibilityValue(([offline ? L("离线 · 状态未同步") : nil, hostName, directory, detail,
                                   updatedAt > 0 ? SessionTime.label(since: updatedAt, waiting: false) : nil].compactMap { $0 } + groups).joined(separator: " · "))
@@ -131,6 +132,7 @@ struct SessionRowChrome<Indicator: View>: View {
                 }.padding(.leading, SidebarMetrics.rowInset).padding(.trailing, 4)
                     .frame(height: rowHeight).contentShape(Rectangle())
             }.buttonStyle(.plain).disabled(!canOpen)
+                .help(Text(verbatim: tooltip))
                 .accessibilityLabel(title)
                 .accessibilityValue(([hostName, directory, detail, updatedAt > 0 ? SessionTime.label(since: updatedAt, waiting: false) : nil].compactMap { $0 } + groups).joined(separator: " · "))
             ZStack(alignment: .trailing) {
@@ -146,13 +148,16 @@ struct SessionRowChrome<Indicator: View>: View {
         }.padding(.trailing, 5).frame(height: rowHeight)
     }
 
-    /// Full title, with host, directory and Agent/status detail on demand.
-    private var tooltip: String {
+    /// Full title, host, directory, Agent/status detail and timestamp on demand.
+    var tooltip: String {
         var lines = [title]
         let location = [hostName, directory].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
         if !location.isEmpty { lines.append(location) }
         let meta = ([detail].compactMap { $0 }.filter { !$0.isEmpty } + groups).joined(separator: " · ")
         if !meta.isEmpty { lines.append(meta) }
+        if updatedAt > 0 {
+            lines.append(SessionTime.label(since: updatedAt, waiting: false))
+        }
         return lines.joined(separator: "\n")
     }
 

@@ -507,8 +507,7 @@ final class WorkbenchDetailController: NSViewController {
     }
 
     /// One clipped sheet contains the reader and its full-height auxiliary lane,
-    /// separated by a subtle vertical hairline so the right column reads as
-    /// a distinct but integrated part of the main container.
+    /// separated only by whitespace (Qoder-style), never a hard vertical rule.
     func installInspector(_ inspector: NSView) -> (NSView, NSLayoutConstraint) {
         _ = view
         let sheet = card!
@@ -521,10 +520,6 @@ final class WorkbenchDetailController: NSViewController {
         }
         inspector.translatesAutoresizingMaskIntoConstraints = false
         panel.addSubview(inspector)
-        let divider = NSBox()
-        divider.boxType = .separator
-        divider.translatesAutoresizingMaskIntoConstraints = false
-        panel.addSubview(divider)
         let width = panel.widthAnchor.constraint(equalToConstant: WorkspaceLayoutMetrics.inspectorDefaultWidth)
         NSLayoutConstraint.activate([
             panel.topAnchor.constraint(equalTo: sheet.topAnchor),
@@ -533,12 +528,8 @@ final class WorkbenchDetailController: NSViewController {
             width,
             inspector.topAnchor.constraint(equalTo: panel.topAnchor, constant: WorkbenchChrome.headerHeight),
             inspector.bottomAnchor.constraint(equalTo: panel.bottomAnchor),
-            inspector.leadingAnchor.constraint(equalTo: panel.leadingAnchor, constant: 1),
+            inspector.leadingAnchor.constraint(equalTo: panel.leadingAnchor),
             inspector.trailingAnchor.constraint(equalTo: panel.trailingAnchor),
-            divider.leadingAnchor.constraint(equalTo: panel.leadingAnchor),
-            divider.topAnchor.constraint(equalTo: panel.topAnchor, constant: WorkbenchChrome.headerHeight),
-            divider.bottomAnchor.constraint(equalTo: panel.bottomAnchor),
-            divider.widthAnchor.constraint(equalToConstant: 1),
         ])
         return (panel, width)
     }
@@ -985,12 +976,14 @@ final class WorkbenchSplitController: NSSplitViewController {
         // container's unified header vertical center.
         if let window = view.window, let card = detailCardView {
             let cardFrame = card.convert(card.bounds, to: nil)
+            // Window coordinates: card top is measured from the window's bottom edge.
+            // The native toolbar (traffic lights + sidebar toggle) must share the
+            // same vertical center as the unified header inside the main container.
             let headerCenterY = cardFrame.minY + WorkbenchChrome.headerHeight / 2
-            let targetMidY = window.frame.height - headerCenterY
             if let container = window.standardWindowButton(.closeButton)?.superview?.superview {
                 var frame = container.frame
-                let delta = targetMidY - frame.midY
-                if abs(delta) > 1 {
+                let delta = headerCenterY - frame.midY
+                if abs(delta) > 0.5 {
                     frame.origin.y += delta
                     container.frame = frame
                 }

@@ -206,12 +206,6 @@ private struct KimiComposerView: View {
                                          disabled: connection.sending) { mode in
                             connection.setPermission(mode, for: sessionID)
                         }
-                        ComposerTemplatesMenu(draft: connection.drafts[sessionID] ?? "") { template in
-                            onInput()
-                            let existing = connection.drafts[sessionID] ?? ""
-                            connection.drafts[sessionID] = existing.isEmpty ? template : existing + "\n\n" + template
-                            NotificationCenter.default.post(name: .init("PerchFocusComposer"), object: nil)
-                        }
                         ContextMeter(budget: connection.conversation?.snapshot.session.budget,
                                      isStale: !connection.online || !connection.snapshotReady,
                                      autoCompactHost: connection.host.id, autoCompactSession: sessionID)
