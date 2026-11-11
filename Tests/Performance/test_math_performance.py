@@ -228,6 +228,21 @@ class MathPerformanceTests(unittest.TestCase):
             record["measurements"]["initial_layout_display_ms"] = 15
         MODULE.compare(runs)
 
+    def test_typeset_early_round_warmup_spike_passes(self):
+        runs = fixtures()
+        runs["baseline"]["parse-30"] = copy.deepcopy(runs["candidate"]["parse-30"])
+        for record in runs["baseline"]["parse-30"]:
+            record["source_input_sha256"] = "a" * 64
+        for record in runs["baseline"]["typeset-32"]:
+            record["measurements"]["cold_attachment"]["total_ms"] = 50
+            record["measurements"]["first_light_dark_draw"]["total_ms"] = 50
+        for record in runs["candidate"]["typeset-32"][:2]:
+            record["measurements"]["cold_attachment"]["total_ms"] = 70
+            record["measurements"]["first_light_dark_draw"]["total_ms"] = 70
+        runs["candidate"]["typeset-32"][2]["measurements"]["cold_attachment"]["total_ms"] = 53
+        runs["candidate"]["typeset-32"][2]["measurements"]["first_light_dark_draw"]["total_ms"] = 53
+        MODULE.compare(runs)
+
     def test_nonfinite_samples_fail(self):
         for value in [-1, float("nan"), float("inf")]:
             with self.assertRaises(ValueError):
