@@ -194,7 +194,7 @@ public struct ActivityNarrativeSnapshot: Equatable, Sendable {
                 if marker == "**" { text = text.replacingOccurrences(of: "**", with: "") }
                 break
             }
-            text = text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+            text = text.collapsedWhitespace
             text = text.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines
                 .union(CharacterSet(charactersIn: ":：")))
             guard let limit, text.count > limit else { return text }
