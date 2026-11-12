@@ -56,8 +56,9 @@ jobs:
             .build/checkouts
             .build/artifacts
             Resources/Mermaid/mermaid.min.js
-          key: ${{ runner.os }}-${{ runner.arch }}-xcode-27-deps-${{ hashFiles('Package.resolved', 'patches/**') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-xcode-27-deps-v2-${{ hashFiles('Package.resolved', 'patches/**') }}
           restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-xcode-27-deps-${{ hashFiles('Package.resolved', 'patches/**') }}
             ${{ runner.os }}-${{ runner.arch }}-xcode-27-spm-${{ hashFiles('Package.resolved') }}
       - name: Restore incremental SwiftPM release build
         uses: actions/cache@v4
@@ -72,15 +73,16 @@ jobs:
       - run: python3 scripts/check-functional.py macos --group build --output .local/functional-build
       - name: Package the shared native build
         run: |
+          set -o pipefail
           mkdir -p .local/native-build
           resources=()
           for path in Resources/Highlight/highlight.min.js Resources/Mermaid/mermaid.min.js; do
             if [ -f "$path" ]; then resources+=("$path"); fi
           done
           if command -v zstd >/dev/null 2>&1; then
-            tar --exclude='.build/checkouts/*/.git' -I 'zstd -1 -T0' -cf .local/native-build/build.tar.zst .build build/Perch.app "${resources[@]}"
+            tar -cf - .build build/Perch.app "${resources[@]}" | zstd -1 -T0 -f -q -o .local/native-build/build.tar.zst
           else
-            tar --exclude='.build/checkouts/*/.git' -czf .local/native-build/build.tar.gz .build build/Perch.app "${resources[@]}"
+            tar -czf .local/native-build/build.tar.gz .build build/Perch.app "${resources[@]}"
           fi
       - name: Publish the shared native build
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -119,8 +121,9 @@ jobs:
           path: .local/native-build
       - name: Restore the shared native build
         run: |
+          set -o pipefail
           if [ -f .local/native-build/build.tar.zst ]; then
-            tar -I 'zstd -d -T0' -xf .local/native-build/build.tar.zst
+            zstd -d -T0 -q -c .local/native-build/build.tar.zst | tar -xf -
           else
             tar -xzf .local/native-build/build.tar.gz
           fi
@@ -155,8 +158,9 @@ jobs:
           path: .local/native-build
       - name: Restore the shared native build
         run: |
+          set -o pipefail
           if [ -f .local/native-build/build.tar.zst ]; then
-            tar -I 'zstd -d -T0' -xf .local/native-build/build.tar.zst
+            zstd -d -T0 -q -c .local/native-build/build.tar.zst | tar -xf -
           else
             tar -xzf .local/native-build/build.tar.gz
           fi
@@ -187,8 +191,9 @@ jobs:
           path: |
             .build/checkouts
             .build/artifacts
-          key: ${{ runner.os }}-${{ runner.arch }}-xcode-27-deps-${{ hashFiles('Package.resolved', 'patches/**') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-xcode-27-deps-v2-${{ hashFiles('Package.resolved', 'patches/**') }}
           restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-xcode-27-deps-${{ hashFiles('Package.resolved', 'patches/**') }}
             ${{ runner.os }}-${{ runner.arch }}-xcode-27-spm-${{ hashFiles('Package.resolved') }}
       - name: Restore incremental acceptance build
         uses: actions/cache@v4
@@ -229,8 +234,9 @@ jobs:
           path: .local/native-build
       - name: Restore the shared native build
         run: |
+          set -o pipefail
           if [ -f .local/native-build/build.tar.zst ]; then
-            tar -I 'zstd -d -T0' -xf .local/native-build/build.tar.zst
+            zstd -d -T0 -q -c .local/native-build/build.tar.zst | tar -xf -
           else
             tar -xzf .local/native-build/build.tar.gz
           fi
