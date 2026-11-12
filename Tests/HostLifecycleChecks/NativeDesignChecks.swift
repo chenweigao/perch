@@ -721,39 +721,39 @@ import WorkbenchCore
             for child in value as? [AXUIElement] ?? [] where pressAction(in: child) { return true }
             return false
         }
+        // The ellipsis pops the same native menu as the context menu, after its
+        // action returns. Menu tracking runs its own event loop, which does not
+        // drain Swift tasks, so a common-mode timer reads the open menu's items
+        // and dismisses it.
+        var actionLabels: [String]?
+        let reader = Timer(timeInterval: 0.1, repeats: true) { timer in
+            MainActor.assumeIsolated {
+                guard let menu = SessionActionsMenuAnchor.presentedMenu else { return }
+                actionLabels = menu.items.map(\.title)
+                timer.invalidate()
+                menu.cancelTracking()
+            }
+        }
+        RunLoop.main.add(reader, forMode: .common)
         precondition(pressAction(in: AXUIElementCreateApplication(getpid())),
                      "The ellipsis action must support AXPress")
-        try await Task.sleep(for: .milliseconds(500))
-        guard let menuWindow = visibleWindow(with: "sidebar.actions.menu") else {
-            preconditionFailure("The ellipsis action must open the same session actions as the context menu")
+        for _ in 0..<30 where actionLabels == nil || SessionActionsMenuAnchor.presentedMenu != nil {
+            try await Task.sleep(for: .milliseconds(100))
         }
-        precondition(menuWindow.contentView?.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .aqua,
-                     "Session actions must follow the workspace's light appearance")
-        let actionLabels = taskPanelElements(menuWindow).compactMap { element -> String? in
-            for name in ["accessibilityLabel", "accessibilityValue"] {
-                let selector = NSSelectorFromString(name)
-                if element.node.responds(to: selector),
-                   let text = element.node.perform(selector)?.takeUnretainedValue() as? String {
-                    return text
-                }
-            }
-            return nil
+        reader.invalidate()
+        guard let actionLabels else {
+            preconditionFailure("The ellipsis action must open the same session actions as the context menu")
         }
         let actionsText = actionLabels.joined(separator: "\n")
         for label in ["重命名", "置顶", "移动到项目", "归档会话", "删除会话"] {
             precondition(actionsText.contains(label), "The session actions must include \(label): \(actionLabels)")
         }
-        if let folder = ProcessInfo.processInfo.environment["PERCH_DESIGN_CAPTURES"],
-           let view = menuWindow.contentView,
-           let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
-            view.cacheDisplay(in: view.bounds, to: bitmap)
-            try? bitmap.representation(using: .png, properties: [:])?
-                .write(to: URL(fileURLWithPath: folder).appendingPathComponent("sidebar-actions-menu.png"))
-        }
-        menuWindow.close()
+        precondition((NSApp.appearance?.bestMatch(from: [.aqua, .darkAqua]) ?? .aqua) == .aqua,
+                     "Session actions must follow the workspace's light appearance")
+        precondition(SessionActionsMenuAnchor.presentedMenu == nil, "Dismissing the actions menu must end its tracking")
         let center = card.convert(card.bounds, to: nil)
         moveMouse(to: CGPoint(x: center.midX, y: center.midY))
-        print("PASS: sidebar delayed styled preview, hover ellipsis and native session actions menu")
+        print("PASS: sidebar delayed preview, hover ellipsis and native session actions menu")
     }
 }
 

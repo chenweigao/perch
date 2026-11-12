@@ -644,7 +644,6 @@ private struct SessionSidebarRow: View {
 
 struct SessionActionsMenu: View {
     @UILocalization private var L
-    @Environment(\.sessionActionPresentation) private var presentation
     @Bindable var model: WorkbenchModel
     let item: WorkspaceSession
     private var busy: Bool { model.managing.contains(item.id) }
@@ -666,11 +665,8 @@ struct SessionActionsMenu: View {
             Divider()
             Button("按所属仓库归组") { model.moveSidebarSession(item, to: nil) }
         } label: {
-            Label(L(presentation == .popover ? "移动到项目  ›" : "移动到项目"), systemImage: "folder")
-                .frame(maxWidth: .infinity, minHeight: presentation == .popover ? 28 : nil, alignment: .leading)
-                .padding(.horizontal, presentation == .popover ? 10 : 0)
+            Label(L("移动到项目"), systemImage: "folder")
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         Button { model.groupingSession = item } label: { Label("管理任务组归属…", systemImage: "square.stack.3d.up") }
         Button { model.toggleTaskNotifications(item.id) } label: {
             Label(model.mutedTasks.contains(item.id) ? L("恢复任务通知") : L("静音任务通知"),

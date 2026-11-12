@@ -228,7 +228,7 @@ struct SidebarProjectHeader: View {
 
 /// The main button of a row that draws its own full-width highlight: it reports
 /// the press to the row instead of drawing a background of its own.
-private struct SidebarPressStyle: ButtonStyle {
+struct SidebarPressStyle: ButtonStyle {
     @Binding var pressed: Bool
     func makeBody(configuration: Configuration) -> some View {
         configuration.label.onChange(of: configuration.isPressed) { _, isPressed in pressed = isPressed }
