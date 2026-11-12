@@ -7,7 +7,7 @@ ROOT = pathlib.Path(os.environ.get('AWB_NATIVE_ROOT', '~/.local/share/agent-work
 ROOT.mkdir(parents=True, exist_ok=True, mode=0o700)
 ROOT.chmod(0o700)
 os.umask(0o077)
-SERVICE_VERSION = 13
+SERVICE_VERSION = 14
 # Subagent text and thinking are forwarded into each subagent's own transcript.
 # Probe 2026-10-18 (SDK 0.3.280, CLI 2.1.302): every subagent assistant/user
 # message carried parent_tool_use_id, and no unparented stream delta held
@@ -664,6 +664,20 @@ def normalize(message, identity):
         elif kind == 'tool_result': parts.append({'type':kind,'tool_call_id':p.get('tool_use_id'),'output':p.get('content'),'is_error':p.get('is_error',False)})
         elif kind == 'image': parts.append({'type':'text','text':'[图片]'})
     return {'id':identity,'role':role,'content':parts,'created_at':str(message.get('timestamp',''))}
+
+def coalesce_acp_parts(parts):
+    merged = []
+    for part in parts or []:
+        if not isinstance(part, dict):
+            merged.append(part); continue
+        kind = part.get('type')
+        if kind in ('text', 'thinking') and not part.get('source') and merged:
+            prev = merged[-1]
+            if isinstance(prev, dict) and prev.get('type') == kind and not prev.get('source'):
+                prev[kind] = str(prev.get(kind, '')) + str(part.get(kind, ''))
+                continue
+        merged.append(copy.deepcopy(part))
+    return merged
 
 def is_user_prompt(message):
     # Match KimiMessage.isUserPrompt: injected context must not split a page
@@ -1690,9 +1704,13 @@ class ACPSessionAdapter:
                 if blocks and blocks[-1].get('type') == 'text': blocks[-1]['text'] += delta
                 else: blocks.append({'type':'text','text':delta})
             elif content.get('type') == 'resource_link':
-                blocks.append({'type':'text','text':'[%s](%s)' % (content.get('name') or content.get('uri') or '资源', content.get('uri') or '')})
+                link = '[%s](%s)' % (content.get('name') or content.get('uri') or '资源', content.get('uri') or '')
+                if blocks and blocks[-1].get('type') == 'text': blocks[-1]['text'] += link
+                else: blocks.append({'type':'text','text':link})
             else:
-                blocks.append({'type':'text','text':'[%s 发出了暂不支持的内容类型 %s]' % (label, content.get('type'))})
+                notice = '[%s 发出了暂不支持的内容类型 %s]' % (label, content.get('type'))
+                if blocks and blocks[-1].get('type') == 'text': blocks[-1]['text'] += notice
+                else: blocks.append({'type':'text','text':notice})
             self.session.upsert({'role':'assistant','content':list(blocks),'timestamp':time.time()}, 'dsh:'+message_id)
             return True
         if kind == 'tool_call':
@@ -2113,6 +2131,10 @@ class Session:
         provider = state.get('provider')
         if provider in PERMISSION_MODES:
             state['permissionMode'] = restore_permission_mode(provider, state.get('permissionMode'))
+        if provider in ACP_PROVIDERS:
+            for message in state.get('messages') or []:
+                if isinstance(message, dict) and message.get('role') == 'assistant' and isinstance(message.get('content'), list):
+                    message['content'] = coalesce_acp_parts(message['content'])
         if provider == 'codex':
             state['context'] = None
             if not state.get('codexHome'): state['codexHome'] = codex_home(legacy=True)

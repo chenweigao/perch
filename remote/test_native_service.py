@@ -3379,5 +3379,25 @@ class KimiAcpProtocolTests(unittest.TestCase):
         self.assertEqual(s.state['requests']['reject-1']['status'], 'failed')
         self.assertEqual([f for f in self.sent if f['method'] == 'session/prompt'], [])
 
+    def test_restored_fragmented_acp_session_coalesces_adjacent_chunks(self):
+        s = broker.Session({
+            'id':'kimi-fragmented','provider':'kimi','cwd':folder.name,'title':'Fragmented',
+            'model':'bailian/kimi-k3','busy':False,'archived':False,'updated':0,'revision':0,'completed':1,
+            'messages':[
+                {'id':'u1','role':'user','created_at':'1','content':[{'type':'text','text':'你好'}]},
+                {'id':'dsh:live','role':'assistant','created_at':'2','content':[
+                    {'type':'thinking','thinking':'先'},
+                    {'type':'thinking','thinking':'确认'},
+                    {'type':'text','text':'是的，你现在是在 **Kimi Code '},
+                    {'type':'text','text':'CLI** 里和我交互。'},
+                ]},
+            ],
+            'interactions':[],'error':None,
+        })
+        self.assertEqual(s.state['messages'][1]['content'], [
+            {'type':'thinking','thinking':'先确认'},
+            {'type':'text','text':'是的，你现在是在 **Kimi Code CLI** 里和我交互。'},
+        ])
+
 
 if __name__=='__main__': unittest.main()

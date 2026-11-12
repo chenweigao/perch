@@ -198,6 +198,18 @@ public struct KimiPart: Decodable, Equatable, Sendable {
     public let source: JSONValue?
     public let fileId: String?
     public let name: String?
+
+    func appendingText(_ more: String) -> KimiPart {
+        KimiPart(type: type, text: (text ?? "") + more, thinking: thinking, toolCallId: toolCallId,
+                 toolName: toolName, input: input, output: output, isError: isError,
+                 source: source, fileId: fileId, name: name)
+    }
+
+    func appendingThinking(_ more: String) -> KimiPart {
+        KimiPart(type: type, text: text, thinking: (thinking ?? "") + more, toolCallId: toolCallId,
+                 toolName: toolName, input: input, output: output, isError: isError,
+                 source: source, fileId: fileId, name: name)
+    }
 }
 public struct KimiMessage: Decodable, Identifiable, Equatable, Sendable {
     public let id: String
@@ -215,6 +227,27 @@ public struct KimiMessage: Decodable, Identifiable, Equatable, Sendable {
     /// start or anchor a turn.
     public var isUserPrompt: Bool {
         role == "user" && !isCompactionSummary && !content.allSatisfy { $0.isRuntimeContext || $0.type == "tool_result" }
+    }
+    func coalescingAdjacentAssistantParts() -> KimiMessage {
+        guard role == "assistant", content.count > 1 else { return self }
+        var merged: [KimiPart] = []
+        merged.reserveCapacity(content.count)
+        for part in content {
+            if part.source == nil, !part.isRuntimeContext,
+               let previous = merged.last, previous.source == nil, !previous.isRuntimeContext {
+                if part.type == "text", previous.type == "text" {
+                    merged[merged.count - 1] = previous.appendingText(part.text ?? "")
+                    continue
+                }
+                if part.type == "thinking", previous.type == "thinking" {
+                    merged[merged.count - 1] = previous.appendingThinking(part.thinking ?? "")
+                    continue
+                }
+            }
+            merged.append(part)
+        }
+        return merged.count == content.count ? self : KimiMessage(
+            id: id, role: role, content: merged, createdAt: createdAt, metadata: metadata)
     }
 }
 public struct KimiLiveTool: Decodable, Identifiable, Equatable, Sendable {

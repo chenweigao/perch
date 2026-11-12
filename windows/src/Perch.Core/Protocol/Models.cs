@@ -10,7 +10,7 @@ namespace Perch.Core.Protocol;
 public static class BridgeProtocol
 {
     /// Must equal SERVICE_VERSION in remote/native-agent-service.py.
-    public const int ServiceVersion = 13;
+    public const int ServiceVersion = 14;
 }
 
 public sealed record BridgeHealth(
