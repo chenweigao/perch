@@ -120,14 +120,47 @@ public enum ReplyDocument {
             }
     }
 
+#if canImport(Darwin)
     private static let linkDetector = try! NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
+#else
+    // NSDataDetector is unavailable in Linux Foundation. The detection only
+    // keeps http/https matches, which this reproduces with the RFC 3986
+    // character class after the scheme, plus trailing-punctuation trimming
+    // the data detector also applies.
+    private static let bareURLRegex = try! NSRegularExpression(pattern: "https?://[A-Za-z0-9\\-._~:/?#\\[\\]@!$&'()*+,;=%]+")
+    private static let urlTrailingPunctuation: Set<Character> = [".", ",", ";", ":", "!", "?", "'", "\""]
+#endif
+
+    private static func linkMatches(in text: String) -> [(range: NSRange, url: URL)] {
+        let ns = text as NSString
+        let whole = NSRange(location: 0, length: ns.length)
+#if canImport(Darwin)
+        return linkDetector.matches(in: text, range: whole).compactMap { match in
+            guard let url = match.url, ["http", "https"].contains(url.scheme?.lowercased() ?? "") else { return nil }
+            return (match.range, url)
+        }
+#else
+        return bareURLRegex.matches(in: text, range: whole).compactMap { match in
+            var range = match.range
+            while range.length > 0 {
+                let candidate = ns.substring(with: range)
+                guard let last = candidate.last else { break }
+                if urlTrailingPunctuation.contains(last) { range.length -= 1; continue }
+                if last == ")", candidate.filter({ $0 == ")" }).count > candidate.filter({ $0 == "(" }).count { range.length -= 1; continue }
+                break
+            }
+            guard range.length > 0, let url = URL(string: ns.substring(with: range)),
+                  ["http", "https"].contains(url.scheme?.lowercased() ?? "") else { return nil }
+            return (range, url)
+        }
+#endif
+    }
 
     private static func linkBareURLs(_ runs: [ReplyInline]) -> [ReplyInline] {
         runs.flatMap { run -> [ReplyInline] in
             guard run.link == nil, !run.code else { return [run] }
             let text = run.text as NSString
-            let matches = linkDetector.matches(in: run.text, range: NSRange(location: 0, length: text.length))
-                .filter { ["http", "https"].contains($0.url?.scheme?.lowercased() ?? "") }
+            let matches = linkMatches(in: run.text)
             guard !matches.isEmpty else { return [run] }
             var result: [ReplyInline] = []
             var offset = 0

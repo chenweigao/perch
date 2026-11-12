@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 extension KimiConversation {
     /// Completion identity must not depend on which transcript pages are loaded.

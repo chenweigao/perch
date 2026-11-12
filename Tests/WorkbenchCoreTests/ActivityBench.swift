@@ -1,5 +1,4 @@
 import Foundation
-import QuartzCore
 import WorkbenchCore
 
 /// Synchronous status-bar derivation for an edit-heavy loaded session window.
@@ -47,16 +46,16 @@ func benchConversationActivity() throws {
         var derive: [Double] = [], activity: [Double] = [], running: [Double] = []
         var checksum = 0
         for _ in 0..<15 {
-            let t0 = CACurrentMediaTime()
+            let t0 = benchNow()
             checksum &+= SessionEditStats.derive(from: messages)?.total.additions ?? 0
-            derive.append((CACurrentMediaTime() - t0) * 1000)
-            let t1 = CACurrentMediaTime()
+            derive.append((benchNow() - t0) * 1000)
+            let t1 = benchNow()
             let ids = ToolVisibilityProjection.runningIDs(in: messages, busy: true)
-            running.append((CACurrentMediaTime() - t1) * 1000)
-            let t2 = CACurrentMediaTime()
+            running.append((benchNow() - t1) * 1000)
+            let t2 = benchNow()
             let summary = ConversationActivity(messages: messages, isRunning: true, running: ids, online: true,
                                                isResponding: true)
-            activity.append((CACurrentMediaTime() - t2) * 1000)
+            activity.append((benchNow() - t2) * 1000)
             checksum &+= summary.edits?.total.deletions ?? 0
         }
         print("activity_bench turns=\(turns) messages=\(messages.count) edit_stats_median_ms=\(String(format: "%.3f", median(derive))) running_ids_median_ms=\(String(format: "%.3f", median(running))) activity_init_median_ms=\(String(format: "%.3f", median(activity))) checksum=\(checksum)")
@@ -81,9 +80,9 @@ func benchConversationActivity() throws {
         var activity: [Double] = []
         var active = 0
         for _ in 0..<15 {
-            let t0 = CACurrentMediaTime()
+            let t0 = benchNow()
             active &+= ConversationActivity(messages: messages, isRunning: true, running: ids, online: true).activeTools.count
-            activity.append((CACurrentMediaTime() - t0) * 1000)
+            activity.append((benchNow() - t0) * 1000)
         }
         print("activity_bench single_turn_calls=\(calls) messages=\(messages.count) activity_init_median_ms=\(String(format: "%.3f", median(activity))) active=\(active)")
     }

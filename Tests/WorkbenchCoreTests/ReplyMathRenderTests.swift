@@ -1,3 +1,4 @@
+#if canImport(AppKit)
 import AppKit
 import SwiftMath
 import WorkbenchCore
@@ -42,3 +43,4 @@ func checkMathRendering() {
     precondition(badError != nil, "bad TeX must surface an error")
     print("PASS: math rendering — typeset pixels, size, TeX error surface")
 }
+#endif

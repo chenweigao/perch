@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 /// A bounded, metadata-only request. Conversations and tool output are never sent.
 public struct GroupingInput: Encodable, Equatable {

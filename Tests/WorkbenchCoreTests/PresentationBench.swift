@@ -1,5 +1,4 @@
 import Foundation
-import QuartzCore
 import WorkbenchCore
 
 /// One-off measurement for the large-conversation first-visit projection cost.
@@ -33,16 +32,16 @@ func benchPresentationUpdate() throws {
         var coldRows = 0, appendedRows = 0
         for _ in 0..<5 {
             let model = ConversationPresentationModel(key: "bench-\(count)")
-            let t0 = CACurrentMediaTime()
+            let t0 = benchNow()
             coldRows = model.update(.init(messages: input, language: "zh")).rows.count
-            cold.append((CACurrentMediaTime() - t0) * 1000)
+            cold.append((benchNow() - t0) * 1000)
             var grew = input
             grew.append(try KimiWire.decoder().decode(KimiMessage.self, from: JSONSerialization.data(withJSONObject: [
                 "id": "tail", "role": "assistant", "created_at": "tail",
                 "content": [["type": "text", "text": "流式追加一段。\n\n" + String(repeating: "增量文本。", count: 10)]]] as [String: Any])))
-            let t1 = CACurrentMediaTime()
+            let t1 = benchNow()
             appendedRows = model.update(.init(messages: grew, isRunning: true, language: "zh")).rows.count
-            append.append((CACurrentMediaTime() - t1) * 1000)
+            append.append((benchNow() - t1) * 1000)
         }
         cold.sort(); append.sort()
         let parts = input.reduce(0) { $0 + $1.content.count }
@@ -98,10 +97,10 @@ func benchPresentationTokenUpdates() throws {
         var snapshot = model.update(.init(messages: messages, isRunning: true, language: "zh"))
         var samples: [[String: Any]] = []
         for update in replacements.indices {
-            let replacementStarted = CACurrentMediaTime()
+            let replacementStarted = benchNow()
             var next = messages
             next[next.index(before: next.endIndex)] = replacements[update]
-            let replacementMilliseconds = (CACurrentMediaTime() - replacementStarted) * 1_000
+            let replacementMilliseconds = (benchNow() - replacementStarted) * 1_000
             recorded = nil
             snapshot = model.update(.init(messages: next, isRunning: true, language: "zh"))
             guard let metrics = recorded else { preconditionFailure("Missing presentation metrics") }
@@ -154,19 +153,19 @@ func benchPresentationRealTranscript() throws {
         throw WorkbenchError("WORKBENCH_BENCH_FILE required")
     }
     let data = try Data(contentsOf: URL(fileURLWithPath: path))
-    let decodeStart = CACurrentMediaTime()
+    let decodeStart = benchNow()
     let input = try KimiWire.decoder().decode([KimiMessage].self, from: data)
-    let decodeMS = (CACurrentMediaTime() - decodeStart) * 1000
+    let decodeMS = (benchNow() - decodeStart) * 1000
     var cold: [Double] = [], warm: [Double] = []
     var rows = 0
     for _ in 0..<5 {
         let model = ConversationPresentationModel(key: "real-transcript")
-        let t0 = CACurrentMediaTime()
+        let t0 = benchNow()
         rows = model.update(.init(messages: input, language: "zh")).rows.count
-        cold.append((CACurrentMediaTime() - t0) * 1000)
-        let t1 = CACurrentMediaTime()
+        cold.append((benchNow() - t0) * 1000)
+        let t1 = benchNow()
         _ = model.update(.init(messages: input, language: "zh"))
-        warm.append((CACurrentMediaTime() - t1) * 1000)
+        warm.append((benchNow() - t1) * 1000)
     }
     cold.sort(); warm.sort()
     let payload = input.reduce(0) { $0 + $1.content.reduce(0) { $0 + ($1.text?.utf8.count ?? 0) } }
@@ -209,9 +208,9 @@ func benchPresentationRealStream() throws {
     for i in 0..<10 {
         var tail = current
         tail[tail.count - 1] = tails[i]
-        let t0 = CACurrentMediaTime()
+        let t0 = benchNow()
         _ = model.update(.init(messages: tail, isRunning: true, language: "zh"))
-        samples.append((CACurrentMediaTime() - t0) * 1000)
+        samples.append((benchNow() - t0) * 1000)
         current = tail
     }
     samples.sort()
