@@ -1094,11 +1094,20 @@ struct ConnectionChecks {
         precondition(client.actionError == nil)
         client.select("b")
         await settle { fixture.pendingSnapshots.count == 4 }
-        client.disconnect()
+        precondition(client.snapshot == nil && client.conversation.presentationSnapshot?.id == "a",
+                     "an uncached target must not expose the outgoing snapshot as authoritative")
         fixture.pendingSnapshots[3].0.resume(returning: fixture.pendingSnapshots[3].1)
-        await settle { fixture.returnedSnapshots == 4 }
+        await settle { client.snapshot?.id == "b" }
+        client.select("a")
+        precondition(client.snapshot == nil && client.conversation.presentationSnapshot?.id == "a"
+                     && client.conversation.presentationSnapshot?.revision == 3,
+                     "A-B-A must restore A from the bounded presentation cache before its read returns")
+        await settle { fixture.pendingSnapshots.count == 5 }
+        client.disconnect()
+        fixture.pendingSnapshots[4].0.resume(returning: fixture.pendingSnapshots[4].1)
+        await settle { fixture.returnedSnapshots == 5 }
         precondition(client.snapshot == nil && !client.online)
-        print("PASS: immediate selection reads, A-B-A stale response isolation and disconnect cancellation")
+        print("PASS: immediate selection reads, cached A-B-A presentation, stale response isolation and disconnect cancellation")
     }
 
     @MainActor

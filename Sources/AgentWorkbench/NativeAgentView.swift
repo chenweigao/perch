@@ -24,19 +24,24 @@ struct NativeAgentView: View {
         #endif
         VStack(spacing: 0) {
             if let s = connection.conversation.presentationSnapshot {
-                content(s)
-                    #if PERCH_ACCEPTANCE
-                    .background {
-                        if NativeAcceptanceProbe.shared.checkDetailLifecycle {
-                            NativeDetailProbe(current: isCurrent(s))
+                let target = isTarget(s)
+                let current = isCurrent(s)
+                ZStack {
+                    content(s)
+                        #if PERCH_ACCEPTANCE
+                        .background {
+                            if NativeAcceptanceProbe.shared.checkDetailLifecycle {
+                                NativeDetailProbe(current: current)
+                            }
                         }
-                    }
-                    #endif
-                    .opacity(isCurrent(s) ? 1 : 0)
-                    .disabled(!isCurrent(s))
-                    .allowsHitTesting(isCurrent(s))
-                    .accessibilityHidden(!isCurrent(s))
-                    .overlay { if !isCurrent(s) { selectionPlaceholder } }
+                        #endif
+                        .opacity(target ? 1 : 0)
+                        .disabled(!current)
+                        .allowsHitTesting(current)
+                        .accessibilityHidden(!current)
+                    if target && !current { cachedSelectionStatus(s.id) }
+                    else if !target { selectionPlaceholder }
+                }
             } else { selectionPlaceholder }
             if !connection.online {
                 ConversationNotice(text: connection.error ?? L("正在连接远端服务"), symbol: "wifi.exclamationmark",
@@ -58,8 +63,30 @@ struct NativeAgentView: View {
         let presented = connection.subagents.presented
         return Binding(get: { presented }, set: { connection.subagents.present($0) })
     }
+    private func isTarget(_ snapshot: NativeAgentSnapshot) -> Bool {
+        connection.selectedID == snapshot.id
+    }
     private func isCurrent(_ snapshot: NativeAgentSnapshot) -> Bool {
-        connection.selectedID == snapshot.id && connection.snapshot?.id == snapshot.id
+        isTarget(snapshot) && connection.snapshot?.id == snapshot.id
+    }
+    @ViewBuilder private func cachedSelectionStatus(_ id: String) -> some View {
+        VStack {
+            if let error = connection.actionError {
+                ConversationNotice(text: error, action: ConversationNotice.Action(title: L("重新读取")) {
+                    connection.select(id)
+                })
+            } else {
+                HStack(spacing: 7) {
+                    ProgressView().controlSize(.small)
+                    Text("正在同步最新内容…")
+                }
+                .font(.system(size: WorkbenchTheme.Typography.secondary))
+                .padding(.horizontal, 11).padding(.vertical, 7)
+                .background(.regularMaterial, in: Capsule())
+                .shadow(color: WorkbenchTheme.Elevation.composerShadow, radius: 6, y: 2)
+            }
+            Spacer()
+        }.padding(12)
     }
     @ViewBuilder private var selectionPlaceholder: some View {
         if connection.online && connection.selectedID == nil {
@@ -116,7 +143,7 @@ struct NativeAgentView: View {
                                            running: ToolVisibilityProjection.runningIDs(in: s.messages, busy: s.busy),
                                            isRunning: s.busy, online: connection.online, memoryKey: readingKey,
                                            allowsActivitySummaries: isCurrent(s), followsLatest: follow, historyEpoch: s.history?.epoch,
-                                           isSuspended: !isCurrent(s), foldsProcess: true, waitsForInitialPosition: true,
+                                           isSuspended: !isTarget(s), foldsProcess: true, waitsForInitialPosition: true,
                                            timing: connection.timings.turns[s.id],
                                            planProgress: planProgress)
                         .environment(\.conversationActionContext,
@@ -168,7 +195,7 @@ struct NativeAgentView: View {
             let activeToolID = runningTools.first
             if turn.running {
                 let actions = ConversationActionContext(hostID: connection.host.id, kind: s.provider, sessionID: s.id)
-                let animates = connection.online && s.interactions.isEmpty && !connection.isStopping
+                let animates = connection.online && isCurrent(s) && s.interactions.isEmpty && !connection.isStopping
                 TurnStallMonitor(animates: animates, signature: s.revision, activeToolID: activeToolID) {
                     actions.post(.turnStalled(minutes: $0))
                 }.id(s.id)
@@ -260,7 +287,7 @@ private struct NativeComposerView: View {
                                 pastes: connection.pastes).id(s.id)
                 ComposerToolbarLayout {
                     ComposerAddButton(supportsFiles: supportsAttachments, disabled: connection.sending) { chooseFiles = true }
-                    NativeModelControls(connection: connection, snapshot: s)
+                    NativeModelControls(connection: connection, snapshot: s, active: isCurrent)
                     HStack(spacing: 6) {
                         ComposerEnvironmentMenu(host: connection.host, provider: s.provider.label, directory: s.cwd)
                         PermissionPicker(
@@ -378,6 +405,7 @@ struct NativeModelControls: View {
     @UILocalization private var L
     let connection: NativeAgentConnection
     let snapshot: NativeAgentSnapshot
+    let active: Bool
     private var session: NativeAgentSession? { connection.sessions.first { $0.id == snapshot.id } }
     private var editable: Bool { [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex].contains(snapshot.provider) }
     private var currentModel: String {
@@ -408,7 +436,7 @@ struct NativeModelControls: View {
                             scope: L("下一轮生效"),
                             onSelectModel: { connection.setModel($0, for: snapshot.id) },
                             onSelectThinking: { connection.setThinking($0, for: snapshot.id) })
-            .task(id: snapshot.id) { if editable { await connection.loadModels() } }
+            .task(id: active ? snapshot.id : nil) { if active && editable { await connection.loadModels() } }
     }
 }
 

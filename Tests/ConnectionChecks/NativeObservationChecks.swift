@@ -68,7 +68,45 @@ private final class NativeInvalidationFlag: @unchecked Sendable {
     state.snapshot = try JSONDecoder().decode(NativeAgentSnapshot.self, from: Data(#"{"id":"b","provider":"omp","title":"Fixture","cwd":"/fixture","busy":false,"revision":1,"completed":0,"model":"fixture-model","messages":[],"interactions":[]}"#.utf8))
     state.select("c")
     precondition(state.snapshot == nil && state.presentationSnapshot?.id == "b")
+    state.select("b")
+    precondition(state.snapshot == nil && state.presentationSnapshot?.id == "b",
+                 "returning to a loaded session must restore presentation without exposing readiness")
     state.select(nil)
     precondition(state.presentationSnapshot == nil, "removal must release the retained presentation")
-    print("PASS: native observation isolation and selection/history cancellation, late failure and cleanup ownership")
+
+    func decodedSnapshot(_ id: String, text: String = "") throws -> NativeAgentSnapshot {
+        let messages: [[String: Any]] = text.isEmpty ? [] : [[
+            "id": "message-\(id)", "role": "assistant", "created_at": "",
+            "content": [["type": "text", "text": text]]
+        ]]
+        let value: [String: Any] = [
+            "id": id, "provider": "omp", "title": id, "cwd": "/fixture", "busy": false,
+            "revision": 1, "completed": 0, "model": "fixture-model", "messages": messages,
+            "interactions": []
+        ]
+        return try KimiWire.decoder().decode(NativeAgentSnapshot.self,
+                                              from: JSONSerialization.data(withJSONObject: value))
+    }
+    let bounded = NativeConversationState(cacheCapacity: 2)
+    for id in ["a", "b", "c"] {
+        bounded.select(id)
+        bounded.snapshot = try decodedSnapshot(id)
+    }
+    bounded.select("a")
+    precondition(bounded.presentationSnapshot?.id == "c", "LRU must evict the oldest snapshot")
+    bounded.select("b")
+    precondition(bounded.snapshot == nil && bounded.presentationSnapshot?.id == "b",
+                 "an admitted snapshot must remain available within the LRU bound")
+
+    let payloadBound = NativeConversationState(cacheCapacity: 2, maximumCachedPayloadCost: 512)
+    payloadBound.select("large")
+    payloadBound.snapshot = try decodedSnapshot("large", text: String(repeating: "x", count: 2_000))
+    payloadBound.select("small")
+    payloadBound.snapshot = try decodedSnapshot("small")
+    payloadBound.select("other")
+    precondition(payloadBound.presentationSnapshot?.id == "small")
+    payloadBound.select("large")
+    precondition(payloadBound.presentationSnapshot?.id == "small",
+                 "oversized snapshots must render while active but not enter the navigation cache")
+    print("PASS: native observation isolation, bounded snapshot restoration and selection/history cancellation")
 }

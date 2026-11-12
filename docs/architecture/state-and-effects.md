@@ -78,22 +78,26 @@ recovery design. Neither is introduced by this change.
 
 `NativeConversationState.snapshot` remains the authoritative selected response.
 Selection clears it immediately and existing cancellation/generation checks protect
-its publication. `presentationSnapshot` holds just the last loaded value so the
-detail tree can survive a pending selection. It is not a response cache and must
-never be used for command routing, readiness or connection decisions. Removing the
-selection clears both; a completed read replaces the presentation value.
+its publication. `presentationSnapshot` may restore the selected session from a
+bounded LRU while its fresh read is pending. That cache admits at most eight snapshots,
+each with at most 1,000 messages and 1 MiB of estimated transcript/interaction payload.
+It is presentation-only and must never be used for command routing, readiness or
+connection decisions. Oversized active snapshots render normally but are not retained;
+removing a session evicts its value. A completed read replaces and refreshes the
+presentation value.
 
-`NativeAgentView` hides, disables and removes the retained detail from accessibility
-until the authoritative snapshot matches the selected session. Loading and failure
-UI appear above that same container. The transcript explicitly suspends its AppKit
-document: save the reading position, hide the native subtree, reserve geometry and
-skip content/appearance reconciliation, measurement and navigation. Resuming supplies
-current content and appearance before restoring position. This avoids propagating a
-temporary disabled appearance through all outgoing rows merely to show a spinner.
+`NativeAgentView` distinguishes an outgoing retained value from a cached value for
+the selected target. The outgoing detail remains hidden, disabled and removed from
+accessibility; its AppKit document is suspended so it saves reading position, reserves
+geometry and skips reconciliation, measurement and navigation. A cached target is
+shown immediately with a syncing or retry notice, but remains disabled, inaccessible
+and unable to route actions until the authoritative snapshot matches. Its summary
+and stall effects also remain paused. This restores read continuity without treating
+stale approvals, run state or composer controls as current.
 
 The scroll view and transcript document retain identity across selection, error and
 retry within one connection. The detail root is keyed by connection identity, so
-two hosts with identical raw session IDs cannot share input or renderer state.
+two hosts with identical raw session IDs cannot share input, cache entries or renderer state.
 Displayed-result callbacks capture their originating connection's host. The
 composer, activity bar, pending-message editor and interaction state stay
 keyed by session; composer text input and undo state therefore remain independent.
