@@ -61,6 +61,7 @@ struct ProtocolTests {
         checkSafeLink()
         try checkSessionEditStats()
         try checkEditLineScans()
+        try checkEditToolClassification()
         try checkProjectCommands()
         checkAppVersionCheck()
         try checkWorkflow()

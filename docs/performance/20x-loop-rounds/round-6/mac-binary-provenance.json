@@ -1,0 +1,16 @@
+{
+  "baseline_ref": "0711150394f210bc5c9c2d5495c35a160f9c23b1",
+  "scope": "Mac same-machine release checks at canonical SwiftPM-linked paths; not copied executables, UI or FPS",
+  "toolchain": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0\n",
+  "macos": "27.0.1",
+  "binary_sha256": {
+    "baseline": "4a2ebac690cd30fd4c901705d408fe0347ae1f9c891bedff6314f4c3ffc52442",
+    "candidate": "28138ce33565c18b560ed60e5fc85dc880d8605e61119212962e8e841c467157"
+  },
+  "binary_paths": {
+    "baseline": ".build/round5-candidate/out/Products/Release/WorkbenchChecks",
+    "candidate": ".build/round6-candidate/out/Products/Release/WorkbenchChecks"
+  },
+  "candidate_patch": "diff --git a/Sources/WorkbenchCore/SessionEditStats.swift b/Sources/WorkbenchCore/SessionEditStats.swift\nindex abe3992..b308d49 100644\n--- a/Sources/WorkbenchCore/SessionEditStats.swift\n+++ b/Sources/WorkbenchCore/SessionEditStats.swift\n@@ -66,10 +66,17 @@ public enum SessionEditStats {\n     // Derive from this snapshot only. Tool IDs are not globally unique and\n     // providers can publish revised inputs under the same ID.\n     private static func compute(tool: String, input: JSONValue) -> (stat: SessionEditStat, path: String?)? {\n+        let name = tool.lowercased()\n+        // Unknown/read-only tools never produce a stat. Do not resolve or\n+        // search their paths just to discard them in the payload switch.\n+        switch name {\n+        case \"edit\", \"edit_file\", \"write\", \"write_file\", \"apply_patch\": break\n+        default: return nil\n+        }\n         // Tool-call paths may be absolute; URL-ish values are never files.\n         let path = input[\"file_path\"].string ?? input[\"filePath\"].string ?? input[\"path\"].string\n         if let path, path.contains(\"://\") { return nil }\n-        switch tool.lowercased() {\n+        switch name {\n         case \"edit\", \"edit_file\":\n             guard let stat = lineDiff(old: input[\"old_string\"].string ?? input[\"oldString\"].string,\n                                       new: input[\"new_string\"].string ?? input[\"newString\"].string) else { return nil }\n",
+  "all_binary_hashes_unchanged": true
+}
