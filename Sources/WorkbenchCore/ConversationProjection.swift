@@ -14,26 +14,49 @@ extension String {
         var out: [UInt8] = []
         out.reserveCapacity(bytes.count)
         var pendingSpace = false
+        var lastScalar: UInt32 = 0
         var i = 0
         while i < bytes.count {
             let byte = bytes[i]
             if byte == 0x20 || (0x09...0x0D).contains(byte) {
+                // GB9b: a Prepend scalar absorbs the following space into its
+                // own Character, which is then not whitespace; the pinned set
+                // is verified against the stdlib's own breaking in the checks.
+                if Self.isPrependScalar(lastScalar) { return strict() }
                 while i < bytes.count, bytes[i] == 0x20 || (0x09...0x0D).contains(bytes[i]) { i += 1 }
                 if i < bytes.count, bytes[i] >= 0x80, Self.beginsBindingMark(in: bytes, at: i) { return strict() }
                 if !out.isEmpty { pendingSpace = true }
             } else if byte < 0x80 {
                 if pendingSpace { out.append(0x20); pendingSpace = false }
                 out.append(byte)
+                lastScalar = 0
                 i += 1
             } else {
                 guard let (scalar, length) = Self.utf8Scalar(in: bytes, at: i),
                       !Self.isNonASCIIWhitespace(scalar) else { return strict() }
                 if pendingSpace { out.append(0x20); pendingSpace = false }
                 out.append(contentsOf: bytes[i..<i + length])
+                lastScalar = scalar
                 i += length
             }
         }
         return String(decoding: out, as: UTF8.self)
+    }
+
+    /// Unicode GCB=Prepend, pinned. `checkCollapsedWhitespace` walks every
+    /// scalar and fails if this set ever disagrees with the toolchain's own
+    /// grapheme breaking, so a Unicode data update surfaces as a test
+    /// failure, not a silent divergence. 0 means "previous byte was ASCII".
+    private static func isPrependScalar(_ scalar: UInt32) -> Bool {
+        switch scalar {
+        case 0x0600...0x0605, 0x06DD, 0x070F, 0x0890...0x0891, 0x08E2,
+             0x0D4E, 0x110BD, 0x110CD, 0x111C2, 0x1193F, 0x11941,
+             0x11A3A, 0x11A84...0x11A89, 0x11D46, 0x11F02,
+             0x16D40...0x16D43:
+            return true
+        default:
+            return false
+        }
     }
 
     /// The Unicode White_Space set outside ASCII, exactly.
