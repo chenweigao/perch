@@ -25,13 +25,14 @@ struct SessionRowChrome<Indicator: View>: View {
     @ViewBuilder let indicator: Indicator
     @State private var hovered = false
     @State private var pressed = false
-    @State private var showPreview = false
     @State private var showActionsMenu = false
+    /// This row's claim on the shared preview panel, and the view it anchors to.
+    @State private var previewOwner = UUID()
+    @State private var hoverAnchor = SessionHoverAnchor()
     @State private var previewTask: Task<Void, Never>?
     /// The title's available width, to tell whether the row truncates it.
     @State private var titleWidth: CGFloat = 0
     @Environment(\.locale) private var locale
-    @Environment(\.colorScheme) private var colorScheme
 
     private var trailingWidth: CGFloat { compact ? (running ? 0 : 36) : (hostName == nil ? 0 : 28) }
     private var rowHeight: CGFloat {
@@ -47,9 +48,9 @@ struct SessionRowChrome<Indicator: View>: View {
         }
         .background { SidebarHighlight(selected: selected, hovered: hovered, pressed: pressed) }
         .contentShape(Rectangle())
-        .popover(isPresented: $showPreview, arrowEdge: .trailing) {
-            SessionRowPreview(title: titleTruncated ? title : nil, lines: previewLines)
-                .preferredColorScheme(colorScheme)
+        .onDisappear {
+            previewTask?.cancel()
+            SessionPreviewPanel.shared.hide(owner: previewOwner)
         }
     }
 
@@ -67,18 +68,34 @@ struct SessionRowChrome<Indicator: View>: View {
     private func updateHover(_ inside: Bool) {
         hovered = inside
         previewTask?.cancel()
+        let panel = SessionPreviewPanel.shared
         guard inside else {
-            if showPreview { SessionPreviewTiming.lastDismissed = Date() }
-            showPreview = false
+            panel.release(owner: previewOwner)
             return
         }
         guard !showActionsMenu, titleTruncated || !previewLines.isEmpty else { return }
-        let delay = SessionPreviewTiming.delay
+        // While another row's preview is up, it moves here at once, with no
+        // close-and-reopen; otherwise the first preview waits for a real dwell.
+        let delay = panel.delay
+        if delay == .zero { presentPreview(); return }
         previewTask = Task { @MainActor in
             try? await Task.sleep(for: delay)
-            guard !Task.isCancelled, hovered, !showActionsMenu, !SessionPreviewTiming.scrolling else { return }
-            showPreview = true
+            guard !Task.isCancelled, hovered, !showActionsMenu else { return }
+            presentPreview()
         }
+    }
+
+    private func presentPreview() {
+        let panel = SessionPreviewPanel.shared
+        guard !panel.scrolling, let view = hoverAnchor.view else { return }
+        panel.show(owner: previewOwner,
+                   content: AnyView(SessionRowPreview(title: titleTruncated ? title : nil, lines: previewLines)),
+                   from: view)
+    }
+
+    private func dismissPreview() {
+        previewTask?.cancel()
+        SessionPreviewPanel.shared.hide(owner: previewOwner)
     }
 
     /// Compact single-line rows prioritize the title and essential status;
@@ -90,7 +107,7 @@ struct SessionRowChrome<Indicator: View>: View {
         let actionsShown = actions != nil && (hovered || showActionsMenu)
         return HStack(spacing: 0) {
             Button {
-                showPreview = false
+                dismissPreview()
                 onOpen()
             } label: {
                 Text(title).font(.system(size: SidebarMetrics.titleSize, weight: unread ? .semibold : .regular))
@@ -118,23 +135,17 @@ struct SessionRowChrome<Indicator: View>: View {
                 if let actions {
                     SessionActionsButton(visible: actionsShown, locale: locale, label: L("会话操作"), actions: actions,
                         willOpen: {
-                            previewTask?.cancel()
-                            showPreview = false
+                            dismissPreview()
                             showActionsMenu = true
                         },
                         didClose: { showActionsMenu = false })
                         .frame(width: SidebarMetrics.actionSize, height: SidebarMetrics.actionSize)
-                        .onHover { inside in
-                            if inside {
-                                previewTask?.cancel()
-                                showPreview = false
-                            }
-                        }
+                        .onHover { inside in if inside { dismissPreview() } }
                 }
             }.frame(width: SidebarMetrics.actionSize, height: SidebarMetrics.actionSize)
                 .padding(.trailing, SidebarMetrics.rowTrailingInset)
         }
-        .overlay(SessionHoverTracking(onChange: updateHover))
+        .overlay(SessionHoverTracking(anchor: hoverAnchor, onChange: updateHover))
     }
 
     @ViewBuilder private var statusMark: some View {
@@ -230,20 +241,110 @@ struct SessionRowChrome<Indicator: View>: View {
 
 }
 
-/// Preview timing shared by every row: a first preview waits for a real dwell;
-/// moving on to a neighbor right after one closed swaps at once, as tooltips do.
-/// Nothing opens while the list is scrolling under the pointer.
-@MainActor enum SessionPreviewTiming {
+/// One preview panel for the whole sidebar. Rows claim it; moving to a neighbor
+/// re-targets the visible panel in place (new content and position, no
+/// close-and-reopen), so scanning the list stays smooth. A first preview waits
+/// for a real dwell, and nothing opens while the list is scrolling. The panel is
+/// a non-activating child window that ignores the mouse.
+@MainActor final class SessionPreviewPanel {
+    static let shared = SessionPreviewPanel()
     static let cold: Duration = .milliseconds(900)
-    static let warm: Duration = .milliseconds(120)
+    static let warm: Duration = .milliseconds(60)
+    /// Just after a preview closed, the next row still counts as a continuation.
     static let warmWindow: TimeInterval = 0.8
-    static var lastDismissed: Date?
-    static var scrollingUntil = Date.distantPast
-    static var scrolling: Bool { Date() < scrollingUntil }
-    static var delay: Duration {
-        guard let lastDismissed, Date().timeIntervalSince(lastDismissed) < warmWindow else { return cold }
-        return warm
+    /// Between leaving one row and entering its neighbor, the panel waits this long.
+    static let handoff: TimeInterval = 0.08
+    private(set) var panel: NSPanel?
+    private var host: NSHostingView<AnyView>?
+    private var owner: UUID?
+    private var pendingHide: DispatchWorkItem?
+    private var lastHidden: Date?
+    var scrollingUntil = Date.distantPast
+    var scrolling: Bool { Date() < scrollingUntil }
+
+    private init() {}
+
+    var delay: Duration {
+        if owner != nil, panel?.isVisible == true { return .zero }
+        if let lastHidden, Date().timeIntervalSince(lastHidden) < Self.warmWindow { return Self.warm }
+        return Self.cold
     }
+
+    func show(owner: UUID, content: AnyView, from view: NSView) {
+        guard let parent = view.window else { return }
+        pendingHide?.cancel()
+        pendingHide = nil
+        let (panel, host) = ensurePanel()
+        panel.appearance = parent.effectiveAppearance
+        host.rootView = content
+        let size = host.fittingSize
+        let row = parent.convertToScreen(view.convert(view.bounds, to: nil))
+        let screen = (parent.screen ?? NSScreen.main)?.visibleFrame ?? row.insetBy(dx: -2000, dy: -2000)
+        var origin = NSPoint(x: row.maxX + 8, y: row.midY - size.height / 2)
+        origin.x = min(origin.x, screen.maxX - size.width - 4)
+        origin.y = min(max(origin.y, screen.minY + 4), screen.maxY - size.height - 4)
+        panel.setFrame(NSRect(origin: origin, size: size), display: true)
+        panel.invalidateShadow()
+        self.owner = owner
+        guard !panel.isVisible || panel.parent !== parent else { return }
+        panel.parent?.removeChildWindow(panel)
+        panel.alphaValue = 0
+        parent.addChildWindow(panel, ordered: .above)
+        panel.orderFront(nil)
+        let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = reduceMotion ? 0 : 0.12
+            panel.animator().alphaValue = 1
+        }
+    }
+
+    /// The pointer left the owner's row: hide unless a neighbor claims the panel first.
+    func release(owner: UUID) {
+        guard self.owner == owner else { return }
+        pendingHide?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.hideNow() }
+        pendingHide = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.handoff, execute: work)
+    }
+
+    /// The owner opened, scrolled away or left the list: hide now.
+    func hide(owner: UUID) {
+        guard self.owner == owner else { return }
+        hideNow()
+    }
+
+    private func hideNow() {
+        pendingHide?.cancel()
+        pendingHide = nil
+        owner = nil
+        guard let panel else { return }
+        if panel.isVisible { lastHidden = Date() }
+        panel.parent?.removeChildWindow(panel)
+        panel.orderOut(nil)
+    }
+
+    private func ensurePanel() -> (NSPanel, NSHostingView<AnyView>) {
+        if let panel, let host { return (panel, host) }
+        let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 280, height: 80),
+                            styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: true)
+        panel.isReleasedWhenClosed = false
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.hasShadow = true
+        panel.ignoresMouseEvents = true
+        panel.animationBehavior = .none
+        panel.collectionBehavior = [.transient, .ignoresCycle, .fullScreenAuxiliary]
+        let host = NSHostingView(rootView: AnyView(EmptyView()))
+        panel.contentView = host
+        self.panel = panel
+        self.host = host
+        return (panel, host)
+    }
+}
+
+/// The AppKit view a row's preview anchors to (its hover-tracking overlay).
+@MainActor final class SessionHoverAnchor {
+    weak var view: NSView?
 }
 
 /// Only what the row doesn't already show: the full title when the row truncates
@@ -271,9 +372,13 @@ private struct SessionRowPreview: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        // A fixed width with its natural height, so the popover sizes to it exactly.
+        // A fixed width with its natural height, so the panel sizes to it exactly.
         .frame(width: 280, alignment: .leading)
         .fixedSize(horizontal: false, vertical: true)
+        .background(Color(nsColor: .controlBackgroundColor),
+                    in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card, style: .continuous)
+            .strokeBorder(WorkbenchTheme.Stroke.hairline, lineWidth: 1))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("sidebar.row.preview")
     }
@@ -291,21 +396,27 @@ private struct SessionActionsButton: View {
     let willOpen: () -> Void
     let didClose: () -> Void
     @State private var anchor = SessionActionsMenuAnchor()
+    @State private var pointing = false
+    @State private var menuOpen = false
 
     var body: some View {
         Button {
             let menu = NSHostingMenu(rootView: actions.environment(\.locale, locale))
             willOpen()
-            anchor.present(menu, didClose: didClose)
+            menuOpen = true
+            anchor.present(menu) { menuOpen = false; didClose() }
         } label: {
+            // A bare glyph on the row's own wash; only pointing at it (or its open
+            // menu) adds a faint fill, so it never reads as a second layer.
             Image(systemName: "ellipsis")
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(WorkbenchTheme.quiet)
+                .foregroundStyle(pointing || menuOpen ? WorkbenchTheme.ink : WorkbenchTheme.quiet)
                 .frame(width: SidebarMetrics.actionSize, height: SidebarMetrics.actionSize)
-                .background(WorkbenchTheme.Fill.surface,
+                .background(WorkbenchTheme.Fill.hover.opacity(pointing || menuOpen ? 1 : 0),
                             in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.chip, style: .continuous))
                 .contentShape(Rectangle())
         }
+        .onHover { pointing = $0 }
         .buttonStyle(.plain)
         .background(SessionActionsMenuAnchorView(anchor: anchor))
         .opacity(visible ? 1 : 0)
@@ -351,16 +462,19 @@ private final class SessionActionsMenuAnchorNSView: NSView {
 }
 
 private struct SessionHoverTracking: NSViewRepresentable {
+    let anchor: SessionHoverAnchor
     let onChange: (Bool) -> Void
 
     func makeNSView(context: Context) -> SessionHoverTrackingView {
         let view = SessionHoverTrackingView()
         view.onChange = onChange
+        anchor.view = view
         return view
     }
 
     func updateNSView(_ view: SessionHoverTrackingView, context: Context) {
         view.onChange = onChange
+        anchor.view = view
     }
 }
 
@@ -400,7 +514,7 @@ private final class SessionHoverTrackingView: NSView {
             for name in [NSScrollView.willStartLiveScrollNotification, NSScrollView.didLiveScrollNotification] {
                 observers.append(center.addObserver(forName: name, object: scroll, queue: .main) { [weak self] _ in
                     MainActor.assumeIsolated {
-                        SessionPreviewTiming.scrollingUntil = Date().addingTimeInterval(0.3)
+                        SessionPreviewPanel.shared.scrollingUntil = Date().addingTimeInterval(0.3)
                         self?.set(false)
                     }
                 })
