@@ -12,6 +12,11 @@ if [ -e "$snapshot" ] || [ -e "$app_dir" ]; then
 fi
 mkdir -p "$snapshot" "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
 git archive "$revision" Sources/WorkbenchCore | tar -x -C "$snapshot"
+math_patch="$snapshot/patches/swiftmath-app-resources.patch"
+if git cat-file -e "$revision:patches/swiftmath-app-resources.patch" 2>/dev/null; then
+    mkdir -p "$snapshot/patches"
+    git show "$revision:patches/swiftmath-app-resources.patch" > "$math_patch"
+fi
 mkdir -p "$snapshot/Sources/AgentWorkbench"
 for name in WorkbenchTheme CodeHighlighting ReplyMarkdownView NativeAssistantBlocks ReplyMathView ReplyAlertBlock ReplySelection ReplyMermaid PerfDiagnostics ImagePreviewPanel ConversationReadingMemory ConversationActions ConversationBookmarksStore; do
     git show "$revision:Sources/AgentWorkbench/${name}.swift" > "$snapshot/Sources/AgentWorkbench/${name}.swift"
@@ -47,7 +52,11 @@ inputs = [(str(path.relative_to(snapshot)), path.read_bytes())
           for path in sorted(Path(snapshot).rglob('*.swift'))]
 inputs += [(name, Path(name).read_bytes()) for name in
            ['Tests/MathPerformancePreview/App.swift', 'scripts/build-math-performance-preview.sh']]
-inputs += [('dependencies', json.dumps(selected, sort_keys=True).encode()),
+patch_path = Path(snapshot) / 'patches/swiftmath-app-resources.patch'
+patch_bytes = patch_path.read_bytes() if patch_path.exists() else b''
+metadata['swiftmath_patch_sha256'] = hashlib.sha256(patch_bytes).hexdigest() if patch_path.exists() else None
+inputs += [('patches/swiftmath-app-resources.patch', patch_bytes),
+           ('dependencies', json.dumps(selected, sort_keys=True).encode()),
            ('toolchain', metadata['toolchain'].encode())]
 for name, data in inputs:
     digest.update(name.encode() + b'\0' + data + b'\0')
@@ -56,14 +65,23 @@ metadata['source_input_sha256'] = digest.hexdigest()
 PY
 checkouts_dir="$snapshot/.build/checkouts"
 bin_dir=""
-if [ "${PERCH_REUSE_PREBUILT:-0}" = "1" ] && git diff --quiet "$revision" HEAD -- Sources/WorkbenchCore Package.resolved 2>/dev/null; then
+if [ "${PERCH_REUSE_PREBUILT:-0}" = "1" ] && git diff --quiet "$revision" HEAD -- Sources/WorkbenchCore Package.resolved patches/swiftmath-app-resources.patch 2>/dev/null; then
     candidate_bin="$(swift build --build-system native -c release --show-bin-path 2>/dev/null || true)"
-    if [ -n "$candidate_bin" ] && [ -e "$candidate_bin/Modules/WorkbenchCore.swiftmodule" ] && [ -e "$candidate_bin/Modules/SwiftMath.swiftmodule" ] && [ -d "$candidate_bin/WorkbenchCore.build" ] && [ -d "$candidate_bin/SwiftMath.build" ] && [ -d "$PWD/.build/checkouts/swift-markdown/Sources/CAtomic/include" ]; then
+    patch_matches=0
+    if [ ! -e "$math_patch" ] || git -C "$PWD/.build/checkouts/SwiftMath" apply --reverse --check "$math_patch" 2>/dev/null; then
+        patch_matches=1
+    fi
+    if [ "$patch_matches" = "1" ] && [ -n "$candidate_bin" ] && [ -e "$candidate_bin/Modules/WorkbenchCore.swiftmodule" ] && [ -e "$candidate_bin/Modules/SwiftMath.swiftmodule" ] && [ -d "$candidate_bin/WorkbenchCore.build" ] && [ -d "$candidate_bin/SwiftMath.build" ] && [ -d "$PWD/.build/checkouts/swift-markdown/Sources/CAtomic/include" ]; then
         bin_dir="$candidate_bin"
         checkouts_dir="$PWD/.build/checkouts"
     fi
 fi
 if [ -z "$bin_dir" ]; then
+    swift package --package-path "$snapshot" resolve
+    if [ -e "$math_patch" ] && ! git -C "$checkouts_dir/SwiftMath" apply --reverse --check "$math_patch" 2>/dev/null; then
+        git -C "$checkouts_dir/SwiftMath" apply --check "$math_patch"
+        git -C "$checkouts_dir/SwiftMath" apply "$math_patch"
+    fi
     swift build --package-path "$snapshot" --build-system native -c release --target SwiftMath
     swift build --package-path "$snapshot" --build-system native -c release --target WorkbenchCore
     bin_dir="$(swift build --package-path "$snapshot" --build-system native -c release --show-bin-path)"

@@ -47,7 +47,7 @@ Mac mini 同机 A/B 超过该轮实测噪声才采纳，不能把 Linux 特有�
 | 3 | 2026-11-12 | 单 text part 摘要省去重复 Character 计数 | **已采纳/合并：Mac cold -16.75%**（9.85→8.20ms@2333）；等价/Core/portable/app build/5次冷启动、全部8项CI通过，独立及GitHub评审无意见 | [round-3](2026-11-12-round-3.md)；[#324](https://github.com/chenweigao/perch/pull/324)，merge=c51ef15（18:17） |
 | 4 | 2026-11-12 | Mac 切换/目录隔离 + CPU 归因 | **归因完成，无产品候选**：9个隔离进程通过，模型投影非切换大头；保持UI红线 | [round-4](2026-11-12-round-4.md) |
 | 5 | 2026-11-12 | 编辑统计 contiguous UTF-8 扫描 | **已采纳/合并：Mac -51.23%（2.05x）**，7.987→3.895ms@6400；Character oracle/Core/portable/app build/5次冷启动及全部8项CI通过，两项评审无发现 | [round-5](2026-11-12-round-5.md)；[#325](https://github.com/chenweigao/perch/pull/325)，merge=0711150（19:01） |
-| 6 | 2026-11-12 | 未知/只读tool先分类、免路径检查 | **候选：Mac stats -13.60%**，3.729→3.222ms@6400；分类/Unicode/path oracle、Core/portable/app build/5次冷启动通过，待评审/CI | [round-6](2026-11-12-round-6.md) |
+| 6 | 2026-11-12 | 未知/只读tool先分类、免路径检查 | **候选：Mac stats -13.60%**，3.729→3.222ms@6400；初始评审无发现，但首次CI math128门槛失败，修复fresh/reused SwiftMath补丁一致性后本机math通过，待新head评审/CI | [round-6](2026-11-12-round-6.md)；[#326](https://github.com/chenweigao/perch/pull/326)，[CI修复证据](round-6/ci/README.md) |
 
 ## 否定清单（勿重复尝试）
 
