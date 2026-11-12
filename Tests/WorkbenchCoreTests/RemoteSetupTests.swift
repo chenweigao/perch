@@ -189,9 +189,11 @@ func checkRemoteSetup() async throws {
     // v12 only by capping snapshot pages, so that pair is safe both ways.
     precondition(RemoteSetup.bridgeTransitionCompatible(serving: RemoteSetup.bridgeServiceVersion))
     precondition(RemoteSetup.bridgeTransitionCompatible(serving: 12, expected: 13))
-    precondition(!RemoteSetup.bridgeTransitionCompatible(serving: 11, expected: 13))
-    precondition(!RemoteSetup.bridgeTransitionCompatible(serving: 12, expected: 14))
-    precondition(!RemoteSetup.bridgeTransitionCompatible(serving: 14, expected: 13))
+    precondition(RemoteSetup.bridgeTransitionCompatible(serving: 12, expected: 14))
+    precondition(RemoteSetup.bridgeTransitionCompatible(serving: 13, expected: 14))
+    precondition(!RemoteSetup.bridgeTransitionCompatible(serving: 11, expected: 14))
+    precondition(!RemoteSetup.bridgeTransitionCompatible(serving: 13, expected: 15))
+    precondition(!RemoteSetup.bridgeTransitionCompatible(serving: 15, expected: 14))
 
     let args = try RemoteSetup.sshArguments("fixture", command: "true")
     precondition(args.contains("StrictHostKeyChecking=yes") && args.contains("BatchMode=yes"))

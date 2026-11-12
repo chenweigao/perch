@@ -72,40 +72,12 @@ struct SessionRowChrome<Indicator: View>: View {
                 showPreview = false
                 onOpen()
             } label: {
-                HStack(alignment: .center, spacing: 6) {
-                    Text(title).font(.system(size: SidebarMetrics.titleSize, weight: unread ? .semibold : .regular))
-                        .foregroundStyle(selected || unread ? WorkbenchTheme.ink
-                                         : WorkbenchTheme.ink.opacity(SidebarMetrics.idleTitleOpacity))
-                        .lineLimit(1).truncationMode(.tail)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    if running {
-                        ConversationBusyIndicator().help("运行中").accessibilityIdentifier("sidebar.running")
-                            .frame(width: 18, height: 18)
-                    } else if offline {
-                        Image(systemName: "wifi.slash").font(.system(size: WorkbenchTheme.Typography.caption))
-                            .foregroundStyle(WorkbenchTheme.quiet).help("离线 · 状态未同步")
-                            .accessibilityHidden(true)
-                            .frame(width: 18, height: 18)
-                    } else {
-                        HStack(spacing: 4) {
-                            if failed {
-                                Image(systemName: "exclamationmark.circle.fill")
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(.red)
-                                    .help(detail ?? L("运行出错"))
-                                    .accessibilityHidden(true)
-                            } else if waiting {
-                                Circle().fill(Color.orange).frame(width: 6, height: 6)
-                                    .help(detail ?? L("等你处理"))
-                                    .accessibilityHidden(true)
-                            } else if unread {
-                                Circle().fill(Color.blue).frame(width: 6, height: 6)
-                                    .help("有未读结果")
-                                    .accessibilityHidden(true)
-                            }
-                        }
-                    }
-                }.padding(.horizontal, SidebarMetrics.rowInset)
+                Text(title).font(.system(size: SidebarMetrics.titleSize, weight: unread ? .semibold : .regular))
+                    .foregroundStyle(selected || unread ? WorkbenchTheme.ink
+                                     : WorkbenchTheme.ink.opacity(SidebarMetrics.idleTitleOpacity))
+                    .lineLimit(1).truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.leading, SidebarMetrics.rowInset).padding(.trailing, 4)
                     .frame(maxWidth: .infinity, minHeight: SidebarMetrics.rowHeight, maxHeight: SidebarMetrics.rowHeight, alignment: .leading)
                     .contentShape(Rectangle())
             }.buttonStyle(.plain).disabled(!canOpen)
@@ -113,43 +85,76 @@ struct SessionRowChrome<Indicator: View>: View {
                 .accessibilityLabel(title)
                 .accessibilityValue(([offline ? L("离线 · 状态未同步") : nil, hostName, directory, detail,
                                       updatedAt > 0 ? SessionTime.label(since: updatedAt, waiting: false) : nil].compactMap { $0 } + groups).joined(separator: " · "))
-            if let actions {
-                Button {
-                    showPreview = false
-                    showActionsMenu = true
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(WorkbenchTheme.quiet)
-                        .frame(width: 24, height: 24)
-                        .background(WorkbenchTheme.Fill.surface,
-                                    in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.chip, style: .continuous))
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .opacity(hovered || showActionsMenu ? 1 : 0)
-                .allowsHitTesting(hovered)
-                .onHover { inside in
-                    if inside {
-                        previewTask?.cancel()
-                        showPreview = false
-                    }
-                }
-                .accessibilityLabel("会话操作")
-                .accessibilityIdentifier("sidebar.row.actions")
-                .popover(isPresented: $showActionsMenu, arrowEdge: .trailing) {
-                    actions
-                        .preferredColorScheme(colorScheme)
-                        .environment(\.sessionActionPresentation, .popover)
-                        .buttonStyle(SessionActionButtonStyle())
-                        .menuStyle(.borderlessButton)
-                        .menuIndicator(.hidden)
-                        .frame(width: 208)
-                        .padding(6)
-                }
-            }
+            // Status sits on the row's trailing edge; on hover the actions button
+            // takes the same slot, so the title column ends in one clean line.
+            ZStack {
+                statusMark.opacity(actions != nil && (hovered || showActionsMenu) ? 0 : 1)
+                if let actions { actionsButton(actions) }
+            }.frame(width: SidebarMetrics.actionSize, height: SidebarMetrics.actionSize)
+                .padding(.trailing, SidebarMetrics.rowTrailingInset)
         }
         .overlay(SessionHoverTracking(onChange: updateHover))
+    }
+
+    @ViewBuilder private var statusMark: some View {
+        if running {
+            ConversationBusyIndicator().help("运行中").accessibilityIdentifier("sidebar.running")
+                .frame(width: 18, height: 18)
+        } else if offline {
+            Image(systemName: "wifi.slash").font(.system(size: WorkbenchTheme.Typography.caption))
+                .foregroundStyle(WorkbenchTheme.quiet).help("离线 · 状态未同步")
+                .accessibilityHidden(true)
+        } else if failed {
+            Image(systemName: "exclamationmark.circle.fill")
+                .font(.system(size: 11))
+                .foregroundStyle(.red)
+                .help(detail ?? L("运行出错"))
+                .accessibilityHidden(true)
+        } else if waiting {
+            Circle().fill(Color.orange).frame(width: 6, height: 6)
+                .help(detail ?? L("等你处理"))
+                .accessibilityHidden(true)
+        } else if unread {
+            Circle().fill(Color.blue).frame(width: 6, height: 6)
+                .help("有未读结果")
+                .accessibilityHidden(true)
+        }
+    }
+
+    private func actionsButton(_ actions: AnyView) -> some View {
+        Button {
+            showPreview = false
+            showActionsMenu = true
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(WorkbenchTheme.quiet)
+                .frame(width: 24, height: 24)
+                .background(WorkbenchTheme.Fill.surface,
+                            in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.chip, style: .continuous))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .opacity(hovered || showActionsMenu ? 1 : 0)
+        .allowsHitTesting(hovered)
+        .onHover { inside in
+            if inside {
+                previewTask?.cancel()
+                showPreview = false
+            }
+        }
+        .accessibilityLabel("会话操作")
+        .accessibilityIdentifier("sidebar.row.actions")
+        .popover(isPresented: $showActionsMenu, arrowEdge: .trailing) {
+            actions
+                .preferredColorScheme(colorScheme)
+                .environment(\.sessionActionPresentation, .popover)
+                .buttonStyle(SessionActionButtonStyle())
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .frame(width: 208)
+                .padding(6)
+        }
     }
 
     private var standardRow: some View {

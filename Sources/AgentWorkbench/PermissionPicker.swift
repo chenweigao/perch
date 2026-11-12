@@ -134,7 +134,8 @@ struct PermissionPicker: View {
             Image(systemName: symbol)
             if layout == .form || showsTitle || risk != .standard { Text(title) }
         }
-        .font(.system(size: layout == .compact ? 12 : 13))
+        // Compact: the composer's 13 pt control glyphs, beside the context ring.
+        .font(.system(size: 13))
         .foregroundStyle(riskColor)
         .frame(minWidth: 28, minHeight: 28)
         .contentShape(Rectangle())

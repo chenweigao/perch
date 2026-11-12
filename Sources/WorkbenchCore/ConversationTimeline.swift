@@ -133,7 +133,7 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
             // Compaction summaries keep their own row but never open a turn.
             if message.isUserPrompt || message.isCompactionSummary {
                 flush(running: false); entries.append(Self(messages: [message], presentation: .message, partOffset: 0))
-            } else { turn.append(message) }
+            } else { turn.append(message.coalescingAdjacentAssistantParts()) }
         }
         flush(running: isRunning)
         return entries
