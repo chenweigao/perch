@@ -54,6 +54,8 @@ enum SidebarMetrics {
     static let actionGlyphSize: CGFloat = 12
     /// A session row's status / actions slot sits this far inside the row's trailing edge.
     static let rowTrailingInset: CGFloat = 4
+    /// Room left of the actions slot where a running or failed mark waits on hover.
+    static let statusReserveWidth: CGFloat = 22
     static let sectionTopSpacing: CGFloat = 6
     static let sectionBottomSpacing: CGFloat = 1
     /// "显示全部", "更多会话" and the pin invitation: quieter than a session row.
