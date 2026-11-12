@@ -39,6 +39,7 @@ struct ProtocolTests {
         try checkConversationPresentationHistory()
         try checkConversationPresentationPaging()
         checkCollapsedWhitespace()
+        try checkTurnExcerpt()
         checkCompactionSummaryDisplay()
         try checkActivitySummaries()
         try checkTaskRecaps()

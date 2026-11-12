@@ -186,6 +186,14 @@ public struct ConversationTurnSummary: Identifiable, Equatable {
             if let cronFire = message.cronFire {
                 return String(cronFire.prompt.prefix(320)).collapsedWhitespace
             }
+            // With only one eligible part there is no next part to budget for.
+            // Keep the exact prefix and leading separator of the general path,
+            // but do not walk its Characters again just to decide to stop.
+            if message.content.count == 1, let part = message.content.first,
+               part.type == "text", !part.isRuntimeContext {
+                let text = part.skillContextSplit?.prefix ?? part.text ?? ""
+                return (" " + String(text.prefix(320))).collapsedWhitespace
+            }
             var value = ""
             for part in message.content where part.type == "text" && !part.isRuntimeContext {
                 value += " " + String((part.skillContextSplit?.prefix ?? part.text ?? "").prefix(320 - value.count))
