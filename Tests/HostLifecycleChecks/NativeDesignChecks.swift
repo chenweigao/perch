@@ -369,8 +369,12 @@ import WorkbenchCore
         "sidebar": fromTop(split.floatingSidebarView), "conversation": fromTop(card),
     ]
     let actualTitlebarHeight = window.frame.height - window.contentLayoutRect.height
-    precondition(window.toolbarStyle == .unifiedCompact && actualTitlebarHeight <= 44,
-                 "Use the native compact toolbar rather than sliding content underneath a tall toolbar: \(actualTitlebarHeight)")
+    precondition(window.toolbarStyle == .unified && actualTitlebarHeight <= 60,
+                 "Use the native unified toolbar rather than sliding content underneath a taller one: \(actualTitlebarHeight)")
+    // The title shares the traffic lights' line with room above it inside the sheet.
+    let titleInset = (fromTop(title)["midY"] ?? 0) - (fromTop(card)["top"] ?? 0)
+    precondition(titleInset >= 18,
+                 "The sheet title must sit clear of the sheet's top edge: \(titleInset) pt from it")
     let liveCardFrame = card.convert(card.bounds, to: nil)
     let liveCardTop = window.frame.height - liveCardFrame.maxY
     let liveCardRight = window.frame.width - liveCardFrame.maxX

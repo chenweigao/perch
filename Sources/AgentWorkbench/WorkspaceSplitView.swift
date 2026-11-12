@@ -3,8 +3,13 @@ import SwiftUI
 import WorkbenchCore
 
 enum WorkbenchChrome {
-    /// Compact native toolbar, with a small gutter above the reading sheet.
-    static let headerHeight: CGFloat = 40
+    /// The standard unified toolbar's traffic-light center line, below the window
+    /// top. The sheet's title shares it, so with the 6 pt frame inset the title
+    /// sits about 20 pt inside the sheet (Qoder). Used until the window reports
+    /// its close button; afterwards the layout follows the measured line.
+    static let titlebarCenter: CGFloat = 26
+    /// The sheet's header band: the title centered at the titlebar line within it.
+    static let headerHeight: CGFloat = 2 * (titlebarCenter - WorkspaceLayoutMetrics.frameInset)
     static let symbolSize: CGFloat = 15
     static let controlSize: CGFloat = 32
     static let controlSpacing: CGFloat = 6
@@ -16,7 +21,8 @@ enum WorkspaceLayoutMetrics {
     /// The reading sheet nearly fills the window: a thin band of window glass on
     /// its top, trailing and bottom edges (Qoder's integrated canvas).
     static let frameInset: CGFloat = 6
-    static let contentTopInset: CGFloat = WorkbenchChrome.headerHeight + 4
+    /// Sidebar content starts below the traffic lights of the standard toolbar.
+    static let contentTopInset: CGFloat = WorkbenchChrome.titlebarCenter + 26
     /// The gap between the reading sheet and its subordinate command-line sheet.
     static let sheetGutter: CGFloat = 6
     /// Keep a usable reading lane beside the integrated inspector in narrow windows.
@@ -407,6 +413,7 @@ final class WorkbenchDetailController: NSViewController {
     private var cardTrailingConstraint: NSLayoutConstraint?
     private var readingTrailingConstraint: NSLayoutConstraint?
     private var headerLeadingConstraint: NSLayoutConstraint?
+    private var headerCenterConstraints: [NSLayoutConstraint] = []
     /// Sidebar avoidance; 0 while the sidebar is hidden or overlays the card.
     private(set) var contentLeadingInset: CGFloat = 0
     private(set) var contentTrailingInset: CGFloat = 0
@@ -459,6 +466,10 @@ final class WorkbenchDetailController: NSViewController {
         let trailing = card.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -inset)
         let cardBottom = card.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -inset)
         let headerLeading = header.leadingAnchor.constraint(equalTo: headerBar.leadingAnchor, constant: WorkbenchTheme.Reading.inset)
+        let titleCenter = WorkbenchChrome.titlebarCenter - WorkspaceLayoutMetrics.frameInset
+        let headerCenter = header.centerYAnchor.constraint(equalTo: headerBar.topAnchor, constant: titleCenter)
+        let actionsCenter = actions.centerYAnchor.constraint(equalTo: headerBar.topAnchor, constant: titleCenter)
+        headerCenterConstraints = [headerCenter, actionsCenter]
         cardLeadingConstraint = leading
         cardTrailingConstraint = trailing
         cardBottomDirect = cardBottom
@@ -473,12 +484,10 @@ final class WorkbenchDetailController: NSViewController {
             headerBar.trailingAnchor.constraint(equalTo: card.trailingAnchor),
             headerBar.heightAnchor.constraint(equalToConstant: WorkbenchChrome.headerHeight),
             headerLeading,
-            header.centerYAnchor.constraint(equalTo: headerBar.topAnchor,
-                constant: WorkbenchChrome.headerHeight / 2 - WorkspaceLayoutMetrics.frameInset),
+            headerCenter,
             header.trailingAnchor.constraint(lessThanOrEqualTo: actions.leadingAnchor, constant: -12),
             actions.trailingAnchor.constraint(equalTo: headerBar.trailingAnchor, constant: -12),
-            actions.centerYAnchor.constraint(equalTo: headerBar.topAnchor,
-                constant: WorkbenchChrome.headerHeight / 2 - WorkspaceLayoutMetrics.frameInset),
+            actionsCenter,
             detail.topAnchor.constraint(equalTo: headerBar.bottomAnchor),
             detail.leadingAnchor.constraint(equalTo: card.leadingAnchor),
             detail.bottomAnchor.constraint(equalTo: card.bottomAnchor),
@@ -503,6 +512,15 @@ final class WorkbenchDetailController: NSViewController {
     func setHeaderLeadingInset(_ inset: CGFloat) {
         if let headerLeadingConstraint, abs(headerLeadingConstraint.constant - inset) > 0.5 {
             headerLeadingConstraint.constant = inset
+        }
+    }
+
+    /// Keeps the title and actions on the traffic lights' center line, given as a
+    /// distance from the window top (the sheet sits `frameInset` below it).
+    func setTitlebarCenter(_ center: CGFloat) {
+        let constant = center - WorkspaceLayoutMetrics.frameInset
+        for constraint in headerCenterConstraints where abs(constraint.constant - constant) > 0.25 {
+            constraint.constant = constant
         }
     }
 
@@ -991,7 +1009,9 @@ final class WorkbenchSplitController: NSSplitViewController {
         window.titlebarAppearsTransparent = true
         window.titlebarSeparatorStyle = .none
         window.styleMask.insert(.fullSizeContentView)
-        window.toolbarStyle = .unifiedCompact
+        // The standard unified toolbar lowers the traffic lights, so the sheet's
+        // title can share their line with room above it (Qoder's title row).
+        window.toolbarStyle = .unified
         if appAppearance != .system { applyAppearance() }
         // The toolbar style sets the window's corner; the glass follows it.
         windowBackdropView?.updateCornerRadius()
@@ -1139,6 +1159,14 @@ final class WorkbenchSplitController: NSSplitViewController {
             headerLeading = WorkbenchTheme.Reading.inset
         }
         detailController?.setHeaderLeadingInset(headerLeading)
+        if let window = view.window, let close = window.standardWindowButton(.closeButton), close.superview != nil {
+            let frame = close.convert(close.bounds, to: nil)
+            // Full screen hides the titlebar; keep the last line rather than follow it off-window.
+            let center = window.frame.height - frame.midY
+            if frame.height > 0, center > WorkspaceLayoutMetrics.frameInset, center < 64 {
+                detailController?.setTitlebarCenter(center)
+            }
+        }
         sidebarOverlayBackdrop?.isHidden = !isSidebarOverlayingContent
         sidebarOverlayShadow?.isHidden = !isSidebarOverlayingContent
         isInspectorOverlayingContent = false
