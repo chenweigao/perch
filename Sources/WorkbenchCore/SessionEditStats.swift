@@ -180,18 +180,77 @@ public enum SessionEditStats {
         return count
     }
 
+    /// These ranges end only at LF separators (except CRLF) or the buffer
+    /// bounds. Converting them back into the original text therefore preserves
+    /// scalar boundaries and canonical Substring comparisons.
+    private static func firstLine(_ bytes: UnsafeBufferPointer<UInt8>, from start: Int) -> Range<Int> {
+        var end = start
+        while end < bytes.count {
+            if bytes[end] == 0x0A && (end == 0 || bytes[end - 1] != 0x0D) { break }
+            end += 1
+        }
+        return start..<end
+    }
+
+    private static func lastLine(_ bytes: UnsafeBufferPointer<UInt8>, before end: Int) -> Range<Int> {
+        var start = end
+        while start > 0 {
+            start -= 1
+            if bytes[start] == 0x0A && (start == 0 || bytes[start - 1] != 0x0D) {
+                return (start + 1)..<end
+            }
+        }
+        return 0..<end
+    }
+
+    private static func substring(_ text: String, bytes range: Range<Int>) -> Substring {
+        let utf8 = text.utf8
+        let start = utf8.index(utf8.startIndex, offsetBy: range.lowerBound)
+        let end = utf8.index(utf8.startIndex, offsetBy: range.upperBound)
+        return text[start..<end]
+    }
+
     /// Old/new diff counting only the changed middle: common prefix and suffix
-    /// lines are context, not edits.
+    /// lines are context, not edits. Borrowed buffers never leave these closures;
+    /// only line offsets and the final counts escape, not pointer-backed storage.
     private static func lineDiff(old: String?, new: String?) -> SessionEditStat? {
-        guard old != nil || new != nil else { return nil }
-        let oldLines = old.map(lines) ?? []
-        let newLines = new.map(lines) ?? []
-        if old != nil && (new == nil || new!.isEmpty) {
-            return SessionEditStat(additions: 0, deletions: oldLines.count)
+        // Keep historical nil/empty counts before the equality fast path:
+        // two empty strings count as one deletion, not a zero-change edit.
+        if let old, new == nil || new!.isEmpty {
+            return SessionEditStat(additions: 0, deletions: lineCount(old))
         }
-        if new != nil && (old == nil || old!.isEmpty) {
-            return SessionEditStat(additions: newLines.count, deletions: 0)
+        if let new, old == nil || old!.isEmpty {
+            return SessionEditStat(additions: lineCount(new), deletions: 0)
         }
+        guard let old, let new else { return nil }
+        let bounded = old.utf8.withContiguousStorageIfAvailable { a in
+            new.utf8.withContiguousStorageIfAvailable { b -> SessionEditStat in
+                // Only a different first AND last line proves that there is
+                // no shared prefix/suffix to remove. Common-context edits
+                // retain the original algorithm rather than rescanning lazily.
+                let firstOld = firstLine(a, from: 0), firstNew = firstLine(b, from: 0)
+                let firstMatches = substring(old, bytes: firstOld) == substring(new, bytes: firstNew)
+                // No separator in either input: the first line is also the
+                // last, so this one canonical comparison determines the tally.
+                if firstOld.upperBound == a.count && firstNew.upperBound == b.count {
+                    return firstMatches ? SessionEditStat(additions: 0, deletions: 0)
+                        : SessionEditStat(additions: 1, deletions: 1)
+                }
+                if !firstMatches,
+                   substring(old, bytes: lastLine(a, before: a.count)) != substring(new, bytes: lastLine(b, before: b.count)) {
+                    return SessionEditStat(additions: lineCount(new), deletions: lineCount(old))
+                }
+                return fullLineDiff(old, new)
+            }
+        }
+        if let result = bounded ?? nil { return result }
+        return fullLineDiff(old, new)
+    }
+
+    /// Original nonempty-string algorithm, used for common context and foreign
+    /// storage. All comparisons remain canonical, including NFC/NFD no-ops.
+    private static func fullLineDiff(_ old: String, _ new: String) -> SessionEditStat {
+        let oldLines = lines(old), newLines = lines(new)
         var start = 0
         while start < oldLines.count && start < newLines.count && oldLines[start] == newLines[start] { start += 1 }
         var oldEnd = oldLines.count

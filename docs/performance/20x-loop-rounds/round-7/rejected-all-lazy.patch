@@ -1,0 +1,88 @@
+diff --git a/Sources/WorkbenchCore/SessionEditStats.swift b/Sources/WorkbenchCore/SessionEditStats.swift
+index b308d49..b706477 100644
+--- a/Sources/WorkbenchCore/SessionEditStats.swift
++++ b/Sources/WorkbenchCore/SessionEditStats.swift
+@@ -180,18 +180,75 @@ public enum SessionEditStats {
+         return count
+     }
+ 
++    /// These ranges end only at LF separators (except CRLF) or the buffer
++    /// bounds. Converting them back into the original text therefore preserves
++    /// scalar boundaries and canonical Substring comparisons.
++    private static func firstLine(_ bytes: UnsafeBufferPointer<UInt8>, from start: Int) -> Range<Int> {
++        var end = start
++        while end < bytes.count {
++            if bytes[end] == 0x0A && (end == 0 || bytes[end - 1] != 0x0D) { break }
++            end += 1
++        }
++        return start..<end
++    }
++
++    private static func lastLine(_ bytes: UnsafeBufferPointer<UInt8>, before end: Int) -> Range<Int> {
++        var start = end
++        while start > 0 {
++            start -= 1
++            if bytes[start] == 0x0A && (start == 0 || bytes[start - 1] != 0x0D) {
++                return (start + 1)..<end
++            }
++        }
++        return 0..<end
++    }
++
++    private static func substring(_ text: String, bytes range: Range<Int>) -> Substring {
++        let utf8 = text.utf8
++        let start = utf8.index(utf8.startIndex, offsetBy: range.lowerBound)
++        let end = utf8.index(utf8.startIndex, offsetBy: range.upperBound)
++        return text[start..<end]
++    }
++
+     /// Old/new diff counting only the changed middle: common prefix and suffix
+-    /// lines are context, not edits.
++    /// lines are context, not edits. Borrowed buffers never leave these closures;
++    /// only line offsets and the final counts escape, not pointer-backed storage.
+     private static func lineDiff(old: String?, new: String?) -> SessionEditStat? {
+-        guard old != nil || new != nil else { return nil }
+-        let oldLines = old.map(lines) ?? []
+-        let newLines = new.map(lines) ?? []
+-        if old != nil && (new == nil || new!.isEmpty) {
+-            return SessionEditStat(additions: 0, deletions: oldLines.count)
++        // Keep historical nil/empty counts before the equality fast path:
++        // two empty strings count as one deletion, not a zero-change edit.
++        if let old, new == nil || new!.isEmpty {
++            return SessionEditStat(additions: 0, deletions: lineCount(old))
++        }
++        if let new, old == nil || old!.isEmpty {
++            return SessionEditStat(additions: lineCount(new), deletions: 0)
+         }
+-        if new != nil && (old == nil || old!.isEmpty) {
+-            return SessionEditStat(additions: newLines.count, deletions: 0)
++        guard let old, let new else { return nil }
++        if old == new { return SessionEditStat(additions: 0, deletions: 0) }
++        let lazy = old.utf8.withContiguousStorageIfAvailable { a in
++            new.utf8.withContiguousStorageIfAvailable { b -> SessionEditStat in
++                var aEnd = lineCount(old), bEnd = lineCount(new)
++                var aStart = 0, bStart = 0, common = 0
++                while common < aEnd && common < bEnd {
++                    let x = firstLine(a, from: aStart), y = firstLine(b, from: bStart)
++                    guard substring(old, bytes: x) == substring(new, bytes: y) else { break }
++                    common += 1
++                    aStart = x.upperBound + (x.upperBound < a.count ? 1 : 0)
++                    bStart = y.upperBound + (y.upperBound < b.count ? 1 : 0)
++                }
++                var aTail = a.count, bTail = b.count
++                while aEnd > common && bEnd > common {
++                    let x = lastLine(a, before: aTail), y = lastLine(b, before: bTail)
++                    guard substring(old, bytes: x) == substring(new, bytes: y) else { break }
++                    aEnd -= 1; bEnd -= 1
++                    aTail = x.lowerBound > 0 ? x.lowerBound - 1 : 0
++                    bTail = y.lowerBound > 0 ? y.lowerBound - 1 : 0
++                }
++                return SessionEditStat(additions: bEnd - common, deletions: aEnd - common)
++            }
+         }
++        if let result = lazy ?? nil { return result }
++        // Non-contiguous storage retains the original complete-line algorithm.
++        let oldLines = lines(old), newLines = lines(new)
+         var start = 0
+         while start < oldLines.count && start < newLines.count && oldLines[start] == newLines[start] { start += 1 }
+         var oldEnd = oldLines.count
