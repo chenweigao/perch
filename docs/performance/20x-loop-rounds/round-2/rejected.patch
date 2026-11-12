@@ -1,0 +1,106 @@
+diff --git a/Sources/WorkbenchCore/ConversationTimeline.swift b/Sources/WorkbenchCore/ConversationTimeline.swift
+index 216ea33..3a103a3 100644
+--- a/Sources/WorkbenchCore/ConversationTimeline.swift
++++ b/Sources/WorkbenchCore/ConversationTimeline.swift
+@@ -1,5 +1,16 @@
+ import Foundation
+ 
++extension String {
++    /// The same predicate as `!trimmingCharacters(in: .whitespacesAndNewlines).isEmpty`,
++    /// without allocating a trimmed copy. Use Foundation's scalar set, not
++    /// Character.isWhitespace: composed whitespace/mark clusters have different
++    /// semantics. Ordinary prose returns at its first non-whitespace scalar.
++    public var hasNonWhitespaceContent: Bool {
++        let whitespace = CharacterSet.whitespacesAndNewlines
++        return unicodeScalars.contains { !whitespace.contains($0) }
++    }
++}
++
+ /// Folding is based on the turn's available output, never on an assumed final summary.
+ public struct ConversationTimelineEntry: Identifiable, Equatable {
+     public enum Presentation: Equatable { case message, activity, commentary, progress, thinkingPreview, thinkingDetails, record, thinkingRecord, emptyOutput, processFold }
+@@ -49,7 +60,7 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
+     public static func make(_ messages: [KimiMessage], isRunning: Bool = false) -> [Self] {
+         var entries: [Self] = [], turn: [KimiMessage] = []
+         func visible(_ part: KimiPart) -> Bool {
+-            (part.type == "text" && !part.isRuntimeContext && !(part.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
++            (part.type == "text" && !part.isRuntimeContext && (part.text ?? "").hasNonWhitespaceContent)
+                 || ["image", "file", "video"].contains(part.type)
+         }
+         func thinking(_ part: KimiPart) -> Bool { part.type == "thinking" && !(part.thinking ?? "").isEmpty }
+diff --git a/Tests/WorkbenchCoreTests/ProtocolTests.swift b/Tests/WorkbenchCoreTests/ProtocolTests.swift
+index 5d01c96..f18ebbe 100644
+--- a/Tests/WorkbenchCoreTests/ProtocolTests.swift
++++ b/Tests/WorkbenchCoreTests/ProtocolTests.swift
+@@ -39,6 +39,7 @@ struct ProtocolTests {
+         try checkConversationPresentationHistory()
+         try checkConversationPresentationPaging()
+         checkCollapsedWhitespace()
++        try checkWhitespaceContent()
+         checkCompactionSummaryDisplay()
+         try checkActivitySummaries()
+         try checkTaskRecaps()
+diff --git a/Tests/WorkbenchCoreTests/WhitespaceContentTests.swift b/Tests/WorkbenchCoreTests/WhitespaceContentTests.swift
+new file mode 100644
+index 0000000..f5784a1
+--- /dev/null
++++ b/Tests/WorkbenchCoreTests/WhitespaceContentTests.swift
+@@ -0,0 +1,58 @@
++import Foundation
++import WorkbenchCore
++
++func checkWhitespaceContent() throws {
++    func expected(_ text: String) -> Bool {
++        !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
++    }
++    let cases = [
++        "", " ", "\t\r\n", "\r\r\n\n", " \u{85}\u{A0}\u{1680}\u{3000} ",
++        "\u{2000}\u{200A}\u{2028}\u{2029}\u{202F}\u{205F}",
++        "\u{200B}", "\u{FEFF}", "\0", " \u{301}", " \u{200D}",
++        " \u{903}", "\u{600} ", "a\u{301}", "👨\u{200D}👩\u{200D}👧", "𠀀",
++        "  中文说明  ", " \n English words \t", "\u{3000}中文\u{3000}",
++        String(repeating: " ", count: 16_000),
++        String(repeating: " \u{3000}\t", count: 5_000) + "x",
++        "x" + String(repeating: "中文 mixed \n", count: 5_000),
++    ]
++    for text in cases {
++        let visible = expected(text)
++        precondition(text.hasNonWhitespaceContent == visible,
++                     "whitespace predicate mismatch for \(text.debugDescription)")
++        let raw: [[String: Any]] = [["id": "a", "role": "assistant", "created_at": "1", "content": [
++            ["type": "thinking", "thinking": "reasoning"], ["type": "text", "text": text],
++        ]]]
++        let messages = try KimiWire.decoder().decode([KimiMessage].self,
++            from: JSONSerialization.data(withJSONObject: raw))
++        for running in [false, true] {
++            let entries = ConversationTimelineEntry.make(messages, isRunning: running)
++            let presentations: [ConversationTimelineEntry.Presentation] = visible
++                ? [.thinkingDetails, running ? .progress : .message]
++                : [running ? .thinkingPreview : .thinkingRecord]
++            precondition(entries.map(\.presentation) == presentations,
++                         "whitespace must not change thinking/final-answer presentation")
++            let displayedText = entries.flatMap(\.messages).flatMap(\.content).filter { $0.type == "text" }
++            precondition(visible ? displayedText.map(\.text) == [text] : displayedText.isEmpty,
++                         "visible text remains byte-for-byte unchanged; whitespace-only text stays hidden")
++        }
++    }
++
++    // Foundation itself is the oracle on each valid Unicode scalar, including
++    // supplementary planes, not a hand-maintained Unicode whitespace table.
++    var whitespaceScalars = ""
++    for value in UInt32(0)..<UInt32(0x110000) {
++        guard let scalar = Unicode.Scalar(value) else { continue }
++        let text = String(scalar)
++        let visible = expected(text)
++        precondition(text.hasNonWhitespaceContent == visible,
++                     "whitespace predicate mismatch at U+\(String(value, radix: 16, uppercase: true))")
++        if !visible { whitespaceScalars += text }
++    }
++    precondition(!whitespaceScalars.hasNonWhitespaceContent && !expected(whitespaceScalars))
++    for text in cases {
++        let padded = whitespaceScalars + text + whitespaceScalars
++        precondition(padded.hasNonWhitespaceContent == expected(padded),
++                     "whitespace clusters must retain Foundation trimming semantics")
++    }
++    print("PASS: whitespace visibility equals Foundation trimming for all Unicode scalars and composed text")
++}
