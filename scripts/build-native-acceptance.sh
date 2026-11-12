@@ -9,6 +9,12 @@ if ! git -C "$checkout" apply --reverse --check "$patch_file" 2>/dev/null; then
     git -C "$checkout" apply --check "$patch_file"
     git -C "$checkout" apply "$patch_file"
 fi
+math_patch="$PWD/patches/swiftmath-app-resources.patch"
+math_checkout="$PWD/.build/checkouts/SwiftMath"
+if ! git -C "$math_checkout" apply --reverse --check "$math_patch" 2>/dev/null; then
+    git -C "$math_checkout" apply --check "$math_patch"
+    git -C "$math_checkout" apply "$math_patch"
+fi
 swift build --build-system native -c release --product AgentWorkbench \
     -Xswiftc -DPERCH_ACCEPTANCE -Xswiftc -DTRANSCRIPT_CHECKS
 bin_dir="$(swift build --build-system native -c release --show-bin-path)"

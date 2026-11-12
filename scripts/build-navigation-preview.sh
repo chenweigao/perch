@@ -6,9 +6,12 @@ cd "$(dirname "$0")/.."
 app_dir="$PWD/build/Navigation Preview.app"
 # This fixture links SwiftPM object files directly. Use the native layout;
 # Xcode 27 defaults to Swift Build, whose Products directory has no .build objects.
-swift build --build-system native -c release --target WorkbenchCore
-swift build --build-system native -c release --target SwiftMath
 bin_dir="$(swift build --build-system native -c release --show-bin-path)"
+if [ "${PERCH_REUSE_PREBUILT:-0}" != "1" ] || [ ! -e "$bin_dir/Modules/WorkbenchCore.swiftmodule" ] || [ ! -e "$bin_dir/Modules/SwiftMath.swiftmodule" ] || [ ! -d "$bin_dir/WorkbenchCore.build" ] || [ ! -d "$bin_dir/SwiftMath.build" ]; then
+    swift build --build-system native -c release --target WorkbenchCore
+    swift build --build-system native -c release --target SwiftMath
+    bin_dir="$(swift build --build-system native -c release --show-bin-path)"
+fi
 mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
 scripts/prepare-highlight.sh "$app_dir/Contents/Resources"
 app_files=(
@@ -35,7 +38,7 @@ objects=()
 for target in WorkbenchCore Markdown CAtomic cmark_gfm cmark_gfm_extensions SwiftMath; do
     while IFS= read -r file; do objects+=("$file"); done < <(find "$bin_dir/$target.build" -type f -name '*.o' | sort)
 done
-time swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -D TRANSCRIPT_CHECKS -parse-as-library "${includes[@]}" \
+time swiftc -j "$(sysctl -n hw.ncpu 2>/dev/null || echo 4)" -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -D TRANSCRIPT_CHECKS -parse-as-library "${includes[@]}" \
     "${app_files[@]}" Tests/PerformancePreview/Workload.swift \
     Tests/NavigationPreview/ToolCardExperiment.swift Tests/NavigationPreview/History.swift Tests/NavigationPreview/ParagraphExperiment.swift Tests/NavigationPreview/JointInteraction.swift Tests/NavigationPreview/DisclosureAnimationProbe.swift Tests/NavigationPreview/App.swift \
     "${objects[@]}" -o "$app_dir/Contents/MacOS/NavigationPreview"

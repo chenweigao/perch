@@ -2,6 +2,7 @@
 """After scripts/build.sh, check the production model without SSH or real preferences."""
 import argparse
 import faulthandler
+import os
 import pathlib
 import platform
 import plistlib
@@ -60,7 +61,7 @@ with tempfile.TemporaryDirectory(prefix="perch-host-check-", dir=ROOT / ".build"
     started = time.monotonic()
     print("Compiling host lifecycle fixture", flush=True)
     subprocess.run([
-        "swiftc", *(["-O", "-whole-module-optimization"] if args.release else ["-Onone"]), "-swift-version", "5", "-parse-as-library",
+        "swiftc", "-j", str(os.cpu_count() or 4), *(["-O", "-whole-module-optimization"] if args.release else ["-Onone"]), "-swift-version", "5", "-parse-as-library",
         "-target", platform.machine() + "-apple-macosx26.0", *includes,
         *map(str, sources), *map(str, sorted((ROOT / "Tests/HostLifecycleChecks").glob("*.swift"))),
         *map(str, objects), str(ghostty / "libghostty.a"), "-lc++",

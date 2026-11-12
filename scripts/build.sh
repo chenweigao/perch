@@ -33,7 +33,7 @@ cp -R "$PWD/Resources/Localization/"*.lproj "$app_dir/Contents/Resources/"
 # blocks degrade to plain code cards.
 mermaid_js="Resources/Mermaid/mermaid.min.js"
 if [ ! -f "$mermaid_js" ]; then
-    curl -sL -o "$mermaid_js" https://cdn.jsdelivr.net/npm/mermaid@11.12.1/dist/mermaid.min.js || true
+    curl -sL --retry 3 --retry-all-errors --connect-timeout 10 --max-time 30 -o "$mermaid_js" https://cdn.jsdelivr.net/npm/mermaid@11.12.1/dist/mermaid.min.js || true
 fi
 if [ -f "$mermaid_js" ] && [ "$(shasum -a 256 "$mermaid_js" | cut -d ' ' -f 1)" = "198b19442f86f0b46a17e56d3abf744c3a28a3427e66fa8dada3b589a77babcc" ]; then
     cp "$mermaid_js" "$app_dir/Contents/Resources/mermaid.min.js"

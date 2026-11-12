@@ -54,9 +54,20 @@ for name, data in inputs:
 metadata['source_input_sha256'] = digest.hexdigest()
 (Path(app) / 'Contents/Resources/build.json').write_text(json.dumps(metadata, indent=2) + '\n')
 PY
-swift build --package-path "$snapshot" --build-system native -c release --target SwiftMath
-swift build --package-path "$snapshot" --build-system native -c release --target WorkbenchCore
-bin_dir="$(swift build --package-path "$snapshot" --build-system native -c release --show-bin-path)"
+checkouts_dir="$snapshot/.build/checkouts"
+bin_dir=""
+if [ "${PERCH_REUSE_PREBUILT:-0}" = "1" ] && git diff --quiet "$revision" HEAD -- Sources/WorkbenchCore Package.resolved 2>/dev/null; then
+    candidate_bin="$(swift build --build-system native -c release --show-bin-path 2>/dev/null || true)"
+    if [ -n "$candidate_bin" ] && [ -e "$candidate_bin/Modules/WorkbenchCore.swiftmodule" ] && [ -e "$candidate_bin/Modules/SwiftMath.swiftmodule" ] && [ -d "$candidate_bin/WorkbenchCore.build" ] && [ -d "$candidate_bin/SwiftMath.build" ] && [ -d "$PWD/.build/checkouts/swift-markdown/Sources/CAtomic/include" ]; then
+        bin_dir="$candidate_bin"
+        checkouts_dir="$PWD/.build/checkouts"
+    fi
+fi
+if [ -z "$bin_dir" ]; then
+    swift build --package-path "$snapshot" --build-system native -c release --target SwiftMath
+    swift build --package-path "$snapshot" --build-system native -c release --target WorkbenchCore
+    bin_dir="$(swift build --package-path "$snapshot" --build-system native -c release --show-bin-path)"
+fi
 objects=()
 for target in WorkbenchCore Markdown CAtomic cmark_gfm cmark_gfm_extensions SwiftMath; do
     while IFS= read -r file; do objects+=("$file"); done < <(python3 - "$bin_dir/$target.build" <<'PY'
@@ -69,11 +80,11 @@ PY
 done
 flags=(-D MATH_PERFORMANCE_BASELINE)
 if [ "$variant" = candidate ]; then flags=(-D MATH_PERFORMANCE_CHECKS); fi
-swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-library \
+swiftc -j "$(sysctl -n hw.ncpu 2>/dev/null || echo 4)" -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-library \
     "${flags[@]}" -I "$bin_dir/Modules" \
-    -I "$snapshot/.build/checkouts/swift-markdown/Sources/CAtomic/include" \
-    -I "$snapshot/.build/checkouts/swift-cmark/src/include" \
-    -I "$snapshot/.build/checkouts/swift-cmark/extensions/include" \
+    -I "$checkouts_dir/swift-markdown/Sources/CAtomic/include" \
+    -I "$checkouts_dir/swift-cmark/src/include" \
+    -I "$checkouts_dir/swift-cmark/extensions/include" \
     "$snapshot"/Sources/AgentWorkbench/*.swift Tests/MathPerformancePreview/App.swift \
     "${objects[@]}" -o "$app_dir/Contents/MacOS/MathPerformance"
 cp -R "$bin_dir/SwiftMath_SwiftMath.bundle" "$app_dir/Contents/Resources/"
