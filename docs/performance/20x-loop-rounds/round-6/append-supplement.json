@@ -1,0 +1,130 @@
+{
+  "scope": "fixed five supplementary presentation-only pairs after original five, all ten retained; 0.01ms log quantization cannot certify microsecond regressions",
+  "binary_sha256": {
+    "baseline": "4a2ebac690cd30fd4c901705d408fe0347ae1f9c891bedff6314f4c3ffc52442",
+    "candidate": "28138ce33565c18b560ed60e5fc85dc880d8605e61119212962e8e841c467157"
+  },
+  "hashes_unchanged": true,
+  "metrics": {
+    "append@117": {
+      "baseline": [
+        0.04,
+        0.04,
+        0.04,
+        0.04,
+        0.04,
+        0.04,
+        0.04,
+        0.04,
+        0.04,
+        0.04
+      ],
+      "candidate": [
+        0.04,
+        0.04,
+        0.04,
+        0.04,
+        0.04,
+        0.05,
+        0.04,
+        0.04,
+        0.04,
+        0.04
+      ],
+      "medians_ms": {
+        "baseline": 0.04,
+        "candidate": 0.04
+      }
+    },
+    "append@583": {
+      "baseline": [
+        0.05,
+        0.05,
+        0.05,
+        0.06,
+        0.05,
+        0.05,
+        0.05,
+        0.05,
+        0.05,
+        0.05
+      ],
+      "candidate": [
+        0.05,
+        0.06,
+        0.06,
+        0.06,
+        0.05,
+        0.05,
+        0.05,
+        0.05,
+        0.05,
+        0.06
+      ],
+      "medians_ms": {
+        "baseline": 0.05,
+        "candidate": 0.05
+      }
+    },
+    "append@1167": {
+      "baseline": [
+        0.09,
+        0.09,
+        0.08,
+        0.09,
+        0.08,
+        0.09,
+        0.09,
+        0.08,
+        0.08,
+        0.08
+      ],
+      "candidate": [
+        0.09,
+        0.1,
+        0.09,
+        0.09,
+        0.09,
+        0.08,
+        0.09,
+        0.09,
+        0.09,
+        0.09
+      ],
+      "medians_ms": {
+        "baseline": 0.08499999999999999,
+        "candidate": 0.09
+      }
+    },
+    "append@2333": {
+      "baseline": [
+        0.14,
+        0.14,
+        0.14,
+        0.14,
+        0.14,
+        0.13,
+        0.14,
+        0.14,
+        0.13,
+        0.13
+      ],
+      "candidate": [
+        0.14,
+        0.15,
+        0.14,
+        0.15,
+        0.15,
+        0.13,
+        0.14,
+        0.14,
+        0.14,
+        0.14
+      ],
+      "medians_ms": {
+        "baseline": 0.14,
+        "candidate": 0.14
+      }
+    }
+  }
+}

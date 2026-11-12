@@ -66,10 +66,17 @@ public enum SessionEditStats {
     // Derive from this snapshot only. Tool IDs are not globally unique and
     // providers can publish revised inputs under the same ID.
     private static func compute(tool: String, input: JSONValue) -> (stat: SessionEditStat, path: String?)? {
+        let name = tool.lowercased()
+        // Unknown/read-only tools never produce a stat. Do not resolve or
+        // search their paths just to discard them in the payload switch.
+        switch name {
+        case "edit", "edit_file", "write", "write_file", "apply_patch": break
+        default: return nil
+        }
         // Tool-call paths may be absolute; URL-ish values are never files.
         let path = input["file_path"].string ?? input["filePath"].string ?? input["path"].string
         if let path, path.contains("://") { return nil }
-        switch tool.lowercased() {
+        switch name {
         case "edit", "edit_file":
             guard let stat = lineDiff(old: input["old_string"].string ?? input["oldString"].string,
                                       new: input["new_string"].string ?? input["newString"].string) else { return nil }
