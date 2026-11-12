@@ -28,23 +28,26 @@ fetch+checkout 到本轮 base。冷启动经 runner 验证可用（5/5，2026-11
 绝对值与 macOS 不可互比；A/B 只用同机同工具链。
 
 红线：不碰 Sources/AgentWorkbench（外观零变化）；行为断言变化 = 回滚；
-性能结论必须附交替 A/B 中位数与噪声带。
+性能结论必须附交替 A/B 中位数与噪声带。Linux 用于筛选；产品性能候选必须在
+Mac mini 同机 A/B 超过该轮实测噪声才采纳，不能把 Linux 特有开销的降低算成产品收益。
 
 ## 轮次记录
 
 | 轮 | 日期 | 场景 | 结论 | 报告 |
 | --- | --- | --- | --- | --- |
-| 1 | 2026-11-12 | 冷投影空白规范化（excerpt 热点） | **采纳：冷投影 -36.7%**（84.7→53.6ms@2333 条），余场景噪声内；Codex P2（Prepend 前向吸收）修复后 -36.5% 保持 | [round-1](2026-11-12-round-1.md)；#323 已合并（3b679fb） |
+| 1 | 2026-11-12 | 冷投影空白规范化（excerpt 热点） | **已合并：Linux 冷投影 -36.7%**（84.7→53.6ms@2333 条），余场景噪声内；Codex P2 修复后 -36.5% 保持。未据此认证 macOS 倍率 | [round-1](2026-11-12-round-1.md)；#323 已合并（3b679fb） |
+| 2 | 2026-11-12 | timeline 文本判空免复制 | **不采纳**：Linux -49.3%，Mac cold +0.8%（噪声内），目标产品无实证收益；已撤回 | [round-2](2026-11-12-round-2.md) |
 
 ## 否定清单（勿重复尝试）
 
-（暂无）
+- timeline 的 `trim(...).isEmpty` 改成标量早停：Linux Foundation 大幅受益，Mac
+  无超噪声改善。勿重复当 macOS 热点尝试（round 2）。
 
 ## 候选队列（按当前证据排序）
 
-1. **excerpt 的 grapheme 计数残留**：`ConversationTurnSummary.make` 里
-   `value.count`/`prefix(320 - value.count)` 仍是 Character 级 O(n) 走查，
-   每 part 两次；round-1 后占比上升，可用 UTF16 计数 + 一次性截断等价替换。
+1. **excerpt 的 grapheme 计数残留**：单 text part 摘要在 prefix(320) 后
+   无需再算 value.count 决定后续 part；走完全相同的 Character 截断与空白规范化。
+   多 part 保留严格原路径。**不能用 UTF16 数直接替代 Character 数**（emoji/组合字符不等价）。
 2. **冷投影剩余机制成本**：perf 平坦剖面中 UTF16View 迭代/下标 ~7.7%、
    `IndexingIterator.next` 5.1%、`getEnumCaseMultiPayload` 4.8%——round-1 后
    重跑 perf 定位下一批热点（大概率在行构造或 timeline 分组）。
