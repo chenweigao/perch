@@ -372,6 +372,7 @@ struct KimiToolCard: View {
         let summary = (tool.input?["command"].string ?? tool.input?["cmd"].string) != nil
             ? ToolPresentation.cleanShellCommand(rawSummary) : rawSummary
         let filePath = ToolPresentation.path(tool)
+        let isCodeSummary = (tool.input?["command"].string ?? tool.input?["cmd"].string) != nil || filePath == summary
         // Named apart from the method so the local never shadows its own initializer.
         let showsAttention = attention()
         // The activity details name the same states with the same words.
@@ -421,11 +422,14 @@ struct KimiToolCard: View {
                                     .foregroundStyle(WorkbenchTheme.quiet)
                                     .fixedSize()
                             }
-                        }.font(.system(size: ReplyStyle.captionSize, design: .monospaced))
+                        // Commands and paths read as code, a tier below the label
+                        // in monospace; other summaries share the label size.
+                        }.font(isCodeSummary ? .system(size: ReplyStyle.secondarySize, design: .monospaced)
+                                             : .system(size: ReplyStyle.Process.labelSize))
                     }
-                    Spacer(minLength: 0)
                     // The requested yellow live dot, a red exit-code capsule
-                    // on failure, and PI's green outcome dot once settled.
+                    // on failure, and PI's green outcome dot once settled. They
+                    // follow the text instead of floating on the far edge.
                     if tool.status == .running { ProcessStatusDot(status: .running) }
                     if let slowLabel {
                         Text(verbatim: slowLabel)
@@ -447,6 +451,7 @@ struct KimiToolCard: View {
                     } else if tool.status == .succeeded || tool.status == .returned {
                         ProcessStatusDot(status: tool.status).fixedSize()
                     }
+                    Spacer(minLength: 0)
                 }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(showsAttention ? Color.orange : WorkbenchTheme.quiet)
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel(Text(verbatim: "\(tool.name) · \(summary) · \(statusLabel)"))
