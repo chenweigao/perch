@@ -255,6 +255,17 @@ func checkConversationPresentation() throws {
     precondition(ModelCatalog.groups(catalog, matching: "CLAUDE").count == 2)
     precondition(ModelCatalog.groups(catalog, matching: "demo-a-proxy").first?.models.first?.id == "demo-a/claude-example")
     precondition(ModelCatalog.groups(catalog, matching: "missing").isEmpty)
+    let fragmented = try decode("""
+    [{"id":"u-frag","role":"user","created_at":"1","content":[{"type":"text","text":"你好"}]},
+     {"id":"a-frag","role":"assistant","created_at":"2","content":[
+       {"type":"thinking","thinking":"先"},{"type":"thinking","thinking":"思考"},
+       {"type":"text","text":"是的，你在 **Kimi Code "},{"type":"text","text":"CLI** 里交互。"}
+     ]}]
+    """)
+    let healed = ConversationTimelineEntry.make(fragmented, isRunning: false)
+    precondition(healed.count == 3, "Fragmented ACP chunks in one assistant message must coalesce instead of splitting into multiple reply rows")
+    expectEqual(healed[1].messages[0].content[0].thinking, "先思考")
+    expectEqual(healed[2].messages[0].content[0].text, "是的，你在 **Kimi Code CLI** 里交互。")
     print("PASS: live progress, missing summaries, thinking-only output, tool-only notice and provider model groups")
 }
 
