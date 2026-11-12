@@ -709,6 +709,31 @@ import WorkbenchCore
             try? bitmap.representation(using: .png, properties: [:])?
                 .write(to: URL(fileURLWithPath: folder).appendingPathComponent("sidebar-hover-preview.png"))
         }
+        // Moving to the next row re-targets the visible panel in place: it never
+        // hides on the way, and it lands on the new row almost at once.
+        let rowFrames = taskPanelElements(window).filter { $0.identifier == "sidebar.row" }.compactMap { element -> NSRect? in
+            guard let frame = (element.node.value(forKey: "accessibilityFrame") as? NSValue)?.rectValue,
+                  frame.minX < sidebarMaxX, frame.height >= 20, frame.height <= 40 else { return nil }
+            return frame
+        }
+        if let next = rowFrames.first(where: { abs($0.midY - rowPoint.y) > 20 && visible.contains(CGPoint(x: $0.midX, y: screenHeight - $0.midY)) }) {
+            let before = previewWindow.frame
+            moveMouse(to: CGPoint(x: next.midX, y: next.midY))
+            var stayedVisible = true
+            var moved = false
+            let started = Date()
+            while Date().timeIntervalSince(started) < 0.3 {
+                stayedVisible = stayedVisible && previewWindow.isVisible
+                if abs(previewWindow.frame.midY - before.midY) > 10 { moved = true; break }
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            let swap = Date().timeIntervalSince(started)
+            precondition(stayedVisible && moved && swap < 0.2,
+                         "A visible preview must move to the neighboring row in place: visible=\(stayedVisible) moved=\(moved) after \(swap) s")
+            print("Sidebar preview handoff: \(Int(swap * 1000)) ms, panel stayed visible")
+            moveMouse(to: rowPoint)
+            try await Task.sleep(for: .milliseconds(100))
+        }
         previewWindow.close()
         func pressAction(in element: AXUIElement) -> Bool {
             var identifier: CFTypeRef?
