@@ -1,5 +1,9 @@
 # Reading canvas
 
+> Current metrics (2026-11-12): 800 pt column, 14 pt default body on a 24 pt line,
+> 16 pt entry rhythm; the rules live in [ui-spec 正文刻度](ui-spec.md#正文刻度).
+> Figures below that differ are history.
+
 The conversation keeps a centered reading column and the existing native
 sidebar/composer glass. All metrics live in `ReplyStyle` (`ReplyMarkdownView.swift`);
 see [the visual refresh](visual-refresh.md) for the complete scale and rationale.

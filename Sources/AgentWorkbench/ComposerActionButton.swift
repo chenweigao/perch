@@ -71,9 +71,14 @@ struct ComposerAddButton: View {
     var disabled = false
     var onChoose: () -> Void = {}
     var body: some View {
+        // An outlined circle (Qoder) whose left edge meets the draft's text
+        // column, in the same ink as the model name beside it.
         Button(action: onChoose) {
-            Image(systemName: "plus").font(.system(size: 15)).frame(width: 28, height: 28).contentShape(Rectangle())
-        }.buttonStyle(.plain).foregroundStyle(.secondary)
+            Image(systemName: "plus").font(.system(size: 13, weight: .medium))
+                .frame(width: 28, height: 28)
+                .overlay(Circle().strokeBorder(WorkbenchTheme.Stroke.hairline, lineWidth: 1))
+                .contentShape(Circle())
+        }.buttonStyle(.plain).foregroundStyle(WorkbenchTheme.ink)
             .disabled(disabled || !supportsFiles)
             .help(supportsFiles ? L("Add images or files") : L("Attachments are not supported by this agent connection"))
             .accessibilityLabel(supportsFiles ? L("Add images or files") : L("Attachments unavailable"))
