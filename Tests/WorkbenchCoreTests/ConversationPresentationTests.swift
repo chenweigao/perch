@@ -255,7 +255,7 @@ func checkConversationPresentation() throws {
     precondition(ModelCatalog.groups(catalog, matching: "CLAUDE").count == 2)
     precondition(ModelCatalog.groups(catalog, matching: "demo-a-proxy").first?.models.first?.id == "demo-a/claude-example")
     precondition(ModelCatalog.groups(catalog, matching: "missing").isEmpty)
-    let fragmented = try decode("""
+    let fragmented = try messages("""
     [{"id":"u-frag","role":"user","created_at":"1","content":[{"type":"text","text":"你好"}]},
      {"id":"a-frag","role":"assistant","created_at":"2","content":[
        {"type":"thinking","thinking":"先"},{"type":"thinking","thinking":"思考"},
