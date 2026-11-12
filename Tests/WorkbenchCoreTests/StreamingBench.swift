@@ -1,5 +1,4 @@
 import Foundation
-import QuartzCore
 import WorkbenchCore
 
 /// The synchronous model work one streaming delta costs a long, running Kimi
@@ -101,7 +100,7 @@ func benchStreamingDelta() throws {
     var stages: [String: [Double]] = [:]
     var presentationStages: [String: [Double]] = [:]
     var rowCount = 0, entryCount = 0
-    func ms(_ start: Double) -> Double { (CACurrentMediaTime() - start) * 1_000 }
+    func ms(_ start: Double) -> Double { (benchNow() - start) * 1_000 }
     func nanos(_ value: UInt64) -> Double { Double(value) / 1_000_000 }
     var metrics: ConversationPresentationUpdateMetrics?
     let model = ConversationPresentationModel(key: key, metricsHandler: { metrics = $0 })
@@ -109,38 +108,38 @@ func benchStreamingDelta() throws {
 
     for update in 0..<(measured + 5) {
         let event = try delta("继续推理第 \(update) 段。", offset: conversation.live?.thinkingText.utf16.count ?? 0)
-        var t = CACurrentMediaTime()
+        var t = benchNow()
         _ = conversation.apply(event)
         let apply = ms(t)
 
         // KimiWorkspaceView: the status line's summary of the latest turn.
-        t = CACurrentMediaTime()
+        t = benchNow()
         let workspaceMessages = conversation.displayMessages
         let display1 = ms(t)
-        t = CACurrentMediaTime()
+        t = benchNow()
         let activity = ConversationActivity(messages: workspaceMessages, isRunning: true, liveTools: [], online: true,
                                             isThinking: true, isResponding: false)
         let activityMs = ms(t)
 
         // KimiTimeline + ConversationTranscript.
-        t = CACurrentMediaTime()
+        t = benchNow()
         let timelineMessages = conversation.displayMessages
         let display2 = ms(t)
         let input = ConversationPresentationModel.Input(messages: timelineMessages, live: [], running: [], isRunning: true,
                                                         online: true, epoch: "bench", language: "zh")
-        t = CACurrentMediaTime()
+        t = benchNow()
         let snapshot = handle.update(key: key, input: input, cache: cache)
         let presentation = ms(t)
         metrics = nil
         _ = model.update(input)
-        t = CACurrentMediaTime()
+        t = benchNow()
         let presented = snapshot.presented(activity: [:], foldsProcess: true, isRunning: true)
         let presentedMs = ms(t)
-        t = CACurrentMediaTime()
+        t = benchNow()
         let memoryKeys = presented.rows.map { key + ":" + $0.entry.id }
         let contentsMs = ms(t)
         // An open find bar with a query searches again on every update.
-        t = CACurrentMediaTime()
+        t = benchNow()
         let found = findBar.hits(in: timelineMessages, query: "已经处理", running: true)
         let findMs = ms(t)
         precondition(found.hits.count >= completedTurns)
@@ -183,13 +182,13 @@ func benchStreamingDelta() throws {
         window = Array(earlier[start..<(start + 100)]) + window
         let messages = window
         let input = ConversationPresentationModel.Input(messages: messages, isRunning: true, epoch: "bench", language: "zh")
-        var t = CACurrentMediaTime()
+        var t = benchNow()
         let snapshot = handle.update(key: key, input: input, cache: cache)
         let presentation = ms(t)
-        t = CACurrentMediaTime()
+        t = benchNow()
         let presented = snapshot.presented(activity: [:], foldsProcess: true, isRunning: true)
         let presentedMs = ms(t)
-        t = CACurrentMediaTime()
+        t = benchNow()
         _ = ConversationActivity(messages: messages, isRunning: true, isThinking: true)
         let activityMs = ms(t)
         paged.append(presentation + presentedMs + activityMs)
@@ -221,7 +220,7 @@ func benchStreamingDelta() throws {
             _ = snapshot.presented(activity: [:], foldsProcess: true, isRunning: true)
             return (leaving, snapshot, copy)
         }()
-        let t = CACurrentMediaTime()
+        let t = benchNow()
         held = nil
         released.append(ms(t))
         precondition(held == nil)

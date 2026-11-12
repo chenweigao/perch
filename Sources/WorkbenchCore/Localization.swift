@@ -39,9 +39,13 @@ public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
 /// Choose the resource bundle explicitly: String(localized:locale:) uses its
 /// locale for formatting, but does not select the language of the resource table.
 public func L(_ value: String.LocalizationValue, locale: Locale = AppLanguage.current.resolvedLocale) -> String {
+#if canImport(Darwin)
     let language = AppLanguage.resolveSystemLanguage([locale.identifier])
     let bundle = LocalizationBundles.values[language] ?? .main
     return String(localized: value, bundle: bundle, locale: locale)
+#else
+    return value.resolved
+#endif
 }
 
 /// Label dynamic keys explicitly so interpolated literals retain placeholders.

@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 /// Automatic local titles for sessions whose remote title is still a
 /// placeholder. Uses the configured activity-summary endpoint; never writes

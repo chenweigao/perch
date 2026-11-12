@@ -1,5 +1,10 @@
 import Foundation
+#if canImport(Darwin)
 import Darwin
+#else
+import FoundationNetworking
+import Glibc
+#endif
 
 public final class KimiAPI: @unchecked Sendable {
     public let baseURL: URL
@@ -92,10 +97,17 @@ public final class KimiAPI: @unchecked Sendable {
         return request
     }
     public static func availableLoopbackPort() throws -> UInt16 {
+#if canImport(Darwin)
         let fd = socket(AF_INET, SOCK_STREAM, 0)
+#else
+        let fd = socket(AF_INET, Int32(SOCK_STREAM.rawValue), 0)
+#endif
         guard fd >= 0 else { throw WorkbenchError(L("无法创建本地连接")) }
         defer { close(fd) }
-        var addr = sockaddr_in(); addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+        var addr = sockaddr_in()
+#if canImport(Darwin)
+        addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+#endif
         addr.sin_family = sa_family_t(AF_INET); addr.sin_addr.s_addr = inet_addr("127.0.0.1")
         let result = withUnsafePointer(to: &addr) { $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { bind(fd, $0, socklen_t(MemoryLayout<sockaddr_in>.size)) } }
         guard result == 0 else { throw WorkbenchError(L("无法分配本地端口")) }

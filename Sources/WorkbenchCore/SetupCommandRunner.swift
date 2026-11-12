@@ -1,4 +1,9 @@
 import Foundation
+#if canImport(Darwin)
+import Darwin
+#else
+import Glibc
+#endif
 
 /// Bounded, cancellable commands used by the setup sheet. Cancellation ends only
 /// the local check/SSH client, never an already running remote agent.
@@ -18,12 +23,20 @@ public enum SetupCommandRunner {
         private var cancelled = false
         private var timedOut = false
         private var finished = false
+        private var launched = false
 
         func stop(cancelled: Bool) {
             lock.lock(); defer { lock.unlock() }
             guard !finished else { return }
             if cancelled { self.cancelled = true } else { timedOut = true }
+#if canImport(Darwin)
             if process.isRunning { process.terminate() }
+#else
+            // Linux corelibs' Process.isRunning reads stale outside the
+            // launching run loop, silently skipping terminate(); the child is
+            // still unreaped here, so terminate() cannot hit a recycled pid.
+            if launched { process.terminate() }
+#endif
         }
         func run(_ executable: String, _ arguments: [String], timeout: TimeInterval, environment: [String: String]?) throws -> Data {
             let output = Pipe(), errors = Pipe()
@@ -34,7 +47,23 @@ public enum SetupCommandRunner {
             if let environment { process.environment = environment }
             process.standardInput = FileHandle.nullDevice
             process.standardOutput = output; process.standardError = errors
-            do { try process.run() } catch { finished = true; lock.unlock(); throw error }
+            do {
+#if canImport(Darwin)
+                try process.run()
+#else
+                // Swift's cooperative pool threads block signals and
+                // posix_spawn hands that mask to the child, which makes
+                // SIGTERM undeliverable and the timeout a no-op. Restore this
+                // thread's inherited mask for the spawn only.
+                var unblock = sigset_t()
+                sigfillset(&unblock)
+                var previous = sigset_t()
+                pthread_sigmask(SIG_UNBLOCK, &unblock, &previous)
+                defer { pthread_sigmask(SIG_SETMASK, &previous, nil) }
+                try process.run()
+#endif
+            } catch { finished = true; lock.unlock(); throw error }
+            launched = true
             lock.unlock()
             let expiry = DispatchWorkItem { self.stop(cancelled: false) }
             DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: expiry)

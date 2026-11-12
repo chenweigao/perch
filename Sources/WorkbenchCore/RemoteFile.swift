@@ -46,15 +46,27 @@ public enum RemoteFilePath {
         }
         // A leading ~ is expanded by the remote shell, so its components stay as typed.
         guard base.hasPrefix("/") else { return base }
+        return standardize(base)
+    }
+
+    /// Lexical `.`/`..` cleanup, identical on every platform: unlike
+    /// NSString.standardizingPath, Linux corelibs leaves `./` components in
+    /// place, and reference matching depends on the normalized form.
+    public static func standardize(_ input: String) -> String {
+        let absolute = input.hasPrefix("/")
         var components: [String] = []
-        for part in base.split(separator: "/", omittingEmptySubsequences: true) {
+        for part in input.split(separator: "/", omittingEmptySubsequences: true) {
             switch part {
             case ".": continue
-            case "..": if !components.isEmpty { components.removeLast() }
+            case "..":
+                if let last = components.last, last != ".." { components.removeLast() }
+                else if !absolute { components.append("..") }
             default: components.append(String(part))
             }
         }
-        return "/" + components.joined(separator: "/")
+        let joined = components.joined(separator: "/")
+        if absolute { return "/" + joined }
+        return joined.isEmpty ? "." : joined
     }
 
     public static func parent(of path: String) -> String? {
@@ -127,7 +139,7 @@ public enum RemoteFileCommand {
         guard !trimmed.hasPrefix("/"), !trimmed.hasPrefix("~") else {
             return remoteCommand(path: try RemoteFilePath.resolve(trimmed, cwd: cwd), limit: limit)
         }
-        let reference = (trimmed as NSString).standardizingPath
+        let reference = RemoteFilePath.standardize(trimmed)
         // Normalize before matching absolute tool paths, so ./Sources/Foo.swift
         // identifies the same worktree root as Sources/Foo.swift.
         let suffix = "/" + reference
@@ -138,7 +150,7 @@ public enum RemoteFileCommand {
         }
         var ordered: [String] = []
         for root in candidates + [cwd] where root.hasPrefix("/") && !root.contains("\0") {
-            let standardized = (root as NSString).standardizingPath
+            let standardized = RemoteFilePath.standardize(root)
             if !ordered.contains(standardized) { ordered.append(standardized) }
         }
         // Without any usable root the session directory is required, which is

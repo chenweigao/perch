@@ -1,5 +1,9 @@
 import Foundation
+#if canImport(CryptoKit)
 import CryptoKit
+#else
+import Crypto
+#endif
 
 /// A reference to exactly what the reader selected, not a claim about later file contents.
 public struct ReviewContext: Equatable, Sendable, Identifiable {

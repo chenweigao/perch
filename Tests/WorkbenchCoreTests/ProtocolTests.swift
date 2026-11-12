@@ -66,7 +66,11 @@ struct ProtocolTests {
         checkConversationRowGeometry()
         checkReplyDocument()
         checkReplyMath()
+#if canImport(AppKit)
         checkMathRendering()
+#else
+        print("SKIP: math rendering smoke check requires AppKit")
+#endif
         checkReplyAlerts()
         checkReplySelection()
         checkReplyTableGeometry()
