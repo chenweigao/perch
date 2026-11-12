@@ -223,6 +223,9 @@ public enum SessionEditStats {
             return SessionEditStat(additions: lineCount(new), deletions: 0)
         }
         guard let old, let new else { return nil }
+        // For short edits, probing first/last lines costs more than creating
+        // the small arrays. Keep that working set on the original algorithm.
+        if old.utf8.count <= 1024 && new.utf8.count <= 1024 { return fullLineDiff(old, new) }
         let bounded = old.utf8.withContiguousStorageIfAvailable { a in
             new.utf8.withContiguousStorageIfAvailable { b -> SessionEditStat in
                 // Only a different first AND last line proves that there is

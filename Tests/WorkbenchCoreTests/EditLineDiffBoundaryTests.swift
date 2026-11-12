@@ -42,5 +42,13 @@ func checkEditLineDiffBoundaries() throws {
         try check(text + "\n", text)
         try check(text, text.decomposedStringWithCanonicalMapping)
     }
+    // Exercise either side of the short-input working-set threshold, including
+    // unequal-sized inputs. Byte length never changes the reference semantics.
+    for size in [1023, 1024, 1025] {
+        let text = String(repeating: "x", count: size - 3) + "\na\n"
+        try check(text, String(repeating: "x", count: size - 3) + "\nb\n")
+        try check(String(repeating: "x", count: size), String(repeating: "y", count: size))
+        try check(text, text + "\n\n")
+    }
     print("PASS: line fast paths preserve prefix/suffix overlap, final empty lines, CRLF and canonical Unicode boundaries")
 }

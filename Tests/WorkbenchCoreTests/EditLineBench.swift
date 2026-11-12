@@ -15,7 +15,7 @@ func benchEditLines() throws {
         return .init(additions: bEnd - start, deletions: aEnd - start)
     }
     var results: [[String: Any]] = []
-    for size in [8, 64, 512] {
+    for size in [8, 16, 32, 64, 512] {
         let rows = (0..<size).map { "let value\($0) = compute(\($0)) // 中文 café" }
         let old = rows.joined(separator: "\n")
         func local(_ index: Int) -> String {
