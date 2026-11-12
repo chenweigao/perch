@@ -1,5 +1,9 @@
 # Floating sidebar integration
 
+> Current layout (2026-11-12): 260 pt default width (220–400 pt), 32 pt rows,
+> vertical page entries at the top and dated recents; the rules live in
+> [ui-spec 侧栏](design/ui-spec.md#侧栏). Figures below that differ are history.
+
 This integration brings Goal A (`352b66c`), Goal B correctness fixes
 (`1399902`), and tool visibility (`c7e3192`) onto one local baseline.
 

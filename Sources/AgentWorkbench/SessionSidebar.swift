@@ -413,7 +413,10 @@ struct WorkbenchSidebar: View {
         } label: {
             SidebarActionGlyph(systemName: filter == .all ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill")
         }
-            .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().help("筛选最近会话：\(L(key: filter.rawValue))")
+            // A borderless-button menu hands its label to AppKit, which tints it
+            // in label ink; the button style keeps the shared quiet glyph.
+            .menuStyle(.button).buttonStyle(SidebarNavigationStyle()).menuIndicator(.hidden).fixedSize()
+            .help("筛选最近会话：\(L(key: filter.rawValue))")
             .accessibilityLabel("筛选最近会话：\(L(key: filter.rawValue))")
     }
     #if PERCH_ACCEPTANCE

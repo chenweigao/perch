@@ -216,9 +216,9 @@ struct ContextMeter: View {
                             .stroke(tint, style: StrokeStyle(lineWidth: 17 * 2.5 / 24, lineCap: .round))
                             .frame(width: 17 * 18 / 24, height: 17 * 18 / 24)
                             .rotationEffect(.degrees(-90))
-                    } else {
-                        Text(isStale ? "–" : "?").font(.system(size: 9, weight: .medium))
                     }
+                    // Unknown or stale usage leaves the bare track; the tooltip names it.
+
                 }.frame(width: 17, height: 17)
                 // PI's contract: the remaining percent rides beside the ring at all
                 // times; pressure only changes the ink.
@@ -228,7 +228,7 @@ struct ContextMeter: View {
                         .monospacedDigit()
                 }
             }.foregroundStyle(tint)
-                .padding(.leading, 5).padding(.trailing, 8).padding(.vertical, 3).frame(minHeight: 24)
+                .padding(.leading, 5).padding(.trailing, 8).frame(minWidth: 28, minHeight: 28)
                 .contentShape(Rectangle())
         }.buttonStyle(.plain).fixedSize()
             .help(summary).accessibilityLabel(summary)
