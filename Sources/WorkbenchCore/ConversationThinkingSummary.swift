@@ -21,7 +21,7 @@ public enum ConversationThinkingSummary {
     }
 
     private static func clean(_ parts: [String]) -> String? {
-        let text = parts.joined(separator: " ").split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        let text = parts.joined(separator: " ").collapsedWhitespace
         return text.isEmpty ? nil : text
     }
 }
