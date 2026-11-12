@@ -119,7 +119,7 @@ struct ChangesButton: View {
         let open = model.taskContextWindow.isShowing(.changes)
         Button { model.taskContextWindow.togglePage(.changes, model: model) } label: {
             WorkbenchToolbarSymbol(name: "plus.forwardslash.minus")
-                .foregroundStyle(open ? WorkbenchTheme.accent : .secondary)
+                .foregroundStyle(open ? WorkbenchTheme.accent : WorkbenchTheme.ink)
         }.buttonStyle(WorkbenchToolbarButtonStyle(selected: open)).help("查看改动").accessibilityLabel("改动")
             .accessibilityValue(open ? "已展开" : "已收起")
     }

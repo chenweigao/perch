@@ -47,7 +47,7 @@ enum SidebarMetrics {
     static let sectionTitleOpacity: Double = 0.40
     static let sectionHeaderHeight: CGFloat = 28
     /// Unselected session titles recede; the selected row returns to full ink.
-    static let idleTitleOpacity: Double = 0.72
+    static let idleTitleOpacity: Double = 0.80
     /// Trailing actions of headers and project rows (+, filter, retry): one quiet
     /// glyph size and one hit target.
     static let actionSize: CGFloat = 24
