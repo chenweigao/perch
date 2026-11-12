@@ -256,6 +256,56 @@ class MathPerformanceTests(unittest.TestCase):
             (cand / "Contents/Resources/build.json").write_text(json.dumps({"source_input_sha256": "b" * 64}))
             self.assertEqual(len(MODULE.schedule_order(base, cand)), 6)
 
+    def test_prebuilt_reuse_accepts_regular_swiftmodule_files_and_skips_package_rebuild(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            scripts = root / "scripts"
+            scripts.mkdir()
+            build = ROOT / "scripts/build-math-performance-preview.sh"
+            shutil.copy2(build, scripts)
+            fixture = root / "Tests/MathPerformancePreview"
+            fixture.mkdir(parents=True)
+            shutil.copy2(ROOT / "Tests/MathPerformancePreview/App.swift", fixture)
+            core = root / "Sources/WorkbenchCore"
+            core.mkdir(parents=True)
+            (core / "ReplyMath.swift").write_text("import Foundation\n")
+            app = root / "Sources/AgentWorkbench"
+            app.mkdir()
+            names = re.search(r"for name in (.*?); do", build.read_text()).group(1).split()
+            for name in names:
+                (app / (name + ".swift")).write_text("import Foundation\n")
+            shutil.copy2(ROOT / "Package.resolved", root)
+            for command in [["init", "-q"], ["config", "user.name", "Math Test"],
+                            ["config", "user.email", "fixture@example.test"], ["add", "."],
+                            ["commit", "-qm", "Math fixture"]]:
+                subprocess.run(["git", *command], cwd=root, check=True, capture_output=True)
+            (root / ".build/checkouts/swift-markdown/Sources/CAtomic/include").mkdir(parents=True)
+            (root / ".build/checkouts/swift-cmark/src/include").mkdir(parents=True)
+            (root / ".build/checkouts/swift-cmark/extensions/include").mkdir(parents=True)
+            binary = root / "bin"
+            (binary / "Modules").mkdir(parents=True)
+            # Native SwiftPM emits .swiftmodule as regular files, not directories.
+            (binary / "Modules/WorkbenchCore.swiftmodule").write_bytes(b"module")
+            (binary / "Modules/SwiftMath.swiftmodule").write_bytes(b"module")
+            for target in ["WorkbenchCore", "Markdown", "CAtomic", "cmark_gfm", "cmark_gfm_extensions", "SwiftMath"]:
+                folder = binary / (target + ".build")
+                folder.mkdir(parents=True)
+                (folder / "fixture.o").write_bytes(b"")
+            stubs = root / "stubs"
+            stubs.mkdir()
+            for name, content in {
+                "swift": '#!/bin/sh\ncase "$*" in\n*--target*) exit 99;;\n*--show-bin-path*) printf "%s\\n" "$MATH_TEST_BIN";;\n*--version*) printf "fixture toolchain\\n";;\nesac\n',
+                "swiftc": '#!/bin/sh\nexit 97\n',
+            }.items():
+                path = stubs / name
+                path.write_text(content)
+                path.chmod(0o755)
+            environment = {**os.environ, "PATH": str(stubs) + os.pathsep + os.environ["PATH"],
+                           "MATH_TEST_BIN": str(binary), "PERCH_REUSE_PREBUILT": "1"}
+            result = subprocess.run(["bash", "scripts/build-math-performance-preview.sh", "candidate"],
+                                    cwd=root, env=environment, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 97, result.stdout + result.stderr)
+
     def test_nonfinite_samples_fail(self):
         for value in [-1, float("nan"), float("inf")]:
             with self.assertRaises(ValueError):

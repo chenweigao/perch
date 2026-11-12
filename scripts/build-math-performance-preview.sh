@@ -58,7 +58,7 @@ checkouts_dir="$snapshot/.build/checkouts"
 bin_dir=""
 if [ "${PERCH_REUSE_PREBUILT:-0}" = "1" ] && git diff --quiet "$revision" HEAD -- Sources/WorkbenchCore Package.resolved 2>/dev/null; then
     candidate_bin="$(swift build --build-system native -c release --show-bin-path 2>/dev/null || true)"
-    if [ -n "$candidate_bin" ] && [ -d "$candidate_bin/Modules/WorkbenchCore.swiftmodule" ] && [ -d "$candidate_bin/SwiftMath.build" ] && [ -d "$PWD/.build/checkouts/swift-markdown/Sources/CAtomic/include" ]; then
+    if [ -n "$candidate_bin" ] && [ -e "$candidate_bin/Modules/WorkbenchCore.swiftmodule" ] && [ -e "$candidate_bin/Modules/SwiftMath.swiftmodule" ] && [ -d "$candidate_bin/WorkbenchCore.build" ] && [ -d "$candidate_bin/SwiftMath.build" ] && [ -d "$PWD/.build/checkouts/swift-markdown/Sources/CAtomic/include" ]; then
         bin_dir="$candidate_bin"
         checkouts_dir="$PWD/.build/checkouts"
     fi

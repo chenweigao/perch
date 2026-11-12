@@ -7,7 +7,7 @@ app_dir="$PWD/build/Navigation Preview.app"
 # This fixture links SwiftPM object files directly. Use the native layout;
 # Xcode 27 defaults to Swift Build, whose Products directory has no .build objects.
 bin_dir="$(swift build --build-system native -c release --show-bin-path)"
-if [ "${PERCH_REUSE_PREBUILT:-0}" != "1" ] || [ ! -d "$bin_dir/Modules/WorkbenchCore.swiftmodule" ] || [ ! -d "$bin_dir/SwiftMath.build" ]; then
+if [ "${PERCH_REUSE_PREBUILT:-0}" != "1" ] || [ ! -e "$bin_dir/Modules/WorkbenchCore.swiftmodule" ] || [ ! -e "$bin_dir/Modules/SwiftMath.swiftmodule" ] || [ ! -d "$bin_dir/WorkbenchCore.build" ] || [ ! -d "$bin_dir/SwiftMath.build" ]; then
     swift build --build-system native -c release --target WorkbenchCore
     swift build --build-system native -c release --target SwiftMath
     bin_dir="$(swift build --build-system native -c release --show-bin-path)"
