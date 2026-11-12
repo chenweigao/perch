@@ -135,6 +135,22 @@ def execute(binary, mode, count, output):
     return read_result(result_path, mode)
 
 
+def schedule_order(baseline_app, candidate_app):
+    default = ["baseline", "candidate", "candidate", "baseline", "baseline", "candidate"]
+    try:
+        base_meta = json.loads((Path(baseline_app) / "Contents/Resources/build.json").read_text())
+        cand_meta = json.loads((Path(candidate_app) / "Contents/Resources/build.json").read_text())
+    except (OSError, ValueError):
+        return default
+    base_sha = base_meta.get("source_input_sha256")
+    cand_sha = cand_meta.get("source_input_sha256")
+    if (isinstance(base_sha, str) and len(base_sha) == 64
+            and all(c in "0123456789abcdef" for c in base_sha)
+            and base_sha == cand_sha):
+        return ["baseline", "candidate"]
+    return default
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--baseline-app", type=Path, required=True)
@@ -148,7 +164,7 @@ def main():
     binaries = {"baseline": args.baseline_app.resolve() / "Contents/MacOS/MathPerformance",
                 "candidate": args.candidate_app.resolve() / "Contents/MacOS/MathPerformance"}
     record = {"status": "running", "binary_sha256": {name: hashlib.sha256(path.read_bytes()).hexdigest() for name, path in binaries.items()},
-              "order": ["baseline", "candidate", "candidate", "baseline", "baseline", "candidate"]}
+              "order": schedule_order(args.baseline_app.resolve(), args.candidate_app.resolve())}
     runs = {"baseline": {}, "candidate": {}}
     try:
         contracts = output / "contracts"

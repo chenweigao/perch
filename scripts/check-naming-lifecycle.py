@@ -77,7 +77,7 @@ with naming_service() as server, tempfile.TemporaryDirectory(prefix="perch-namin
     }))
     compiled = work / "compiled"
     subprocess.run([
-        "swiftc", "-Onone", "-swift-version", "5", "-parse-as-library",
+        "swiftc", "-j", str(os.cpu_count() or 4), "-Onone", "-swift-version", "5", "-parse-as-library",
         "-target", platform.machine() + "-apple-macosx26.0", *includes,
         *map(str, sources), str(ROOT / "Tests/NamingLifecycleChecks/App.swift"),
         *map(str, objects), str(ghostty / "libghostty.a"), "-lc++",

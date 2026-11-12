@@ -243,6 +243,19 @@ class MathPerformanceTests(unittest.TestCase):
         runs["candidate"]["typeset-32"][2]["measurements"]["first_light_dark_draw"]["total_ms"] = 53
         MODULE.compare(runs)
 
+    def test_schedule_order_shortens_only_identical_valid_fingerprints(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory) / "base.app"
+            cand = Path(directory) / "cand.app"
+            for app in (base, cand):
+                (app / "Contents/Resources").mkdir(parents=True)
+            self.assertEqual(len(MODULE.schedule_order(base, cand)), 6)
+            (base / "Contents/Resources/build.json").write_text(json.dumps({"source_input_sha256": "a" * 64}))
+            (cand / "Contents/Resources/build.json").write_text(json.dumps({"source_input_sha256": "a" * 64}))
+            self.assertEqual(MODULE.schedule_order(base, cand), ["baseline", "candidate"])
+            (cand / "Contents/Resources/build.json").write_text(json.dumps({"source_input_sha256": "b" * 64}))
+            self.assertEqual(len(MODULE.schedule_order(base, cand)), 6)
+
     def test_nonfinite_samples_fail(self):
         for value in [-1, float("nan"), float("inf")]:
             with self.assertRaises(ValueError):

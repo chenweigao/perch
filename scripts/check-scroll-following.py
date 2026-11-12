@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """After scripts/build.sh, check native scroll-following behavior in isolation."""
+import os
 import pathlib
 import platform
 import plistlib
@@ -36,7 +37,7 @@ with tempfile.TemporaryDirectory(prefix="perch-scroll-check-") as folder:
     subprocess.run([str(ROOT / "scripts/prepare-highlight.sh"), str(app / "Contents/Resources")], check=True)
     compiled = work / "compiled"
     subprocess.run([
-        "swiftc", "-Onone", "-swift-version", "5", "-parse-as-library", "-target", platform.machine() + "-apple-macosx26.0", *includes,
+        "swiftc", "-j", str(os.cpu_count() or 4), "-Onone", "-swift-version", "5", "-parse-as-library", "-target", platform.machine() + "-apple-macosx26.0", *includes,
         *[str(ROOT / "Sources/AgentWorkbench" / (name + ".swift")) for name in files],
         str(ROOT / "Tests/ScrollFollowingChecks/App.swift"), *map(str, objects), "-o", str(compiled),
     ], cwd=ROOT, check=True)
