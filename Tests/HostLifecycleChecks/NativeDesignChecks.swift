@@ -171,14 +171,13 @@ import WorkbenchCore
     precondition(connection.drafts["design-0"] == citedDraft &&
                  connection.pastes.expand(connection.drafts["design-1"]!).text == "> 另一个会话的上下文\n\n",
                  "A message quote stays with its originating session")
-    let kimi = model.agentConnections(for: host.id)!.kimi
     let kimiContext = ConversationActionContext(hostID: host.id, kind: .kimi, sessionID: "kimi-cite-fixture")
     model.handleConversationAction(.init(context: kimiContext, action: .quote("Kimi 上下文")))
-    precondition(kimi.pastes.expand(kimi.drafts["kimi-cite-fixture"]!).text == "> Kimi 上下文\n\n" &&
+    precondition(connection.pastes.expand(connection.drafts["kimi-cite-fixture"]!).text == "> Kimi 上下文\n\n" &&
                  connection.drafts["design-0"] == citedDraft,
-                 "Kimi citations use the owning Kimi store without changing the native draft")
+                 "Kimi citations use the native store without changing another session's draft")
     connection.drafts["design-0"] = ""; connection.drafts["design-1"] = nil
-    kimi.drafts["kimi-cite-fixture"] = nil
+    connection.drafts["kimi-cite-fixture"] = nil
     for _ in 0..<40 where !draft.draftString.isEmpty { try await Task.sleep(for: .milliseconds(25)) }
     precondition(draft.draftString.isEmpty)
     checkStatusOutsideComposer()

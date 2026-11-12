@@ -3235,4 +3235,149 @@ class IncrementalHistoryTests(unittest.TestCase):
         with self.assertRaises(ValueError):s.snapshot(turns='0')
         with self.assertRaises(ValueError):s.snapshot(turns='101')
 
+
+class KimiAcpProtocolTests(unittest.TestCase):
+    OPTIONS = [
+        {'id':'model','name':'Model','category':'model','type':'select','currentValue':'bailian/kimi-k3',
+         'options':[
+             {'value':'bailian/kimi-k3','name':'kimi-k3'},
+             {'value':'bailian/qwen3.8-max','name':'qwen3.8-max'},
+             {'value':'aone/qwen3.8-max','name':'qwen3.8-max'},
+             {'value':'kimi-for-coding','name':'Kimi for Coding'},
+         ]},
+        {'id':'thinking','name':'Thinking','category':'thought_level','type':'select','currentValue':'high',
+         'options':[{'value':'off','name':'Thinking Off'},{'value':'low','name':'Thinking Low'},{'value':'high','name':'Thinking High'}]},
+        {'id':'mode','name':'Mode','category':'mode','type':'select','currentValue':'default',
+         'options':[{'value':'default','name':'Default'},{'value':'plan','name':'Plan'},{'value':'yolo','name':'YOLO'},{'value':'auto','name':'Auto'}]},
+    ]
+
+    def make_session(self, model='', thinking=None, mode='default'):
+        broker.KIMI_MODELS = None
+        s = broker.Session({
+            'id':'kimi-acp-test','provider':'kimi','cwd':folder.name,'title':'新对话',
+            'model':model,'thinking':thinking,'permissionMode':mode,'busy':False,'archived':False,
+            'updated':0,'revision':0,'completed':0,'messages':[],'interactions':[],'error':None,
+        })
+        self.sent = []
+        s.send = lambda value: self.sent.append(value)
+        s.process = type('Process',(),{'poll':lambda self:None})()
+        return s
+
+    def test_catalog_keeps_provider_prefixed_and_bare_models_distinct(self):
+        s = self.make_session()
+        s.event({'type':'acp_response','kind':'session_open','result':{'sessionId':'session_1','configOptions':broker.copy.deepcopy(self.OPTIONS)},'error':None})
+        catalog = broker.kimi_catalog()
+        self.assertEqual([m['id'] for m in catalog], ['bailian/kimi-k3','bailian/qwen3.8-max','aone/qwen3.8-max','kimi-for-coding'])
+        self.assertEqual([m['provider'] for m in catalog], ['bailian','bailian','aone','kimi'])
+        self.assertEqual(catalog[0]['thinking'], ['off','low','high'])
+        self.assertEqual(s.summary()['permission'], {'selected':'default','options':['default','plan','yolo','auto'],'scope':'next-turn'})
+
+    def test_explicit_creation_config_syncs_before_flushing_prompt(self):
+        s = self.make_session(model='aone/qwen3.8-max', thinking='low', mode='yolo')
+        s.prompt({'requestId':'req-1','text':'hello'})
+        s.event({'type':'acp_response','kind':'session_open','result':{'sessionId':'session_2','configOptions':broker.copy.deepcopy(self.OPTIONS)},'error':None})
+        self.assertEqual(self.sent[-1]['method'], 'session/set_config_option')
+        self.assertEqual(self.sent[-1]['params'], {'sessionId':'session_2','configId':'model','value':'aone/qwen3.8-max'})
+        updated = broker.copy.deepcopy(self.OPTIONS)
+        updated[0]['currentValue'] = 'aone/qwen3.8-max'
+        s.event({'type':'acp_response','kind':'set_config','result':{'configOptions':updated},'error':None})
+        self.assertEqual(self.sent[-1]['params'], {'sessionId':'session_2','configId':'thinking','value':'low'})
+        updated[1]['currentValue'] = 'low'
+        s.event({'type':'acp_response','kind':'set_config','result':{'configOptions':updated},'error':None})
+        self.assertEqual(self.sent[-1]['method'], 'session/set_mode')
+        self.assertEqual(self.sent[-1]['params'], {'sessionId':'session_2','modeId':'yolo'})
+        s.event({'type':'acp_response','kind':'set_config','result':{},'error':None})
+        self.assertEqual(self.sent[-1]['method'], 'session/prompt')
+        self.assertEqual(s.state['model'], 'aone/qwen3.8-max')
+        self.assertEqual(s.state['thinking'], 'low')
+        self.assertEqual(s.state['permissionMode'], 'yolo')
+
+    def test_streaming_chunks_coalesce_and_stay_ordered_across_tools_and_turns(self):
+        s = self.make_session()
+        s.event({'type':'acp_response','kind':'session_open','result':{'sessionId':'session_3','configOptions':broker.copy.deepcopy(self.OPTIONS)},'error':None})
+        s.prompt({'requestId':'turn-1','text':'first question'})
+        for kind, piece in [('agent_thought_chunk','先'),('agent_thought_chunk','思考'),('agent_message_chunk','准备'),('agent_message_chunk','检查')]:
+            s.event({'type':'acp_notification','method':'session/update','params':{'sessionId':'session_3','update':{'sessionUpdate':kind,'content':{'type':'text','text':piece}}}})
+        # Lazy tool_call followed by streaming args update, then terminal completion.
+        s.event({'type':'acp_notification','method':'session/update','params':{'sessionId':'session_3','update':{'sessionUpdate':'tool_call','toolCallId':'1:c1','title':'Bash','kind':'execute','status':'pending'}}})
+        s.event({'type':'acp_notification','method':'session/update','params':{'sessionId':'session_3','update':{'sessionUpdate':'tool_call_update','toolCallId':'1:c1','title':'List files','kind':'execute','status':'in_progress','rawInput':{'command':'ls -la'}}}})
+        mid_messages = s.snapshot()['messages']
+        self.assertFalse(any(m['role'] == 'tool' for m in mid_messages), 'in_progress update must not create a completed tool result')
+        self.assertEqual(mid_messages[-1]['content'][0]['tool_name'], 'Bash')
+        self.assertEqual(mid_messages[-1]['content'][0]['input'], {'command':'ls -la'})
+        s.event({'type':'acp_notification','method':'session/update','params':{'sessionId':'session_3','update':{'sessionUpdate':'tool_call_update','toolCallId':'1:c1','status':'completed','content':[{'type':'content','content':{'type':'text','text':'README.md'}}]}}})
+        s.event({'type':'acp_notification','method':'session/update','params':{'sessionId':'session_3','update':{'sessionUpdate':'agent_message_chunk','content':{'type':'text','text':'第一轮完成'}}}})
+        s.event({'type':'acp_response','kind':'prompt:turn-1','result':{'stopReason':'end_turn'},'error':None})
+        s.prompt({'requestId':'turn-2','text':'second question'})
+        s.event({'type':'acp_notification','method':'session/update','params':{'sessionId':'session_3','update':{'sessionUpdate':'agent_message_chunk','content':{'type':'text','text':'第二轮回答'}}}})
+        messages = s.snapshot()['messages']
+        self.assertEqual([m['role'] for m in messages], ['user','assistant','assistant','tool','assistant','user','assistant'])
+        self.assertEqual(messages[1]['content'], [{'type':'thinking','thinking':'先思考'},{'type':'text','text':'准备检查'}])
+        self.assertEqual(messages[4]['content'], [{'type':'text','text':'第一轮完成'}])
+        self.assertEqual(messages[6]['content'], [{'type':'text','text':'第二轮回答'}])
+
+    def test_attachments_and_session_metadata_updates(self):
+        s = self.make_session()
+        s.event({'type':'acp_response','kind':'session_open','result':{'sessionId':'session_4','configOptions':broker.copy.deepcopy(self.OPTIONS)},'error':None})
+        png = base64.b64encode(b'\x89PNG\r\n').decode('ascii')
+        note = base64.b64encode(b'hello').decode('ascii')
+        s.prompt({'requestId':'att-1','text':'check files','attachments':[
+            {'name':'shot.png','mediaType':'image/png','data':png},
+            {'name':'notes.txt','mediaType':'text/plain','data':note},
+        ]})
+        prompt_frame = self.sent[-1]
+        self.assertEqual(prompt_frame['method'], 'session/prompt')
+        blocks = prompt_frame['params']['prompt']
+        self.assertEqual(len(blocks), 2)
+        self.assertIn('notes.txt', blocks[0]['text'])
+        self.assertEqual(blocks[1], {'type':'image','mimeType':'image/png','data':png})
+        s.event({'type':'acp_notification','method':'session/update','params':{'sessionId':'session_4','update':{'sessionUpdate':'available_commands_update','availableCommands':[{'name':'compact','description':'Compact'}]}}})
+        s.event({'type':'acp_notification','method':'session/update','params':{'sessionId':'session_4','update':{'sessionUpdate':'session_info_update','title':'自动标题'}}})
+        s.event({'type':'acp_notification','method':'session/update','params':{'sessionId':'session_4','update':{'sessionUpdate':'current_mode_update','currentModeId':'plan'}}})
+        snap = s.snapshot()
+        self.assertEqual(snap['commands'], [{'name':'compact','description':'Compact'}])
+        self.assertEqual(snap['title'], '自动标题')
+        self.assertEqual(snap['permission']['selected'], 'plan')
+
+    def test_local_kimi_binary_participates_in_serves_current_code(self):
+        health = {'version':broker.SERVICE_VERSION,'implementation':broker.SOURCE_FINGERPRINT,'localKimiBinary':'/opt/a/kimi'}
+        with patch.dict(broker.os.environ, {'PERCH_LOCAL_KIMI':'/opt/a/kimi'}, clear=False):
+            self.assertTrue(broker.serves_current_code(health))
+        with patch.dict(broker.os.environ, {'PERCH_LOCAL_KIMI':'/opt/b/kimi'}, clear=False):
+            self.assertFalse(broker.serves_current_code(health))
+
+    def test_prompt_arriving_during_config_sync_waits_for_mode_and_thinking(self):
+        s = self.make_session(model='aone/qwen3.8-max', thinking='low', mode='plan')
+        # Session opens first (launched on create), then the client's prompt arrives
+        # while the model-setting request is still awaiting its acknowledgement.
+        s.event({'type':'acp_response','kind':'session_open','result':{'sessionId':'session_race','configOptions':broker.copy.deepcopy(self.OPTIONS)},'error':None})
+        self.assertFalse(s.ready.is_set())
+        self.assertEqual([f['method'] for f in self.sent], ['session/set_config_option'])
+        receipt = s.prompt({'requestId':'race-1','text':'plan this refactor'})
+        self.assertEqual(receipt['status'], 'submitting')
+        self.assertEqual([f for f in self.sent if f['method'] == 'session/prompt'], [])
+        updated = broker.copy.deepcopy(self.OPTIONS)
+        updated[0]['currentValue'] = 'aone/qwen3.8-max'
+        s.event({'type':'acp_response','kind':'set_config','result':{'configOptions':updated},'error':None})
+        self.assertEqual([f for f in self.sent if f['method'] == 'session/prompt'], [])
+        updated[1]['currentValue'] = 'low'
+        s.event({'type':'acp_response','kind':'set_config','result':{'configOptions':updated},'error':None})
+        self.assertEqual(self.sent[-1]['method'], 'session/set_mode')
+        self.assertEqual(self.sent[-1]['params'], {'sessionId':'session_race','modeId':'plan'})
+        self.assertEqual([f for f in self.sent if f['method'] == 'session/prompt'], [])
+        s.event({'type':'acp_response','kind':'set_config','result':{},'error':None})
+        self.assertTrue(s.ready.is_set())
+        self.assertEqual(self.sent[-1]['method'], 'session/prompt')
+        self.assertEqual(s.state['requests']['race-1']['status'], 'submitted')
+
+    def test_rejected_config_sync_fails_parked_prompt(self):
+        s = self.make_session(mode='plan')
+        s.event({'type':'acp_response','kind':'session_open','result':{'sessionId':'session_reject','configOptions':broker.copy.deepcopy(self.OPTIONS)},'error':None})
+        s.prompt({'requestId':'reject-1','text':'do not execute in default mode'})
+        s.event({'type':'acp_response','kind':'set_config','result':None,'error':{'message':'mode rejected'}})
+        self.assertFalse(s.state['busy'])
+        self.assertEqual(s.state['requests']['reject-1']['status'], 'failed')
+        self.assertEqual([f for f in self.sent if f['method'] == 'session/prompt'], [])
+
+
 if __name__=='__main__': unittest.main()

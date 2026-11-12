@@ -196,7 +196,7 @@ import WorkbenchCore
             model.start()
             let aa = model.agentConnections(for: a.id)!
             let ba = model.agentConnections(for: b.id)!
-            precondition(aa.kimi.connecting && aa.native.wantsConnection)
+            precondition(!aa.kimi.connecting && aa.native.wantsConnection)
             precondition(!model.connections[0].wantsConnection, "the host SSH channel is on demand, never at launch")
             precondition(!ba.kimi.connecting && !ba.native.wantsConnection && !model.connections[1].wantsConnection)
             model.activateAgentEnvironment(b.id)
@@ -211,7 +211,7 @@ import WorkbenchCore
                          "temporary disconnect must preserve launch preferences")
 
             model.setAutoConnect(true, for: b.id)
-            precondition(ba.kimi.connecting && ba.native.wantsConnection)
+            precondition(!ba.kimi.connecting && ba.native.wantsConnection)
             model.setAutoConnect(false, for: b.id)
             precondition(!ba.kimi.connecting && !ba.native.wantsConnection)
             model.setAutoConnect(false, for: a.id)
@@ -249,7 +249,7 @@ import WorkbenchCore
             model.connectSSH(connection.id)
             connection.connect()
             let agents = model.agentConnections(for: connection.id)!
-            precondition(agents.kimi.connecting && agents.native.wantsConnection && connection.wantsConnection)
+            precondition(!agents.kimi.connecting && agents.native.wantsConnection && connection.wantsConnection)
             precondition(!connection.host.autoConnectSSH)
             model.shutdown()
             print("PASS: disabled launch preferences survive restart; manual reconnect remains available")

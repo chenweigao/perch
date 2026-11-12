@@ -107,7 +107,7 @@ private final class TransportFixture {
             let id = parts[1], mode = body["mode"].string!
             guard let raw = sessions[id]?["provider"] as? String,
                   let provider = SessionKind(rawValue: raw),
-                  [.qoder, .qoderintl, .claude].contains(provider) else {
+                  [.kimi, .qoder, .qoderintl, .claude].contains(provider) else {
                 throw WorkbenchError("permission is fixed")
             }
             sessions[id]?["permission"] = Self.permission(provider, mode)
@@ -462,6 +462,7 @@ struct ConnectionChecks {
         try await checkNativeModelCatalog()
         try await checkModelSettingsSerialization()
         try await checkPromotedSteerTiming()
+        try await checkKimiNativeBridge()
         let unsupportedFixture = TransportFixture()
         let unsupportedClient = NativeAgentConnection(host: SSHHost(name: "Commands", destination: "fixture"), transport: unsupportedFixture.request)
         try await unsupportedClient.refresh(); unsupportedClient.select("a")
@@ -1098,5 +1099,38 @@ struct ConnectionChecks {
         await settle { fixture.returnedSnapshots == 4 }
         precondition(client.snapshot == nil && !client.online)
         print("PASS: immediate selection reads, A-B-A stale response isolation and disconnect cancellation")
+    }
+
+    @MainActor
+    static func checkKimiNativeBridge() async throws {
+        let fixture = TransportFixture()
+        fixture.modelsCatalog = [
+            ["agent": "kimi", "id": "bailian/kimi-k3", "provider": "bailian", "name": "kimi-k3",
+             "thinking": ["off", "low", "high"], "defaultThinking": "high"],
+            ["agent": "kimi", "id": "kimi-for-coding", "provider": "kimi", "name": "Kimi for Coding",
+             "thinking": ["off", "on"]]
+        ]
+        let client = NativeAgentConnection(host: SSHHost(name: "Kimi ACP", destination: "fixture"), transport: fixture.request)
+        await client.loadModels()
+        let kimiModels = client.models(for: .kimi)
+        precondition(kimiModels.count == 2 && kimiModels[1].thinking == [.off, .on])
+        let created = try await client.create(provider: .kimi, cwd: "/fixture", model: "bailian/kimi-k3",
+                                              thinking: .low, permissionMode: "default")
+        await settle { client.snapshot?.id == created.id }
+        precondition(fixture.creates.last?.0 == .kimi && fixture.creates.last?.2 == "default" && fixture.creates.last?.3 == "low")
+        client.setPermission("yolo", for: created.id)
+        await settle { fixture.permissionChanges.last?.1 == "yolo" }
+        client.setModel(kimiModels[1], for: created.id)
+        await settle { fixture.modelChanges.last?.2 == "kimi-for-coding" }
+        let temp = FileManager.default.temporaryDirectory.appendingPathComponent("kimi-acp-\(UUID().uuidString).png")
+        try Data([0x89, 0x50, 0x4E, 0x47]).write(to: temp)
+        defer { try? FileManager.default.removeItem(at: temp) }
+        client.drafts[created.id] = "检查图片"
+        client.attachments[created.id] = [temp]
+        client.send()
+        await settle { fixture.prompts.contains(created.id) && !client.sending }
+        precondition(fixture.promptAttachments.values.first?.first?["name"] == temp.lastPathComponent)
+        client.disconnect()
+        print("PASS: Kimi native ACP bridge catalog, boolean thinking, dynamic permission, model switch and inline attachments")
     }
 }

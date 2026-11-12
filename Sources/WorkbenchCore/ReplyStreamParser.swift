@@ -39,11 +39,12 @@ public struct ReplyStreamParser {
         let suffix = next[tail...]
         guard !Self.documentWideSyntax(in: suffix) else { return fullParse(next) }
         let parsed = Self.parse(String(suffix), documentLinks: documentLinks)
+        let preserved = max(0, blocks.count - tailBlockCount)
         blocks.removeLast(tailBlockCount)
         blocks.append(contentsOf: parsed.blocks)
         tailBlockCount = parsed.tailBlockCount
         if let line = parsed.tailLine { tail = Self.index(ofLine: line, in: next, from: tail) }
-        stableBlockCount = max(0, blocks.count - tailBlockCount)
+        stableBlockCount = preserved
         source = next
         return blocks
     }

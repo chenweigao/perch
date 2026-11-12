@@ -21,7 +21,6 @@ import WorkbenchCore
         UserDefaults.standard.set("fixture-model", forKey: "new.model.kimi")
         UserDefaults.standard.set("把登录页改成两栏布局，左侧放品牌插画", forKey: "new.task.prompt")
         let model = WorkbenchModel()
-        model.kimi.models = previewModels
         _model = State(initialValue: model)
     }
 
@@ -33,16 +32,12 @@ import WorkbenchCore
                     if showPreviewControls {
                     Button("项目选择预览") { openWindow(id: "project-picker") }
                     Button("模拟就绪") {
-                        let configuration = URLSessionConfiguration.ephemeral
-                        configuration.protocolClasses = [NewTaskPreviewProtocol.self]
-                        let connection = KimiConnection(host: model.kimi.host,
-                            api: KimiAPI(baseURL: URL(string: "https://fixture.invalid")!, token: "fixture", configuration: configuration))
-                        connection.models = previewModels
-                        model.kimi = connection
-                        model.native = NativeAgentConnection(host: model.native.host) { _, _ in Data(#"{"models":[]}"#.utf8) }
+                        model.native = NativeAgentConnection(host: model.native.host) { _, _ in
+                            Data(#"{"models":[{"agent":"kimi","id":"fixture-model","provider":"fixture","name":"Preview Model","thinking":["low","high"],"defaultThinking":"high"}]}"#.utf8)
+                        }
                     }
-                    Button("模拟连接错误") { model.kimi.error = "预览：连接超时，请检查运行环境。" }
-                    Button("清除错误") { model.kimi.error = nil }
+                    Button("模拟连接错误") { model.native.error = "预览：连接超时，请检查运行环境。" }
+                    Button("清除错误") { model.native.error = nil }
                     Button("隐藏预览控件") { showPreviewControls = false }
                     }
                 }

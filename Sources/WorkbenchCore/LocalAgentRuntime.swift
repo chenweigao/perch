@@ -1,14 +1,21 @@
 import Foundation
 
 /// Only connection establishment differs locally; conversation, approval and
-/// recovery continue through the same authenticated APIs as remote sessions.
+/// recovery continue through the same authenticated bridge APIs as remote sessions.
 public enum LocalAgentRuntime {
-    public static func endpoint(for kind: SessionKind, host: SSHHost, forceRestart: Bool = false) async throws -> Data {
-        guard host.isLocal, LocalAgentDiscovery.supported.contains(kind) else {
+    public static func endpoint(host: SSHHost) async throws -> Data {
+        guard host.isLocal else {
             throw WorkbenchError(L("此 Agent 尚未接入本机对话"))
         }
-        let found = await LocalAgentDiscovery.discover(kind, override: host.localAgentPaths[kind.rawValue])
-        guard let binary = found.executablePath else {
+        let targets = LocalAgentDiscovery.supported.filter { host.enabledAgents.contains($0) }
+        var binaries: [SessionKind: String] = [:]
+        for kind in targets {
+            let found = await LocalAgentDiscovery.discover(kind, override: host.localAgentPaths[kind.rawValue])
+            if let binary = found.executablePath {
+                binaries[kind] = binary
+            }
+        }
+        guard !binaries.isEmpty else {
             throw WorkbenchError(L("未找到可用的本机 Agent，请重新检测。"))
         }
         guard let resources = Bundle.main.resourceURL else { throw WorkbenchError(L("本机服务组件缺失，请重新构建应用。")) }
@@ -16,10 +23,19 @@ public enum LocalAgentRuntime {
         guard FileManager.default.fileExists(atPath: script.path) else {
             throw WorkbenchError(L("本机服务组件缺失，请重新构建应用。"))
         }
-        // Kimi may first replace an idle outdated instance Perch started, which waits for its shutdown.
-        var arguments = [script.path, "--agent", kind.rawValue, "--binary", binary, "--port", String(host.kimiPort)]
-        if forceRestart { arguments.append("--force-restart") }
+        var arguments = [script.path]
+        if let kimi = binaries[.kimi] { arguments += ["--kimi-binary", kimi] }
+        if let codex = binaries[.codex] { arguments += ["--codex-binary", codex] }
         return try await SetupCommandRunner.run("/usr/bin/python3", arguments,
-            timeout: kind == .kimi ? RemoteSetup.kimiEnsureTimeout : 20, environment: LocalAgentDiscovery.environment)
+            timeout: 20, environment: LocalAgentDiscovery.environment)
+    }
+
+    public static func endpoint(for kind: SessionKind, host: SSHHost, forceRestart: Bool = false) async throws -> Data {
+        guard host.isLocal, LocalAgentDiscovery.supported.contains(kind) else {
+            throw WorkbenchError(L("此 Agent 尚未接入本机对话"))
+        }
+        var scoped = host
+        if !scoped.enabledAgents.contains(kind) { scoped.enabledAgents = [kind] }
+        return try await endpoint(host: scoped)
     }
 }

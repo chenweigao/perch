@@ -13,7 +13,8 @@ for arg in "$@"; do
     --provider=dsh) provider="dsh"; with_dsh=1 ;;
     --provider=codex) provider="codex" ;;
     --provider=claude) provider="claude" ;;
-    -h|--help) echo "usage: $0 <host> [--provider=omp|qoder|qoderintl|dsh|codex|claude] [--with-dsh]"; exit 0 ;;
+    --provider=kimi) provider="kimi" ;;
+    -h|--help) echo "usage: $0 <host> [--provider=kimi|omp|qoder|qoderintl|dsh|codex|claude] [--with-dsh]"; exit 0 ;;
     *) remote_host="$arg" ;;
   esac
 done

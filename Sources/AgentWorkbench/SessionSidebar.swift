@@ -105,8 +105,7 @@ struct WorkbenchSidebar: View {
     private var environmentNeedsAttention: Bool {
         if model.connections.contains(where: { !$0.online && $0.error != nil }) { return true }
         guard let host = model.selectedHost else { return false }
-        return (host.enabledAgents.contains(.kimi) && !model.kimi.online && model.kimi.error != nil)
-            || (host.hasNativeAgents && !model.native.online && model.native.error != nil)
+        return host.hasNativeAgents && !model.native.online && model.native.error != nil
     }
     private var usesTable: Bool {
         #if PERCH_ACCEPTANCE
@@ -758,11 +757,8 @@ private struct ConnectionControls: View {
                         Button("移除机器…", role: .destructive) { dismiss(); model.pendingHostRemoval = connection.host }
                     }
                     if model.selectedHostID == connection.id {
-                        if connection.host.enabledAgents.contains(.kimi) {
-                            agentStatus("Kimi", online: kimi.online, error: kimi.error) { kimi.connect() }
-                        }
                         if connection.host.hasNativeAgents {
-                            let providers = connection.host.enabledAgents.filter { [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains($0) }
+                            let providers = connection.host.enabledAgents.filter { [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains($0) }
                             let expanded = expandedNativeAgents.contains(connection.id)
                             VStack(alignment: .leading, spacing: 6) {
                                 HStack(spacing: 0) {

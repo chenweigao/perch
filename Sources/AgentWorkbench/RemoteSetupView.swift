@@ -46,16 +46,7 @@ struct AddHostSheet: View {
         }.frame(width: 620)
             .onDisappear { setup.cancel() }
             .onChange(of: setup.provider) { _, _ in setup.invalidateAgent() }
-            .onChange(of: setup.port) { _, _ in setup.invalidateAgent() }
-            .onChange(of: setup.tokenPath) { _, _ in setup.invalidateAgent() }
-            .onChange(of: setup.kimiEnvironment) { _, _ in setup.invalidateAgent() }
             .onChange(of: setup.directory) { _, _ in setup.invalidateProject() }
-            .alert("立即重启 Kimi Web？", isPresented: $setup.pendingKimiRestart) {
-                Button("取消", role: .cancel) {}
-                Button("立即重启", role: .destructive) { setup.restartKimi() }
-            } message: {
-                Text("正在运行的回合、后台任务和待处理的审批或提问会中断。会话历史会保留，重连后可继续。")
-            }
     }
     private func stepLabel(_ title: LocalizedStringKey, step: RemoteSetupController.Step) -> some View {
         HStack(spacing: 6) {
@@ -100,29 +91,6 @@ struct AddHostSheet: View {
             }.disabled(setup.busy)
         } footer: {
             Text("选择要使用的 Agent。只检查所选 Agent 所需的环境。")
-        }
-        if setup.provider == .kimi {
-            Section {
-                LabeledContent("远端端口") { TextField("58627", text: $setup.port).frame(width: 110) }
-                LabeledContent("远端令牌文件") {
-                    TextField("~/.kimi-code/server.token", text: $setup.tokenPath) // l10n-ignore
-                }
-                Toggle("由 Perch 托管 Kimi Web", isOn: Binding(get: { setup.kimiManaged },
-                                                            set: { setup.kimiManaged = $0; setup.invalidateAgent() }))
-                if setup.kimiManaged {
-                    LabeledContent("启动环境变量") {
-                        TextField("NAME=value", text: $setup.kimiEnvironment) // l10n-ignore
-                    }
-                }
-            } header: {
-                Text("高级设置")
-            } footer: {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("服务只通过 SSH 访问远端 127.0.0.1。填写文件路径即可，令牌不保存在 Mac 配置中。")
-                    Text("托管时，服务未运行则由 Perch 启动；Kimi 升级或启动配置修改后，等所有会话空闲再自动重启，也可以在检查结果中立即重启。Perch 只重启自己启动的 Kimi Web。")
-                }
-            }
-            .disabled(setup.busy)
         }
         if let original = setup.original, original.enabledAgents.contains(where: { $0 != setup.provider }) {
             Section {
@@ -178,20 +146,8 @@ struct AddHostSheet: View {
                     Button(action.title, action: action.perform)
                         .buttonStyle(.bordered).controlSize(.small).disabled(setup.busy)
                 }
-                if check.needsManualRestart {
-                    DisclosureGroup("重启步骤") {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("1. 等待这台机器上该 Kimi Web 服务中的会话和后台任务结束。")
-                            Text("2. 在远端按原来的启动方式停止并重新启动 Kimi Web。前台运行时，在原终端按 Control-C 后重新运行原命令；后台或托管服务请通过原来的服务管理方式重启。")
-                            Text("沿用原来的端口（\(String(setup.host.kimiPort))）、令牌路径（\(setup.tokenPath)）与环境配置。")
-                            Text("3. 返回 Perch 点击“重新检查”。运行版本与安装版本一致后，此提示会消失。")
-                            Text("“重新检查”只核对状态；重开 Perch 不会重启远端 Kimi Web。")
-                                .foregroundStyle(.secondary)
-                        }.textSelection(.enabled).padding(.top, 6)
-                    }.font(.subheadline).padding(.top, 4)
-                }
             }
-        }.accessibilityElement(children: check.needsManualRestart || check.action != nil ? .contain : .combine)
+        }.accessibilityElement(children: check.action != nil ? .contain : .combine)
     }
     private var repairs: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -211,17 +167,10 @@ struct AddHostSheet: View {
                 Button("安装 / 更新桥接组件") { setup.installBridge() }
             }
             HStack {
-                if setup.provider == .kimi && setup.failedCheck == "service" {
-                    Button("启动并检查 Kimi Web") { setup.startKimi() }
-                }
                 Button("打开远端终端") { setup.openTerminal() }
                 if !setup.loginCommand.isEmpty && setup.failedCheck == "models" {
                     Button("登录 / 配置模型…") { setup.openTerminal(command: setup.loginCommand) }
                 }
-            }
-            if setup.provider == .kimi && setup.failedCheck == "service" && !setup.kimiManaged {
-                Text("由 Perch 启动的 Kimi Web 由 Perch 托管：Kimi 升级后，Perch 会在所有会话空闲时自动重启它，也可以立即重启。")
-                    .font(.subheadline).foregroundStyle(.secondary)
             }
             if setup.provider == .dsh {
                 Text("在远端 shell 或服务环境中设置 DEEPSEEK_API_KEY；Perch 不读取或保存它的值。")

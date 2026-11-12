@@ -740,6 +740,10 @@ private struct ReadingReviewControls: View {
         session: "stage-page-A", hit: hit, query: "marker-26"))
     try await waitForVisible("tool-call:page-tool-26")
     try await waitForVisible("tool-call:page-tool-0")
+    for _ in 0..<40 where !readingTextViews(host).contains(where: { $0.string.contains("marker-26") }) {
+        try await Task.sleep(for: .milliseconds(50))
+        host.layoutSubtreeIfNeeded()
+    }
     precondition(taskPanelControl(window, "tool-call:page-tool-26") != nil && taskPanelControl(window, "tool-call:page-tool-0") != nil,
                  "Find opens the whole stage and reaches its exact final tool record")
     precondition(readingTextViews(host).contains { $0.string.contains("marker-26") })
@@ -748,7 +752,12 @@ private struct ReadingReviewControls: View {
     }!
     NotificationCenter.default.post(name: .init("PerchRevealConversationHit"), object: ConversationFindTarget(
         session: "stage-page-A", hit: repeatedHit, query: "marker-"))
-    try await settle()
+    for _ in 0..<40 where !readingTextViews(host).contains(where: { text in
+        text.string.contains("marker-26") && text.selectedRange() == (text.string as NSString).range(of: "marker-", options: .backwards)
+    }) {
+        try await Task.sleep(for: .milliseconds(50))
+        host.layoutSubtreeIfNeeded()
+    }
     precondition(readingTextViews(host).contains { text in
         text.string.contains("marker-26") && text.selectedRange() == (text.string as NSString).range(of: "marker-", options: .backwards)
     }, "A repeated query selects its record-local occurrence at the end of the full stage")

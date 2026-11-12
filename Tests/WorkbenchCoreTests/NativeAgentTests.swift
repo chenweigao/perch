@@ -51,7 +51,7 @@ func checkNativeAgents() throws {
     precondition(qoderSnapshot.snapshot?.model == "resolved-default" && qoderSnapshot.snapshot?.qoderRequestedModel == "")
 
     let expectedPermissions: [(SessionKind, [String], String, PermissionChangeScope)] = [
-        (.kimi, ["manual", "yolo", "auto"], "manual", .nextMessage),
+        (.kimi, ["default", "plan", "yolo", "auto"], "default", .nextTurn),
         (.omp, ["always-ask", "write", "yolo"], "always-ask", .newSession),
         (.qoder, ["default", "acceptEdits", "plan", "dontAsk", "auto", "bypassPermissions"], "default", .nextTurn),
         (.qoderintl, ["default", "acceptEdits", "plan", "dontAsk", "auto", "bypassPermissions"], "default", .nextTurn),
@@ -80,10 +80,12 @@ func checkNativeAgents() throws {
     precondition(PermissionDefaults.mode(for: .codex, defaults: defaults) == "workspace-ask")
     defaults.set("full-access", forKey: "codex.defaultPermissionMode")
     precondition(PermissionDefaults.mode(for: .codex, defaults: defaults) == "full-access")
+    defaults.set("manual", forKey: "perch.permission.default.kimi")
+    precondition(PermissionDefaults.mode(for: .kimi, defaults: defaults) == "default")
     PermissionDefaults.set("auto", for: .kimi, defaults: defaults)
     precondition(PermissionDefaults.mode(for: .kimi, defaults: defaults) == "auto")
     PermissionDefaults.restoreSafeDefault(for: .kimi, defaults: defaults)
-    precondition(PermissionDefaults.mode(for: .kimi, defaults: defaults) == "manual")
+    precondition(PermissionDefaults.mode(for: .kimi, defaults: defaults) == "default")
     print("PASS: chronological tool summaries, native identity, permission catalogs, wire decoding and default migration")
 }
 

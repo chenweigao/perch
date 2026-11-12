@@ -4,12 +4,13 @@ import Foundation
 /// model's own catalog entry, because unsupported values are not rejected
 /// consistently by every runtime.
 public enum ThinkingLevel: String, CaseIterable, Codable, Sendable, Equatable {
-    case off, minimal, low, medium, high, xhigh, max, ultra, auto, none
+    case off, minimal, low, medium, high, xhigh, max, ultra, auto, none, on
 
     public var label: String {
         switch self {
         case .none: return "None"
         case .off: return "Off"
+        case .on: return "On"
         case .minimal: return "Minimal"
         case .low: return "Low"
         case .medium: return "Medium"

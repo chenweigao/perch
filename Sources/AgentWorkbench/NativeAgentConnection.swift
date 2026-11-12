@@ -282,7 +282,7 @@ final class NativeAgentConnection {
     private func ensureEndpointData() async throws -> Data {
         if let ensureOverride { return try await ensureOverride() }
         if host.isLocal {
-            return try await LocalAgentRuntime.endpoint(for: .codex, host: host)
+            return try await LocalAgentRuntime.endpoint(host: host)
         }
         try SSHCommand.validateDestination(host.destination)
         return try await SetupCommandRunner.run("/usr/bin/ssh", RemoteSetup.sshArguments(host.destination,
@@ -892,7 +892,7 @@ final class NativeAgentConnection {
     }
     func setPermission(_ mode: String, for id: String) {
         guard let provider = sessions.first(where: { $0.id == id })?.provider,
-              [.qoder, .qoderintl, .claude].contains(provider),
+              [.kimi, .qoder, .qoderintl, .claude].contains(provider),
               PermissionCatalog.isValid(mode, for: provider) else {
             actionError = L("当前 Agent 不支持动态切换权限")
             return
@@ -921,7 +921,7 @@ final class NativeAgentConnection {
         let files = attachments[id] ?? []
         guard !draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !files.isEmpty else { return }
         if !files.isEmpty {
-            guard [.claude, .codex].contains(sessions.first(where: { $0.id == id })?.provider) else {
+            guard [.kimi, .claude, .codex].contains(sessions.first(where: { $0.id == id })?.provider) else {
                 actionError = L("当前 Agent 不支持发送附件")
                 return
             }
@@ -935,9 +935,9 @@ final class NativeAgentConnection {
             return
         }
         let text = expansion.text
-        // A draft that names one of this session's commands runs that command; sending
-        // it to the model would just produce a reply about the text "/compact".
-        if let snapshot, snapshot.id == id, let commands = snapshot.commands,
+        // A draft that names one of this session's commands runs that command; Kimi ACP
+        // executes advertised slash commands and skills directly through session/prompt.
+        if let snapshot, snapshot.id == id, snapshot.provider != .kimi, let commands = snapshot.commands,
            let invocation = SlashCommands.invocation(in: text, from: commands) {
             guard files.isEmpty else { actionError = L("Remove attachments before running a command."); return }
             run(invocation.command, arguments: invocation.arguments, for: id, draft: text)

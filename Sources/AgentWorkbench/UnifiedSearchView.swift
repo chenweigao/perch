@@ -33,7 +33,7 @@ final class WorkspaceSearchState {
             do {
                 guard let agents = model.agentConnections(for: session.reference.hostID) else { continue }
                 let window: HistorySearchWindow
-                if session.reference.kind == .kimi { window = try await agents.kimi.searchHistory(for: session.reference.terminalID) }
+                if model.usesLegacyKimiConnection(session.reference) { window = try await agents.kimi.searchHistory(for: session.reference.terminalID) }
                 else { window = try await agents.native.searchHistory(for: session.reference.terminalID) }
                 guard !Task.isCancelled, generation == token else { return }
                 if !window.complete { partial += 1 }

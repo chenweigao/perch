@@ -240,7 +240,7 @@ func runToolbarChecks() async {
             try await press("running")
             let running = try await openPanel(main, thinking: true)
             try await chooseThinking(0, in: running)
-            if agent != "kimi" { try expect(ToolbarProbe.selection == selection, "Native running sessions must not change thinking") }
+            try expect(ToolbarProbe.selection == selection, "Native running sessions must not change thinking")
             if running.isVisible { try await closePanel(running) }
             try await press("running")
             try await press("empty")

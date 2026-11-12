@@ -23,12 +23,6 @@ final class RemoteSetupController: ObservableObject {
     @Published var name: String
     @Published var provider: SessionKind
     @Published var enabledAgents: Set<SessionKind>
-    @Published var port: String
-    @Published var tokenPath: String
-    /// Perch starts this host's Kimi Web and restarts it once idle after an upgrade.
-    @Published var kimiManaged: Bool
-    /// Extra launch environment for that instance, as `NAME=value` entries.
-    @Published var kimiEnvironment: String
     @Published var directory = ""
     @Published var modelID = ""
     @Published private(set) var models: [ModelOption] = []
@@ -36,8 +30,6 @@ final class RemoteSetupController: ObservableObject {
     @Published private(set) var busy = false
     @Published private(set) var ready = false
     @Published private(set) var awaitingInstallCheck = false
-    /// Set by the pending-restart row; the sheet confirms before interrupting turns.
-    @Published var pendingKimiRestart = false
     @Published private(set) var error: String?
     @Published private(set) var hint = ""
     @Published private(set) var failedCheck: String?
@@ -50,34 +42,28 @@ final class RemoteSetupController: ObservableObject {
     let original: SSHHost?
     private let hostID: UUID
     private var task: Task<Void, Never>?
-    private var kimi: KimiConnection?
     private var native: NativeAgentConnection?
-    private var kimiBinaryPath = ""
-    private var kimiInstalledVersion = ""
 
     init(host: SSHHost? = nil, initialProvider: SessionKind? = nil) {
         original = host; hostID = host?.id ?? UUID()
         destination = host?.destination ?? ""; name = host?.name ?? ""
         provider = initialProvider ?? host?.enabledAgents.first ?? .kimi
         enabledAgents = Set(host?.enabledAgents ?? [])
-        port = String(host?.kimiPort ?? 58627); tokenPath = host?.kimiTokenPath ?? SSHHost.defaultKimiTokenPath
-        kimiManaged = host?.kimiManaged ?? false
-        kimiEnvironment = RemoteSetup.formatKimiEnvironment(host?.kimiEnvironment ?? [:])
         let config = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".ssh/config")
         if let text = try? String(contentsOf: config, encoding: .utf8) { aliases = RemoteSetup.sshAliases(text) }
     }
     var host: SSHHost {
         var result = SSHHost(id: hostID, name: name.isEmpty ? destination : name, destination: destination,
                              enabledAgents: RemoteSetup.agents.filter { enabledAgents.contains($0) || $0 == provider },
-                             kimiPort: Int(port) ?? 0, kimiTokenPath: tokenPath,
+                             kimiPort: original?.kimiPort ?? 58627,
+                             kimiTokenPath: original?.kimiTokenPath ?? SSHHost.defaultKimiTokenPath,
                              autoConnectSSH: original?.autoConnectSSH ?? true,
                              autoConnectHerdr: original?.autoConnectHerdr ?? true)
-        result.kimiManaged = kimiManaged
-        // An unparsable entry is reported by the agent check, which a save requires.
-        result.kimiEnvironment = (try? RemoteSetup.parseKimiEnvironment(kimiEnvironment)) ?? original?.kimiEnvironment ?? [:]
+        result.kimiManaged = false
+        result.kimiEnvironment = original?.kimiEnvironment ?? [:]
         return result
     }
-    var needsBridge: Bool { [.omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(provider) }
+    var needsBridge: Bool { [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(provider) }
     var canContinue: Bool { ready && !busy }
     var canFinish: Bool { projectVerified && ready && !busy }
     var checkAgentTitle: String {
@@ -99,7 +85,7 @@ final class RemoteSetupController: ObservableObject {
     }
     var installCommand: String? {
         switch provider {
-        case .kimi: return "npm install -g @moonshot-ai/kimi-code@2.0.2"
+        case .kimi: return "npm install -g @moonshot-ai/kimi-code"
         case .omp: return "bun install -g @oh-my-pi/pi-coding-agent@18.1.16"
         case .qoder: return "npm install -g @qodercn-ai/qoderclicn@1.1.58"
         case .qoderintl: return "curl -fsSL https://qoder.com/install | bash"
@@ -110,7 +96,7 @@ final class RemoteSetupController: ObservableObject {
     }
     var loginCommand: String {
         switch provider {
-        case .kimi: return kimiBinaryPath.isEmpty ? "kimi" : SSHCommand.quote(kimiBinaryPath)
+        case .kimi: return "kimi login"
         case .omp: return "omp"
         case .qoder: return "qoderclicn"
         case .qoderintl: return "qodercli"
@@ -122,21 +108,21 @@ final class RemoteSetupController: ObservableObject {
     }
     func invalidateAgent() {
         cancel(); ready = false; verifiedDirectory = nil; checks = []; models = []; modelID = ""
-        awaitingInstallCheck = false; kimiBinaryPath = ""; kimiInstalledVersion = ""
+        awaitingInstallCheck = false
         error = nil; hint = ""; failedCheck = nil
     }
     func invalidateProject() { error = nil }
     func back() {
         cancel(); error = nil; hint = ""; failedCheck = nil; awaitingInstallCheck = false
         if step == .project { step = .agent; verifiedDirectory = nil }
-        else { step = .machine; ready = false; checks = []; kimiBinaryPath = ""; kimiInstalledVersion = "" }
+        else { step = .machine; ready = false; checks = [] }
     }
     func cancel() {
         task?.cancel(); task = nil; disconnectProbes(); busy = false
     }
     private func disconnectProbes() {
-        kimi?.disconnect(); native?.disconnect()
-        kimi = nil; native = nil
+        native?.disconnect()
+        native = nil
     }
     private func run(_ action: @escaping () async throws -> Void) {
         guard !busy else { return }
@@ -193,96 +179,12 @@ final class RemoteSetupController: ObservableObject {
         run {
             self.ready = false; self.verifiedDirectory = nil; self.disconnectProbes(); self.models = []
             try RemoteSetup.validate(self.host)
-            if self.provider == .kimi { _ = try RemoteSetup.parseKimiEnvironment(self.kimiEnvironment) }
             self.checks = [Check(id: "runtime", title: L("运行环境")), Check(id: "service", title: L("服务连接")), Check(id: "models", title: L("模型与登录"))]
             defer { if !Task.isCancelled { self.disconnectProbes() } }
-            if self.provider == .kimi { try await self.checkKimi() }
-            else { try await self.checkNative() }
+            try await self.checkNative()
             try Task.checkCancellation()
             self.ready = true
         }
-    }
-    private func checkKimiRuntime() async throws -> KimiRuntime {
-        kimiBinaryPath = ""; kimiInstalledVersion = ""
-        mark("runtime", .checking)
-        hint = L("正在检查远端 Kimi 与运行环境。")
-        let output = try await ssh(RemoteSetup.kimiRuntimeProbeCommand)
-        try Task.checkCancellation()
-        switch RemoteSetup.parseKimiRuntimeProbe(output) {
-        case .ready(let runtime):
-            kimiBinaryPath = runtime.path; kimiInstalledVersion = runtime.version
-            let suffix = runtime.source == .npmPrefix ? " · " + L("npm 全局目录") : ""
-            mark("runtime", .passed, runtime.version.trimmingCharacters(in: .whitespacesAndNewlines) + suffix)
-            return runtime
-        case .missing(let prefix):
-            let location = prefix.map { "\($0)/bin" } ?? L("npm 全局目录")
-            throw WorkbenchError(L("未找到 Kimi。已检查非交互 SSH PATH 和 \(location)，请安装后重新检查。"))
-        case .npmMissing:
-            throw WorkbenchError(L("未找到 Kimi 或 npm。请先安装 Node.js 22.19+ 与 npm，再安装 Kimi。"))
-        case .nodeMissing:
-            throw WorkbenchError(L("已找到 npm，但未找到 Node.js。请安装 Node.js 22.19 或更高版本。"))
-        case .nodeTooOld(let version):
-            throw WorkbenchError(L("远端 Node.js \(version) 版本过低；Kimi 2.0.2 需要 Node.js 22.19 或更高版本。"))
-        case .npmFailed:
-            throw WorkbenchError(L("无法读取远端 npm 全局安装目录。请运行 npm prefix -g 检查 npm 配置。"))
-        case .unusable(let path, let reason):
-            throw WorkbenchError(L("Kimi 可执行文件 \(path) 无法运行：\(reason)"))
-        case .invalid:
-            throw WorkbenchError(L("无法识别远端 Kimi 检查结果。请在终端运行 kimi --version。"))
-        }
-    }
-    private func checkKimiServiceAndModels() async throws {
-        mark("service", .checking)
-        hint = host.kimiManaged ? L("正在准备由 Perch 托管的 Kimi Web；远端需要 Python 3。")
-            : L("正在连接 Kimi Web；已有服务请核对高级设置中的端口与令牌路径。")
-        let connection = KimiConnection(setupHost: host); kimi = connection; connection.connect()
-        // Replacing an idle outdated managed instance first waits for its shutdown.
-        let seconds = host.kimiManaged ? Int(RemoteSetup.kimiEnsureTimeout) + 10 : 35
-        try await awaitConnection(seconds: seconds, online: { connection.online }, error: { connection.error })
-        let service = connection.managedService
-        let address = "127.0.0.1:\(service?.port ?? host.kimiPort)"
-        mark("service", .passed, service?.owned == true ? address + " · " + L("由 Perch 托管") : address)
-        reportKimiProcess(running: connection.runtime, managed: service)
-        mark("models", .checking)
-        models = ModelCatalog.options(connection.models)
-        hint = L("在远端 Kimi 中完成登录并配置模型，然后重新检查。")
-        guard !models.isEmpty else { throw WorkbenchError(L("Kimi 服务可用，但没有已配置的模型。")) }
-        if !models.contains(where: { $0.id == modelID }) { modelID = models.first?.id ?? "" }
-        mark("models", .passed, L("模型列表已读取；实际模型鉴权将在首条消息时验证。"))
-        hint = ""
-    }
-    /// Holds the version of the process serving the connection against the package
-    /// on disk. A `kimi web` started before an upgrade keeps running the old code,
-    /// so this row is informational and never blocks the wizard. Perch restarts only
-    /// the instance it manages, once idle; someone else's service gets manual steps.
-    private func reportKimiProcess(running: RunningRuntime, managed: KimiServiceEndpoint?) {
-        checks.removeAll { $0.id == "process" }
-        if let managed, managed.owned {
-            if let notice = RuntimeVersion.managedNotice(managed) {
-                let title = managed.restartReason == .settings ? L("Kimi Web 配置待生效") : L("Kimi 更新待生效")
-                let action = managed.canForceRestart
-                    ? Check.Action(title: L("立即重启")) { [weak self] in self?.pendingKimiRestart = true }
-                    : nil
-                checks.append(Check(id: "process", title: title, status: .information, detail: notice, action: action))
-                return
-            }
-            var detail = RuntimeVersion.detail(installed: kimiInstalledVersion, running: running)
-            if managed.replaced { detail = detail.isEmpty ? L("Perch 已自动重启 Kimi Web") : L("Perch 已自动重启 Kimi Web") + " · " + detail }
-            if !detail.isEmpty { checks.append(Check(id: "process", title: L("运行进程"), status: .information, detail: detail)) }
-            return
-        }
-        let freshness = RuntimeVersion.compare(installed: kimiInstalledVersion, running: running.version)
-        var detail: String
-        switch freshness {
-        case .stale(let onDisk, let serving):
-            detail = RuntimeVersion.staleNotice(agent: "Kimi", installed: onDisk, running: serving)
-            if managed != nil { detail += "\n" + RuntimeVersion.foreignServiceNote() }
-        case .current, .unknown:
-            detail = RuntimeVersion.detail(installed: kimiInstalledVersion, running: running)
-        }
-        guard !detail.isEmpty else { return }
-        checks.append(Check(id: "process", title: freshness.isStale ? L("Kimi 更新待生效") : L("运行进程"),
-                            status: .information, detail: detail, needsManualRestart: freshness.isStale))
     }
     /// The bridge process serving this check. `--ensure` already replaces an idle
     /// service whose source differs, so this row only makes the running one visible;
@@ -303,10 +205,6 @@ final class RemoteSetupController: ObservableObject {
         guard !parts.isEmpty else { return }
         checks.append(Check(id: "process", title: L("运行进程"), status: .information,
                             detail: parts.joined(separator: " · ")))
-    }
-    private func checkKimi() async throws {
-        _ = try await checkKimiRuntime()
-        try await checkKimiServiceAndModels()
     }
     /// Compares the installed bridge with the protocol this build speaks, so a stale
     /// or newer remote copy is named here instead of failing later during a task.
@@ -350,6 +248,15 @@ final class RemoteSetupController: ObservableObject {
         mark("runtime", .passed, status["version"].string ?? "")
         if let message = status["error"].string { throw WorkbenchError(message) }
         switch provider {
+        case .kimi:
+            let entries = ModelSelectionCatalog.parseOMP(status["models"])
+            models = entries.map { ModelOption(id: $0.id, provider: $0.provider, name: $0.name) }
+            if !models.isEmpty {
+                if !models.contains(where: { $0.id == modelID }) { modelID = models.first?.id ?? "" }
+                mark("models", .passed, L("模型列表已读取；实际模型鉴权将在首条消息时验证。"))
+            } else {
+                mark("models", .information, L("模型目录将在首次 ACP 会话握手时读取；实际模型鉴权将在首条消息时验证。"))
+            }
         case .omp:
             let entries = ModelSelectionCatalog.parseOMP(status["models"])
             models = entries.map { ModelOption(id: $0.provider + "/" + $0.id, provider: $0.provider, name: $0.name) }
@@ -429,51 +336,6 @@ final class RemoteSetupController: ObservableObject {
             _ = try await self.ssh("test -d " + SSHCommand.quote(self.directory) + " && test -x " + SSHCommand.quote(self.directory))
             try Task.checkCancellation()
             self.verifiedDirectory = self.directory; self.hint = ""
-        }
-    }
-    /// A Kimi Web Perch starts is Perch's to manage: connecting with managed mode starts
-    /// it through the service script, which records it as Perch's own.
-    func startKimi() {
-        awaitingInstallCheck = false
-        kimiManaged = true
-        run {
-            self.ready = false; self.verifiedDirectory = nil; self.disconnectProbes(); self.models = []
-            try RemoteSetup.validate(self.host)
-            _ = try RemoteSetup.parseKimiEnvironment(self.kimiEnvironment)
-            defer { if !Task.isCancelled { self.disconnectProbes() } }
-            _ = try await self.checkKimiRuntime()
-            self.hint = L("正在启动并连接 Kimi Web。")
-            // The service script returns once the instance it started answers.
-            try await self.checkKimiServiceAndModels()
-            try Task.checkCancellation()
-            self.ready = true
-        }
-    }
-
-    /// Applies a pending update or launch-setting change now, even while sessions are
-    /// busy. The sheet confirmed the interruption; the check afterward connects to the
-    /// new instance and reads its version and models.
-    func restartKimi() {
-        awaitingInstallCheck = false
-        run {
-            self.ready = false; self.verifiedDirectory = nil; self.disconnectProbes(); self.models = []
-            try RemoteSetup.validate(self.host)
-            _ = try RemoteSetup.parseKimiEnvironment(self.kimiEnvironment)
-            defer { if !Task.isCancelled { self.disconnectProbes() } }
-            _ = try await self.checkKimiRuntime()
-            self.hint = L("正在重启 Kimi Web…")
-            if self.host.isLocal {
-                _ = try await LocalAgentRuntime.endpoint(for: .kimi, host: self.host, forceRestart: true)
-            } else {
-                let command = RemoteSetup.kimiEnsureCommand(script: try RemoteSetup.kimiServiceScript(),
-                                                            port: self.host.kimiPort, tokenPath: self.host.kimiTokenPath,
-                                                            environment: self.host.kimiEnvironment, forceRestart: true)
-                _ = try await self.ssh(command, timeout: RemoteSetup.kimiEnsureTimeout)
-            }
-            self.hint = L("正在连接重启后的 Kimi Web。")
-            try await self.checkKimiServiceAndModels()
-            try Task.checkCancellation()
-            self.ready = true
         }
     }
     /// Shared installer: no provider argument updates every component (service,

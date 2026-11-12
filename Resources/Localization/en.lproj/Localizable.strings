@@ -503,6 +503,7 @@
 "安装或更新 Perch 桥接组件后重新检查。空闲的旧服务会自动安全重启；有任务运行时会等待任务结束。" = "Install or update the Perch bridge and check again. An idle old service restarts automatically; a busy service waits for its tasks to finish.";
 "安装说明" = "Installation guide";
 "已检测到远端凭据；模型目录在首次 ACP 会话握手时读取，鉴权在发送时验证。" = "Remote credentials are present. Models are read during the first ACP session handshake; authentication is verified when sending.";
+"模型目录将在首次 ACP 会话握手时读取；实际模型鉴权将在首条消息时验证。" = "Models will be read during the first ACP session handshake; model authentication will be verified with the first message.";
 "打开远端终端" = "Open remote terminal";
 "服务只通过 SSH 访问远端 127.0.0.1。填写文件路径即可，令牌不保存在 Mac 配置中。" = "The service is reached through SSH at remote 127.0.0.1. Enter the file path; the token is not saved in Mac settings.";
 "服务连接" = "Service connection";

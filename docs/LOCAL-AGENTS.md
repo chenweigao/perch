@@ -9,16 +9,11 @@ Kimi and Codex can be connected and used in an existing Mac project directory.
 OMP, Claude Code, Qoder and dsh are detected but do not yet offer local execution.
 The selected executable paths are saved with the stable local environment.
 
-- Kimi uses its authenticated loopback Web API and existing token. If no service
-  is listening, Perch starts `kimi web` detached on port 58627. An authentication
-  failure or unrelated service occupying that port is an error, not permission
-  to replace it. `KIMI_CODE_HOME` is respected when inherited by Perch. Perch
-  records the instance it starts; after a Kimi upgrade it replaces only that
-  instance, once every session is idle, as on managed remote hosts
-  (`docs/KIMI.md`). A service started outside Perch is reused and never stopped.
-- Codex uses the same app-server adapter as remote sessions, with bridge state in
-  `~/.local/share/perch/local-native`. The selected executable's real path is used
-  so an app-bundled CLI can find its sibling tool helpers through a symlink.
+- Kimi and Codex both run through the local native agent bridge (`native-agent-service.py --ensure`),
+  with bridge state in `~/.local/share/perch/local-native`. Kimi speaks standard ACP over stdio
+  (`kimi acp`), and Codex uses its `app-server` adapter, matching remote sessions without starting
+  or managing a `kimi web` HTTP server. The selected executable paths are passed via
+  `PERCH_LOCAL_KIMI` and `PERCH_LOCAL_CODEX`.
 - Existing conversation, effort, approval, stop and reconnect controls are reused.
   Closing Perch disconnects the client without terminating active tasks.
 - File and Git browsing execute the existing read-only commands in the selected

@@ -84,7 +84,7 @@ PERMISSION_MODES = {
     'dsh': ('runtime-managed',),
     'codex': ('read-only', 'workspace-ask', 'workspace-auto', 'full-access'),
     'claude': ('default', 'acceptEdits', 'plan', 'bypassPermissions'),
-    'kimi': ('default', 'plan', 'auto', 'yolo'),
+    'kimi': ('default', 'plan', 'yolo', 'auto'),
 }
 PERMISSION_DEFAULTS = {'omp':'always-ask', 'qoder':'default', 'qoderintl':'default', 'dsh':'runtime-managed', 'codex':'workspace-ask', 'claude':'default', 'kimi':'default'}
 PERMISSION_SCOPES = {'omp':'new-session', 'qoder':'next-turn', 'qoderintl':'next-turn', 'dsh':'runtime-managed', 'codex':'new-session', 'claude':'next-turn', 'kimi':'next-turn'}
@@ -92,8 +92,10 @@ QODER_SDK = {'qoder':'@qodercn-ai/qodercn-agent-sdk', 'qoderintl':'@qoder-ai/qod
 QODER_CLI = {'qoder':'qoderclicn', 'qoderintl':'qodercli'}
 # Providers spoken to over the Agent Client Protocol (stdio). dsh uses grouped
 # config options with JSON [provider, model] values; kimi-code uses flat options
-# with 'provider/model' strings and a 'thinking' effort id.
+# with 'provider/model' (or bare model) strings and a 'thinking' effort id.
 ACP_PROVIDERS = {'dsh', 'kimi'}
+ACP_LABELS = {'dsh': 'dsh', 'kimi': 'Kimi'}
+ACP_CANONICAL_TOOLS = ('Bash', 'Terminal', 'Read', 'Write', 'Edit', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'Think', 'Agent', 'Task')
 
 def acp_option_items(option):
     # dsh nests items under groups; kimi returns a flat item list.
@@ -109,8 +111,14 @@ def acp_model_value(value):
         if isinstance(parsed, list) and len(parsed) == 2: return parsed[0], parsed[1]
     except Exception:
         pass
-    provider, _, model = str(value or '').partition('/')
-    return provider, model
+    provider, sep, model = str(value or '').partition('/')
+    return (provider, model) if sep else ('kimi', provider)
+
+def kimi_model_value(value):
+    raw = str(value or '')
+    if not raw: return '', ''
+    provider, sep, _ = raw.partition('/')
+    return (provider if sep else 'kimi'), raw
 
 def permission_mode(provider, value=None):
     mode = value if value is not None else PERMISSION_DEFAULTS[provider]
@@ -305,21 +313,39 @@ def dsh_catalog():
 
 KIMI_MODELS = None
 
+def kimi_binary():
+    local = os.environ.get('PERCH_LOCAL_KIMI')
+    if local:
+        if os.path.isabs(local) and os.access(local, os.X_OK): return local
+        raise ValueError('未找到本机 kimi')
+    found = shutil.which('kimi')
+    if found: return found
+    try:
+        prefix = subprocess.run(['npm', 'prefix', '-g'], stdin=subprocess.DEVNULL,
+                                capture_output=True, text=True, timeout=10).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        prefix = ''
+    candidate = os.path.join(prefix, 'bin', 'kimi') if prefix else ''
+    if candidate and os.access(candidate, os.X_OK): return candidate
+    raise ValueError('未找到 kimi：请安装 @moonshot-ai/kimi-code 或确认其在 PATH 中')
+
 def kimi_catalog_update(config_options):
-    # Same normalized shape as dsh_catalog_update, but for kimi's flat options
-    # and slash-separated model values; thinking rides on 'thinking'.
+    # Same normalized shape as dsh_catalog_update, keeping the full option value as
+    # id so multi-provider aliases ('bailian/m', 'aone/m') and bare official ids
+    # ('kimi-for-coding') stay distinct and round-trip cleanly.
     global KIMI_MODELS
     model_option = next((o for o in config_options if o.get('id') == 'model'), None)
     if not model_option: return
     effort = next((o for o in config_options if o.get('id') in ('reasoning_effort', 'thinking')), {})
     efforts = [e['value'] for e in effort.get('options', []) if e.get('value')]
     current = model_option.get('currentValue')
+    previous = {m['id']: m.get('thinking', []) for m in kimi_catalog() if isinstance(m, dict) and m.get('id')}
     entries = []
     for item in acp_option_items(model_option):
-        provider, model = acp_model_value(item.get('value'))
+        provider, model = kimi_model_value(item.get('value'))
         if not model: continue
         entries.append({'id': model, 'provider': provider, 'name': item.get('name') or model,
-                        'thinking': efforts if item.get('value') == current else []})
+                        'thinking': efforts if item.get('value') == current else previous.get(model, [])})
     KIMI_MODELS = entries
     save(ROOT / 'kimi-catalog.json', entries)
 
@@ -360,8 +386,9 @@ def setup_status(provider):
         raise ValueError('Unknown setup provider')
     try:
         if provider == 'dsh': binary = dsh_binary()
+        elif provider == 'kimi': binary = kimi_binary()
         elif provider == 'codex' and os.environ.get('PERCH_LOCAL_CODEX'): binary = os.environ['PERCH_LOCAL_CODEX']
-        else: binary = shutil.which({'omp':'omp', 'qoder':'qoderclicn', 'qoderintl':'qodercli', 'codex':'codex', 'claude':'claude', 'kimi':'kimi'}[provider])
+        else: binary = shutil.which({'omp':'omp', 'qoder':'qoderclicn', 'qoderintl':'qodercli', 'codex':'codex', 'claude':'claude'}[provider])
     except ValueError:
         binary = None
     result = {'installed': bool(binary), 'models': [], 'modelCheck': 'unverified', 'credentialCheck': 'unverified'}
@@ -1512,48 +1539,72 @@ class ACPSessionAdapter:
         self.session = session
         self.pending = {}; self.next_id = 0; self.pending_prompt = None
         self.blocks = {}; self.permission_options = {}
+        self.live_id = None; self.stream_seq = 0; self.tools = {}; self.syncing = False; self.pending_config_syncs = 0
 
+    def reset(self):
+        self.pending = {}; self.next_id = 0; self.pending_prompt = None
+        self.blocks = {}; self.permission_options = {}
+        self.live_id = None; self.stream_seq = 0; self.tools = {}; self.syncing = False; self.pending_config_syncs = 0
     def request(self, method, params, kind):
         self.next_id += 1
         request_id = self.next_id
         self.pending[request_id] = kind
+        if kind == 'set_config': self.pending_config_syncs += 1
         self.session.send({'jsonrpc':'2.0','id':request_id,'method':method,'params':params})
         return request_id
     def notify(self, method, params):
         self.session.send({'jsonrpc':'2.0','method':method,'params':params})
+    def can_flush_prompt(self):
+        return self.session.ready.is_set() and not self.syncing and self.pending_config_syncs == 0
     def flush_prompt(self):
         # session/prompt settles only when the whole turn does, so its response — not
         # a separate event — is the turn's terminal signal.
         if not self.pending_prompt: return
-        request_id, text = self.pending_prompt
+        if len(self.pending_prompt) == 3: request_id, text, stored = self.pending_prompt
+        else: request_id, text = self.pending_prompt; stored = []
         self.pending_prompt = None
-        self.request('session/prompt', {'sessionId':self.session.state['resume'],'prompt':[{'type':'text','text':text}]}, 'prompt:'+request_id)
-        receipt = self.session.state.get('requests',{}).get(request_id)
+        self.live_id = None
+        s = self.session.state
+        prompt_text = text
+        images = []
+        for a in stored or []:
+            if s['provider'] == 'kimi' and a['mediaType'].startswith('image/'):
+                raw = pathlib.Path(a['path']).read_bytes()
+                images.append({'type':'image','mimeType':a['mediaType'],'data':base64.b64encode(raw).decode('ascii')})
+            else:
+                prompt_text += '\n[Attached file %s is saved at %s; inspect it with the Read tool.]' % (a['name'], a['path'])
+        blocks = ([{'type':'text','text':prompt_text}] if prompt_text.strip() or not images else []) + images
+        self.request('session/prompt', {'sessionId':s['resume'],'prompt':blocks}, 'prompt:'+request_id)
+        receipt = s.get('requests',{}).get(request_id)
         if receipt and receipt['status'] == 'submitting':
             receipt['status'] = 'submitted'
-            if self.session.state.get('turnState') == 'submitting': self.session.state['turnState'] = 'submitted'
-    def apply_options(self, options):
+            if s.get('turnState') == 'submitting': s['turnState'] = 'submitted'
+    def current_model(self, raw):
+        if self.session.state['provider'] == 'kimi': return kimi_model_value(raw)
+        try:
+            parsed = json.loads(raw)
+            if isinstance(parsed, list) and len(parsed) == 2: return parsed[0], parsed[1]
+        except Exception:
+            pass
+        return acp_model_value(raw)
+    def apply_options(self, options, preserve_desired=False):
         s = self.session.state
         s['acpOptions'] = options
         if s['provider'] == 'dsh': dsh_catalog_update(options)
         elif s['provider'] == 'kimi': kimi_catalog_update(options)
         model_option = next((o for o in options if o.get('id') == 'model'), None)
-        if model_option and model_option.get('currentValue'):
-            try:
-                provider, model = json.loads(model_option['currentValue'])
-                s['model'] = model; s['provider_id'] = provider
-            except Exception:
-                provider, model = acp_model_value(model_option['currentValue'])
-                if model: s['model'] = model; s['provider_id'] = provider
+        if model_option and model_option.get('currentValue') and not (preserve_desired and s.get('model')):
+            provider, model = self.current_model(model_option['currentValue'])
+            if model: s['model'] = model; s['provider_id'] = provider
         effort = next((o for o in options if o.get('id') in ('reasoning_effort', 'thinking')), None)
-        if effort is not None:
+        if effort is not None and not (preserve_desired and s.get('thinking')):
             # The empty value is "provider default", which is a real choice, not an
             # unknown level; keep it distinct from a named effort.
             s['thinking'] = effort.get('currentValue') or None
     def event(self, frame):
         # Fold the ACP wire shape into the per-provider event vocabulary event()
         # already switches on. Unknown frames are dropped rather than failing the
-        # stream, because dsh is a preview runtime that may add message kinds.
+        # stream, because ACP runtimes may add extension notifications.
         if 'method' in frame and 'id' in frame:
             return {'type':'acp_request','wireId':frame['id'],'method':frame['method'],'params':frame.get('params') or {}}
         if 'method' in frame:
@@ -1571,70 +1622,124 @@ class ACPSessionAdapter:
         # the parked prompt go. Each step waits for the runtime's answer so a prompt
         # never gets pinned to a route the user already replaced.
         s = self.session.state
+        label = ACP_LABELS.get(s['provider'], s['provider'])
         options = s.get('acpOptions') or []
         model_option = next((o for o in options if o.get('id') == 'model'), None)
         if s.get('model') and model_option and model_option.get('currentValue'):
-            try: current = json.loads(model_option['currentValue'])[1]
-            except Exception: current = acp_model_value(model_option['currentValue'])[1] or None
+            current_provider, current = self.current_model(model_option['currentValue'])
             if current and s['model'] != current:
                 target = None
                 for item in acp_option_items(model_option):
-                    if acp_model_value(item.get('value'))[1] == s['model']: target = target or item['value']
+                    raw = item.get('value')
+                    _, full = self.current_model(raw)
+                    _, short = acp_model_value(raw)
+                    if s['model'] in (full, short): target = target or raw
                 if target:
                     self.request('session/set_config_option', {'sessionId':s['resume'],'configId':'model','value':target}, 'set_config')
                     return
-                s['error'] = 'dsh 不认识模型 %s，沿用当前模型' % s['model']
+                s['error'] = '%s 不认识模型 %s，沿用当前模型' % (label, s['model'])
+                s['model'] = current; s['provider_id'] = current_provider
         effort = next((o for o in options if o.get('id') in ('reasoning_effort', 'thinking')), None)
         if s.get('thinking') and effort is not None:
             values = [o.get('value') for o in effort.get('options', [])]
             if s['thinking'] != effort.get('currentValue') and s['thinking'] in values:
                 self.request('session/set_config_option', {'sessionId':s['resume'],'configId':effort.get('id') or 'reasoning_effort','value':s['thinking']}, 'set_config')
                 return
-        if s['provider'] == 'kimi' and s.get('permissionMode') and s['permissionMode'] != 'default':
-            # kimi starts every ACP session in default; a non-default permission
-            # wish rides on session/set_mode before the parked prompt goes out.
-            # Echo it optimistically so the next sync does not re-send.
-            current_mode = next((o for o in options if o.get('id') == 'mode'), {}).get('currentValue')
+            if values and s['thinking'] not in values:
+                s['thinking'] = effort.get('currentValue') or None
+        if s['provider'] == 'kimi' and s.get('permissionMode'):
+            current_mode = next((o for o in options if o.get('id') == 'mode'), {}).get('currentValue') or 'default'
             if current_mode != s['permissionMode']:
                 self.request('session/set_mode', {'sessionId':s['resume'],'modeId':s['permissionMode']}, 'set_config')
                 for option in options:
                     if option.get('id') == 'mode': option['currentValue'] = s['permissionMode']
                 return
-        self.flush_prompt()
+        self.syncing = False
+        self.session.ready.set()
+        if self.pending_config_syncs == 0:
+            self.flush_prompt()
+    def resolve_tool_name(self, update, previous=None):
+        title = update.get('title')
+        raw_input = update.get('rawInput')
+        if previous in ACP_CANONICAL_TOOLS: return previous
+        if title in ACP_CANONICAL_TOOLS: return title
+        if update.get('kind') == 'execute' and isinstance(raw_input, dict) and 'command' in raw_input: return 'Bash'
+        return title or previous or 'tool'
     def update(self, update):
         s = self.session.state
+        label = ACP_LABELS.get(s['provider'], s['provider'])
         kind = update.get('sessionUpdate')
         if s['busy'] and s.get('turnState') in ('submitting','submitted','accepted'):
             self.session.finish('running')
         if kind in ('agent_message_chunk', 'agent_thought_chunk'):
-            message_id = update.get('messageId') or 'live'
+            if update.get('messageId'):
+                message_id = update['messageId']
+            else:
+                if self.live_id is None:
+                    self.stream_seq += 1
+                    self.live_id = 'turn-%s-%d' % (s.get('turnId') or '0', self.stream_seq)
+                message_id = self.live_id
             blocks = self.blocks.setdefault(message_id, [])
             content = update.get('content') or {}
             if kind == 'agent_thought_chunk':
-                blocks.append({'type':'thinking','thinking':content.get('text','')})
+                delta = content.get('text', '')
+                if blocks and blocks[-1].get('type') == 'thinking': blocks[-1]['thinking'] += delta
+                else: blocks.append({'type':'thinking','thinking':delta})
             elif content.get('type') == 'text':
-                blocks.append({'type':'text','text':content.get('text','')})
+                delta = content.get('text', '')
+                if blocks and blocks[-1].get('type') == 'text': blocks[-1]['text'] += delta
+                else: blocks.append({'type':'text','text':delta})
             elif content.get('type') == 'resource_link':
                 blocks.append({'type':'text','text':'[%s](%s)' % (content.get('name') or content.get('uri') or '资源', content.get('uri') or '')})
             else:
-                blocks.append({'type':'text','text':'[dsh 发出了暂不支持的内容类型 %s]' % content.get('type')})
+                blocks.append({'type':'text','text':'[%s 发出了暂不支持的内容类型 %s]' % (label, content.get('type'))})
             self.session.upsert({'role':'assistant','content':list(blocks),'timestamp':time.time()}, 'dsh:'+message_id)
             return True
         if kind == 'tool_call':
-            self.session.upsert({'role':'assistant','content':[{'type':'toolCall','id':update.get('toolCallId'),'name':update.get('title') or 'tool','arguments':update.get('rawInput') if update.get('rawInput') is not None else {}}],'timestamp':time.time()}, 'dsh-tool:'+str(update.get('toolCallId')))
+            self.live_id = None
+            tc_id = str(update.get('toolCallId'))
+            name = self.resolve_tool_name(update)
+            args = update.get('rawInput') if update.get('rawInput') is not None else {}
+            self.tools[tc_id] = {'name':name,'arguments':args}
+            self.session.upsert({'role':'assistant','content':[{'type':'toolCall','id':update.get('toolCallId'),'name':name,'arguments':args}],'timestamp':time.time()}, 'dsh-tool:'+tc_id)
             return True
         if kind == 'tool_call_update':
+            self.live_id = None
+            tc_id = str(update.get('toolCallId'))
+            status = update.get('status')
+            entry = self.tools.setdefault(tc_id, {'name':'tool','arguments':{}})
+            name = self.resolve_tool_name(update, entry.get('name'))
+            args = update['rawInput'] if update.get('rawInput') is not None else entry.get('arguments', {})
+            if name != entry.get('name') or args != entry.get('arguments'):
+                entry['name'] = name; entry['arguments'] = args
+                self.session.upsert({'role':'assistant','content':[{'type':'toolCall','id':update.get('toolCallId'),'name':name,'arguments':args}],'timestamp':time.time()}, 'dsh-tool:'+tc_id)
+            if status not in ('completed', 'failed'):
+                return True
             texts = []
             for part in update.get('content') or []:
                 body = part.get('content') or {}
                 if body.get('type') == 'text' and body.get('text'): texts.append(body['text'])
-            self.session.upsert({'role':'toolResult','toolCallId':update.get('toolCallId'),'content':'\n'.join(texts),'isError':update.get('status') == 'failed','timestamp':time.time()}, 'dsh-result:'+str(update.get('toolCallId')))
+            if not texts and isinstance(update.get('rawOutput'), str) and update['rawOutput']:
+                texts.append(update['rawOutput'])
+            self.session.upsert({'role':'toolResult','toolCallId':update.get('toolCallId'),'content':'\n'.join(texts),'isError':status == 'failed','timestamp':time.time()}, 'dsh-result:'+tc_id)
             return True
         if kind == 'usage_update':
             s['context'] = {'tokens':update.get('used'),'limit':update.get('size')}
             return True
         if kind == 'config_option_update' and update.get('configOptions'):
             self.apply_options(update['configOptions'])
+            return True
+        if kind == 'current_mode_update' and update.get('currentModeId') in PERMISSION_MODES.get(s['provider'], ()):
+            s['permissionMode'] = update['currentModeId']
+            return True
+        if kind == 'session_info_update' and isinstance(update.get('title'), str) and update['title'].strip():
+            s['title'] = update['title'].strip()
+            return True
+        if kind == 'available_commands_update':
+            commands = [{'name':c['name'],'description':c.get('description','')}
+                        for c in (update.get('availableCommands') or []) if isinstance(c, dict) and c.get('name')]
+            if commands == s.get('commands'): return False
+            s['commands'] = commands
             return True
         return False
 
@@ -2063,7 +2168,7 @@ class Session:
             receipt['error']=self.state.get('error')
     def decode_attachments(self, value):
         if not value: return []
-        if self.state['provider'] not in ('claude','codex'): raise ValueError('当前 Agent 不支持发送附件')
+        if self.state['provider'] not in ('claude','codex','kimi'): raise ValueError('当前 Agent 不支持发送附件')
         if not isinstance(value, list) or len(value) > 5: raise ValueError('附件一次最多 5 个')
         result = []
         for item in value:
@@ -2116,9 +2221,9 @@ class Session:
         if not s['messages']: s['title']=content[:60]
         if s['provider'] in ('qoder','qoderintl','dsh','codex','claude','kimi'): self.upsert({'role':'user','content':content},request_id)
         if s['provider'] in ACP_PROVIDERS:
-            self.acp_adapter.pending_prompt=(request_id,text)
+            self.acp_adapter.pending_prompt=(request_id,text,stored)
             try:
-                if self.ready.is_set(): self.acp_adapter.flush_prompt()
+                if self.acp_adapter.can_flush_prompt(): self.acp_adapter.flush_prompt()
             except Exception as e:
                 s['busy']=False; s['error']=str(e); self.finish('unknown')
             self.touch(True)
@@ -2173,7 +2278,8 @@ class Session:
             args = [dsh_binary(),'--profile','acp']
             env = dict(os.environ, DSH_HOME=str(ROOT/'dsh-home'), DSH_TELEMETRY_MODE='DISABLED')
         elif s['provider'] == 'kimi':
-            args = ['kimi','acp']
+            args = [kimi_binary(),'acp']
+            env = proxy_aware_spawn_env()
         else:
             cli = QODER_CLI.get(s['provider'], 'claude')
             worker = 'qoder-worker.mjs' if s['provider'] in QODER_SDK else 'claude-worker.mjs'
@@ -2189,8 +2295,7 @@ class Session:
             # model gateway; without the proxy env those calls stall the turn silently.
             if s['provider'] == 'claude': env = proxy_aware_spawn_env()
         self.ready.clear()
-        self.acp_adapter.pending = {}; self.acp_adapter.next_id = 0; self.acp_adapter.pending_prompt = None
-        self.acp_adapter.blocks = {}; self.acp_adapter.permission_options = {}
+        self.acp_adapter.reset()
         self.process = subprocess.Popen(args,cwd=s['cwd'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=open(ROOT/(s['id']+'.stderr'),'a'),text=True,start_new_session=True,env=env)
         threading.Thread(target=self.read,daemon=True).start()
         if s['provider'] in ACP_PROVIDERS:
@@ -2469,8 +2574,9 @@ class Session:
             if not self.subagents.guard(self.subagents.stop_result, e): return
             durable=True
         elif provider in ACP_PROVIDERS and t == 'acp_response' and e['kind'] == 'initialize':
+            label = ACP_LABELS.get(provider, provider)
             if e.get('error'):
-                s['error']='dsh 握手失败：'+str(e['error'].get('message','initialize 被拒绝'))
+                s['error']='%s 握手失败：%s' % (label, str(e['error'].get('message','initialize 被拒绝')))
                 if self.acp_adapter.pending_prompt: self.acp_adapter.fail_prompt(str(e['error'].get('message','握手失败')))
                 durable=True
             else:
@@ -2480,28 +2586,35 @@ class Session:
                     self.acp_adapter.request('session/new', {'cwd':s['cwd'],'mcpServers':[]}, 'session_open')
             return
         elif provider in ACP_PROVIDERS and t == 'acp_response' and e['kind'] == 'session_open':
+            label = ACP_LABELS.get(provider, provider)
             if e.get('error'):
-                s['error']='dsh 会话打开失败：'+str(e['error'].get('message','未知错误'))
+                s['error']='%s 会话打开失败：%s' % (label, str(e['error'].get('message','未知错误')))
                 if self.acp_adapter.pending_prompt: self.acp_adapter.fail_prompt(s['error'])
             else:
                 result = e.get('result') or {}
                 if result.get('sessionId'): s['resume'] = result['sessionId']
-                self.acp_adapter.apply_options(result.get('configOptions') or [])
-                self.ready.set()
+                self.acp_adapter.syncing = True
+                self.acp_adapter.apply_options(result.get('configOptions') or [], preserve_desired=True)
                 self.acp_adapter.sync_config()
             durable=True
         elif provider in ACP_PROVIDERS and t == 'acp_response' and e['kind'] == 'set_config':
+            label = ACP_LABELS.get(provider, provider)
+            self.acp_adapter.pending_config_syncs = max(0, self.acp_adapter.pending_config_syncs - 1)
             if e.get('error'):
-                s['error']='dsh 设置被拒绝：'+str(e['error'].get('message','未知错误'))
+                self.acp_adapter.syncing = False
+                s['error']='%s 设置被拒绝：%s' % (label, str(e['error'].get('message','未知错误')))
+                if self.acp_adapter.pending_prompt: self.acp_adapter.fail_prompt(s['error'])
+                self.ready.set()
             else:
                 updated = (e.get('result') or {}).get('configOptions')
-                if updated: self.acp_adapter.apply_options(updated)
+                if updated: self.acp_adapter.apply_options(updated, preserve_desired=self.acp_adapter.syncing)
                 self.acp_adapter.sync_config()
             durable=True
         elif provider in ACP_PROVIDERS and t == 'acp_response' and e['kind'].startswith('prompt:'):
+            label = ACP_LABELS.get(provider, provider)
             s['busy']=False; s['interactions']=[]; s['updated']=time.time(); durable=True
             if e.get('error'):
-                message=str(e['error'].get('message','dsh 执行失败'))
+                message=str(e['error'].get('message','%s 执行失败' % label))
                 if message.startswith('Internal error: '): message=message[len('Internal error: '):]
                 # The cancel ack for dsh IS the prompt response; an error racing a
                 # requested stop reads as a stopped turn, not as a failure.
@@ -2701,6 +2814,8 @@ class Handler(BaseHTTPRequestHandler):
                     result={'version':SERVICE_VERSION,'implementation':SOURCE_FINGERPRINT,'startedAt':STARTED_AT,'pid':os.getpid(),'watch':True}
                     if os.environ.get('PERCH_LOCAL_CODEX'):
                         result['localCodexBinary']=str(pathlib.Path(os.environ['PERCH_LOCAL_CODEX']).resolve())
+                    if os.environ.get('PERCH_LOCAL_KIMI'):
+                        result['localKimiBinary']=os.path.abspath(os.environ['PERCH_LOCAL_KIMI'])
                 elif self.path=='/sessions' and not post: result={'sessions':[s.summary() for s in SESSIONS.values()]}
                 elif self.path=='/sessions' and post:
                     provider=body.get('provider')
@@ -2732,7 +2847,7 @@ class Handler(BaseHTTPRequestHandler):
                             raise
                     else:
                         s.persist()
-                        if body['provider']=='dsh':
+                        if body['provider'] in ACP_PROVIDERS:
                             # Launch at create so the ACP handshake lands before the first
                             # prompt and the model picker has a live catalog to show.
                             try: s.launch()
@@ -2775,18 +2890,20 @@ class Handler(BaseHTTPRequestHandler):
                             elif s.state['provider'] in ACP_PROVIDERS:
                                 # Send the runtime's own opaque option value back rather
                                 # than re-serializing [provider, model] ourselves.
+                                label = ACP_LABELS.get(s.state['provider'], s.state['provider'])
                                 options = s.state.get('acpOptions') or []
                                 model_option = next((o for o in options if o.get('id')=='model'), {})
                                 target = next((item['value'] for item in acp_option_items(model_option)
-                                               if item.get('value')==json.dumps([provider,model],separators=(',',':'))
-                                               or item.get('value')==json.dumps([provider,model])
-                                               or item.get('value')==provider+'/'+model), None)
-                                if target is None: raise ValueError(s.state['provider'] + ' 不认识该模型，请同步后重试')
-                                if s.process and s.process.poll() is None and s.ready.is_set():
+                                               if item.get('value') in (
+                                                   json.dumps([provider,model],separators=(',',':')),
+                                                   json.dumps([provider,model]),
+                                                   model,
+                                                   provider+'/'+model)), None)
+                                if target is None and options:
+                                    raise ValueError(label + ' 不认识该模型，请同步后重试')
+                                s.state['model']=model; s.state['provider_id']=provider; s.touch(True)
+                                if target and s.process and s.process.poll() is None and s.ready.is_set():
                                     s.acp_adapter.request('session/set_config_option', {'sessionId':s.state.get('resume'),'configId':'model','value':target}, 'set_config')
-                                else:
-                                    # Applied by acp_sync_config on the next handshake.
-                                    s.state['model']=model; s.state['provider_id']=provider; s.touch(True)
                                 result={'ok':True}
                             else:
                                 # set_model takes provider and modelId separately; a combined
@@ -2949,13 +3066,15 @@ def active_session(session):
 
 def serves_current_code(health):
     """A running service counts as current only when it reports this protocol, the
-    selected local Codex binary and this exact source. A service too old to report
+    selected local agent binaries and this exact source. A service too old to report
     its source is not assumed to match. When the local file cannot be read the
     version alone decides, so an unreadable digest never restarts a healthy
     service on every check."""
     if health.get('version')!=SERVICE_VERSION: return False
     local_binary=os.environ.get('PERCH_LOCAL_CODEX')
     if local_binary and health.get('localCodexBinary')!=str(pathlib.Path(local_binary).resolve()): return False
+    local_kimi=os.environ.get('PERCH_LOCAL_KIMI')
+    if local_kimi and health.get('localKimiBinary')!=os.path.abspath(local_kimi): return False
     if not SOURCE_FINGERPRINT: return True
     return health.get('implementation')==SOURCE_FINGERPRINT
 

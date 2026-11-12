@@ -331,15 +331,14 @@ private struct HostConnectionControls: View {
     let kimi: KimiConnection
     let native: NativeAgentConnection
 
-    private var sshRequested: Bool { kimi.connecting || native.wantsConnection }
+    private var sshRequested: Bool { native.wantsConnection }
     private var sshOnline: Bool {
-        (!connection.host.enabledAgents.contains(.kimi) || kimi.online) &&
-        (!connection.host.hasNativeAgents || native.online)
+        !connection.host.hasNativeAgents || native.online
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            if connection.host.enabledAgents.contains(.kimi) || connection.host.hasNativeAgents {
+            if connection.host.hasNativeAgents {
                 connectionRow(connection.host.isLocal ? L("本机 Agent") : "SSH Agent", online: sshOnline, requested: sshRequested,
                               autoConnect: Binding(get: { connection.host.autoConnectSSH },
                                   set: { model.setAutoConnect($0, for: connection.id) })) {

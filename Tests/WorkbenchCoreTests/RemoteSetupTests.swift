@@ -27,7 +27,7 @@ func checkRemoteSetup() async throws {
                        kimiPort: 60123, kimiTokenPath: "~/custom token/credential",
                        autoConnectSSH: false, autoConnectHerdr: false)
     let restored = try JSONDecoder().decode(SSHHost.self, from: JSONEncoder().encode(host))
-    precondition(restored == host && !restored.hasNativeAgents)
+    precondition(restored == host && restored.hasNativeAgents)
     // Hosts saved before managed mode keep connecting to the service the user runs.
     precondition(!legacy.kimiManaged && legacy.kimiEnvironment.isEmpty)
     var managedHost = host
@@ -161,16 +161,14 @@ func checkRemoteSetup() async throws {
                                               environment: ["KIMI_CODE_HOME": "/srv/kimi home"])
     let movedArguments = try JSONDecoder().decode([String].self, from: try await SetupCommandRunner.run("/bin/sh", ["-c", moved]))
     precondition(movedArguments == ["--agent", "kimi", "--port", "60123", "--env", "KIMI_CODE_HOME=/srv/kimi home"])
-    // The real script runs from the stream without an installed copy; a host without Kimi says so.
+    // The local native launcher rejects an unavailable binary without starting the bridge.
     let serviceScript = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
         .deletingLastPathComponent().appendingPathComponent("remote/local-agent-service.py")
-    let serviceSource = try String(contentsOf: serviceScript, encoding: .utf8)
-    let missingKimi = "PATH=/usr/bin:/bin; HOME=\(SSHCommand.quote(runtimeRoot.path)); export PATH HOME; "
-        + RemoteSetup.kimiEnsureCommand(script: serviceSource, port: 60123, tokenPath: "~/.kimi-code/server.token", environment: [:])
+    let missingKimi = "/usr/bin/python3 \(SSHCommand.quote(serviceScript.path)) --agent kimi --binary /nonexistent/kimi"
     do {
         _ = try await SetupCommandRunner.run("/bin/sh", ["-c", missingKimi])
         preconditionFailure("a host without Kimi returned an endpoint")
-    } catch { precondition(error.localizedDescription.contains("not found"), error.localizedDescription) }
+    } catch { precondition(error.localizedDescription.contains("unavailable"), error.localizedDescription) }
 
     let bridgeHome = runtimeRoot.appendingPathComponent("bridge home")
     let bridgeDirectory = bridgeHome.appendingPathComponent(".local/share/agent-workbench/native")
