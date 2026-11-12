@@ -2095,9 +2095,21 @@ private struct ReferenceComposerFixtureView: View {
         guard model.native.drafts["session-1"] == "B 独立草稿" else { throw WorkbenchError("Composition leaked into B") }
         fixture.failSelection = true
         model.open(fixture.sessions[1])
-        try await settle(window, "failed selection") { self.model.native.actionError != nil && !self.model.native.conversation.isSelecting }
-        guard model.native.snapshot == nil, !probe.detailCurrent, hidden(probe.detailView),
-              ConversationTranscript.document(in: scroll) === document else { throw WorkbenchError("Failed load exposed the retained detail") }
+        try await settle(window, "failed cached selection") {
+            self.model.native.actionError != nil && !self.model.native.conversation.isSelecting
+                && self.model.native.conversation.presentationSnapshot?.id == "session-1"
+        }
+        guard model.native.snapshot == nil, !probe.detailCurrent, !hidden(probe.detailView),
+              let cachedEditor = draftEditor(in: window.contentView), !cachedEditor.isEditable,
+              ConversationTranscript.document(in: scroll) === document else {
+            throw WorkbenchError("Failed revisit did not retain its read-only cached transcript")
+        }
+        let cachedRequests = fixture.mutationRequests
+        cachedEditor.onSend?()
+        await Task.yield()
+        guard fixture.mutationRequests == cachedRequests, model.native.queue.allItems.isEmpty else {
+            throw WorkbenchError("Cached presentation routed an action before its fresh snapshot")
+        }
         fixture.failSelection = false
         model.native.select("session-1")
         try await settle(window, "retry selection") { self.hasMountedMessage(window, session: "session-1") && self.probe.detailCurrent }

@@ -1214,6 +1214,7 @@ final class NativeAgentConnection {
     func action(_ id: String, _ action: String, _ body: [String: JSONValue] = [:]) async throws {
         let _: JSONValue = try await request("/sessions/\(id)/\(action)", body: .object(body))
         if action == "delete" {
+            conversation.removeCached(id)
             if selectedID == id { conversation.select(nil); subagents.present(nil) }
             drafts.removeValue(forKey: id); attachments.removeValue(forKey: id)
         }

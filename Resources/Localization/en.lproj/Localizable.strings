@@ -832,6 +832,7 @@
 "尚未读取到当前模型的思考档位。" = "Thinking levels for the current model are not available yet.";
 "连接恢复后可修改设置。" = "Settings can be changed after reconnecting.";
 "正在同步会话，请稍候。" = "Syncing the session. Please wait.";
+"正在同步最新内容…" = "Syncing latest content…";
 "消息发送中，请稍候。" = "Sending the message. Please wait.";
 "正在更新模型设置…" = "Updating model settings…";
 "任务运行中，完成或停止后可修改。" = "Settings can be changed after the running task finishes or stops.";
