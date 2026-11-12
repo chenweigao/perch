@@ -1,0 +1,16 @@
+{
+  "baseline_ref": "c51ef15a35acdce074d887dde18ac61eb73b2d7c",
+  "scope": "Mac same-machine release checks at canonical SwiftPM-linked paths; not copied executables, UI or FPS",
+  "toolchain": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0\n",
+  "macos": "27.0.1",
+  "binary_sha256": {
+    "baseline": "ebb93400430ae8fa1683af3775bd176b339c6d1758d4035ea52a4facce4a40c0",
+    "candidate": "4a2ebac690cd30fd4c901705d408fe0347ae1f9c891bedff6314f4c3ffc52442"
+  },
+  "binary_paths": {
+    "baseline": ".build/round5-baseline/out/Products/Release/WorkbenchChecks",
+    "candidate": ".build/round5-candidate/out/Products/Release/WorkbenchChecks"
+  },
+  "candidate_patch": "diff --git a/Sources/WorkbenchCore/SessionEditStats.swift b/Sources/WorkbenchCore/SessionEditStats.swift\nindex 41af7cd..abe3992 100644\n--- a/Sources/WorkbenchCore/SessionEditStats.swift\n+++ b/Sources/WorkbenchCore/SessionEditStats.swift\n@@ -121,8 +121,23 @@ public enum SessionEditStats {\n     /// is exactly the Character-split line and line comparisons keep canonical\n     /// equivalence.\n     private static func lines(_ text: String) -> [Substring] {\n-        var result: [Substring] = []\n         let utf8 = text.utf8\n+        // Scan integer byte offsets when storage is contiguous. Only LF line\n+        // boundaries need String.Index values; keep the substrings backed by\n+        // the original text so comparisons still use canonical equivalence.\n+        if let result = utf8.withContiguousStorageIfAvailable({ bytes -> [Substring] in\n+            var result: [Substring] = []\n+            var start = utf8.startIndex\n+            for offset in bytes.indices where bytes[offset] == 0x0A && (offset == 0 || bytes[offset - 1] != 0x0D) {\n+                let index = utf8.index(utf8.startIndex, offsetBy: offset)\n+                result.append(text[start..<index])\n+                start = utf8.index(after: index)\n+            }\n+            result.append(text[start...])\n+            return result\n+        }) { return result }\n+        // Foreign/non-contiguous storage retains the original UTF8View walk.\n+        var result: [Substring] = []\n         var start = utf8.startIndex\n         var index = start\n         var previous: UInt8 = 0\n@@ -142,6 +157,13 @@ public enum SessionEditStats {\n     /// A trailing newline ends the last line rather than starting another \u2014\n     /// but keep parity with ccgui's JS split, which counts it.\n     private static func lineCount(_ text: String) -> Int {\n+        if let count = text.utf8.withContiguousStorageIfAvailable({ bytes -> Int in\n+            var count = 1\n+            for offset in bytes.indices where bytes[offset] == 0x0A && (offset == 0 || bytes[offset - 1] != 0x0D) {\n+                count += 1\n+            }\n+            return count\n+        }) { return count }\n         var count = 1\n         var previous: UInt8 = 0\n         for byte in text.utf8 {\n",
+  "all_binary_hashes_unchanged": true
+}

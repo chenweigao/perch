@@ -21,7 +21,10 @@ A/B ≥5 轮取中位数 → 超噪声带（本机 <2%）才采纳 → Workbench
 **macOS 测量通道**：`ssh -o BatchMode=yes mac-mini` 直达（反向隧道，launchd KeepAlive
 自愈）。GUI 应用类作业必须走 runner：写 bash 文件到 `~/Library/PerfRunner/jobs/<名>.job`，
 LaunchAgent `local.perf.runner`（Aqua 会话内）自动执行，结果在
-`~/Library/PerfRunner/results/<名>.log`+`.done`。SSH 直接拉 GUI 应用会被 TCC 拒绝
+`~/Library/PerfRunner/results/<名>.log`+`.done`。round 5 起 Mac A/B 使用两个相同默认
+SwiftPM builder 的独立 scratch 产品路径，逐对及最终验证二进制hash恒定；归档copied
+native checks曾exit137，不能当成功测量，不用带调试权限的xctrace跑数替代无捕获A/B。
+SSH 直接拉 GUI 应用会被 TCC 拒绝
 （Operation not permitted）。Mac 工作树：`~/_worktrees/20x-loop-20261112/perch`，用前
 fetch+checkout 到本轮 base。冷启动经 runner 验证可用（5/5，2026-11-12）。
 
@@ -42,6 +45,7 @@ Mac mini 同机 A/B 超过该轮实测噪声才采纳，不能把 Linux 特有�
 | 2 | 2026-11-12 | timeline 文本判空免复制 | **不采纳**：Linux -49.3%，Mac cold +0.8%（噪声内），目标产品无实证收益；已撤回 | [round-2](2026-11-12-round-2.md) |
 | 3 | 2026-11-12 | 单 text part 摘要省去重复 Character 计数 | **已采纳/合并：Mac cold -16.75%**（9.85→8.20ms@2333）；等价/Core/portable/app build/5次冷启动、全部8项CI通过，独立及GitHub评审无意见 | [round-3](2026-11-12-round-3.md)；[#324](https://github.com/chenweigao/perch/pull/324)，merge=c51ef15（18:17） |
 | 4 | 2026-11-12 | Mac 切换/目录隔离 + CPU 归因 | **归因完成，无产品候选**：9个隔离进程通过，模型投影非切换大头；保持UI红线 | [round-4](2026-11-12-round-4.md) |
+| 5 | 2026-11-12 | 编辑统计 contiguous UTF-8 扫描 | **候选：Mac -51.23%（2.05x）**，7.987→3.895ms@6400；Character oracle/Core/portable/app build/5次冷启动通过，待评审/CI | [round-5](2026-11-12-round-5.md) |
 
 ## 否定清单（勿重复尝试）
 
@@ -50,10 +54,10 @@ Mac mini 同机 A/B 超过该轮实测噪声才采纳，不能把 Linux 特有�
 
 ## 候选队列（按当前证据排序）
 
-1. **SessionEditStats.lines 字节索引成本**：round 4 合成切换归因已完成，Mac
-   重复模型投影非大头；不动UI实现。转向单独的edit_stats派生场景，先在Mac剖析
-   逐byte String.Index推进，再尝试contiguous buffer扫描；保留LF/CRLF、canonical
-   equality和非contiguous回退。**不能用 UTF16 数直接替代 Character 数**。
+1. **编辑统计残余（round 5 之后）**：先复剖候选。原采样的 path.contains("://")
+   Foundation搜索占比可观；未知/只读tool先分类再处理路径可能免掉无消费者的工作。
+   保持所有已识别tool的路径拒绝语义，不未经oracle验证换成裸字节contains。
+   **不能用 UTF16 数直接替代 Character 数**。
 2. **冷投影剩余机制成本**：perf 平坦剖面中 UTF16View 迭代/下标 ~7.7%、
    `IndexingIterator.next` 5.1%、`getEnumCaseMultiPayload` 4.8%——round-1 后
    重跑 perf 定位下一批热点（大概率在行构造或 timeline 分组）。

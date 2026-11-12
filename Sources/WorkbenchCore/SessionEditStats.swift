@@ -121,8 +121,23 @@ public enum SessionEditStats {
     /// is exactly the Character-split line and line comparisons keep canonical
     /// equivalence.
     private static func lines(_ text: String) -> [Substring] {
-        var result: [Substring] = []
         let utf8 = text.utf8
+        // Scan integer byte offsets when storage is contiguous. Only LF line
+        // boundaries need String.Index values; keep the substrings backed by
+        // the original text so comparisons still use canonical equivalence.
+        if let result = utf8.withContiguousStorageIfAvailable({ bytes -> [Substring] in
+            var result: [Substring] = []
+            var start = utf8.startIndex
+            for offset in bytes.indices where bytes[offset] == 0x0A && (offset == 0 || bytes[offset - 1] != 0x0D) {
+                let index = utf8.index(utf8.startIndex, offsetBy: offset)
+                result.append(text[start..<index])
+                start = utf8.index(after: index)
+            }
+            result.append(text[start...])
+            return result
+        }) { return result }
+        // Foreign/non-contiguous storage retains the original UTF8View walk.
+        var result: [Substring] = []
         var start = utf8.startIndex
         var index = start
         var previous: UInt8 = 0
@@ -142,6 +157,13 @@ public enum SessionEditStats {
     /// A trailing newline ends the last line rather than starting another —
     /// but keep parity with ccgui's JS split, which counts it.
     private static func lineCount(_ text: String) -> Int {
+        if let count = text.utf8.withContiguousStorageIfAvailable({ bytes -> Int in
+            var count = 1
+            for offset in bytes.indices where bytes[offset] == 0x0A && (offset == 0 || bytes[offset - 1] != 0x0D) {
+                count += 1
+            }
+            return count
+        }) { return count }
         var count = 1
         var previous: UInt8 = 0
         for byte in text.utf8 {

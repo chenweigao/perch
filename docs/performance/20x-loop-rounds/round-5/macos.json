@@ -1,0 +1,406 @@
+{
+  "baseline": "c51ef15",
+  "scope": "Mac mini synthetic model only; alternating AB/BA order for five pairs; same Apple Swift 6.4/default SwiftPM release builder at separate canonical linked paths; not UI/FPS",
+  "metrics": {
+    "cold@117": {
+      "baseline": {
+        "runs_ms": [
+          1.31,
+          0.44,
+          0.44,
+          0.47,
+          0.44
+        ],
+        "median_ms": 0.44,
+        "spread_pct": 197.72727272727275
+      },
+      "candidate": {
+        "runs_ms": [
+          0.43,
+          0.44,
+          0.45,
+          0.44,
+          0.44
+        ],
+        "median_ms": 0.44,
+        "spread_pct": 4.545454545454549
+      },
+      "change_pct": 0.0
+    },
+    "append@117": {
+      "baseline": {
+        "runs_ms": [
+          0.11,
+          0.04,
+          0.04,
+          0.04,
+          0.04
+        ],
+        "median_ms": 0.04,
+        "spread_pct": 175.00000000000003
+      },
+      "candidate": {
+        "runs_ms": [
+          0.04,
+          0.04,
+          0.04,
+          0.04,
+          0.04
+        ],
+        "median_ms": 0.04,
+        "spread_pct": 0.0
+      },
+      "change_pct": 0.0
+    },
+    "cold@583": {
+      "baseline": {
+        "runs_ms": [
+          3.39,
+          2.18,
+          2.14,
+          2.32,
+          2.16
+        ],
+        "median_ms": 2.18,
+        "spread_pct": 57.3394495412844
+      },
+      "candidate": {
+        "runs_ms": [
+          2.15,
+          2.21,
+          2.19,
+          2.17,
+          2.17
+        ],
+        "median_ms": 2.17,
+        "spread_pct": 2.7649769585253483
+      },
+      "change_pct": -0.4587155963302836
+    },
+    "append@583": {
+      "baseline": {
+        "runs_ms": [
+          0.08,
+          0.06,
+          0.06,
+          0.05,
+          0.06
+        ],
+        "median_ms": 0.06,
+        "spread_pct": 50.0
+      },
+      "candidate": {
+        "runs_ms": [
+          0.06,
+          0.06,
+          0.06,
+          0.06,
+          0.06
+        ],
+        "median_ms": 0.06,
+        "spread_pct": 0.0
+      },
+      "change_pct": 0.0
+    },
+    "cold@1167": {
+      "baseline": {
+        "runs_ms": [
+          4.09,
+          4.28,
+          4.3,
+          4.54,
+          4.23
+        ],
+        "median_ms": 4.28,
+        "spread_pct": 10.514018691588788
+      },
+      "candidate": {
+        "runs_ms": [
+          4.2,
+          4.38,
+          4.29,
+          4.28,
+          4.24
+        ],
+        "median_ms": 4.28,
+        "spread_pct": 4.205607476635507
+      },
+      "change_pct": 0.0
+    },
+    "append@1167": {
+      "baseline": {
+        "runs_ms": [
+          0.09,
+          0.09,
+          0.09,
+          0.09,
+          0.09
+        ],
+        "median_ms": 0.09,
+        "spread_pct": 0.0
+      },
+      "candidate": {
+        "runs_ms": [
+          0.09,
+          0.09,
+          0.09,
+          0.09,
+          0.09
+        ],
+        "median_ms": 0.09,
+        "spread_pct": 0.0
+      },
+      "change_pct": 0.0
+    },
+    "cold@2333": {
+      "baseline": {
+        "runs_ms": [
+          8.24,
+          8.58,
+          8.57,
+          9.02,
+          8.35
+        ],
+        "median_ms": 8.57,
+        "spread_pct": 9.101516919486572
+      },
+      "candidate": {
+        "runs_ms": [
+          8.37,
+          8.68,
+          8.48,
+          8.47,
+          8.42
+        ],
+        "median_ms": 8.47,
+        "spread_pct": 3.65997638724912
+      },
+      "change_pct": -1.1668611435239118
+    },
+    "append@2333": {
+      "baseline": {
+        "runs_ms": [
+          0.14,
+          0.15,
+          0.15,
+          0.15,
+          0.14
+        ],
+        "median_ms": 0.15,
+        "spread_pct": 6.666666666666654
+      },
+      "candidate": {
+        "runs_ms": [
+          0.14,
+          0.14,
+          0.15,
+          0.15,
+          0.14
+        ],
+        "median_ms": 0.14,
+        "spread_pct": 7.142857142857128
+      },
+      "change_pct": -6.666666666666654
+    },
+    "streaming.chain_total": {
+      "baseline": {
+        "runs_ms": [
+          1.22,
+          1.19,
+          1.19,
+          1.19,
+          1.19
+        ],
+        "median_ms": 1.19,
+        "spread_pct": 2.521008403361347
+      },
+      "candidate": {
+        "runs_ms": [
+          1.18,
+          1.21,
+          1.18,
+          1.18,
+          1.21
+        ],
+        "median_ms": 1.18,
+        "spread_pct": 2.5423728813559343
+      },
+      "change_pct": -0.8403361344537785
+    },
+    "streaming.presentation_update": {
+      "baseline": {
+        "runs_ms": [
+          0.83,
+          0.82,
+          0.81,
+          0.82,
+          0.82
+        ],
+        "median_ms": 0.82,
+        "spread_pct": 2.4390243902438913
+      },
+      "candidate": {
+        "runs_ms": [
+          0.82,
+          0.84,
+          0.82,
+          0.82,
+          0.83
+        ],
+        "median_ms": 0.82,
+        "spread_pct": 2.4390243902439046
+      },
+      "change_pct": 0.0
+    },
+    "streaming.older_page_full_chain": {
+      "baseline": {
+        "runs_ms": [
+          4.73,
+          4.58,
+          4.55,
+          4.58,
+          4.57
+        ],
+        "median_ms": 4.58,
+        "spread_pct": 3.9301310043668254
+      },
+      "candidate": {
+        "runs_ms": [
+          4.61,
+          4.8,
+          4.61,
+          4.62,
+          4.73
+        ],
+        "median_ms": 4.62,
+        "spread_pct": 4.112554112554101
+      },
+      "change_pct": 0.8733624454148492
+    },
+    "streaming.find_bar_query_update": {
+      "baseline": {
+        "runs_ms": [
+          0.95,
+          0.94,
+          0.95,
+          0.94,
+          0.94
+        ],
+        "median_ms": 0.94,
+        "spread_pct": 1.0638297872340436
+      },
+      "candidate": {
+        "runs_ms": [
+          0.95,
+          0.96,
+          0.95,
+          0.95,
+          0.96
+        ],
+        "median_ms": 0.95,
+        "spread_pct": 1.0526315789473695
+      },
+      "change_pct": 1.0638297872340496
+    },
+    "streaming.release_model_state": {
+      "baseline": {
+        "runs_ms": [
+          4.85,
+          5.15,
+          5.03,
+          5.15,
+          5.38
+        ],
+        "median_ms": 5.15,
+        "spread_pct": 10.291262135922334
+      },
+      "candidate": {
+        "runs_ms": [
+          5.15,
+          5.26,
+          5.21,
+          4.94,
+          5.22
+        ],
+        "median_ms": 5.21,
+        "spread_pct": 6.142034548944326
+      },
+      "change_pct": 1.1650485436893065
+    },
+    "activity.edit_stats@6400": {
+      "baseline": {
+        "runs_ms": [
+          7.894,
+          7.828,
+          7.987,
+          8.114,
+          8.277
+        ],
+        "median_ms": 7.987,
+        "spread_pct": 5.621635157130324
+      },
+      "candidate": {
+        "runs_ms": [
+          3.84,
+          3.771,
+          3.909,
+          3.917,
+          3.895
+        ],
+        "median_ms": 3.895,
+        "spread_pct": 3.7483953786906263
+      },
+      "change_pct": -51.23325403781145
+    },
+    "token.total@200": {
+      "baseline": {
+        "runs_ms": [
+          0.14479150000000002,
+          0.15602100000000002,
+          0.1530835,
+          0.1486665,
+          0.1415415
+        ],
+        "median_ms": 0.1486665,
+        "spread_pct": 9.739584909848576
+      },
+      "candidate": {
+        "runs_ms": [
+          0.152729,
+          0.14981250000000002,
+          0.1485625,
+          0.1449375,
+          0.154083
+        ],
+        "median_ms": 0.14981250000000002,
+        "spread_pct": 6.104630788485607
+      },
+      "change_pct": 0.7708528821220639
+    },
+    "token.total@2000": {
+      "baseline": {
+        "runs_ms": [
+          0.39912499999999995,
+          0.4070415,
+          0.403583,
+          0.40075,
+          0.393104
+        ],
+        "median_ms": 0.40075,
+        "spread_pct": 3.4778540237055497
+      },
+      "candidate": {
+        "runs_ms": [
+          0.3997085,
+          0.412396,
+          0.3937085,
+          0.40547900000000003,
+          0.4008125
+        ],
+        "median_ms": 0.4008125,
+        "spread_pct": 4.662404490877896
+      },
+      "change_pct": 0.015595757953845713
+    }
+  }
+}
