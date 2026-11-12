@@ -16,12 +16,15 @@ A/B ≥5 轮取中位数 → 超噪声带（本机 <2%）才采纳 → Workbench
 
 分支纪律：工作在本线程 T3 worktree，各轮本地用 `codex/20x-loop-N-20261112`，
 推独立 `perf/20x-loop-N-20261112` PR 分支。底座：#320
-（Linux 可移植性）与 #323（round 1）均已合并，当前 base=3b679fb。
+（Linux 可移植性）、#323（round 1）及 #324（round 3）均已合并，当前 base=c51ef15。
 
 **macOS 测量通道**：`ssh -o BatchMode=yes mac-mini` 直达（反向隧道，launchd KeepAlive
 自愈）。GUI 应用类作业必须走 runner：写 bash 文件到 `~/Library/PerfRunner/jobs/<名>.job`，
 LaunchAgent `local.perf.runner`（Aqua 会话内）自动执行，结果在
-`~/Library/PerfRunner/results/<名>.log`+`.done`。SSH 直接拉 GUI 应用会被 TCC 拒绝
+`~/Library/PerfRunner/results/<名>.log`+`.done`。round 5 起 Mac A/B 使用两个相同默认
+SwiftPM builder 的独立 scratch 产品路径，逐对及最终验证二进制hash恒定；归档copied
+native checks曾exit137，不能当成功测量，不用带调试权限的xctrace跑数替代无捕获A/B。
+SSH 直接拉 GUI 应用会被 TCC 拒绝
 （Operation not permitted）。Mac 工作树：`~/_worktrees/20x-loop-20261112/perch`，用前
 fetch+checkout 到本轮 base。冷启动经 runner 验证可用（5/5，2026-11-12）。
 
@@ -40,7 +43,9 @@ Mac mini 同机 A/B 超过该轮实测噪声才采纳，不能把 Linux 特有�
 | --- | --- | --- | --- | --- |
 | 1 | 2026-11-12 | 冷投影空白规范化（excerpt 热点） | **已合并：Linux 冷投影 -36.7%**（84.7→53.6ms@2333 条），余场景噪声内；Codex P2 修复后 -36.5% 保持。未据此认证 macOS 倍率 | [round-1](2026-11-12-round-1.md)；#323 已合并（3b679fb） |
 | 2 | 2026-11-12 | timeline 文本判空免复制 | **不采纳**：Linux -49.3%，Mac cold +0.8%（噪声内），目标产品无实证收益；已撤回 | [round-2](2026-11-12-round-2.md) |
-| 3 | 2026-11-12 | 单 text part 摘要省去重复 Character 计数 | **候选：Mac cold -16.75%**（9.85→8.20ms@2333）；等价/Core/portable/app build/5次冷启动通过，待PR CI/评审 | [round-3](2026-11-12-round-3.md) |
+| 3 | 2026-11-12 | 单 text part 摘要省去重复 Character 计数 | **已采纳/合并：Mac cold -16.75%**（9.85→8.20ms@2333）；等价/Core/portable/app build/5次冷启动、全部8项CI通过，独立及GitHub评审无意见 | [round-3](2026-11-12-round-3.md)；[#324](https://github.com/chenweigao/perch/pull/324)，merge=c51ef15（18:17） |
+| 4 | 2026-11-12 | Mac 切换/目录隔离 + CPU 归因 | **归因完成，无产品候选**：9个隔离进程通过，模型投影非切换大头；保持UI红线 | [round-4](2026-11-12-round-4.md) |
+| 5 | 2026-11-12 | 编辑统计 contiguous UTF-8 扫描 | **候选：Mac -51.23%（2.05x）**，7.987→3.895ms@6400；Character oracle/Core/portable/app build/5次冷启动通过，待评审/CI | [round-5](2026-11-12-round-5.md) |
 
 ## 否定清单（勿重复尝试）
 
@@ -49,10 +54,10 @@ Mac mini 同机 A/B 超过该轮实测噪声才采纳，不能把 Linux 特有�
 
 ## 候选队列（按当前证据排序）
 
-1. **Mac 首访/切换阶段归因**：round 3 单 text 摘要优化已得可靠收益，但 Mac
-   2333条模型 cold 仅~8ms。先测 actual session-switch 分阶段成本，不把 Linux
-   剖面的大量 Foundation 额外复制误当 Mac 瓶颈。**不能用 UTF16 数直接替代
-   Character 数**（emoji/组合字符不等价）。
+1. **编辑统计残余（round 5 之后）**：先复剖候选。原采样的 path.contains("://")
+   Foundation搜索占比可观；未知/只读tool先分类再处理路径可能免掉无消费者的工作。
+   保持所有已识别tool的路径拒绝语义，不未经oracle验证换成裸字节contains。
+   **不能用 UTF16 数直接替代 Character 数**。
 2. **冷投影剩余机制成本**：perf 平坦剖面中 UTF16View 迭代/下标 ~7.7%、
    `IndexingIterator.next` 5.1%、`getEnumCaseMultiPayload` 4.8%——round-1 后
    重跑 perf 定位下一批热点（大概率在行构造或 timeline 分组）。

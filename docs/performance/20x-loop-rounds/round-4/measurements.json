@@ -1,0 +1,1659 @@
+[
+  {
+    "run": "combined-cpu",
+    "result": {
+      "status": "passed",
+      "mode": "render-combined",
+      "render_steps": 80,
+      "render_step_ms": {
+        "count": 80,
+        "max": 142.15808326844126,
+        "median": 79.00508330203593,
+        "p95": 93.52887503337115
+      },
+      "render_process_cpu_seconds": 6.565196,
+      "render_stages": {
+        "attributed_text": {
+          "count": 2,
+          "ms": 0.03058323636651039
+        },
+        "document_configure": {
+          "count": 226,
+          "ms": 810.940666589886
+        },
+        "document_reconcile": {
+          "count": 153,
+          "ms": 159.4850413966924
+        },
+        "file_reference_scan": {
+          "count": 2,
+          "ms": 0.007083406671881676
+        },
+        "host_attach": {
+          "count": 254,
+          "ms": 20.611417246982455
+        },
+        "host_create": {
+          "count": 254,
+          "ms": 34.7584584960714
+        },
+        "host_first_attach": {
+          "count": 254,
+          "ms": 20.640083588659763
+        },
+        "host_first_measure": {
+          "count": 254,
+          "ms": 550.6121662911028
+        },
+        "host_measure": {
+          "count": 473,
+          "ms": 601.7425005557016
+        },
+        "host_measure_assistant": {
+          "count": 313,
+          "ms": 602.4054591543972
+        },
+        "host_measure_user": {
+          "count": 160,
+          "ms": 0.3389590419828892
+        },
+        "host_remeasure": {
+          "count": 219,
+          "ms": 52.02437553089112
+        },
+        "host_view": {
+          "count": 254,
+          "ms": 5.845251493155956
+        },
+        "native_place": {
+          "count": 160,
+          "ms": 3.137249150313437
+        },
+        "native_user_place": {
+          "count": 160,
+          "ms": 3.1518329633399844
+        },
+        "native_user_update": {
+          "count": 160,
+          "ms": 0.02479169052094221
+        },
+        "refresh_guard_unavailable": {
+          "count": 27,
+          "ms": 0.010916381143033504
+        },
+        "refresh_range_work": {
+          "count": 160,
+          "ms": 678.5569585626945
+        },
+        "refresh_same_range": {
+          "count": 1681,
+          "ms": 1.4732489362359047
+        },
+        "refresh_source_clip_bounds": {
+          "count": 50,
+          "ms": 0.5838331999257207
+        },
+        "refresh_source_configure": {
+          "count": 226,
+          "ms": 649.7056662337855
+        },
+        "refresh_source_measurement": {
+          "count": 763,
+          "ms": 30.822249711491168
+        },
+        "refresh_source_row_height": {
+          "count": 443,
+          "ms": 0.4412083653733134
+        },
+        "refresh_source_viewport": {
+          "count": 226,
+          "ms": 0.3129581455141306
+        },
+        "refresh_source_will_draw": {
+          "count": 160,
+          "ms": 0.4722496960312128
+        },
+        "refresh_total": {
+          "count": 1868,
+          "ms": 681.5827082609758
+        },
+        "row_create_native_user": {
+          "count": 87,
+          "ms": 7.736916886642575
+        },
+        "row_create_swiftui_message": {
+          "count": 167,
+          "ms": 27.56258356384933
+        },
+        "row_geometry": {
+          "count": 94,
+          "ms": 7.331999950110912
+        },
+        "row_layout": {
+          "count": 734,
+          "ms": 8.988459128886461
+        },
+        "row_measure_native_user": {
+          "count": 160,
+          "ms": 0.2619577571749687
+        },
+        "row_measure_swiftui_message": {
+          "count": 313,
+          "ms": 602.3149162065238
+        },
+        "row_parse": {
+          "count": 35,
+          "ms": 6.307000177912414
+        },
+        "row_view_native_user": {
+          "count": 87,
+          "ms": 1.3343753525987267
+        },
+        "row_view_swiftui_message": {
+          "count": 167,
+          "ms": 4.731875145807862
+        },
+        "set_root": {
+          "count": 473,
+          "ms": 53.299168474040926
+        },
+        "text_create": {
+          "count": 1395,
+          "ms": 12.478999444283545
+        },
+        "text_measure": {
+          "count": 350,
+          "ms": 5.0729591166600585
+        },
+        "text_measure_unwrapped": {
+          "count": 348,
+          "ms": 5.050125299021602
+        },
+        "text_measure_wrapped": {
+          "count": 2,
+          "ms": 0.05662499461323023
+        },
+        "text_reuse": {
+          "count": 1344,
+          "ms": 0.08549983613193035
+        }
+      },
+      "mutations": {
+        "catalog": true,
+        "selection_and_draft": true
+      },
+      "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded"
+    },
+    "manifest": {
+      "commit": "5ccec1326e63ee8ec2a2012c2dbb549608194f09",
+      "source_sha256": "ad8451c5844c17baa682d0210f3f2386394d1661bd3f2155ff9d457315af2791",
+      "configuration": "release -O",
+      "defines": [
+        "PERCH_ACCEPTANCE",
+        "TRANSCRIPT_CHECKS"
+      ],
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+      "window_points": [
+        1280,
+        820
+      ],
+      "history_turns": 200,
+      "catalog_sessions": 500,
+      "resident_snapshot_count": 8,
+      "binary_sha256": "e04a01bd661e35e33e29b79b5f9dfb34461f00de67622603a4dfabd9840f9a8d",
+      "capture": "cpu",
+      "mode": "render-combined",
+      "sidebar_variant": "flat",
+      "responsiveness_control": false,
+      "input_positive_control": false,
+      "positive_control": false,
+      "joint_seconds": null,
+      "supervisor_pid": 79663,
+      "exit_code": 0,
+      "elapsed_s": 24.534663666,
+      "behavior_passed": true,
+      "missing_schemas": [],
+      "trace_exported": true
+    }
+  },
+  {
+    "run": "render-catalog-1",
+    "result": {
+      "status": "passed",
+      "mode": "render-catalog",
+      "render_steps": 80,
+      "render_step_ms": {
+        "count": 80,
+        "max": 58.08625009376556,
+        "median": 20.16908337827772,
+        "p95": 24.08983325585723
+      },
+      "render_process_cpu_seconds": 1.457306,
+      "render_stages": {},
+      "mutations": {
+        "catalog": true,
+        "selection_and_draft": false
+      },
+      "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded"
+    },
+    "manifest": {
+      "commit": "5ccec1326e63ee8ec2a2012c2dbb549608194f09",
+      "source_sha256": "ad8451c5844c17baa682d0210f3f2386394d1661bd3f2155ff9d457315af2791",
+      "configuration": "release -O",
+      "defines": [
+        "PERCH_ACCEPTANCE",
+        "TRANSCRIPT_CHECKS"
+      ],
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+      "window_points": [
+        1280,
+        820
+      ],
+      "history_turns": 200,
+      "catalog_sessions": 500,
+      "resident_snapshot_count": 8,
+      "binary_sha256": "e04a01bd661e35e33e29b79b5f9dfb34461f00de67622603a4dfabd9840f9a8d",
+      "capture": "none",
+      "mode": "render-catalog",
+      "sidebar_variant": "flat",
+      "responsiveness_control": false,
+      "input_positive_control": false,
+      "positive_control": false,
+      "joint_seconds": null,
+      "supervisor_pid": 79328,
+      "exit_code": 0,
+      "elapsed_s": 10.416334709000001,
+      "behavior_passed": true
+    }
+  },
+  {
+    "run": "render-catalog-2",
+    "result": {
+      "status": "passed",
+      "mode": "render-catalog",
+      "render_steps": 80,
+      "render_step_ms": {
+        "count": 80,
+        "max": 55.78187492210418,
+        "median": 19.745541620068252,
+        "p95": 23.162041674368083
+      },
+      "render_process_cpu_seconds": 1.439275,
+      "render_stages": {},
+      "mutations": {
+        "catalog": true,
+        "selection_and_draft": false
+      },
+      "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded"
+    },
+    "manifest": {
+      "commit": "5ccec1326e63ee8ec2a2012c2dbb549608194f09",
+      "source_sha256": "ad8451c5844c17baa682d0210f3f2386394d1661bd3f2155ff9d457315af2791",
+      "configuration": "release -O",
+      "defines": [
+        "PERCH_ACCEPTANCE",
+        "TRANSCRIPT_CHECKS"
+      ],
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+      "window_points": [
+        1280,
+        820
+      ],
+      "history_turns": 200,
+      "catalog_sessions": 500,
+      "resident_snapshot_count": 8,
+      "binary_sha256": "e04a01bd661e35e33e29b79b5f9dfb34461f00de67622603a4dfabd9840f9a8d",
+      "capture": "none",
+      "mode": "render-catalog",
+      "sidebar_variant": "flat",
+      "responsiveness_control": false,
+      "input_positive_control": false,
+      "positive_control": false,
+      "joint_seconds": null,
+      "supervisor_pid": 79459,
+      "exit_code": 0,
+      "elapsed_s": 10.359642959,
+      "behavior_passed": true
+    }
+  },
+  {
+    "run": "render-catalog-3",
+    "result": {
+      "status": "passed",
+      "mode": "render-catalog",
+      "render_steps": 80,
+      "render_step_ms": {
+        "count": 80,
+        "max": 57.10020835977048,
+        "median": 19.886250025592744,
+        "p95": 24.607708328403533
+      },
+      "render_process_cpu_seconds": 1.449037,
+      "render_stages": {},
+      "mutations": {
+        "catalog": true,
+        "selection_and_draft": false
+      },
+      "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded"
+    },
+    "manifest": {
+      "commit": "5ccec1326e63ee8ec2a2012c2dbb549608194f09",
+      "source_sha256": "ad8451c5844c17baa682d0210f3f2386394d1661bd3f2155ff9d457315af2791",
+      "configuration": "release -O",
+      "defines": [
+        "PERCH_ACCEPTANCE",
+        "TRANSCRIPT_CHECKS"
+      ],
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+      "window_points": [
+        1280,
+        820
+      ],
+      "history_turns": 200,
+      "catalog_sessions": 500,
+      "resident_snapshot_count": 8,
+      "binary_sha256": "e04a01bd661e35e33e29b79b5f9dfb34461f00de67622603a4dfabd9840f9a8d",
+      "capture": "none",
+      "mode": "render-catalog",
+      "sidebar_variant": "flat",
+      "responsiveness_control": false,
+      "input_positive_control": false,
+      "positive_control": false,
+      "joint_seconds": null,
+      "supervisor_pid": 79574,
+      "exit_code": 0,
+      "elapsed_s": 10.282818084,
+      "behavior_passed": true
+    }
+  },
+  {
+    "run": "render-combined-1",
+    "result": {
+      "status": "passed",
+      "mode": "render-combined",
+      "render_steps": 80,
+      "render_step_ms": {
+        "count": 80,
+        "max": 140.05904167424887,
+        "median": 76.01099996827543,
+        "p95": 88.20312493480742
+      },
+      "render_process_cpu_seconds": 6.323629,
+      "render_stages": {
+        "attributed_text": {
+          "count": 2,
+          "ms": 0.03462505992501974
+        },
+        "document_configure": {
+          "count": 226,
+          "ms": 793.3216664241627
+        },
+        "document_reconcile": {
+          "count": 153,
+          "ms": 149.40466661937535
+        },
+        "file_reference_scan": {
+          "count": 2,
+          "ms": 0.006541726179420948
+        },
+        "host_attach": {
+          "count": 254,
+          "ms": 19.79591604322195
+        },
+        "host_create": {
+          "count": 254,
+          "ms": 32.718833070248365
+        },
+        "host_first_attach": {
+          "count": 254,
+          "ms": 19.820208195596933
+        },
+        "host_first_measure": {
+          "count": 254,
+          "ms": 544.1790856420994
+        },
+        "host_measure": {
+          "count": 473,
+          "ms": 595.0659584486857
+        },
+        "host_measure_assistant": {
+          "count": 313,
+          "ms": 595.743833691813
+        },
+        "host_measure_user": {
+          "count": 160,
+          "ms": 0.3373331855982542
+        },
+        "host_remeasure": {
+          "count": 219,
+          "ms": 51.77054111845791
+        },
+        "host_view": {
+          "count": 254,
+          "ms": 5.406209034845233
+        },
+        "native_place": {
+          "count": 160,
+          "ms": 3.795374999754131
+        },
+        "native_user_place": {
+          "count": 160,
+          "ms": 3.8069584406912327
+        },
+        "native_user_update": {
+          "count": 160,
+          "ms": 0.02800021320581436
+        },
+        "refresh_guard_unavailable": {
+          "count": 32,
+          "ms": 0.009208102710545063
+        },
+        "refresh_range_work": {
+          "count": 160,
+          "ms": 669.0019579837099
+        },
+        "refresh_same_range": {
+          "count": 1598,
+          "ms": 1.433293567970395
+        },
+        "refresh_source_clip_bounds": {
+          "count": 18,
+          "ms": 0.26825035456568
+        },
+        "refresh_source_configure": {
+          "count": 226,
+          "ms": 642.1137498691678
+        },
+        "refresh_source_measurement": {
+          "count": 745,
+          "ms": 28.617624542675912
+        },
+        "refresh_source_row_height": {
+          "count": 420,
+          "ms": 0.4151250468567014
+        },
+        "refresh_source_viewport": {
+          "count": 221,
+          "ms": 0.29437500052154064
+        },
+        "refresh_source_will_draw": {
+          "count": 160,
+          "ms": 0.48404140397906303
+        },
+        "refresh_total": {
+          "count": 1790,
+          "ms": 671.4866238180548
+        },
+        "row_create_native_user": {
+          "count": 87,
+          "ms": 7.5628748163580894
+        },
+        "row_create_swiftui_message": {
+          "count": 167,
+          "ms": 25.668833404779434
+        },
+        "row_geometry": {
+          "count": 94,
+          "ms": 7.320041535422206
+        },
+        "row_layout": {
+          "count": 734,
+          "ms": 9.615335613489151
+        },
+        "row_measure_native_user": {
+          "count": 160,
+          "ms": 0.2548742340877652
+        },
+        "row_measure_swiftui_message": {
+          "count": 313,
+          "ms": 595.6274998607114
+        },
+        "row_parse": {
+          "count": 35,
+          "ms": 6.132958107627928
+        },
+        "row_view_native_user": {
+          "count": 87,
+          "ms": 1.1835414916276932
+        },
+        "row_view_swiftui_message": {
+          "count": 167,
+          "ms": 4.4421261409297585
+        },
+        "set_root": {
+          "count": 473,
+          "ms": 49.44058193359524
+        },
+        "text_create": {
+          "count": 1396,
+          "ms": 12.406082823872566
+        },
+        "text_measure": {
+          "count": 350,
+          "ms": 5.014916183426976
+        },
+        "text_measure_unwrapped": {
+          "count": 348,
+          "ms": 4.990833578631282
+        },
+        "text_measure_wrapped": {
+          "count": 2,
+          "ms": 0.06975000724196434
+        },
+        "text_reuse": {
+          "count": 1344,
+          "ms": 0.07037573959678411
+        }
+      },
+      "mutations": {
+        "catalog": true,
+        "selection_and_draft": true
+      },
+      "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded"
+    },
+    "manifest": {
+      "commit": "5ccec1326e63ee8ec2a2012c2dbb549608194f09",
+      "source_sha256": "ad8451c5844c17baa682d0210f3f2386394d1661bd3f2155ff9d457315af2791",
+      "configuration": "release -O",
+      "defines": [
+        "PERCH_ACCEPTANCE",
+        "TRANSCRIPT_CHECKS"
+      ],
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+      "window_points": [
+        1280,
+        820
+      ],
+      "history_turns": 200,
+      "catalog_sessions": 500,
+      "resident_snapshot_count": 8,
+      "binary_sha256": "e04a01bd661e35e33e29b79b5f9dfb34461f00de67622603a4dfabd9840f9a8d",
+      "capture": "none",
+      "mode": "render-combined",
+      "sidebar_variant": "flat",
+      "responsiveness_control": false,
+      "input_positive_control": false,
+      "positive_control": false,
+      "joint_seconds": null,
+      "supervisor_pid": 79364,
+      "exit_code": 0,
+      "elapsed_s": 16.27971225,
+      "behavior_passed": true
+    }
+  },
+  {
+    "run": "render-combined-2",
+    "result": {
+      "status": "passed",
+      "mode": "render-combined",
+      "render_steps": 80,
+      "render_step_ms": {
+        "count": 80,
+        "max": 138.50841659586877,
+        "median": 75.91337489429861,
+        "p95": 88.06674997322261
+      },
+      "render_process_cpu_seconds": 6.320664000000001,
+      "render_stages": {
+        "attributed_text": {
+          "count": 2,
+          "ms": 0.031624920666217804
+        },
+        "document_configure": {
+          "count": 226,
+          "ms": 789.8470413638279
+        },
+        "document_reconcile": {
+          "count": 153,
+          "ms": 150.29691625386477
+        },
+        "file_reference_scan": {
+          "count": 2,
+          "ms": 0.006666756235063076
+        },
+        "host_attach": {
+          "count": 254,
+          "ms": 19.940917030908167
+        },
+        "host_create": {
+          "count": 254,
+          "ms": 32.58566663134843
+        },
+        "host_first_attach": {
+          "count": 254,
+          "ms": 19.965958781540394
+        },
+        "host_first_measure": {
+          "count": 254,
+          "ms": 540.2109163114801
+        },
+        "host_measure": {
+          "count": 473,
+          "ms": 590.4968334361911
+        },
+        "host_measure_assistant": {
+          "count": 313,
+          "ms": 591.1547087598592
+        },
+        "host_measure_user": {
+          "count": 160,
+          "ms": 0.330001232214272
+        },
+        "host_remeasure": {
+          "count": 219,
+          "ms": 51.15954205393791
+        },
+        "host_view": {
+          "count": 254,
+          "ms": 5.409999866969883
+        },
+        "native_place": {
+          "count": 160,
+          "ms": 3.4312502248212695
+        },
+        "native_user_place": {
+          "count": 160,
+          "ms": 3.444708534516394
+        },
+        "native_user_update": {
+          "count": 160,
+          "ms": 0.03150082193315029
+        },
+        "refresh_guard_unavailable": {
+          "count": 33,
+          "ms": 0.009583192877471447
+        },
+        "refresh_range_work": {
+          "count": 160,
+          "ms": 664.0650837216526
+        },
+        "refresh_same_range": {
+          "count": 1583,
+          "ms": 1.4095853548496962
+        },
+        "refresh_source_clip_bounds": {
+          "count": 18,
+          "ms": 0.19895832519978285
+        },
+        "refresh_source_configure": {
+          "count": 226,
+          "ms": 637.7796662272885
+        },
+        "refresh_source_measurement": {
+          "count": 733,
+          "ms": 28.00012635998428
+        },
+        "refresh_source_row_height": {
+          "count": 420,
+          "ms": 0.46529259998351336
+        },
+        "refresh_source_viewport": {
+          "count": 219,
+          "ms": 0.2863749396055937
+        },
+        "refresh_source_will_draw": {
+          "count": 160,
+          "ms": 0.4693750524893403
+        },
+        "refresh_total": {
+          "count": 1776,
+          "ms": 666.4812109665945
+        },
+        "row_create_native_user": {
+          "count": 87,
+          "ms": 7.372083840891719
+        },
+        "row_create_swiftui_message": {
+          "count": 167,
+          "ms": 25.778499548323452
+        },
+        "row_geometry": {
+          "count": 94,
+          "ms": 7.375708199106157
+        },
+        "row_layout": {
+          "count": 734,
+          "ms": 9.153001243248582
+        },
+        "row_measure_native_user": {
+          "count": 160,
+          "ms": 0.25012600235641
+        },
+        "row_measure_swiftui_message": {
+          "count": 313,
+          "ms": 591.0681664245203
+        },
+        "row_parse": {
+          "count": 35,
+          "ms": 6.118000019341707
+        },
+        "row_view_native_user": {
+          "count": 87,
+          "ms": 1.170791918411851
+        },
+        "row_view_swiftui_message": {
+          "count": 167,
+          "ms": 4.457084345631301
+        },
+        "set_root": {
+          "count": 473,
+          "ms": 49.40045811235905
+        },
+        "text_create": {
+          "count": 1395,
+          "ms": 12.36958452500403
+        },
+        "text_measure": {
+          "count": 350,
+          "ms": 4.99975006096065
+        },
+        "text_measure_unwrapped": {
+          "count": 348,
+          "ms": 4.97404218185693
+        },
+        "text_measure_wrapped": {
+          "count": 2,
+          "ms": 0.06154167931526899
+        },
+        "text_reuse": {
+          "count": 1344,
+          "ms": 0.09154435247182846
+        }
+      },
+      "mutations": {
+        "catalog": true,
+        "selection_and_draft": true
+      },
+      "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded"
+    },
+    "manifest": {
+      "commit": "5ccec1326e63ee8ec2a2012c2dbb549608194f09",
+      "source_sha256": "ad8451c5844c17baa682d0210f3f2386394d1661bd3f2155ff9d457315af2791",
+      "configuration": "release -O",
+      "defines": [
+        "PERCH_ACCEPTANCE",
+        "TRANSCRIPT_CHECKS"
+      ],
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+      "window_points": [
+        1280,
+        820
+      ],
+      "history_turns": 200,
+      "catalog_sessions": 500,
+      "resident_snapshot_count": 8,
+      "binary_sha256": "e04a01bd661e35e33e29b79b5f9dfb34461f00de67622603a4dfabd9840f9a8d",
+      "capture": "none",
+      "mode": "render-combined",
+      "sidebar_variant": "flat",
+      "responsiveness_control": false,
+      "input_positive_control": false,
+      "positive_control": false,
+      "joint_seconds": null,
+      "supervisor_pid": 79489,
+      "exit_code": 0,
+      "elapsed_s": 16.017613542,
+      "behavior_passed": true
+    }
+  },
+  {
+    "run": "render-combined-3",
+    "result": {
+      "status": "passed",
+      "mode": "render-combined",
+      "render_steps": 80,
+      "render_step_ms": {
+        "count": 80,
+        "max": 138.54395831003785,
+        "median": 76.88545831479132,
+        "p95": 88.58816674910486
+      },
+      "render_process_cpu_seconds": 6.364491,
+      "render_stages": {
+        "attributed_text": {
+          "count": 2,
+          "ms": 0.03241666126996279
+        },
+        "document_configure": {
+          "count": 226,
+          "ms": 788.6541659245268
+        },
+        "document_reconcile": {
+          "count": 153,
+          "ms": 148.60404166392982
+        },
+        "file_reference_scan": {
+          "count": 2,
+          "ms": 0.006208312697708607
+        },
+        "host_attach": {
+          "count": 254,
+          "ms": 19.60954105015844
+        },
+        "host_create": {
+          "count": 254,
+          "ms": 32.396291266195476
+        },
+        "host_first_attach": {
+          "count": 254,
+          "ms": 19.633331801742315
+        },
+        "host_first_measure": {
+          "count": 254,
+          "ms": 541.9863337883726
+        },
+        "host_measure": {
+          "count": 473,
+          "ms": 592.464082641527
+        },
+        "host_measure_assistant": {
+          "count": 313,
+          "ms": 593.0917920777574
+        },
+        "host_measure_user": {
+          "count": 160,
+          "ms": 0.33408310264348984
+        },
+        "host_remeasure": {
+          "count": 219,
+          "ms": 51.32762482389808
+        },
+        "host_view": {
+          "count": 254,
+          "ms": 5.405166768468916
+        },
+        "native_place": {
+          "count": 160,
+          "ms": 3.39816533960402
+        },
+        "native_user_place": {
+          "count": 160,
+          "ms": 3.4106234088540077
+        },
+        "native_user_update": {
+          "count": 160,
+          "ms": 0.02362497616559267
+        },
+        "refresh_guard_unavailable": {
+          "count": 20,
+          "ms": 0.007208436727523804
+        },
+        "refresh_range_work": {
+          "count": 160,
+          "ms": 665.3507512528449
+        },
+        "refresh_same_range": {
+          "count": 1656,
+          "ms": 1.5197094762697816
+        },
+        "refresh_source_clip_bounds": {
+          "count": 35,
+          "ms": 0.41141663677990437
+        },
+        "refresh_source_configure": {
+          "count": 226,
+          "ms": 638.294915901497
+        },
+        "refresh_source_measurement": {
+          "count": 753,
+          "ms": 28.85166578926146
+        },
+        "refresh_source_row_height": {
+          "count": 435,
+          "ms": 0.46708399895578623
+        },
+        "refresh_source_viewport": {
+          "count": 227,
+          "ms": 0.300958170555532
+        },
+        "refresh_source_will_draw": {
+          "count": 160,
+          "ms": 0.46633381862193346
+        },
+        "refresh_total": {
+          "count": 1836,
+          "ms": 668.1025823345408
+        },
+        "row_create_native_user": {
+          "count": 87,
+          "ms": 7.544250111095607
+        },
+        "row_create_swiftui_message": {
+          "count": 167,
+          "ms": 25.38545790594071
+        },
+        "row_geometry": {
+          "count": 94,
+          "ms": 7.377291447483003
+        },
+        "row_layout": {
+          "count": 734,
+          "ms": 9.05033340677619
+        },
+        "row_measure_native_user": {
+          "count": 160,
+          "ms": 0.2568744821473956
+        },
+        "row_measure_swiftui_message": {
+          "count": 313,
+          "ms": 592.992456862703
+        },
+        "row_parse": {
+          "count": 35,
+          "ms": 6.1662916559726
+        },
+        "row_view_native_user": {
+          "count": 87,
+          "ms": 1.1746672680601478
+        },
+        "row_view_swiftui_message": {
+          "count": 167,
+          "ms": 4.451708169654012
+        },
+        "set_root": {
+          "count": 473,
+          "ms": 49.1715834941715
+        },
+        "text_create": {
+          "count": 1396,
+          "ms": 12.214084388688207
+        },
+        "text_measure": {
+          "count": 350,
+          "ms": 4.977250355295837
+        },
+        "text_measure_unwrapped": {
+          "count": 348,
+          "ms": 4.942458705045283
+        },
+        "text_measure_wrapped": {
+          "count": 2,
+          "ms": 0.06241677328944206
+        },
+        "text_reuse": {
+          "count": 1344,
+          "ms": 0.09991822298616171
+        }
+      },
+      "mutations": {
+        "catalog": true,
+        "selection_and_draft": true
+      },
+      "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded"
+    },
+    "manifest": {
+      "commit": "5ccec1326e63ee8ec2a2012c2dbb549608194f09",
+      "source_sha256": "ad8451c5844c17baa682d0210f3f2386394d1661bd3f2155ff9d457315af2791",
+      "configuration": "release -O",
+      "defines": [
+        "PERCH_ACCEPTANCE",
+        "TRANSCRIPT_CHECKS"
+      ],
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+      "window_points": [
+        1280,
+        820
+      ],
+      "history_turns": 200,
+      "catalog_sessions": 500,
+      "resident_snapshot_count": 8,
+      "binary_sha256": "e04a01bd661e35e33e29b79b5f9dfb34461f00de67622603a4dfabd9840f9a8d",
+      "capture": "none",
+      "mode": "render-combined",
+      "sidebar_variant": "flat",
+      "responsiveness_control": false,
+      "input_positive_control": false,
+      "positive_control": false,
+      "joint_seconds": null,
+      "supervisor_pid": 79620,
+      "exit_code": 0,
+      "elapsed_s": 16.020952,
+      "behavior_passed": true
+    }
+  },
+  {
+    "run": "render-switching-1",
+    "result": {
+      "status": "passed",
+      "mode": "render-switching",
+      "render_steps": 80,
+      "render_step_ms": {
+        "count": 80,
+        "max": 118.48658334929496,
+        "median": 65.7632916700095,
+        "p95": 76.09320839401335
+      },
+      "render_process_cpu_seconds": 5.507342,
+      "render_stages": {
+        "attributed_text": {
+          "count": 2,
+          "ms": 0.03495824057608843
+        },
+        "document_configure": {
+          "count": 226,
+          "ms": 788.2703327341005
+        },
+        "document_reconcile": {
+          "count": 153,
+          "ms": 148.23249995242804
+        },
+        "file_reference_scan": {
+          "count": 2,
+          "ms": 0.007291673682630062
+        },
+        "host_attach": {
+          "count": 254,
+          "ms": 19.652332994155586
+        },
+        "host_create": {
+          "count": 254,
+          "ms": 32.5357501860708
+        },
+        "host_first_attach": {
+          "count": 254,
+          "ms": 19.679500022903085
+        },
+        "host_first_measure": {
+          "count": 254,
+          "ms": 542.5492919748649
+        },
+        "host_measure": {
+          "count": 473,
+          "ms": 592.792791663669
+        },
+        "host_measure_assistant": {
+          "count": 313,
+          "ms": 593.4553738916293
+        },
+        "host_measure_user": {
+          "count": 160,
+          "ms": 0.3265006234869361
+        },
+        "host_remeasure": {
+          "count": 219,
+          "ms": 51.11541680525988
+        },
+        "host_view": {
+          "count": 254,
+          "ms": 5.415333085693419
+        },
+        "native_place": {
+          "count": 160,
+          "ms": 3.221333376131952
+        },
+        "native_user_place": {
+          "count": 160,
+          "ms": 3.237417316995561
+        },
+        "native_user_update": {
+          "count": 160,
+          "ms": 0.026583904400467873
+        },
+        "refresh_guard_unavailable": {
+          "count": 21,
+          "ms": 0.007875030860304832
+        },
+        "refresh_range_work": {
+          "count": 160,
+          "ms": 665.7797077205032
+        },
+        "refresh_same_range": {
+          "count": 1632,
+          "ms": 1.3632072368636727
+        },
+        "refresh_source_clip_bounds": {
+          "count": 29,
+          "ms": 0.3410835051909089
+        },
+        "refresh_source_configure": {
+          "count": 226,
+          "ms": 638.3534588385373
+        },
+        "refresh_source_measurement": {
+          "count": 752,
+          "ms": 29.11958540789783
+        },
+        "refresh_source_row_height": {
+          "count": 423,
+          "ms": 0.40795805398374796
+        },
+        "refresh_source_viewport": {
+          "count": 223,
+          "ms": 0.2829155419021845
+        },
+        "refresh_source_will_draw": {
+          "count": 160,
+          "ms": 0.4619582323357463
+        },
+        "refresh_total": {
+          "count": 1813,
+          "ms": 668.2899560546502
+        },
+        "row_create_native_user": {
+          "count": 87,
+          "ms": 7.414542254991829
+        },
+        "row_create_swiftui_message": {
+          "count": 167,
+          "ms": 25.662791915237904
+        },
+        "row_geometry": {
+          "count": 94,
+          "ms": 7.353833760134876
+        },
+        "row_layout": {
+          "count": 734,
+          "ms": 8.787416387349367
+        },
+        "row_measure_native_user": {
+          "count": 160,
+          "ms": 0.2527508186176419
+        },
+        "row_measure_swiftui_message": {
+          "count": 313,
+          "ms": 593.3572064386681
+        },
+        "row_parse": {
+          "count": 35,
+          "ms": 6.240250077098608
+        },
+        "row_view_native_user": {
+          "count": 87,
+          "ms": 1.2128743110224605
+        },
+        "row_view_swiftui_message": {
+          "count": 167,
+          "ms": 4.418540862388909
+        },
+        "set_root": {
+          "count": 473,
+          "ms": 49.454042222350836
+        },
+        "text_create": {
+          "count": 1396,
+          "ms": 12.385001056827605
+        },
+        "text_measure": {
+          "count": 350,
+          "ms": 5.007665604352951
+        },
+        "text_measure_unwrapped": {
+          "count": 348,
+          "ms": 4.968248424120247
+        },
+        "text_measure_wrapped": {
+          "count": 2,
+          "ms": 0.06262504030019045
+        },
+        "text_reuse": {
+          "count": 1344,
+          "ms": 0.08395779877901077
+        }
+      },
+      "mutations": {
+        "catalog": false,
+        "selection_and_draft": true
+      },
+      "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded"
+    },
+    "manifest": {
+      "commit": "5ccec1326e63ee8ec2a2012c2dbb549608194f09",
+      "source_sha256": "ad8451c5844c17baa682d0210f3f2386394d1661bd3f2155ff9d457315af2791",
+      "configuration": "release -O",
+      "defines": [
+        "PERCH_ACCEPTANCE",
+        "TRANSCRIPT_CHECKS"
+      ],
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+      "window_points": [
+        1280,
+        820
+      ],
+      "history_turns": 200,
+      "catalog_sessions": 500,
+      "resident_snapshot_count": 8,
+      "binary_sha256": "e04a01bd661e35e33e29b79b5f9dfb34461f00de67622603a4dfabd9840f9a8d",
+      "capture": "none",
+      "mode": "render-switching",
+      "sidebar_variant": "flat",
+      "responsiveness_control": false,
+      "input_positive_control": false,
+      "positive_control": false,
+      "joint_seconds": null,
+      "supervisor_pid": 79284,
+      "exit_code": 0,
+      "elapsed_s": 16.831880458,
+      "behavior_passed": true
+    }
+  },
+  {
+    "run": "render-switching-2",
+    "result": {
+      "status": "passed",
+      "mode": "render-switching",
+      "render_steps": 80,
+      "render_step_ms": {
+        "count": 80,
+        "max": 120.47258333768696,
+        "median": 66.04258331935853,
+        "p95": 77.77554169297218
+      },
+      "render_process_cpu_seconds": 5.553485,
+      "render_stages": {
+        "attributed_text": {
+          "count": 2,
+          "ms": 0.036624958738684654
+        },
+        "document_configure": {
+          "count": 226,
+          "ms": 798.790457774885
+        },
+        "document_reconcile": {
+          "count": 153,
+          "ms": 151.77329152356833
+        },
+        "file_reference_scan": {
+          "count": 2,
+          "ms": 0.007083406671881676
+        },
+        "host_attach": {
+          "count": 254,
+          "ms": 19.885042449459434
+        },
+        "host_create": {
+          "count": 254,
+          "ms": 33.10462448280305
+        },
+        "host_first_attach": {
+          "count": 254,
+          "ms": 19.910084549337626
+        },
+        "host_first_measure": {
+          "count": 254,
+          "ms": 548.8689171615988
+        },
+        "host_measure": {
+          "count": 473,
+          "ms": 599.0918739698827
+        },
+        "host_measure_assistant": {
+          "count": 313,
+          "ms": 599.7527077561244
+        },
+        "host_measure_user": {
+          "count": 160,
+          "ms": 0.33675029408186674
+        },
+        "host_remeasure": {
+          "count": 219,
+          "ms": 51.10008269548416
+        },
+        "host_view": {
+          "count": 254,
+          "ms": 5.48099959269166
+        },
+        "native_place": {
+          "count": 160,
+          "ms": 3.6630406975746155
+        },
+        "native_user_place": {
+          "count": 160,
+          "ms": 3.682833514176309
+        },
+        "native_user_update": {
+          "count": 160,
+          "ms": 0.03350013867020607
+        },
+        "refresh_guard_unavailable": {
+          "count": 27,
+          "ms": 0.009291688911616802
+        },
+        "refresh_range_work": {
+          "count": 160,
+          "ms": 673.4408338088542
+        },
+        "refresh_same_range": {
+          "count": 1652,
+          "ms": 1.375915831886232
+        },
+        "refresh_source_clip_bounds": {
+          "count": 39,
+          "ms": 0.41483319364488125
+        },
+        "refresh_source_configure": {
+          "count": 226,
+          "ms": 645.294415880926
+        },
+        "refresh_source_measurement": {
+          "count": 750,
+          "ms": 29.908499447628856
+        },
+        "refresh_source_row_height": {
+          "count": 438,
+          "ms": 0.41720783337950706
+        },
+        "refresh_source_viewport": {
+          "count": 226,
+          "ms": 0.28466712683439255
+        },
+        "refresh_source_will_draw": {
+          "count": 160,
+          "ms": 0.4458753392100334
+        },
+        "refresh_total": {
+          "count": 1839,
+          "ms": 676.1151681421325
+        },
+        "row_create_native_user": {
+          "count": 87,
+          "ms": 7.531874463893473
+        },
+        "row_create_swiftui_message": {
+          "count": 167,
+          "ms": 26.125625474378467
+        },
+        "row_geometry": {
+          "count": 94,
+          "ms": 7.3588748928159475
+        },
+        "row_layout": {
+          "count": 734,
+          "ms": 9.365625795908272
+        },
+        "row_measure_native_user": {
+          "count": 160,
+          "ms": 0.2609168877825141
+        },
+        "row_measure_swiftui_message": {
+          "count": 313,
+          "ms": 599.656707723625
+        },
+        "row_parse": {
+          "count": 35,
+          "ms": 6.484750076197088
+        },
+        "row_view_native_user": {
+          "count": 87,
+          "ms": 1.201916253194213
+        },
+        "row_view_swiftui_message": {
+          "count": 167,
+          "ms": 4.511332488618791
+        },
+        "set_root": {
+          "count": 473,
+          "ms": 50.002541742287576
+        },
+        "text_create": {
+          "count": 1395,
+          "ms": 12.370584183372557
+        },
+        "text_measure": {
+          "count": 350,
+          "ms": 5.035459180362523
+        },
+        "text_measure_unwrapped": {
+          "count": 348,
+          "ms": 5.013166693970561
+        },
+        "text_measure_wrapped": {
+          "count": 2,
+          "ms": 0.06700016092509031
+        },
+        "text_reuse": {
+          "count": 1344,
+          "ms": 0.07233163341879845
+        }
+      },
+      "mutations": {
+        "catalog": false,
+        "selection_and_draft": true
+      },
+      "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded"
+    },
+    "manifest": {
+      "commit": "5ccec1326e63ee8ec2a2012c2dbb549608194f09",
+      "source_sha256": "ad8451c5844c17baa682d0210f3f2386394d1661bd3f2155ff9d457315af2791",
+      "configuration": "release -O",
+      "defines": [
+        "PERCH_ACCEPTANCE",
+        "TRANSCRIPT_CHECKS"
+      ],
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+      "window_points": [
+        1280,
+        820
+      ],
+      "history_turns": 200,
+      "catalog_sessions": 500,
+      "resident_snapshot_count": 8,
+      "binary_sha256": "e04a01bd661e35e33e29b79b5f9dfb34461f00de67622603a4dfabd9840f9a8d",
+      "capture": "none",
+      "mode": "render-switching",
+      "sidebar_variant": "flat",
+      "responsiveness_control": false,
+      "input_positive_control": false,
+      "positive_control": false,
+      "joint_seconds": null,
+      "supervisor_pid": 79399,
+      "exit_code": 0,
+      "elapsed_s": 15.475772375,
+      "behavior_passed": true
+    }
+  },
+  {
+    "run": "render-switching-3",
+    "result": {
+      "status": "passed",
+      "mode": "render-switching",
+      "render_steps": 80,
+      "render_step_ms": {
+        "count": 80,
+        "max": 103.58354169875383,
+        "median": 67.85012502223253,
+        "p95": 76.38999994378537
+      },
+      "render_process_cpu_seconds": 5.576547000000001,
+      "render_stages": {
+        "attributed_text": {
+          "count": 2,
+          "ms": 0.02975005190819502
+        },
+        "document_configure": {
+          "count": 226,
+          "ms": 800.7730011595413
+        },
+        "document_reconcile": {
+          "count": 153,
+          "ms": 154.92762438952923
+        },
+        "file_reference_scan": {
+          "count": 2,
+          "ms": 0.006041722372174263
+        },
+        "host_attach": {
+          "count": 254,
+          "ms": 19.729292136617005
+        },
+        "host_create": {
+          "count": 254,
+          "ms": 32.78883348684758
+        },
+        "host_first_attach": {
+          "count": 254,
+          "ms": 19.755917135626078
+        },
+        "host_first_measure": {
+          "count": 254,
+          "ms": 546.0342083824798
+        },
+        "host_measure": {
+          "count": 473,
+          "ms": 597.2216674126685
+        },
+        "host_measure_assistant": {
+          "count": 313,
+          "ms": 597.8860002942383
+        },
+        "host_measure_user": {
+          "count": 160,
+          "ms": 0.3251254092901945
+        },
+        "host_remeasure": {
+          "count": 219,
+          "ms": 52.06062598153949
+        },
+        "host_view": {
+          "count": 254,
+          "ms": 5.414832849055529
+        },
+        "native_place": {
+          "count": 160,
+          "ms": 3.4420419251546264
+        },
+        "native_user_place": {
+          "count": 160,
+          "ms": 3.457250655628741
+        },
+        "native_user_update": {
+          "count": 160,
+          "ms": 0.03870821092277765
+        },
+        "refresh_guard_unavailable": {
+          "count": 26,
+          "ms": 0.008916831575334072
+        },
+        "refresh_range_work": {
+          "count": 160,
+          "ms": 670.9643327631056
+        },
+        "refresh_same_range": {
+          "count": 1640,
+          "ms": 1.46212475374341
+        },
+        "refresh_source_clip_bounds": {
+          "count": 40,
+          "ms": 0.40633324533700943
+        },
+        "refresh_source_configure": {
+          "count": 226,
+          "ms": 644.1039582714438
+        },
+        "refresh_source_measurement": {
+          "count": 747,
+          "ms": 28.749456629157066
+        },
+        "refresh_source_row_height": {
+          "count": 429,
+          "ms": 0.4170411266386509
+        },
+        "refresh_source_viewport": {
+          "count": 224,
+          "ms": 0.30016666278243065
+        },
+        "refresh_source_will_draw": {
+          "count": 160,
+          "ms": 0.46775059308856726
+        },
+        "refresh_total": {
+          "count": 1826,
+          "ms": 673.7760392716154
+        },
+        "row_create_native_user": {
+          "count": 87,
+          "ms": 7.466833223588765
+        },
+        "row_create_swiftui_message": {
+          "count": 167,
+          "ms": 25.858166511170566
+        },
+        "row_geometry": {
+          "count": 94,
+          "ms": 7.431500707753003
+        },
+        "row_layout": {
+          "count": 734,
+          "ms": 9.193125762976706
+        },
+        "row_measure_native_user": {
+          "count": 160,
+          "ms": 0.24533329997211695
+        },
+        "row_measure_swiftui_message": {
+          "count": 313,
+          "ms": 597.7880420396104
+        },
+        "row_parse": {
+          "count": 35,
+          "ms": 6.2362083699554205
+        },
+        "row_view_native_user": {
+          "count": 87,
+          "ms": 1.1824587127193809
+        },
+        "row_view_swiftui_message": {
+          "count": 167,
+          "ms": 4.456416005268693
+        },
+        "set_root": {
+          "count": 473,
+          "ms": 50.05479312967509
+        },
+        "text_create": {
+          "count": 1395,
+          "ms": 12.260128743946552
+        },
+        "text_measure": {
+          "count": 350,
+          "ms": 5.112207727506757
+        },
+        "text_measure_unwrapped": {
+          "count": 348,
+          "ms": 5.059041082859039
+        },
+        "text_measure_wrapped": {
+          "count": 2,
+          "ms": 0.08299993351101875
+        },
+        "text_reuse": {
+          "count": 1344,
+          "ms": 0.07600057870149612
+        }
+      },
+      "mutations": {
+        "catalog": false,
+        "selection_and_draft": true
+      },
+      "render_contract": "mounted sidebar projection, selected transcript and visible draft; clock starts before model mutations; fixture generation excluded"
+    },
+    "manifest": {
+      "commit": "5ccec1326e63ee8ec2a2012c2dbb549608194f09",
+      "source_sha256": "ad8451c5844c17baa682d0210f3f2386394d1661bd3f2155ff9d457315af2791",
+      "configuration": "release -O",
+      "defines": [
+        "PERCH_ACCEPTANCE",
+        "TRANSCRIPT_CHECKS"
+      ],
+      "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+      "window_points": [
+        1280,
+        820
+      ],
+      "history_turns": 200,
+      "catalog_sessions": 500,
+      "resident_snapshot_count": 8,
+      "binary_sha256": "e04a01bd661e35e33e29b79b5f9dfb34461f00de67622603a4dfabd9840f9a8d",
+      "capture": "none",
+      "mode": "render-switching",
+      "sidebar_variant": "flat",
+      "responsiveness_control": false,
+      "input_positive_control": false,
+      "positive_control": false,
+      "joint_seconds": null,
+      "supervisor_pid": 79527,
+      "exit_code": 0,
+      "elapsed_s": 15.895512458,
+      "behavior_passed": true
+    }
+  }
+]

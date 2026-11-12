@@ -1,0 +1,86 @@
+{
+  "baseline": "5ccec1326e63ee8ec2a2012c2dbb549608194f09",
+  "scope": "Mac synthetic isolation/attribution only, not A/B or FPS; no product changes",
+  "groups": {
+    "render-switching": {
+      "process_runs": 3,
+      "steps_per_run": 80,
+      "median_runs_ms": [
+        65.7632916700095,
+        66.04258331935853,
+        67.85012502223253
+      ],
+      "median_ms": 66.04258331935853,
+      "p95_runs_ms": [
+        76.09320839401335,
+        77.77554169297218,
+        76.38999994378537
+      ],
+      "spread_pct": 3.1598299874671048,
+      "cpu_runs_s": [
+        5.507342,
+        5.553485,
+        5.576547000000001
+      ]
+    },
+    "render-catalog": {
+      "process_runs": 3,
+      "steps_per_run": 80,
+      "median_runs_ms": [
+        20.16908337827772,
+        19.745541620068252,
+        19.886250025592744
+      ],
+      "median_ms": 19.886250025592744,
+      "p95_runs_ms": [
+        24.08983325585723,
+        23.162041674368083,
+        24.607708328403533
+      ],
+      "spread_pct": 2.129822151810356,
+      "cpu_runs_s": [
+        1.457306,
+        1.439275,
+        1.449037
+      ]
+    },
+    "render-combined": {
+      "process_runs": 3,
+      "steps_per_run": 80,
+      "median_runs_ms": [
+        76.01099996827543,
+        75.91337489429861,
+        76.88545831479132
+      ],
+      "median_ms": 76.01099996827543,
+      "p95_runs_ms": [
+        88.20312493480742,
+        88.06674997322261,
+        88.58816674910486
+      ],
+      "spread_pct": 1.278872032861593,
+      "cpu_runs_s": [
+        6.323629,
+        6.320664000000001,
+        6.364491
+      ]
+    }
+  },
+  "trace_workload_interval_s": [
+    3.321955083,
+    9.718129541
+  ],
+  "main_sampled_cpu_ms": 6312.0,
+  "main_stack_context_partition_ms": {
+    "framework_graph_remaining": 2580.0,
+    "other": 1092.0,
+    "framework_layout_remaining": 1036.0,
+    "row_measure": 553.0,
+    "transcript_other": 538.0,
+    "sidebar": 247.0,
+    "composer": 228.0,
+    "row_create": 38.0
+  },
+  "core_projection_inclusive_sample_ms": 20.0,
+  "core_projection_note": "ConversationPresentationModel.update inclusive samples only; not all core work and not additive with partition buckets"
+}

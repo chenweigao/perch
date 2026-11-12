@@ -1,0 +1,728 @@
+{
+  "after_s": 3.321955083,
+  "before_s": 9.718129541,
+  "sample_rows": 6586,
+  "main_sample_rows": 6312,
+  "all_threads_sampled_cpu_ms": 6586.0,
+  "main_sampled_cpu_ms": 6312.0,
+  "main_cpu_ms_per_second": {
+    "3": 670.0,
+    "4": 981.0,
+    "5": 989.0,
+    "6": 988.0,
+    "7": 988.0,
+    "8": 989.0,
+    "9": 707.0
+  },
+  "main_inclusive_top": [
+    [
+      "_CFRunLoopRunSpecificWithOptions",
+      5303.0
+    ],
+    [
+      "RunCurrentEventLoopInMode",
+      5301.0
+    ],
+    [
+      "ReceiveNextEventCommon",
+      5299.0
+    ],
+    [
+      "_BlockUntilNextEventMatchingListInMode",
+      5297.0
+    ],
+    [
+      "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+      5296.0
+    ],
+    [
+      "_DPSNextEvent",
+      5296.0
+    ],
+    [
+      "_DPSBlockUntilNextEventMatchingListInMode",
+      5296.0
+    ],
+    [
+      "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+      5296.0
+    ],
+    [
+      "NSApplicationMain",
+      5294.0
+    ],
+    [
+      "-[NSApplication run]",
+      5294.0
+    ],
+    [
+      "runApp<A>(_:)",
+      5293.0
+    ],
+    [
+      "specialized runApp(_:)",
+      5293.0
+    ],
+    [
+      "static App.main()",
+      5292.0
+    ],
+    [
+      "static NativeAcceptanceApp.$main()",
+      5290.0
+    ],
+    [
+      "AgentWorkbench_main",
+      5290.0
+    ],
+    [
+      "start",
+      5288.0
+    ],
+    [
+      "<deduplicated_symbol>",
+      4960.0
+    ],
+    [
+      "AG::Graph::UpdateStack::update()",
+      3820.0
+    ],
+    [
+      "AG::Subgraph::update(unsigned int)",
+      3172.0
+    ],
+    [
+      "GraphHost.flushTransactions()",
+      3111.0
+    ],
+    [
+      "__CFRUNLOOP_IS_CALLING_OUT_TO_AN_OBSERVER_CALLBACK_FUNCTION__",
+      3058.0
+    ],
+    [
+      "__CFRunLoopDoObservers",
+      3056.0
+    ],
+    [
+      "ViewGraphRootValueUpdater._updateViewGraph<A>(body:)",
+      2971.0
+    ],
+    [
+      "@objc closure #1 in static NSRunLoop.addObserver(_:)",
+      2934.0
+    ],
+    [
+      "ViewGraphRootValueUpdater.updateGraph<A>(body:)",
+      2920.0
+    ],
+    [
+      "specialized static NSRunLoop.flushObservers()",
+      2917.0
+    ],
+    [
+      "closure #1 in closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      2896.0
+    ],
+    [
+      "partial apply for closure #1 in ViewGraphRootValueUpdater.updateGraph<A>(body:)",
+      2892.0
+    ],
+    [
+      "closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      2888.0
+    ],
+    [
+      "partial apply for implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      2412.0
+    ],
+    [
+      "__CFRunLoopRun",
+      2271.0
+    ],
+    [
+      "UC::DriverCore::continueProcessing()",
+      2254.0
+    ],
+    [
+      "0x1911a020c",
+      2140.0
+    ],
+    [
+      "0x1911a0234",
+      2140.0
+    ],
+    [
+      "stepTransactionFlush",
+      2140.0
+    ],
+    [
+      "NSPerformVisuallyAtomicChange",
+      2134.0
+    ],
+    [
+      "__CFRUNLOOP_IS_CALLING_OUT_TO_A_SOURCE0_PERFORM_FUNCTION__",
+      2118.0
+    ],
+    [
+      "__CFRunLoopDoSource0",
+      2118.0
+    ],
+    [
+      "__CFRunLoopDoSources0",
+      2118.0
+    ],
+    [
+      "CA::Transaction::commit()",
+      2060.0
+    ]
+  ],
+  "main_leaf_top": [
+    [
+      "objc_msgSend",
+      255.0
+    ],
+    [
+      "<deduplicated_symbol>",
+      207.0
+    ],
+    [
+      "swift_release",
+      109.0
+    ],
+    [
+      "AG::Graph::UpdateStack::update()",
+      105.0
+    ],
+    [
+      "swift::MetadataCacheKey::operator==(swift::MetadataCacheKey const&) const",
+      98.0
+    ],
+    [
+      "__CFStringHash",
+      89.0
+    ],
+    [
+      "_platform_memmove",
+      87.0
+    ],
+    [
+      "AG::Graph::propagate_dirty(AG::AttributeID)",
+      85.0
+    ],
+    [
+      "_xzm_free_tc",
+      81.0
+    ],
+    [
+      "swift_retain",
+      69.0
+    ],
+    [
+      "__CF_IS_OBJC",
+      63.0
+    ],
+    [
+      "__CFFromUTF8",
+      60.0
+    ],
+    [
+      "_stringCompareFastUTF8Abnormal(_:_:expecting:)",
+      55.0
+    ],
+    [
+      "getCache(swift::TargetTypeContextDescriptor<swift::InProcess> const&)",
+      50.0
+    ],
+    [
+      "_xzm_malloc_tc",
+      49.0
+    ],
+    [
+      "__kdebug_trace64",
+      47.0
+    ],
+    [
+      "___CFBasicHashFindBucket_Linear",
+      43.0
+    ],
+    [
+      "___chkstk_darwin",
+      43.0
+    ],
+    [
+      "__CFStringEqual",
+      40.0
+    ],
+    [
+      "objc_release",
+      40.0
+    ],
+    [
+      "find(_:key:filter:)",
+      38.0
+    ],
+    [
+      "mach_msg2_trap",
+      35.0
+    ],
+    [
+      "bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)",
+      35.0
+    ],
+    [
+      "swift_bridgeObjectRelease",
+      33.0
+    ],
+    [
+      "swift::TargetContextDescriptor<swift::InProcess>::getGenericContext() const",
+      32.0
+    ]
+  ],
+  "main_stack_context_partition_ms": {
+    "framework_graph_remaining": 2580.0,
+    "other": 1092.0,
+    "framework_layout_remaining": 1036.0,
+    "row_measure": 553.0,
+    "transcript_other": 538.0,
+    "sidebar": 247.0,
+    "composer": 228.0,
+    "row_create": 38.0
+  },
+  "partition_note": "First matching context: row_measure, row_create, transcript_other, sidebar, composer, framework_graph_remaining, framework_layout_remaining, other. Buckets sum to main CPU, but deferred framework work cannot be assigned to a feature from these stacks.",
+  "main_app_inclusive_top": [
+    [
+      "AgentWorkbench_main",
+      5290.0
+    ],
+    [
+      "static NativeAcceptanceApp.$main()",
+      5290.0
+    ],
+    [
+      "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+      892.0
+    ],
+    [
+      "partial apply for specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+      891.0
+    ],
+    [
+      "ConversationDocumentView.configure(_:contentIdentity:navigation:sessionId:appearance:viewport:foldParents:contentOriginY:waitsForInitialPosition:)",
+      773.0
+    ],
+    [
+      "ConversationDocumentHost.updateNSView(_:context:)",
+      772.0
+    ],
+    [
+      "ConversationDocumentView.refreshVisibleRows(source:)",
+      639.0
+    ],
+    [
+      "NativeAcceptanceRunner.rendering(_:mode:)",
+      606.0
+    ],
+    [
+      "NativeAcceptanceRunner.run(_:)",
+      602.0
+    ],
+    [
+      "closure #1 in static NativeAcceptanceApp.drive(model:fixture:)",
+      602.0
+    ],
+    [
+      "partial apply for closure #1 in static NativeAcceptanceApp.drive(model:fixture:)",
+      602.0
+    ],
+    [
+      "ConversationEntryController.measure(width:)",
+      553.0
+    ],
+    [
+      "NativeAcceptanceRunner.settle(_:_:until:)",
+      546.0
+    ],
+    [
+      "NativeAcceptanceRunner.flush(_:)",
+      538.0
+    ],
+    [
+      "specialized NativeAcceptanceRunner.flush(_:)",
+      538.0
+    ],
+    [
+      "partial apply for closure #2 in static ConversationDocumentView.retire(_:)",
+      282.0
+    ],
+    [
+      "closure #2 in static ConversationDocumentView.retire(_:)",
+      282.0
+    ],
+    [
+      "specialized autoreleasepool<A, B>(invoking:)",
+      282.0
+    ],
+    [
+      "SessionRowChrome.body.getter",
+      177.0
+    ],
+    [
+      "specialized Collection.map<A, B>(_:)",
+      177.0
+    ],
+    [
+      "closure #1 in SessionRowChrome.body.getter",
+      168.0
+    ],
+    [
+      "Group.init(content:)",
+      168.0
+    ],
+    [
+      "SessionRowChrome.standardRow.getter",
+      160.0
+    ],
+    [
+      "ConversationDocumentView.reconcileRows(_:sessionId:appearance:)",
+      159.0
+    ],
+    [
+      "closure #1 in SessionRowChrome.standardRow.getter",
+      152.0
+    ],
+    [
+      "ComposerToolbarLayout.dimensions(_:_:)",
+      128.0
+    ],
+    [
+      "specialized ComposerToolbarLayout.dimensions(_:_:)",
+      128.0
+    ],
+    [
+      "protocol witness for Layout.sizeThatFits(proposal:subviews:cache:) in conformance ComposerToolbarLayout",
+      127.0
+    ],
+    [
+      "ComposerToolbarLayout.sizeThatFits(proposal:subviews:cache:)",
+      127.0
+    ],
+    [
+      "closure #1 in ComposerToolbarLayout.dimensions(_:_:)",
+      127.0
+    ],
+    [
+      "L(_:locale:)",
+      99.0
+    ],
+    [
+      "protocol witness for NSViewRepresentable.updateNSView(_:context:) in conformance SelectableReplyText",
+      90.0
+    ],
+    [
+      "SelectableReplyText.updateNSView(_:context:)",
+      90.0
+    ],
+    [
+      "static SessionTime.label(since:waiting:now:locale:)",
+      85.0
+    ],
+    [
+      "specialized _VariadicView.Tree.init(_:content:)",
+      81.0
+    ]
+  ],
+  "app_stack_examples": {
+    "AgentWorkbench_main": [
+      "AG::Graph::propagate_dirty(AG::AttributeID)",
+      "ObservationGraphMutation.apply()",
+      "GraphHost.flushTransactions()",
+      "closure #1 in closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      "partial apply for closure #1 in ViewGraphRootValueUpdater.updateGraph<A>(body:)",
+      "ViewGraphRootValueUpdater._updateViewGraph<A>(body:)",
+      "ViewGraphRootValueUpdater.updateGraph<A>(body:)",
+      "closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      "<deduplicated_symbol>",
+      "specialized static NSRunLoop.flushObservers()",
+      "@objc closure #1 in static NSRunLoop.addObserver(_:)",
+      "__CFRUNLOOP_IS_CALLING_OUT_TO_AN_OBSERVER_CALLBACK_FUNCTION__",
+      "__CFRunLoopDoObservers",
+      "_CFRunLoopRunSpecificWithOptions",
+      "RunCurrentEventLoopInMode",
+      "ReceiveNextEventCommon",
+      "_BlockUntilNextEventMatchingListInMode",
+      "_DPSBlockUntilNextEventMatchingListInMode",
+      "_DPSNextEvent",
+      "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+      "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+      "-[NSApplication run]",
+      "NSApplicationMain",
+      "specialized runApp(_:)",
+      "runApp<A>(_:)",
+      "static App.main()",
+      "static NativeAcceptanceApp.$main()",
+      "AgentWorkbench_main",
+      "start"
+    ],
+    "static NativeAcceptanceApp.$main()": [
+      "AG::Graph::propagate_dirty(AG::AttributeID)",
+      "ObservationGraphMutation.apply()",
+      "GraphHost.flushTransactions()",
+      "closure #1 in closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      "partial apply for closure #1 in ViewGraphRootValueUpdater.updateGraph<A>(body:)",
+      "ViewGraphRootValueUpdater._updateViewGraph<A>(body:)",
+      "ViewGraphRootValueUpdater.updateGraph<A>(body:)",
+      "closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      "<deduplicated_symbol>",
+      "specialized static NSRunLoop.flushObservers()",
+      "@objc closure #1 in static NSRunLoop.addObserver(_:)",
+      "__CFRUNLOOP_IS_CALLING_OUT_TO_AN_OBSERVER_CALLBACK_FUNCTION__",
+      "__CFRunLoopDoObservers",
+      "_CFRunLoopRunSpecificWithOptions",
+      "RunCurrentEventLoopInMode",
+      "ReceiveNextEventCommon",
+      "_BlockUntilNextEventMatchingListInMode",
+      "_DPSBlockUntilNextEventMatchingListInMode",
+      "_DPSNextEvent",
+      "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+      "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+      "-[NSApplication run]",
+      "NSApplicationMain",
+      "specialized runApp(_:)",
+      "runApp<A>(_:)",
+      "static App.main()",
+      "static NativeAcceptanceApp.$main()",
+      "AgentWorkbench_main",
+      "start"
+    ],
+    "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)": [
+      "swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::incrementSlow(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)",
+      "closure #2 in ObservationCenter.invalidate<A>(_:with:onChangeIn:)",
+      "partial apply for closure #2 in closure #1 in static ObservationTracking._installTracking(options:_:willSet:didSet:deinit:)",
+      "partial apply for thunk for @escaping @callee_guaranteed @Sendable (@guaranteed AnyKeyPath) -> ()",
+      "specialized ObservationRegistrar.Context.willSet<A, B>(_:keyPath:)",
+      "specialized ObservationRegistrar.willSet<A, B>(_:keyPath:)",
+      "WorkbenchModel.workspace.modify",
+      "NativeAcceptanceRunner.rendering(_:mode:)",
+      "NativeAcceptanceRunner.run(_:)",
+      "closure #1 in static NativeAcceptanceApp.drive(model:fixture:)",
+      "partial apply for closure #1 in static NativeAcceptanceApp.drive(model:fixture:)",
+      "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+      "partial apply for specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+      "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)"
+    ],
+    "partial apply for specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)": [
+      "swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::incrementSlow(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)",
+      "closure #2 in ObservationCenter.invalidate<A>(_:with:onChangeIn:)",
+      "partial apply for closure #2 in closure #1 in static ObservationTracking._installTracking(options:_:willSet:didSet:deinit:)",
+      "partial apply for thunk for @escaping @callee_guaranteed @Sendable (@guaranteed AnyKeyPath) -> ()",
+      "specialized ObservationRegistrar.Context.willSet<A, B>(_:keyPath:)",
+      "specialized ObservationRegistrar.willSet<A, B>(_:keyPath:)",
+      "WorkbenchModel.workspace.modify",
+      "NativeAcceptanceRunner.rendering(_:mode:)",
+      "NativeAcceptanceRunner.run(_:)",
+      "closure #1 in static NativeAcceptanceApp.drive(model:fixture:)",
+      "partial apply for closure #1 in static NativeAcceptanceApp.drive(model:fixture:)",
+      "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+      "partial apply for specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+      "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)"
+    ],
+    "ConversationDocumentView.configure(_:contentIdentity:navigation:sessionId:appearance:viewport:foldParents:contentOriginY:waitsForInitialPosition:)": [
+      "SLSServerMightHaveAcceleration",
+      "0x191111808",
+      "0x1911144ec",
+      "-[NSView _recursiveLostHiddenAncestorBySwitchingWindow:]",
+      "-[NSView _recursiveLostHiddenAncestorBySwitchingWindow:]",
+      "-[NSView _recursiveLostHiddenAncestorBySwitchingWindow:]",
+      "-[NSView _recursiveLostHiddenAncestorBySwitchingWindow:]",
+      "-[NSView _recursiveLostHiddenAncestorBySwitchingWindow:]",
+      "-[NSView _recursiveLostHiddenAncestorBySwitchingWindow:]",
+      "-[NSView _setSuperview:]",
+      "-[NSView removeFromSuperview]",
+      "ConversationDocumentView.reconcileRows(_:sessionId:appearance:)",
+      "ConversationDocumentView.configure(_:contentIdentity:navigation:sessionId:appearance:viewport:foldParents:contentOriginY:waitsForInitialPosition:)",
+      "ConversationDocumentHost.updateNSView(_:context:)",
+      "PlatformViewRepresentableAdaptor.updateViewProvider(_:context:)",
+      "closure #1 in closure #1 in closure #7 in closure #1 in PlatformViewChild.updateValue()",
+      "ViewRendererHost.performExternalUpdate(_:)",
+      "closure #1 in closure #7 in closure #1 in PlatformViewChild.updateValue()",
+      "closure #1 in PlatformViewChild.updateValue()",
+      "partial apply for implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      "AG::Graph::UpdateStack::update()",
+      "AG::Subgraph::update(unsigned int)",
+      "GraphHost.flushTransactions()",
+      "closure #1 in closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      "partial apply for closure #1 in ViewGraphRootValueUpdater.updateGraph<A>(body:)",
+      "ViewGraphRootValueUpdater._updateViewGraph<A>(body:)",
+      "ViewGraphRootValueUpdater.updateGraph<A>(body:)",
+      "closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      "<deduplicated_symbol>",
+      "specialized static NSRunLoop.flushObservers()",
+      "@objc closure #1 in static NSRunLoop.addObserver(_:)",
+      "__CFRUNLOOP_IS_CALLING_OUT_TO_AN_OBSERVER_CALLBACK_FUNCTION__",
+      "__CFRunLoopDoObservers",
+      "_CFRunLoopRunSpecificWithOptions",
+      "RunCurrentEventLoopInMode",
+      "ReceiveNextEventCommon",
+      "_BlockUntilNextEventMatchingListInMode",
+      "_DPSBlockUntilNextEventMatchingListInMode",
+      "_DPSNextEvent",
+      "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+      "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+      "-[NSApplication run]",
+      "NSApplicationMain",
+      "specialized runApp(_:)",
+      "runApp<A>(_:)",
+      "static App.main()",
+      "static NativeAcceptanceApp.$main()",
+      "AgentWorkbench_main",
+      "start"
+    ],
+    "ConversationDocumentHost.updateNSView(_:context:)": [
+      "0x191111808",
+      "0x1911144ec",
+      "-[NSView _recursiveGainedHiddenAncestorBySwitchingWindow:]",
+      "-[NSView _recursiveGainedHiddenAncestorBySwitchingWindow:]",
+      "-[NSView _recursiveGainedHiddenAncestorBySwitchingWindow:]",
+      "-[NSView _recursiveGainedHiddenAncestorBySwitchingWindow:]",
+      "-[NSView _recursiveGainedHiddenAncestorBySwitchingWindow:]",
+      "-[NSView _recursiveGainedHiddenAncestorBySwitchingWindow:]",
+      "-[NSView _recursiveGainedHiddenAncestorBySwitchingWindow:]",
+      "-[NSView _setHidden:setNeedsDisplay:]",
+      "ConversationDocumentView.suspend()",
+      "ConversationDocumentHost.updateNSView(_:context:)",
+      "PlatformViewRepresentableAdaptor.updateViewProvider(_:context:)",
+      "closure #1 in closure #1 in closure #7 in closure #1 in PlatformViewChild.updateValue()",
+      "ViewRendererHost.performExternalUpdate(_:)",
+      "closure #1 in closure #7 in closure #1 in PlatformViewChild.updateValue()",
+      "closure #1 in PlatformViewChild.updateValue()",
+      "partial apply for implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      "AG::Graph::UpdateStack::update()",
+      "AG::Subgraph::update(unsigned int)",
+      "GraphHost.flushTransactions()",
+      "closure #1 in closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      "partial apply for closure #1 in ViewGraphRootValueUpdater.updateGraph<A>(body:)",
+      "ViewGraphRootValueUpdater._updateViewGraph<A>(body:)",
+      "ViewGraphRootValueUpdater.updateGraph<A>(body:)",
+      "closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      "<deduplicated_symbol>",
+      "specialized static NSRunLoop.flushObservers()",
+      "@objc closure #1 in static NSRunLoop.addObserver(_:)",
+      "__CFRUNLOOP_IS_CALLING_OUT_TO_AN_OBSERVER_CALLBACK_FUNCTION__",
+      "__CFRunLoopDoObservers",
+      "_CFRunLoopRunSpecificWithOptions",
+      "RunCurrentEventLoopInMode",
+      "ReceiveNextEventCommon",
+      "_BlockUntilNextEventMatchingListInMode",
+      "_DPSBlockUntilNextEventMatchingListInMode",
+      "_DPSNextEvent",
+      "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+      "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+      "-[NSApplication run]",
+      "NSApplicationMain",
+      "specialized runApp(_:)",
+      "runApp<A>(_:)",
+      "static App.main()",
+      "static NativeAcceptanceApp.$main()",
+      "AgentWorkbench_main",
+      "start"
+    ],
+    "ConversationDocumentView.refreshVisibleRows(source:)": [
+      "_StringGuts.validateScalarIndex(_:)",
+      "String.subscript.getter",
+      "specialized Collection<>.firstIndex(of:)",
+      "specialized _ProcessInfo.environment.getter",
+      "@objc _NSSwiftProcessInfo.environment.getter",
+      "ConversationEntryController.nativeUserPreparation()",
+      "ConversationEntryController.setRoot()",
+      "ConversationEntryController.init(content:appearance:measuredSize:disclosureChanged:heightChanged:)",
+      "ConversationEntryController.__allocating_init(content:appearance:measuredSize:disclosureChanged:heightChanged:)",
+      "ConversationDocumentView.refreshVisibleRows(source:)",
+      "ConversationDocumentView.configure(_:contentIdentity:navigation:sessionId:appearance:viewport:foldParents:contentOriginY:waitsForInitialPosition:)",
+      "ConversationDocumentHost.updateNSView(_:context:)",
+      "PlatformViewRepresentableAdaptor.updateViewProvider(_:context:)",
+      "closure #1 in closure #1 in closure #7 in closure #1 in PlatformViewChild.updateValue()",
+      "ViewRendererHost.performExternalUpdate(_:)",
+      "closure #1 in closure #7 in closure #1 in PlatformViewChild.updateValue()",
+      "closure #1 in PlatformViewChild.updateValue()",
+      "partial apply for implicit closure #1 in closure #1 in closure #1 in Attribute.init<A>(_:)",
+      "AG::Graph::UpdateStack::update()",
+      "AG::Subgraph::update(unsigned int)",
+      "GraphHost.flushTransactions()",
+      "closure #1 in closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      "partial apply for closure #1 in ViewGraphRootValueUpdater.updateGraph<A>(body:)",
+      "ViewGraphRootValueUpdater._updateViewGraph<A>(body:)",
+      "ViewGraphRootValueUpdater.updateGraph<A>(body:)",
+      "closure #1 in closure #1 in NSHostingView.beginTransaction()",
+      "<deduplicated_symbol>",
+      "specialized static NSRunLoop.flushObservers()",
+      "@objc closure #1 in static NSRunLoop.addObserver(_:)",
+      "__CFRUNLOOP_IS_CALLING_OUT_TO_AN_OBSERVER_CALLBACK_FUNCTION__",
+      "__CFRunLoopDoObservers",
+      "_CFRunLoopRunSpecificWithOptions",
+      "RunCurrentEventLoopInMode",
+      "ReceiveNextEventCommon",
+      "_BlockUntilNextEventMatchingListInMode",
+      "_DPSBlockUntilNextEventMatchingListInMode",
+      "_DPSNextEvent",
+      "-[NSApplication(NSEventRouting) _nextEventMatchingEventMask:untilDate:inMode:dequeue:]",
+      "-[NSApplication(NSEventRouting) nextEventMatchingMask:untilDate:inMode:dequeue:]",
+      "-[NSApplication run]",
+      "NSApplicationMain",
+      "specialized runApp(_:)",
+      "runApp<A>(_:)",
+      "static App.main()",
+      "static NativeAcceptanceApp.$main()",
+      "AgentWorkbench_main",
+      "start"
+    ],
+    "NativeAcceptanceRunner.rendering(_:mode:)": [
+      "swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::incrementSlow(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)",
+      "closure #2 in ObservationCenter.invalidate<A>(_:with:onChangeIn:)",
+      "partial apply for closure #2 in closure #1 in static ObservationTracking._installTracking(options:_:willSet:didSet:deinit:)",
+      "partial apply for thunk for @escaping @callee_guaranteed @Sendable (@guaranteed AnyKeyPath) -> ()",
+      "specialized ObservationRegistrar.Context.willSet<A, B>(_:keyPath:)",
+      "specialized ObservationRegistrar.willSet<A, B>(_:keyPath:)",
+      "WorkbenchModel.workspace.modify",
+      "NativeAcceptanceRunner.rendering(_:mode:)",
+      "NativeAcceptanceRunner.run(_:)",
+      "closure #1 in static NativeAcceptanceApp.drive(model:fixture:)",
+      "partial apply for closure #1 in static NativeAcceptanceApp.drive(model:fixture:)",
+      "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+      "partial apply for specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+      "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)"
+    ],
+    "NativeAcceptanceRunner.run(_:)": [
+      "swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::incrementSlow(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)",
+      "closure #2 in ObservationCenter.invalidate<A>(_:with:onChangeIn:)",
+      "partial apply for closure #2 in closure #1 in static ObservationTracking._installTracking(options:_:willSet:didSet:deinit:)",
+      "partial apply for thunk for @escaping @callee_guaranteed @Sendable (@guaranteed AnyKeyPath) -> ()",
+      "specialized ObservationRegistrar.Context.willSet<A, B>(_:keyPath:)",
+      "specialized ObservationRegistrar.willSet<A, B>(_:keyPath:)",
+      "WorkbenchModel.workspace.modify",
+      "NativeAcceptanceRunner.rendering(_:mode:)",
+      "NativeAcceptanceRunner.run(_:)",
+      "closure #1 in static NativeAcceptanceApp.drive(model:fixture:)",
+      "partial apply for closure #1 in static NativeAcceptanceApp.drive(model:fixture:)",
+      "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+      "partial apply for specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+      "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)"
+    ],
+    "closure #1 in static NativeAcceptanceApp.drive(model:fixture:)": [
+      "swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::incrementSlow(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)",
+      "closure #2 in ObservationCenter.invalidate<A>(_:with:onChangeIn:)",
+      "partial apply for closure #2 in closure #1 in static ObservationTracking._installTracking(options:_:willSet:didSet:deinit:)",
+      "partial apply for thunk for @escaping @callee_guaranteed @Sendable (@guaranteed AnyKeyPath) -> ()",
+      "specialized ObservationRegistrar.Context.willSet<A, B>(_:keyPath:)",
+      "specialized ObservationRegistrar.willSet<A, B>(_:keyPath:)",
+      "WorkbenchModel.workspace.modify",
+      "NativeAcceptanceRunner.rendering(_:mode:)",
+      "NativeAcceptanceRunner.run(_:)",
+      "closure #1 in static NativeAcceptanceApp.drive(model:fixture:)",
+      "partial apply for closure #1 in static NativeAcceptanceApp.drive(model:fixture:)",
+      "specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+      "partial apply for specialized thunk for @escaping @isolated(any) @callee_guaranteed @async () -> (@out A)",
+      "completeTaskWithClosure(swift::AsyncContext*, swift::SwiftError*)"
+    ]
+  },
+  "note": "Inclusive CPU sample weights overlap. Sampling excludes waiting threads; these are neither wall-clock latency nor display frame timings."
+}
