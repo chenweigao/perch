@@ -143,7 +143,7 @@ jobs:
 
   native-math:
     name: Native math performance regression
-    needs: native-build
+    needs: native-host-build
     runs-on: xcode-27
     timeout-minutes: 20
     steps:
@@ -201,7 +201,28 @@ jobs:
           else
             tar -xzf .local/native-build/build.tar.gz
           fi
-      - run: python3 scripts/check-functional.py macos --group host-build --output .local/functional-host-build
+      - name: Restore the exact host fixture
+        id: host-fixture-cache
+        uses: actions/cache@v4
+        with:
+          path: .local/host-fixture/HostLifecycleChecks.app
+          key: ${{ runner.os }}-${{ runner.arch }}-xcode-27-host-fixture-v1-${{ hashFiles('Sources/**', 'Tests/HostLifecycleChecks/**', 'Package.swift', 'Package.resolved', 'patches/**', 'Resources/Highlight/**', 'Resources/Localization/**', 'scripts/build.sh', 'scripts/check-host-lifecycle.py', 'scripts/prepare-highlight.sh') }}
+      - if: steps.host-fixture-cache.outputs.cache-hit != 'true'
+        run: python3 scripts/check-functional.py macos --group host-build --output .local/functional-host-build
+      - name: Verify and record the cached host fixture
+        if: steps.host-fixture-cache.outputs.cache-hit == 'true'
+        run: |
+          codesign --verify --strict .local/host-fixture/HostLifecycleChecks.app
+          mkdir -p .local/functional-host-build
+          python3 - <<'PY'
+          import json, pathlib, subprocess
+          report = {
+              "suite": "macos", "group": "host-build", "status": "passed", "cache_hit": True,
+              "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
+              "checks": [{"name": "host-build", "command": ["actions/cache"], "passed": True, "seconds": 0}],
+          }
+          pathlib.Path(".local/functional-host-build/results.json").write_text(json.dumps(report, indent=2) + "\n")
+          PY
       - name: Package the host lifecycle fixture
         run: |
           mkdir -p .local/host-fixture
@@ -270,7 +291,14 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+      - name: Restore the exact acceptance fixture
+        id: acceptance-fixture-cache
+        uses: actions/cache@v4
+        with:
+          path: build/Perch Acceptance.app
+          key: ${{ runner.os }}-${{ runner.arch }}-xcode-27-acceptance-fixture-v1-${{ hashFiles('Sources/**', 'Package.swift', 'Package.resolved', 'patches/**', 'Resources/Info.plist', 'Resources/Highlight/**', 'Resources/Localization/**', 'scripts/build.sh', 'scripts/build-native-acceptance.sh', 'scripts/prepare-highlight.sh') }}
       - name: Restore Swift package dependencies
+        if: steps.acceptance-fixture-cache.outputs.cache-hit != 'true'
         uses: actions/cache@v4
         with:
           path: |
@@ -281,6 +309,7 @@ jobs:
             ${{ runner.os }}-${{ runner.arch }}-xcode-27-deps-${{ hashFiles('Package.resolved', 'patches/**') }}
             ${{ runner.os }}-${{ runner.arch }}-xcode-27-spm-${{ hashFiles('Package.resolved') }}
       - name: Restore incremental acceptance build
+        if: steps.acceptance-fixture-cache.outputs.cache-hit != 'true'
         uses: actions/cache@v4
         with:
           path: |
@@ -290,7 +319,22 @@ jobs:
           key: ${{ runner.os }}-${{ runner.arch }}-xcode-27-acceptance-${{ hashFiles('Package.resolved', 'patches/**') }}-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-${{ runner.arch }}-xcode-27-acceptance-${{ hashFiles('Package.resolved', 'patches/**') }}-
-      - run: python3 scripts/check-functional.py macos --group native-build --output .local/functional-native-build
+      - if: steps.acceptance-fixture-cache.outputs.cache-hit != 'true'
+        run: python3 scripts/check-functional.py macos --group native-build --output .local/functional-native-build
+      - name: Verify and record the cached acceptance fixture
+        if: steps.acceptance-fixture-cache.outputs.cache-hit == 'true'
+        run: |
+          codesign --verify --deep --strict "build/Perch Acceptance.app"
+          mkdir -p .local/functional-native-build
+          python3 - <<'PY'
+          import json, pathlib, subprocess
+          report = {
+              "suite": "macos", "group": "native-build", "status": "passed", "cache_hit": True,
+              "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
+              "checks": [{"name": "native-build", "command": ["actions/cache"], "passed": True, "seconds": 0}],
+          }
+          pathlib.Path(".local/functional-native-build/results.json").write_text(json.dumps(report, indent=2) + "\n")
+          PY
       - name: Package the native acceptance fixture
         run: |
           mkdir -p .local/native-acceptance
@@ -350,8 +394,8 @@ jobs:
           overwrite: true
           if-no-files-found: error
 
-  native-navigation:
-    name: Native navigation regression
+  native-navigation-build:
+    name: Native navigation fixture build
     needs: native-build
     runs-on: xcode-27
     timeout-minutes: 20
@@ -373,15 +417,84 @@ jobs:
           else
             tar -xzf .local/native-build/build.tar.gz
           fi
-      - env:
+      - name: Restore the exact navigation fixture
+        id: navigation-fixture-cache
+        uses: actions/cache@v4
+        with:
+          path: build/Navigation Preview.app
+          key: ${{ runner.os }}-${{ runner.arch }}-xcode-27-navigation-fixture-v1-${{ hashFiles('Sources/**', 'Tests/NavigationPreview/**', 'Tests/PerformancePreview/Workload.swift', 'Package.swift', 'Package.resolved', 'patches/**', 'Resources/Highlight/**', 'scripts/build.sh', 'scripts/build-navigation-preview.sh', 'scripts/prepare-highlight.sh') }}
+      - if: steps.navigation-fixture-cache.outputs.cache-hit != 'true'
+        env:
           PERCH_REUSE_PREBUILT: '1'
-        run: python3 scripts/check-functional.py macos --group navigation --output .local/functional-navigation
-      - name: Retain navigation results
-        if: always() && hashFiles('.local/functional-navigation/results.json') != ''
+        run: python3 scripts/check-functional.py macos --group navigation-build --output .local/functional-navigation-build
+      - name: Verify and record the cached navigation fixture
+        if: steps.navigation-fixture-cache.outputs.cache-hit == 'true'
+        run: |
+          codesign --verify --strict "build/Navigation Preview.app"
+          mkdir -p .local/functional-navigation-build
+          python3 - <<'PY'
+          import json, pathlib, subprocess
+          report = {
+              "suite": "macos", "group": "navigation-build", "status": "passed", "cache_hit": True,
+              "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
+              "checks": [{"name": "navigation-build", "command": ["actions/cache"], "passed": True, "seconds": 0}],
+          }
+          pathlib.Path(".local/functional-navigation-build/results.json").write_text(json.dumps(report, indent=2) + "\n")
+          PY
+      - name: Package the navigation fixture
+        run: |
+          mkdir -p .local/native-navigation
+          ditto -c -k --sequesterRsrc --keepParent "build/Navigation Preview.app" .local/native-navigation/NavigationPreview.zip
+      - name: Publish the navigation fixture
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: macos-results-native-navigation
-          path: .local/functional-navigation/
+          name: native-navigation-fixture-${{ github.sha }}
+          path: .local/native-navigation/NavigationPreview.zip
+          compression-level: 0
+          retention-days: 1
+          overwrite: true
+          if-no-files-found: error
+      - name: Retain navigation build results
+        if: always() && hashFiles('.local/functional-navigation-build/results.json') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: macos-results-native-navigation-build
+          path: .local/functional-navigation-build/
+          include-hidden-files: true
+          retention-days: 7
+          overwrite: true
+          if-no-files-found: error
+
+  native-navigation:
+    name: Native navigation regression (${{ matrix.group }})
+    needs: native-navigation-build
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [reading, interaction]
+    runs-on: xcode-27
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Download the navigation fixture
+        uses: actions/download-artifact@v4
+        with:
+          name: native-navigation-fixture-${{ github.sha }}
+          path: .local/native-navigation
+      - name: Restore the navigation fixture
+        run: |
+          mkdir -p build
+          ditto -x -k .local/native-navigation/NavigationPreview.zip build
+      - run: python3 scripts/check-functional.py macos --group navigation-${{ matrix.group }} --output .local/functional-navigation-${{ matrix.group }}
+      - name: Retain navigation results
+        if: always() && hashFiles(format('.local/functional-navigation-{0}/results.json', matrix.group)) != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: macos-results-native-navigation-${{ matrix.group }}
+          path: .local/functional-navigation-${{ matrix.group }}/
           include-hidden-files: true
           retention-days: 7
           overwrite: true
@@ -398,6 +511,7 @@ jobs:
       - native-host
       - native-acceptance-build
       - native-acceptance
+      - native-navigation-build
       - native-navigation
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -418,6 +532,7 @@ jobs:
           HOST_RESULT: ${{ needs.native-host.result }}
           ACCEPTANCE_BUILD_RESULT: ${{ needs.native-acceptance-build.result }}
           ACCEPTANCE_RESULT: ${{ needs.native-acceptance.result }}
+          NAVIGATION_BUILD_RESULT: ${{ needs.native-navigation-build.result }}
           NAVIGATION_RESULT: ${{ needs.native-navigation.result }}
         run: |
           python3 - <<'PY'
@@ -432,6 +547,7 @@ jobs:
               "host": os.environ["HOST_RESULT"],
               "acceptance_build": os.environ["ACCEPTANCE_BUILD_RESULT"],
               "acceptance": os.environ["ACCEPTANCE_RESULT"],
+              "navigation_build": os.environ["NAVIGATION_BUILD_RESULT"],
               "navigation": os.environ["NAVIGATION_RESULT"],
           }
           print(json.dumps(results, indent=2))

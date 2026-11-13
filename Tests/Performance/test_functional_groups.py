@@ -75,6 +75,16 @@ class FunctionalGroupTests(unittest.TestCase):
         self.assertEqual(sorted(sharded), sorted(complete))
         self.assertEqual(len(sharded), len(set(sharded)))
         self.assertEqual([name for name, _, _ in functional.macos_commands("native-build", out)], ["native-build"])
+        self.assertIn("dashboard", functional.NATIVE_MODE_GROUPS["native-streaming"])
+
+    def test_ci_navigation_shards_preserve_every_mode_once(self):
+        out = Path("/tmp/functional-groups")
+        complete = [name for name, _, _ in functional.macos_commands("navigation", out) if name != "navigation-build"]
+        sharded = [name for group in functional.NAVIGATION_MODE_GROUPS
+                   for name, _, _ in functional.macos_commands(group, out)]
+        self.assertEqual(sorted(sharded), sorted(complete))
+        self.assertEqual(len(sharded), len(set(sharded)))
+        self.assertEqual([name for name, _, _ in functional.macos_commands("navigation-build", out)], ["navigation-build"])
 
     def test_prebuilt_host_fixture_does_not_invoke_swift(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -30,13 +30,16 @@ The optional `WORKBENCH_LIVE_HOST` variable is removed from the suite environmen
 
 The `Functional checks` workflow runs these suites on PRs and main, alongside the
 existing publication checks, and retains logs/results for seven days. One native
-job builds and packages the production app and Swift build tree once. Core, math
-performance, navigation, and the host fixture builder restore that artifact on
-separate macOS runners; the core shard also runs scroll-following. The host fixture
-is compiled once, then two runners restore the same signed app for disjoint phase
-groups. Native acceptance uses different compile flags, so a parallel job builds
-its fixture once and two runners restore that app for disjoint mode groups. Every
-phase and mode still executes exactly once; no test is skipped by this split.
+job builds and packages the production app and Swift build tree once. Core and the
+host/navigation fixture builders restore that artifact on separate macOS runners;
+the core shard also runs scroll-following. Math performance waits for the host
+fixture builder so the shorter math job does not delay the host critical path.
+Each fixture is compiled once, then two runners restore the same signed app for
+disjoint phase or mode groups. Native acceptance still builds independently because
+it uses different compile flags. Every phase and mode executes exactly once; no
+test is skipped by these splits. Exact-source fixture caches can reuse a signed app
+without compilation, but never use a fallback key or a binary built from different
+sources. Cache hits verify the signature and publish a `cache_hit` group report.
 A summary job named `Native build and interaction regression` fails if any group
 fails and publishes the combined `macos-results` evidence. Group reports retain
 individual and total durations.
@@ -46,10 +49,12 @@ For a targeted local run, add `--group build`, `--group core`, `--group host`,
 full local behavior. To reproduce the CI host split, run `--group host-build` once,
 then `--group host-state` and `--group host-workspace` with the resulting
 `.local/host-fixture/HostLifecycleChecks.app`. For acceptance, `--group native-build`
-is followed by `--group native-streaming` and `--group native-session`; the core
-CI split uses `--group core-regression` and `--group core-math`. Use separate GUI
-sessions when running these groups concurrently. Do not open multiple interactive
-fixture suites in one desktop session. The runners use GitHub's
+is followed by `--group native-streaming` and `--group native-session`; navigation
+uses `--group navigation-build` followed by `--group navigation-reading` and
+`--group navigation-interaction`. The core CI split uses `--group core-regression`
+and `--group core-math`. Use separate GUI sessions when running these groups
+concurrently. Do not open multiple interactive fixture suites in one desktop session.
+The runners use GitHub's
 [Xcode 27 preview image](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md)
 to match the local Swift 6.4 build. Hosted GUI execution must be confirmed by
 an actual workflow run; local equivalence alone does not establish hosted success.
