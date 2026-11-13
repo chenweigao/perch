@@ -45,4 +45,8 @@ Core 输入仍有真实差异，因此 relative gates **仍 applied**，不是�
 [local-aa-control.json](local-aa-control.json)。
 
 这证明修复后的本机匹配构建可通过，没有证明旧 CI 波动完全由补丁导致，更不代替 CI。
-推送修复后必须让所有 CI 在新 head 重新跑绿，并对工具修复做新的独立评审，才可合并。
+修复 head `ace9d7d` 的八项新 CI 已全部成功（run `43215468016`，含 core 数学门槛），
+新的独立评审无可操作发现并复跑22个数学工具测试；最终Codex回执审阅该head、无重大问题。
+汇总评论仍有早于最终回执的 running 标记，合并审计已说明差异，没有伪称汇总已更新。
+确认无inline意见及mergeable/CLEAN后，2026-11-12 20:27 按授权以 sha=ace9d7d 原子匹配
+合并为 `74dee39961babdaa8f3f0118c6b16a9261b6fb6b`。最初失败记录未删除，门槛未降低。

@@ -1,0 +1,275 @@
+{
+  "candidate_ref": "933a070",
+  "scope": "single independent Mac round6 activity CPU profile; all test-process threads; overall includes fixture setup; not A/B or UI/FPS",
+  "binary_sha256_before": "28138ce33565c18b560ed60e5fc85dc880d8605e61119212962e8e841c467157",
+  "binary_sha256_after": "28138ce33565c18b560ed60e5fc85dc880d8605e61119212962e8e841c467157",
+  "binary_sha256_unchanged_by_profile": true,
+  "sampled_total_ms": 245.0,
+  "edit_stats_inclusive_sampled_ms": 60.0,
+  "edit_stats_frames_ms": [
+    [
+      "static SessionEditStats.tally(_:into:)",
+      60.0
+    ],
+    [
+      "static SessionEditStats.derive(from:)",
+      60.0
+    ],
+    [
+      "specialized static SessionEditStats.tally(_:into:)",
+      58.0
+    ],
+    [
+      "static SessionEditStats.compute(tool:input:)",
+      54.0
+    ],
+    [
+      "specialized static SessionEditStats.compute(tool:input:)",
+      52.0
+    ],
+    [
+      "specialized static SessionEditStats.lineDiff(old:new:)",
+      30.0
+    ],
+    [
+      "static SessionEditStats.lineDiff(old:new:)",
+      30.0
+    ],
+    [
+      "specialized static SessionEditStats.lines(_:)",
+      25.0
+    ],
+    [
+      "static SessionEditStats.lines(_:)",
+      25.0
+    ],
+    [
+      "closure #1 in static SessionEditStats.lines(_:)",
+      24.0
+    ],
+    [
+      "implicit closure #4 in static SessionEditStats.lineDiff(old:new:)",
+      18.0
+    ],
+    [
+      "closure #1 in static SessionEditStats.lineCount(_:)",
+      14.0
+    ],
+    [
+      "static SessionEditStats.lineCount(_:)",
+      14.0
+    ],
+    [
+      "implicit closure #2 in static SessionEditStats.lineDiff(old:new:)",
+      7.0
+    ],
+    [
+      "closure #2 in static SessionEditStats.tally(_:into:)",
+      1.0
+    ]
+  ],
+  "edit_stats_leaf_top": [
+    [
+      "specialized IndexingIterator.next()",
+      20.0
+    ],
+    [
+      "closure #1 in static SessionEditStats.lines(_:)",
+      5.0
+    ],
+    [
+      "closure #1 in static SessionEditStats.lineCount(_:)",
+      4.0
+    ],
+    [
+      "swift_bridgeObjectRelease",
+      3.0
+    ],
+    [
+      "swift_release",
+      3.0
+    ],
+    [
+      "_xzm_malloc_tc",
+      2.0
+    ],
+    [
+      "Hasher.combine(bytes:)",
+      2.0
+    ],
+    [
+      "specialized BidirectionalCollection._range<A>(of:anchored:backwards:)",
+      2.0
+    ],
+    [
+      "Substring.index(_:offsetBy:)",
+      2.0
+    ],
+    [
+      "<deduplicated_symbol>",
+      1.0
+    ],
+    [
+      "_xzm_free_tc",
+      1.0
+    ],
+    [
+      "DYLD-STUB$$String.subscript.getter",
+      1.0
+    ],
+    [
+      "specialized static String._uncheckedFromUTF8(_:isASCII:precalculatedUTF16Count:)",
+      1.0
+    ],
+    [
+      "swift_bridgeObjectRetain",
+      1.0
+    ],
+    [
+      "specialized Array._makeUniqueAndReserveCapacityIfNotUnique()",
+      1.0
+    ],
+    [
+      "malloc_type_malloc",
+      1.0
+    ],
+    [
+      "_StringGuts.scalarAlignSlow(_:)",
+      1.0
+    ],
+    [
+      "StringProtocol._asContiguousUTF8Substring(from:)",
+      1.0
+    ],
+    [
+      "_allASCII(_:)",
+      1.0
+    ],
+    [
+      "_xzm_xzone_malloc_tiny",
+      1.0
+    ]
+  ],
+  "edit_stats_inclusive_top": [
+    [
+      "static SessionEditStats.tally(_:into:)",
+      60.0
+    ],
+    [
+      "specialized thunk for @escaping @convention(thin) @async () -> ()",
+      60.0
+    ],
+    [
+      "completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)",
+      60.0
+    ],
+    [
+      "benchConversationActivity()",
+      60.0
+    ],
+    [
+      "specialized static ProtocolTests.main()",
+      60.0
+    ],
+    [
+      "static SessionEditStats.derive(from:)",
+      60.0
+    ],
+    [
+      "specialized static SessionEditStats.tally(_:into:)",
+      58.0
+    ],
+    [
+      "static SessionEditStats.compute(tool:input:)",
+      54.0
+    ],
+    [
+      "specialized static SessionEditStats.compute(tool:input:)",
+      52.0
+    ],
+    [
+      "specialized static SessionEditStats.lineDiff(old:new:)",
+      30.0
+    ],
+    [
+      "static SessionEditStats.lineDiff(old:new:)",
+      30.0
+    ],
+    [
+      "specialized Optional.map<A, B>(_:)",
+      26.0
+    ],
+    [
+      "specialized static SessionEditStats.lines(_:)",
+      25.0
+    ],
+    [
+      "specialized String.UTF8View.withContiguousStorageIfAvailable<A>(_:)",
+      25.0
+    ],
+    [
+      "static SessionEditStats.lines(_:)",
+      25.0
+    ],
+    [
+      "closure #1 in static SessionEditStats.lines(_:)",
+      24.0
+    ],
+    [
+      "specialized IndexingIterator.next()",
+      20.0
+    ],
+    [
+      "implicit closure #4 in static SessionEditStats.lineDiff(old:new:)",
+      18.0
+    ],
+    [
+      "closure #1 in static SessionEditStats.lineCount(_:)",
+      14.0
+    ],
+    [
+      "static SessionEditStats.lineCount(_:)",
+      14.0
+    ],
+    [
+      "bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)",
+      8.0
+    ],
+    [
+      "StringProtocol.contains<A>(_:)",
+      8.0
+    ],
+    [
+      "implicit closure #2 in static SessionEditStats.lineDiff(old:new:)",
+      7.0
+    ],
+    [
+      "_swift_release_dealloc",
+      7.0
+    ],
+    [
+      "specialized Array.append(_:)",
+      7.0
+    ],
+    [
+      "StringProtocol.range<A>(of:options:range:locale:)",
+      7.0
+    ],
+    [
+      "_ContiguousArrayStorage.__deallocating_deinit",
+      6.0
+    ],
+    [
+      "specialized Array._reserveCapacityAssumingUniqueBuffer(oldCount:)",
+      6.0
+    ],
+    [
+      "specialized Array._createNewBuffer(bufferIsUnique:minimumCapacity:growForAppend:)",
+      6.0
+    ],
+    [
+      "specialized _StringCompareOptionsIterable._range<A>(of:toHalfWidth:diacriticsInsensitive:caseFold:anchored:backwards:)",
+      6.0
+    ]
+  ]
+}

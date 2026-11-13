@@ -6,8 +6,10 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location("math_performance", ROOT / "scripts/run-math-performance.py")
@@ -99,7 +101,8 @@ class MathPerformanceTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 97, result.stdout + result.stderr)
                 flags = arguments.read_text().splitlines()
                 self.assertIn("-D", flags)
-                self.assertIn("MATH_PERFORMANCE_BASELINE" if variant == "baseline" else "MATH_PERFORMANCE_CHECKS", flags)
+                self.assertIn("MATH_PERFORMANCE_BASELINE", flags)
+                self.assertNotIn("MATH_PERFORMANCE_CHECKS", flags)
                 snapshot = root / ".local/math-performance-sources" / variant
                 metadata = json.loads((root / f"build/Math Performance {variant}.app/Contents/Resources/build.json").read_text())
                 fingerprints.append(metadata["source_input_sha256"])
@@ -305,6 +308,51 @@ class MathPerformanceTests(unittest.TestCase):
             result = subprocess.run(["bash", "scripts/build-math-performance-preview.sh", "candidate"],
                                     cwd=root, env=environment, capture_output=True, text=True)
             self.assertEqual(result.returncode, 97, result.stdout + result.stderr)
+
+    def test_runner_uses_separate_contracts_and_propagates_failures(self):
+        for fail_contracts in [False, True]:
+            with self.subTest(fail_contracts=fail_contracts), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                apps = {variant: root / (variant + '.app') for variant in ['baseline', 'candidate']}
+
+                def binary(app, name, records, exit_code=0):
+                    path = app / 'Contents/MacOS' / name
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_text('#!' + sys.executable + '\n' +
+                                    'import json, sys\nfrom pathlib import Path\n' +
+                                    'records = ' + repr(records) + '\n' +
+                                    'key = sys.argv[1] + "-" + sys.argv[2]\n' +
+                                    'with open(__file__ + ".calls", "a") as log: log.write(key + "\\n")\n' +
+                                    f'if {exit_code} or key not in records: sys.exit({exit_code or 99})\n' +
+                                    'Path(sys.argv[3]).write_text(json.dumps(records[key]))\n')
+                    path.chmod(0o755)
+                    return path
+
+                for variant, cases in fixtures().items():
+                    records = {key: {'status': 'passed', 'mode': key.rsplit('-', 1)[0],
+                                     'revision': 'fixture', **values[0]} for key, values in cases.items()}
+                    binary(apps[variant], 'MathPerformance', records)
+                contract = binary(apps['candidate'], 'MathPerformanceContracts',
+                                  {'contracts-1': {'status': 'passed', 'mode': 'contracts', 'revision': 'fixture',
+                                                   'measurements': {'checks': ['rendering contracts']}}},
+                                  exit_code=99 if fail_contracts else 0)
+                output = root / 'results'
+                argv = ['run-math-performance.py', '--baseline-app', str(apps['baseline']),
+                        '--candidate-app', str(apps['candidate']), '--output', str(output)]
+                with patch.object(sys, 'argv', argv), patch.object(sys, 'platform', 'darwin'), patch('builtins.print'):
+                    self.assertEqual(MODULE.main(), 1 if fail_contracts else 0)
+                summary = json.loads((output / 'summary.json').read_text())
+                self.assertEqual(summary['status'], 'failed' if fail_contracts else 'passed')
+                self.assertIn('contracts', summary['binary_sha256'])
+                self.assertEqual(Path(str(contract) + '.calls').read_text().splitlines(), ['contracts-1'])
+                if fail_contracts:
+                    self.assertIn('contracts-1 exited 99', summary['error'])
+                else:
+                    self.assertEqual(summary['contracts']['measurements']['checks'], ['rendering contracts'])
+                    for app in apps.values():
+                        calls = (app / 'Contents/MacOS/MathPerformance.calls').read_text().splitlines()
+                        self.assertEqual(len(calls), 18)
+                        self.assertFalse(any(call.startswith('contracts-') for call in calls))
 
     def test_nonfinite_samples_fail(self):
         for value in [-1, float("nan"), float("inf")]:

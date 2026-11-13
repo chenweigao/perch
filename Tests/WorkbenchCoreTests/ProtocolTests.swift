@@ -15,6 +15,9 @@ struct ProtocolTests {
         case "activity":
             try benchConversationActivity()
             return
+        case "edit-lines":
+            try benchEditLines()
+            return
         case "streaming":
             try benchStreamingDelta()
             return
@@ -61,6 +64,7 @@ struct ProtocolTests {
         checkSafeLink()
         try checkSessionEditStats()
         try checkEditLineScans()
+        try checkEditLineDiffBoundaries()
         try checkEditToolClassification()
         try checkProjectCommands()
         checkAppVersionCheck()
