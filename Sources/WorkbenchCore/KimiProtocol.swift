@@ -1,4 +1,9 @@
 import Foundation
+#if canImport(Darwin)
+import Darwin
+#else
+import Glibc
+#endif
 
 public enum JSONValue: Codable, Equatable, Sendable {
     case object([String: JSONValue]), array([JSONValue]), string(String), number(Double), bool(Bool), null
@@ -250,6 +255,58 @@ public struct KimiMessage: Decodable, Identifiable, Equatable, Sendable {
             id: id, role: role, content: merged, createdAt: createdAt, metadata: metadata)
     }
 }
+/// A reused projection or search must know that the earlier messages of a window
+/// did not change, and asks on every streamed token. Walking them through an
+/// iterator copies each element, retaining and releasing its strings and parts;
+/// a copy of an unchanged message is instead compared as the bytes it was copied
+/// from, because bitwise equal storage is value equal. A byte difference only
+/// means the values still need the real comparison.
+extension KimiMessage {
+    static func sameWindow(_ lhs: ArraySlice<KimiMessage>, _ rhs: ArraySlice<KimiMessage>) -> Bool {
+        guard lhs.count == rhs.count, !lhs.isEmpty else { return lhs.count == rhs.count }
+        let bitwise = lhs.withContiguousStorageIfAvailable { left in
+            rhs.withContiguousStorageIfAvailable { right -> Bool? in
+                guard left.count == right.count,
+                      let first = left.baseAddress, let second = right.baseAddress else { return nil }
+                let size = MemoryLayout<KimiMessage>.size, stride = MemoryLayout<KimiMessage>.stride
+                let lhsBytes = UnsafeRawPointer(first), rhsBytes = UnsafeRawPointer(second)
+                // Without trailing padding one comparison covers the window.
+                if size == stride { return memcmp(lhsBytes, rhsBytes, left.count * stride) == 0 }
+                for index in 0..<left.count
+                where !sameBytes(lhsBytes + index * stride, rhsBytes + index * stride, count: size) { return false }
+                return true
+            } ?? nil
+        } ?? nil
+        if bitwise == true { return true }
+        // Messages rebuilt from the same wire data are equal by value with
+        // different payloads. The indexed walk keeps them from being copied.
+        let valued = lhs.withContiguousStorageIfAvailable { left in
+            rhs.withContiguousStorageIfAvailable { right -> Bool? in
+                guard left.count == right.count else { return nil }
+                for index in 0..<left.count where left[index] != right[index] { return false }
+                return true
+            } ?? nil
+        } ?? nil
+        return valued ?? lhs.elementsEqual(rhs)
+    }
+
+    /// Only trailing padding can separate two copies of one value, so the bytes
+    /// a value occupies decide.
+    private static func sameBytes(_ lhs: UnsafeRawPointer, _ rhs: UnsafeRawPointer, count: Int) -> Bool {
+        var offset = 0
+        while offset + 8 <= count {
+            if lhs.loadUnaligned(fromByteOffset: offset, as: UInt64.self)
+                != rhs.loadUnaligned(fromByteOffset: offset, as: UInt64.self) { return false }
+            offset += 8
+        }
+        while offset < count {
+            if lhs.load(fromByteOffset: offset, as: UInt8.self) != rhs.load(fromByteOffset: offset, as: UInt8.self) { return false }
+            offset += 1
+        }
+        return true
+    }
+}
+
 public struct KimiLiveTool: Decodable, Identifiable, Equatable, Sendable {
     public let toolCallId: String
     public let name: String

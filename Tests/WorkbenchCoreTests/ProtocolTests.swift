@@ -41,6 +41,7 @@ struct ProtocolTests {
         try checkConversationPresentationModel()
         try checkConversationPresentationHistory()
         try checkConversationPresentationPaging()
+        try checkWindowIdentityReuse()
         checkCollapsedWhitespace()
         try checkTurnExcerpt()
         checkCompactionSummaryDisplay()

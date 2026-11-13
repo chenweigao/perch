@@ -55,7 +55,11 @@ public final class ConversationSearch {
         let role: ConversationFindOptions.Role
     }
     private struct Earlier {
-        let source: ArraySlice<KimiMessage>
+        /// The window these hits were made from, or an equal window a later update
+        /// brought. Messages rebuilt from the same wire data compare equal by value
+        /// while carrying different payloads; adopting the newest copy keeps the
+        /// next comparison on the bytes a copy carries.
+        var source: ArraySlice<KimiMessage>
         let query: String
         let options: ConversationFindOptions
         let hits: [ConversationSearchHit]
@@ -83,8 +87,9 @@ public final class ConversationSearch {
         let prefix = messages[..<split]
         var hits: [ConversationSearchHit]
         if let earlier, earlier.query == query, earlier.options == options,
-           earlier.source.count == prefix.count, earlier.source.elementsEqual(prefix) {
+           earlier.source.count == prefix.count, KimiMessage.sameWindow(prefix, earlier.source) {
             hits = earlier.hits
+            self.earlier?.source = prefix
         } else {
             var found: [String: Entry] = [:]
             let previous = earlier?.entries ?? [:]
