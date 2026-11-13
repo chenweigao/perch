@@ -129,7 +129,7 @@ jobs:
           fi
       - env:
           PERCH_REUSE_PREBUILT: '1'
-        run: python3 scripts/check-functional.py macos --group core --output .local/functional-core
+        run: python3 scripts/check-functional.py macos --group core-regression --output .local/functional-core
       - name: Retain core results
         if: always() && hashFiles('.local/functional-core/results.json') != ''
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -141,8 +141,8 @@ jobs:
           overwrite: true
           if-no-files-found: error
 
-  native-host:
-    name: Native host lifecycle regression
+  native-math:
+    name: Native math performance regression
     needs: native-build
     runs-on: xcode-27
     timeout-minutes: 20
@@ -164,22 +164,107 @@ jobs:
           else
             tar -xzf .local/native-build/build.tar.gz
           fi
-      - run: python3 scripts/check-functional.py macos --group host --output .local/functional-host
-      - name: Retain host lifecycle results
-        if: always() && hashFiles('.local/functional-host/results.json') != ''
+      - env:
+          PERCH_REUSE_PREBUILT: '1'
+        run: python3 scripts/check-functional.py macos --group core-math --output .local/functional-math
+      - name: Retain math performance results
+        if: always() && hashFiles('.local/functional-math/results.json') != ''
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: macos-results-native-host
-          path: .local/functional-host/
+          name: macos-results-native-math
+          path: .local/functional-math/
           include-hidden-files: true
           retention-days: 7
           overwrite: true
           if-no-files-found: error
 
-  native-acceptance:
-    name: Native session regression
+  native-host-build:
+    name: Native host fixture build
+    needs: native-build
     runs-on: xcode-27
-    timeout-minutes: 25
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Download the shared native build
+        uses: actions/download-artifact@v4
+        with:
+          name: native-build-${{ github.sha }}
+          path: .local/native-build
+      - name: Restore the shared native build
+        run: |
+          set -o pipefail
+          if [ -f .local/native-build/build.tar.zst ]; then
+            zstd -d -T0 -q -c .local/native-build/build.tar.zst | tar -xf -
+          else
+            tar -xzf .local/native-build/build.tar.gz
+          fi
+      - run: python3 scripts/check-functional.py macos --group host-build --output .local/functional-host-build
+      - name: Package the host lifecycle fixture
+        run: |
+          mkdir -p .local/host-fixture
+          ditto -c -k --sequesterRsrc --keepParent .local/host-fixture/HostLifecycleChecks.app .local/host-fixture/HostLifecycleChecks.zip
+      - name: Publish the host lifecycle fixture
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: native-host-fixture-${{ github.sha }}
+          path: .local/host-fixture/HostLifecycleChecks.zip
+          compression-level: 0
+          retention-days: 1
+          overwrite: true
+          if-no-files-found: error
+      - name: Retain host fixture build results
+        if: always() && hashFiles('.local/functional-host-build/results.json') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: macos-results-native-host-build
+          path: .local/functional-host-build/
+          include-hidden-files: true
+          retention-days: 7
+          overwrite: true
+          if-no-files-found: error
+
+  native-host:
+    name: Native host lifecycle regression (${{ matrix.group }})
+    needs: native-host-build
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [state, workspace]
+    runs-on: xcode-27
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Download the host lifecycle fixture
+        uses: actions/download-artifact@v4
+        with:
+          name: native-host-fixture-${{ github.sha }}
+          path: .local/host-fixture-archive
+      - name: Restore the host lifecycle fixture
+        run: |
+          mkdir -p .local/host-fixture
+          ditto -x -k .local/host-fixture-archive/HostLifecycleChecks.zip .local/host-fixture
+      - run: python3 scripts/check-functional.py macos --group host-${{ matrix.group }} --output .local/functional-host-${{ matrix.group }}
+      - name: Retain host lifecycle results
+        if: always() && hashFiles(format('.local/functional-host-{0}/results.json', matrix.group)) != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: macos-results-native-host-${{ matrix.group }}
+          path: .local/functional-host-${{ matrix.group }}/
+          include-hidden-files: true
+          retention-days: 7
+          overwrite: true
+          if-no-files-found: error
+
+  native-acceptance-build:
+    name: Native acceptance fixture build
+    runs-on: xcode-27
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -205,13 +290,61 @@ jobs:
           key: ${{ runner.os }}-${{ runner.arch }}-xcode-27-acceptance-${{ hashFiles('Package.resolved', 'patches/**') }}-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-${{ runner.arch }}-xcode-27-acceptance-${{ hashFiles('Package.resolved', 'patches/**') }}-
-      - run: python3 scripts/check-functional.py macos --group native --output .local/functional-native
-      - name: Retain native session results
-        if: always() && hashFiles('.local/functional-native/results.json') != ''
+      - run: python3 scripts/check-functional.py macos --group native-build --output .local/functional-native-build
+      - name: Package the native acceptance fixture
+        run: |
+          mkdir -p .local/native-acceptance
+          ditto -c -k --sequesterRsrc --keepParent "build/Perch Acceptance.app" .local/native-acceptance/PerchAcceptance.zip
+      - name: Publish the native acceptance fixture
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: macos-results-native-acceptance
-          path: .local/functional-native/
+          name: native-acceptance-${{ github.sha }}
+          path: .local/native-acceptance/PerchAcceptance.zip
+          compression-level: 0
+          retention-days: 1
+          overwrite: true
+          if-no-files-found: error
+      - name: Retain native acceptance build results
+        if: always() && hashFiles('.local/functional-native-build/results.json') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: macos-results-native-acceptance-build
+          path: .local/functional-native-build/
+          include-hidden-files: true
+          retention-days: 7
+          overwrite: true
+          if-no-files-found: error
+
+  native-acceptance:
+    name: Native session regression (${{ matrix.group }})
+    needs: native-acceptance-build
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [streaming, session]
+    runs-on: xcode-27
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Download the native acceptance fixture
+        uses: actions/download-artifact@v4
+        with:
+          name: native-acceptance-${{ github.sha }}
+          path: .local/native-acceptance
+      - name: Restore the native acceptance fixture
+        run: |
+          mkdir -p build
+          ditto -x -k .local/native-acceptance/PerchAcceptance.zip build
+      - run: python3 scripts/check-functional.py macos --group native-${{ matrix.group }} --output .local/functional-native-${{ matrix.group }}
+      - name: Retain native session results
+        if: always() && hashFiles(format('.local/functional-native-{0}/results.json', matrix.group)) != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: macos-results-native-acceptance-${{ matrix.group }}
+          path: .local/functional-native-${{ matrix.group }}/
           include-hidden-files: true
           retention-days: 7
           overwrite: true
@@ -257,7 +390,15 @@ jobs:
   native-summary:
     name: Native build and interaction regression
     if: always()
-    needs: [native-build, native-core, native-host, native-acceptance, native-navigation]
+    needs:
+      - native-build
+      - native-core
+      - native-math
+      - native-host-build
+      - native-host
+      - native-acceptance-build
+      - native-acceptance
+      - native-navigation
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -272,7 +413,10 @@ jobs:
         env:
           BUILD_RESULT: ${{ needs.native-build.result }}
           CORE_RESULT: ${{ needs.native-core.result }}
+          MATH_RESULT: ${{ needs.native-math.result }}
+          HOST_BUILD_RESULT: ${{ needs.native-host-build.result }}
           HOST_RESULT: ${{ needs.native-host.result }}
+          ACCEPTANCE_BUILD_RESULT: ${{ needs.native-acceptance-build.result }}
           ACCEPTANCE_RESULT: ${{ needs.native-acceptance.result }}
           NAVIGATION_RESULT: ${{ needs.native-navigation.result }}
         run: |
@@ -283,7 +427,10 @@ jobs:
           results = {
               "build": os.environ["BUILD_RESULT"],
               "core": os.environ["CORE_RESULT"],
+              "math": os.environ["MATH_RESULT"],
+              "host_build": os.environ["HOST_BUILD_RESULT"],
               "host": os.environ["HOST_RESULT"],
+              "acceptance_build": os.environ["ACCEPTANCE_BUILD_RESULT"],
               "acceptance": os.environ["ACCEPTANCE_RESULT"],
               "navigation": os.environ["NAVIGATION_RESULT"],
           }
