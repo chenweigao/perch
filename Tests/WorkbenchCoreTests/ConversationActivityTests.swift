@@ -59,6 +59,8 @@ func checkConversationActivity() throws {
                  "A returned error folds away; only a missing result needs attention")
     precondition(mixed.todos.count == 2 && mixed.completedSteps == 1, "Keep the plan after hiding completed TodoList calls")
     precondition(mixed.tools.count == 6, "Filtering the popover must not discard tool history")
+    precondition(mixed.tools.map(\.id) == ["t", "returned", "failed", "missing", "active", "plan"],
+                 "The popover lists the turn's tools in source order, duplicates and results included")
     let transcript = ToolVisibilityProjection().update(mixedMessages, sessionID: "fixture", running: ["active"])
     precondition(transcript.tools["t"]?.status == .succeeded && transcript.tools["returned"]?.status == .returned)
     precondition(offline.attentionTools.map(\.id) == ["t"])

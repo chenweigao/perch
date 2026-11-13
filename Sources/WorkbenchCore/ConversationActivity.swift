@@ -37,11 +37,20 @@ public struct ConversationActivity {
                 running: Set<String> = [], online: Bool = true, isThinking: Bool = false,
                 isResponding: Bool = false, pendingCount: Int = 0, isStopping: Bool = false) {
         let start = messages.lastIndex { $0.isUserPrompt } ?? 0
-        let current = Array(messages.dropFirst(start))
+        // A window that is one long turn needs no copy of itself.
+        let current = start == 0 ? messages : Array(messages.dropFirst(start))
         let projection = ToolVisibilityProjection().update(current, sessionID: "activity", live: liveTools,
                                                           running: running, online: online)
-        tools = projection.messages.flatMap(\.content).filter { $0.type == "tool_use" }
-            .compactMap { projection.tools[$0.toolCallId ?? ""] }
+        // One walk in source order, instead of materializing every part of the
+        // turn and then the tool calls in it.
+        var visible: [VisibleTool] = []
+        visible.reserveCapacity(projection.tools.count)
+        for message in projection.messages {
+            for part in message.content where part.type == "tool_use" {
+                if let tool = projection.tools[part.toolCallId ?? ""] { visible.append(tool) }
+            }
+        }
+        tools = visible
         todos = ConversationTodo.floating(in: current, isRunning: isRunning)
         edits = SessionEditStats.derive(from: current)
         var progress = Hasher()

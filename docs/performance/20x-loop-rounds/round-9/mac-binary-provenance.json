@@ -1,0 +1,49 @@
+{
+  "baseline_ref": "e160eec361622ab62cc71d6c2ed6df5b6899f023",
+  "binary_sha256": {
+    ".build/round9-baseline/out/Products/Release/WorkbenchChecks": "03aad85cefe286c9fbc8c6e999ffe44a7d81775a48fe8822f8c7a694cead7121",
+    ".build/round9-candidate/out/Products/Release/WorkbenchChecks": "6dee31b88a2a37c8d821ab5bee1c04c0159f3fa70095bb8ae6653f7bf3bc16ac"
+  },
+  "binary_sha256_after_all_pairs": {
+    ".build/round9-baseline/out/Products/Release/WorkbenchChecks": "03aad85cefe286c9fbc8c6e999ffe44a7d81775a48fe8822f8c7a694cead7121",
+    ".build/round9-candidate/out/Products/Release/WorkbenchChecks": "6dee31b88a2a37c8d821ab5bee1c04c0159f3fa70095bb8ae6653f7bf3bc16ac"
+  },
+  "builder": "Apple Swift 6.4 (swiftlang-6.4.0.34.1), swift build -c release --product WorkbenchChecks",
+  "candidate_patch_stat": "patch_applied=ok\n M Sources/WorkbenchCore/ConversationActivity.swift\n M Sources/WorkbenchCore/ConversationTodo.swift\n M Tests/WorkbenchCoreTests/ConversationActivityTests.swift",
+  "checks": {
+    "linux_candidate": "91 PASS + 1 SKIP",
+    "linux_matched_baseline": "91 PASS + 1 SKIP (math needs AppKit)",
+    "linux_portable": "10/10",
+    "linux_remote_bridge_tests": 224,
+    "mac_baseline_pass": 92,
+    "mac_candidate_pass": 92,
+    "mac_exit_codes": [
+      0,
+      0
+    ]
+  },
+  "cold_launches": {
+    "completed_launches": 5,
+    "passed": true,
+    "passed_launches": 5,
+    "revision": "v0.8.1-29-ge160eec-dirty",
+    "scope": "five isolated production WindowGroup cold launches; no remote acceptance"
+  },
+  "fixture_source_sha256": {
+    "Tests/WorkbenchCoreTests/ActivityBench.swift": "38fcb58430e95097a3da735f62c1da769d25729725d4c07553fa21014fb97c4e",
+    "Tests/WorkbenchCoreTests/BenchClock.swift": "f8f8723875b18eebffdbdbd42c1b07c9247f90328d1fd64f3d695687cfb816e3",
+    "Tests/WorkbenchCoreTests/ConversationActivityTests.swift": "f2b3d5ddca31dcb8027c2f847b910e4842abd71e527a444777d4040525a12d96",
+    "Tests/WorkbenchCoreTests/EditLineBench.swift": "eebe68e23b14788dd4fbe5712a663144d1f746fbcf4d1e51fe608d5880ff8bc8",
+    "Tests/WorkbenchCoreTests/PresentationBench.swift": "b89e39741639fe120770ac8b3f3eae3fe8369e16197c7468be3901f55487d3aa",
+    "Tests/WorkbenchCoreTests/StreamingBench.swift": "1a05e3fe94ed5b738f69fdf49b86d6497a474f1ba5ebaf4c58b5c81ebe4f2030"
+  },
+  "hashes_unchanged": true,
+  "platform": "darwin arm64 macOS 27.0.1",
+  "round": 9,
+  "scope": "same-machine six AB/BA pairs; model only; fixtures and decoding excluded from timing",
+  "scratch_paths": {
+    "baseline": ".build/round9-baseline/out/Products/Release/WorkbenchChecks",
+    "candidate": ".build/round9-candidate/out/Products/Release/WorkbenchChecks"
+  },
+  "test_code_note": "The patch adds one ordering assertion to ConversationActivityTests.swift, so the Mac baseline binary was built before it and the candidate after it. No bench source is touched by the patch and the assertion is not on any measured path; the Linux A/B used a matched baseline that already contains the assertion, and that baseline passes it, which is what proves the assertion pins pre-existing behaviour."
+}
