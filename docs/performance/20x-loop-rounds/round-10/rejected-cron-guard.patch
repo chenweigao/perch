@@ -1,0 +1,19 @@
+diff --git a/Sources/WorkbenchCore/CronFireEnvelope.swift b/Sources/WorkbenchCore/CronFireEnvelope.swift
+index 2da97d7..09d3274 100644
+--- a/Sources/WorkbenchCore/CronFireEnvelope.swift
++++ b/Sources/WorkbenchCore/CronFireEnvelope.swift
+@@ -17,6 +17,14 @@ public struct CronFireEnvelope: Equatable, Sendable {
+     /// missing prompt block: anything bracketed by the envelope tags is ours,
+     /// and rendering it as a prose bubble would be wrong either way.
+     public static func parse(_ text: String) -> CronFireEnvelope? {
++        // Trimming only removes whitespace, so an envelope's text opens with its
++        // tag and closes with its end tag once that whitespace is gone. A text
++        // whose first or last scalar is neither the tag's character nor trimmable
++        // cannot be an envelope; rejecting it here keeps a window's ordinary
++        // prompts from being copied and trimmed on every projection.
++        let trimmable = CharacterSet.whitespacesAndNewlines
++        guard let first = text.unicodeScalars.first, first == "<" || trimmable.contains(first),
++              let last = text.unicodeScalars.last, last == ">" || trimmable.contains(last) else { return nil }
+         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+         guard trimmed.hasPrefix("<cron-fire "), trimmed.hasSuffix("</cron-fire>"),
+               let openEnd = trimmed.firstIndex(of: ">") else { return nil }

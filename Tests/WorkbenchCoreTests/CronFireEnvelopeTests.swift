@@ -27,6 +27,20 @@ func checkCronFireEnvelope() throws {
     expectEqual(CronFireEnvelope.parse("<system-reminder>x</system-reminder>") == nil, true)
     expectEqual(CronFireEnvelope.parse("今天天气怎么样") == nil, true)
 
+    // Whitespace around an envelope still parses and a text that merely starts or
+    // ends like one still does not: rejecting before the trim must not move any
+    // answer, only skip the copy for the window's ordinary prompts.
+    expectEqual(CronFireEnvelope.parse("\n  <cron-fire jobId=\"x\" cron=\"0 9 * * *\"></cron-fire>\n ")?.cron,
+                Optional("0 9 * * *"))
+    expectEqual(CronFireEnvelope.parse(" <cron-fire jobId=\"x\"><prompt>计划任务</prompt></cron-fire> ")?.prompt,
+                Optional("计划任务"))
+    expectEqual(CronFireEnvelope.parse("  普通问题") == nil, true)
+    expectEqual(CronFireEnvelope.parse("<b>不是信封></b>") == nil, true)
+    expectEqual(CronFireEnvelope.parse("看看 <cron-fire jobId=\"x\"></cron-fire> ") == nil, true)
+    expectEqual(CronFireEnvelope.parse("<cron-fire jobId=\"x\"></cron-fire>尾注") == nil, true)
+    expectEqual(CronFireEnvelope.parse("") == nil, true)
+    expectEqual(CronFireEnvelope.parse(" \n\t ") == nil, true)
+
     func message(_ text: String, id: String = "1") throws -> KimiMessage {
         try KimiWire.decoder().decode(KimiMessage.self, from: JSONSerialization.data(withJSONObject: [
             "id": id, "role": "user", "created_at": "1",
