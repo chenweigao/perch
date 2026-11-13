@@ -1,0 +1,34 @@
+{
+  "purpose": "Mac verification that the eight retained CronFireEnvelope assertions pass on the committed configuration with unmodified product code (independent-review finding: the Mac A/B baseline binary predated the assertions)",
+  "host": "mac-mini (Apple Silicon, Aqua session via local.perf.runner)",
+  "performed_at": "2026-11-13T20:53:12+08:00 build start, 20:54:44 done",
+  "raw_log": "round-10/macos-committed-checks.log (runner result 10-round10-verify.log)",
+  "checkout": {
+    "head": "9b3a728986da1513249a5b1c63e30163f1479a9f",
+    "branch": "perf/20x-loop-10-20261113 (as pushed before the docs-fix commit)",
+    "modified_files": 0,
+    "swift_subtree_sha256": "92016672c69a8ba9a0dcee2e8128a61be06c98e29386a5cf51361bf1701d9a9d",
+    "swift_subtree_note": "git ls-tree -r <head> -- Sources Tests Package.swift Package.resolved | sha256sum; identical at 9b3a728, 5a6e145 and the docs-fix head (later commits touch only docs/), so this run verifies the exact committed Swift configuration of the PR",
+    "cron_test_source_sha256": "4ab1948f0c403a07e6b2dc5bd4fb127c5f46b812f03791a0d46ca1083b74adcc (= HEAD version including the eight assertions)"
+  },
+  "build": {
+    "channel": "PerfRunner job, default SwiftPM release builder, independent scratch product path .build/round10-committed",
+    "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)",
+    "exit": 0,
+    "binary": ".build/round10-committed/out/Products/Release/WorkbenchChecks",
+    "binary_sha256": "8b294a158009c6ad339b827a04caf2c0d01b07b8d9e43843bee5f1c303308fb8"
+  },
+  "checks": {
+    "exit": 0,
+    "pass": 92,
+    "skip": 0,
+    "cron_envelope_check_line": "23:PASS: cron-fire envelope parsing, turn anchoring, naming excerpt"
+  },
+  "ab_provenance_disclosure": {
+    "macos_ab_baseline_binary": "54e79425c7cde8ef5297de0112f459e96283bee570c7cdc3ed58be4883a7014e",
+    "macos_ab_baseline_cron_test_source_sha256": "7860ce78420e0a67983f2a3595ea7431f361023f68ef186252c543278bc78f7e (= base a9bca95 without the eight assertions; recorded in macos.json fixture_source_sha256)",
+    "macos_ab_candidate_binary": "030afe613e915dc5567f696da1d922761596281d4c1b7619d46c5b267845c9f1 (guard patch + eight assertions; checks 92 PASS exit 0)",
+    "bench_sources": "the five bench source hashes in macos.json fixture_source_sha256 are identical on both A/B sides and equal the committed tree; the assertions are not on any measured path",
+    "linux_matched": "linux.json matched_binaries: both variants contain the same test sources including the new assertions (fixture hash 4ab1948f... recorded); baseline product code unmodified; 91 PASS + 1 SKIP exit 0 (binary 3667e7eb...)"
+  }
+}
