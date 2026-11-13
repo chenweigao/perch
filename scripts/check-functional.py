@@ -38,8 +38,18 @@ NATIVE_MODES = [
     "workspace", "review", "branch-review", "paging", "invalidation", "subagents", "input",
 ]
 NATIVE_MODE_GROUPS = {
-    "native-streaming": {"all", "switching", "joint"},
-    "native-session": set(NATIVE_MODES) - {"all", "switching", "joint"},
+    "native-streaming": {"all", "switching", "dashboard", "joint"},
+    "native-session": set(NATIVE_MODES) - {"all", "switching", "dashboard", "joint"},
+}
+NAVIGATION_MODES = [
+    "reading", "interactions", "paragraphs", "claude", "user-rows", "assistant-rows",
+    "streaming-rendering", "tool-card", "fast-scroll", "turns", "roundtrip",
+]
+NAVIGATION_MODE_GROUPS = {
+    "navigation-reading": {"reading", "interactions", "paragraphs", "claude", "user-rows", "assistant-rows"},
+    "navigation-interaction": set(NAVIGATION_MODES) - {
+        "reading", "interactions", "paragraphs", "claude", "user-rows", "assistant-rows",
+    },
 }
 HOST_FIXTURE_APP = ROOT / ".local/host-fixture/HostLifecycleChecks.app"
 
@@ -53,6 +63,16 @@ def native_commands(out):
         "--mode", "sidebar-projects", "--sidebar-variant", "projects", "--output", str(out / "native-sidebar-projects")], 150))
     commands.append(("native-input-control", [python, "scripts/run-native-acceptance.py",
         "--mode", "input", "--input-positive-control", "--output", str(out / "native-input-control")], 150))
+    return commands
+
+
+def navigation_commands(out):
+    python = sys.executable
+    commands = [("navigation-" + mode, [python, "scripts/run-navigation-check.py",
+        mode, "--output", str(out / ("navigation-" + mode))], 150) for mode in NAVIGATION_MODES]
+    for label, extra in [("disclosure", []), ("disclosure-full", ["--full-content"])]:
+        commands.append(("navigation-" + label, [python, "scripts/run-navigation-check.py", "disclosure",
+            "--disclosure-context", "--assert-atomic-disclosure", "--output", str(out / ("navigation-" + label))] + extra, 150))
     return commands
 
 
@@ -99,14 +119,15 @@ def macos_commands(group, out):
         if group == "native-session":
             selected |= {"native-sidebar-projects", "native-input-control"}
         commands += [command for command in native_commands(out) if command[0] in selected]
-    if group in ("all", "navigation"):
+    if group in ("all", "navigation", "navigation-build"):
         commands.append(("navigation-build", ["bash", "scripts/build-navigation-preview.sh"], 600))
-        for mode in ["reading", "interactions", "paragraphs", "claude", "user-rows", "assistant-rows", "streaming-rendering", "tool-card", "fast-scroll", "turns", "roundtrip"]:
-            commands.append(("navigation-" + mode, [python, "scripts/run-navigation-check.py",
-                mode, "--output", str(out / ("navigation-" + mode))], 150))
-        for label, extra in [("disclosure", []), ("disclosure-full", ["--full-content"])]:
-            commands.append(("navigation-" + label, [python, "scripts/run-navigation-check.py", "disclosure",
-                "--disclosure-context", "--assert-atomic-disclosure", "--output", str(out / ("navigation-" + label))] + extra, 150))
+    if group in ("all", "navigation"):
+        commands += navigation_commands(out)
+    if group in NAVIGATION_MODE_GROUPS:
+        selected = {"navigation-" + mode for mode in NAVIGATION_MODE_GROUPS[group]}
+        if group == "navigation-interaction":
+            selected |= {"navigation-disclosure", "navigation-disclosure-full"}
+        commands += [command for command in navigation_commands(out) if command[0] in selected]
     return commands
 
 
@@ -116,7 +137,8 @@ def main():
     parser.add_argument("--output", type=Path, required=True, help="New directory for this run")
     parser.add_argument("--group", choices=[
         "all", "build", "core", "core-regression", "core-math", "host", "host-build",
-        *HOST_PHASE_GROUPS, "native", "native-build", *NATIVE_MODE_GROUPS, "navigation",
+        *HOST_PHASE_GROUPS, "native", "native-build", *NATIVE_MODE_GROUPS,
+        "navigation", "navigation-build", *NAVIGATION_MODE_GROUPS,
     ], default="all")
     args = parser.parse_args()
     if args.suite == "portable" and args.group != "all":
