@@ -7,40 +7,46 @@ extension String {
     /// combining mark; anything it cannot prove identical (non-ASCII whitespace
     /// like U+3000, an Extend/SpacingMark right after whitespace, which fuses
     /// into one non-whitespace Character, or unexpected UTF-8) falls back to
-    /// the Character-accurate form.
+    /// the Character-accurate form. The bytes are read in place through
+    /// `withUTF8` on a copy-on-write local (a refcount bump for the native
+    /// contiguous strings this sees); only the collapsed output is allocated.
     public var collapsedWhitespace: String {
         let strict = { self.split(whereSeparator: \.isWhitespace).joined(separator: " ") }
-        let bytes = Array(utf8)
-        var out: [UInt8] = []
-        out.reserveCapacity(bytes.count)
-        var pendingSpace = false
-        var lastScalar: UInt32 = 0
-        var i = 0
-        while i < bytes.count {
-            let byte = bytes[i]
-            if byte == 0x20 || (0x09...0x0D).contains(byte) {
-                // GB9b: a Prepend scalar absorbs the following space into its
-                // own Character, which is then not whitespace; the pinned set
-                // is verified against the stdlib's own breaking in the checks.
-                if Self.isPrependScalar(lastScalar) { return strict() }
-                while i < bytes.count, bytes[i] == 0x20 || (0x09...0x0D).contains(bytes[i]) { i += 1 }
-                if i < bytes.count, bytes[i] >= 0x80, Self.beginsBindingMark(in: bytes, at: i) { return strict() }
-                if !out.isEmpty { pendingSpace = true }
-            } else if byte < 0x80 {
-                if pendingSpace { out.append(0x20); pendingSpace = false }
-                out.append(byte)
-                lastScalar = 0
-                i += 1
-            } else {
-                guard let (scalar, length) = Self.utf8Scalar(in: bytes, at: i),
-                      !Self.isNonASCIIWhitespace(scalar) else { return strict() }
-                if pendingSpace { out.append(0x20); pendingSpace = false }
-                out.append(contentsOf: bytes[i..<i + length])
-                lastScalar = scalar
-                i += length
+        var contiguous = self
+        return contiguous.withUTF8 { bytes in
+            var out: [UInt8] = []
+            out.reserveCapacity(bytes.count)
+            var pendingSpace = false
+            var lastScalar: UInt32 = 0
+            var i = 0
+            while i < bytes.count {
+                let byte = bytes[i]
+                if byte == 0x20 || (0x09...0x0D).contains(byte) {
+                    // GB9b: a Prepend scalar absorbs the following space into its
+                    // own Character, which is then not whitespace; the pinned set
+                    // is verified against the stdlib's own breaking in the checks.
+                    if Self.isPrependScalar(lastScalar) { return strict() }
+                    while i < bytes.count, bytes[i] == 0x20 || (0x09...0x0D).contains(bytes[i]) { i += 1 }
+                    if i < bytes.count, bytes[i] >= 0x80, Self.beginsBindingMark(in: bytes, at: i) { return strict() }
+                    if !out.isEmpty { pendingSpace = true }
+                } else if byte < 0x80 {
+                    if pendingSpace { out.append(0x20); pendingSpace = false }
+                    out.append(byte)
+                    lastScalar = 0
+                    i += 1
+                } else {
+                    guard let (scalar, length) = Self.utf8Scalar(in: bytes, at: i),
+                          !Self.isNonASCIIWhitespace(scalar) else { return strict() }
+                    if pendingSpace { out.append(0x20); pendingSpace = false }
+                    // A decoded scalar is at most four bytes; copy it directly
+                    // instead of walking a slice through the generic append.
+                    for offset in 0..<length { out.append(bytes[i + offset]) }
+                    lastScalar = scalar
+                    i += length
+                }
             }
+            return String(decoding: out, as: UTF8.self)
         }
-        return String(decoding: out, as: UTF8.self)
     }
 
     /// Unicode GCB=Prepend, pinned. `checkCollapsedWhitespace` walks every
@@ -71,7 +77,7 @@ extension String {
         }
     }
 
-    private static func utf8Scalar(in bytes: [UInt8], at i: Int) -> (UInt32, Int)? {
+    private static func utf8Scalar(in bytes: UnsafeBufferPointer<UInt8>, at i: Int) -> (UInt32, Int)? {
         func continuation(_ j: Int) -> Bool { j < bytes.count && bytes[j] & 0xC0 == 0x80 }
         switch bytes[i] {
         case 0xC2...0xDF:
@@ -96,12 +102,37 @@ extension String {
     /// guess, so any binder forces the strict path. ZWJ is checked by value:
     /// its grapheme-break class is ZWJ, not Extend, so `isGraphemeExtend`
     /// is false for it.
-    private static func beginsBindingMark(in bytes: [UInt8], at i: Int) -> Bool {
+    private static func beginsBindingMark(in bytes: UnsafeBufferPointer<UInt8>, at i: Int) -> Bool {
         guard let (value, _) = utf8Scalar(in: bytes, at: i), let scalar = Unicode.Scalar(value) else { return true }
+        // Scalars the pinned ranges below prove cannot bind skip the property
+        // lookups; CJK-heavy excerpts otherwise pay two table walks per
+        // whitespace run they follow.
+        if isNeverBindingScalar(value) { return false }
         if value == 0x200D || scalar.properties.isGraphemeExtend { return true }
         switch scalar.properties.generalCategory {
         case .nonspacingMark, .spacingMark, .enclosingMark: return true
         default: return false
+        }
+    }
+
+    /// Pinned never-binding ranges for `beginsBindingMark`: CJK, kana, Hangul
+    /// and fullwidth blocks that contain no ZWJ, no Grapheme_Extend scalar and
+    /// no Mn/Mc/Me, so none of their scalars can fuse with a preceding
+    /// whitespace. `checkCollapsedWhitespace` walks every scalar and compares
+    /// the byte path against the Character-accurate form on this toolchain's
+    /// own Unicode data, so a data update surfaces as a test failure, not a
+    /// silent divergence. The halfwidth kana voiced marks U+FF9E/U+FF9F are
+    /// Grapheme_Extend and stay out of the set.
+    private static func isNeverBindingScalar(_ value: UInt32) -> Bool {
+        switch value {
+        case 0x1100...0x11FF, 0x3001...0x3029, 0x3030...0x303E,
+             0x3041...0x3096, 0x309D...0x309F, 0x30A1...0x30FF,
+             0x3105...0x312F, 0x3131...0x318E, 0x3400...0x4DBF,
+             0x4E00...0x9FFF, 0xAC00...0xD7A3, 0xF900...0xFAFF,
+             0xFF01...0xFF60, 0xFF61...0xFF9D, 0xFFA0...0xFFDC:
+            return true
+        default:
+            return false
         }
     }
 }
