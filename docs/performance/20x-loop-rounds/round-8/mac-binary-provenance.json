@@ -1,0 +1,56 @@
+{
+  "baseline_ref": "ad4cb18f7a2f4e91ef26b45c24d9790454cf1093",
+  "binary_sha256": {
+    "baseline": "b5768abbbaddc0746772a83b34727a85591a70e0bfa7cc49f0fd730effd18e5a",
+    "candidate": "3602cdf0e5747dd1afa96ef840e3c0195c42f6e01747ad7a60b7600716adbc8d"
+  },
+  "binary_sha256_after_all_pairs": {
+    "baseline": "b5768abbbaddc0746772a83b34727a85591a70e0bfa7cc49f0fd730effd18e5a",
+    "candidate": "3602cdf0e5747dd1afa96ef840e3c0195c42f6e01747ad7a60b7600716adbc8d"
+  },
+  "builder": "Apple Swift 6.4 (swiftlang-6.4.0.34.1), swift build -c release --product WorkbenchChecks",
+  "candidate_patch_stat": "Sources/WorkbenchCore/ConversationSearch.swift     |    9 +-\n Sources/WorkbenchCore/KimiProtocol.swift           |   57 ++++++++++\n .../WorkbenchCore/ToolVisibilityProjection.swift   |   21 +++-\n Tests/WorkbenchCoreTests/ProtocolTests.swift       |    1 \n Tests/WorkbenchCoreTests/WindowIdentityTests.swift |  120 ++++++++++++++++++++\n 5 files changed, 201 insertions(+), 7 deletions(-)",
+  "checks": {
+    "baseline_pass": 91,
+    "candidate_pass": 92,
+    "exit_codes": [
+      0,
+      0
+    ],
+    "note": "macOS runs the math rendering check, so it is one PASS ahead of the Linux suite"
+  },
+  "cold_launches": {
+    "completed_launches": 5,
+    "passed": true,
+    "revision": "v0.8.1-27-gad4cb18-dirty",
+    "scope": "five isolated production WindowGroup cold launches; no remote acceptance"
+  },
+  "fixture_source_sha256": {
+    "Tests/WorkbenchCoreTests/ActivityBench.swift": "38fcb58430e95097a3da735f62c1da769d25729725d4c07553fa21014fb97c4e",
+    "Tests/WorkbenchCoreTests/BenchClock.swift": "f8f8723875b18eebffdbdbd42c1b07c9247f90328d1fd64f3d695687cfb816e3",
+    "Tests/WorkbenchCoreTests/EditLineBench.swift": "eebe68e23b14788dd4fbe5712a663144d1f746fbcf4d1e51fe608d5880ff8bc8",
+    "Tests/WorkbenchCoreTests/PresentationBench.swift": "b89e39741639fe120770ac8b3f3eae3fe8369e16197c7468be3901f55487d3aa",
+    "Tests/WorkbenchCoreTests/StreamingBench.swift": "1a05e3fe94ed5b738f69fdf49b86d6497a474f1ba5ebaf4c58b5c81ebe4f2030"
+  },
+  "hashes_unchanged": true,
+  "layout_probe": {
+    "linux": {
+      "KimiMessage_size": 73,
+      "KimiMessage_stride": 80,
+      "note": "value-equal copies differed only at offsets 73..79, the trailing padding; temporary probe, removed before committing"
+    },
+    "macos": "not measured: a standalone probe binary was killed (exit 137) in both the SSH and the Aqua runner context, the failure mode the loop index already records; both branches of sameWindow are covered by the same checks and the Mac fast path is measured below"
+  },
+  "platform": "darwin arm64 macOS 27.0.1",
+  "product_build": {
+    "app": "build/Perch.app",
+    "command": "scripts/build.sh",
+    "exit": 0
+  },
+  "round": 8,
+  "scope": "same-machine six AB/BA pairs; model only; fixtures and decoding excluded from timing",
+  "scratch_paths": {
+    "baseline": ".build/round8-baseline/out/Products/Release/WorkbenchChecks",
+    "candidate": ".build/round8-candidate/out/Products/Release/WorkbenchChecks"
+  }
+}

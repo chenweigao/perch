@@ -14,10 +14,10 @@ A/B ≥5 轮取中位数 → 超噪声带（本机 <2%）才采纳 → Workbench
 `gh pr merge --merge --delete-branch` 自动合并并在此记录。任何门槛不满足→不合并，留 PR
 注明原因。禁止 merge 他人 PR、动主检出、碰用户真实数据/远端连接。
 
-分支纪律：工作在本线程 T3 worktree，各轮本地用 `codex/20x-loop-N-20261112`，
-推独立 `perf/20x-loop-N-20261112` PR 分支。底座：#320
-（Linux 可移植性）、#323（round 1）、#324（round 3）、#325（round 5）及 #326（round 6）
-均已合并，当前 base=74dee39。
+分支纪律：工作在本线程 T3 worktree，各轮本地用 `codex/20x-loop-N-<日期>`，
+推独立 `perf/20x-loop-N-<日期>` PR 分支（round 8 起日期为 20261113）。底座：#320
+（Linux 可移植性）、#323（round 1）、#324（round 3）、#325（round 5）、#326（round 6）
+及 #327（round 7）均已合并，当前 base=ad4cb18。
 
 **macOS 测量通道**：`ssh -o BatchMode=yes mac-mini` 直达（反向隧道，launchd KeepAlive
 自愈）。GUI 应用类作业必须走 runner：写 bash 文件到 `~/Library/PerfRunner/jobs/<名>.job`，
@@ -49,6 +49,7 @@ Mac mini 同机 A/B 超过该轮实测噪声才采纳，不能把 Linux 特有�
 | 5 | 2026-11-12 | 编辑统计 contiguous UTF-8 扫描 | **已采纳/合并：Mac -51.23%（2.05x）**，7.987→3.895ms@6400；Character oracle/Core/portable/app build/5次冷启动及全部8项CI通过，两项评审无发现 | [round-5](2026-11-12-round-5.md)；[#325](https://github.com/chenweigao/perch/pull/325)，merge=0711150（19:01） |
 | 6 | 2026-11-12 | 未知/只读tool先分类、免路径检查 | **已采纳/合并：Mac stats -13.60%**，3.729→3.222ms@6400；保留首次math CI失败，修复依赖补丁一致性后新head全部8项CI绿，独立评审/最终Codex回执无问题 | [round-6](2026-11-12-round-6.md)；[#326](https://github.com/chenweigao/perch/pull/326)，merge=74dee39（20:27）；[CI修复证据](round-6/ci/README.md) |
 | 7 | 2026-11-12 | 无共同首尾/单行编辑免分行数组 | **修订候选：Mac stats -22.39%**，3.220→2.499ms@6400；保留全lazy否定与旧小输入偏慢证据，≤1024bytes走旧算法，50代表场景/完整原样本/各门槛通过，待新head评审CI | [round-7](2026-11-12-round-7.md)；[#327](https://github.com/chenweigao/perch/pull/327)；[短输入复核](round-7/short-input/README.md) |
+| 8 | 2026-11-13 | 复用窗口按副本字节比较（delta/翻页/查找缓存） | **候选：Mac 每 delta 模型链 -47.60%**（1.145→0.600ms@16,142），tool_projection -91.60%、查找栏 -46.24%、翻页整链 -11.41%；Linux edit-lines fullLineDiff +23～31% 已证明是布局伪影（热点指令逐条相同、对照构建同向、Mac 无此退化），待评审/CI | [round-8](2026-11-13-round-8.md) |
 
 ## 否定清单（勿重复尝试）
 
@@ -56,19 +57,27 @@ Mac mini 同机 A/B 超过该轮实测噪声才采纳，不能把 Linux 特有�
   无超噪声改善。勿重复当 macOS 热点尝试（round 2）。
 - 完整lazy行cursor + whole-string canonical equality：单进程Linux筛选使common编辑
   +48–61%、NFC/NFD +165%，已撤回（round7）。最终窄化guard不等于该原型。
+- Linux edit-lines 的 fullLineDiff 场景对**代码布局**敏感：round 8 候选里这些场景
+  +23～31%，而 `lineDiff`/`fullLineDiff` 的指令在四个二进制里逐条相同、整进程指令数
+  -0.017%、IPC 4.322→4.276，两个无产品改动的对照构建同批场景是 -0.4%/-1.2%，Mac 上
+  只有 +0.2～0.3%。不要把 Linux edit-lines 的小幅变化当算法结论（round 8）。
+- `page_retained_cost` 在同机对照构建之间摆动过 -19.7%…+25.3%，不要单凭它判退化（round 8）。
 
 ## 候选队列（按当前证据排序）
 
-1. **round7之后重排热点**：当前fast path已避开无上下文数组，完整lazy方案对
-   common/canonical场景反而慢，勿再照搬。先复剖当前Mac代码，考虑Write/patch扫描或
-   明确不同的热点，不引入全局memo来刷重复fixture分数。所有新候选仍需代表场景控制。
+1. **round8之后重排热点（Mac 每 delta，16,142 条窗口）**：chain 0.600ms 里
+   `displayMessages` 两次调用共 0.18ms（`messages + [live]` 每 delta 复制整个窗口）、
+   narrative 0.16ms、tool_projection 0.05ms。翻页路径 model_total 3.375ms 里
+   turn_projection 1.15ms、tool_projection 0.91ms、retained_cost 0.77ms，另有
+   presented_rows 0.79ms。先复剖再立项，不引入全局memo来刷重复fixture分数。
 2. **冷投影剩余机制成本**：perf 平坦剖面中 UTF16View 迭代/下标 ~7.7%、
    `IndexingIterator.next` 5.1%、`getEnumCaseMultiPayload` 4.8%——round-1 后
    重跑 perf 定位下一批热点（大概率在行构造或 timeline 分组）。
 3. **activity edit_stats 线性成本**：6400 条 9.2–9.4ms，随消息数线性；
    检查是否可增量/懒计算（已有部分增量逻辑，见 2026-10-24 报告）。
-4. **streaming 每 delta 的 tool_projection 1.58ms**：chain 大头；
-   10-24 已有分轮块复用，剩余部分需要 perf 归因后再立项。
+4. **streaming 每 delta 的 tool_projection**：round 8 已把 O(prefix) 的窗口校验
+   改为按副本字节比较，Mac 0.595→0.050ms、Linux 1.57→0.07ms；剩余部分是尾轮投影，
+   不再是 chain 大头。
 5. **Mac mini dashboard 归因（低优先）**：`--mode all`/`dashboard` 在 Mac mini 上
    确定性失败（Missing directory scroll view，mounted=False 但 projection_matches=
    True）；SSH 与 GUI runner 两种上下文同样失败，GitHub CI 同代码通过——本机环境

@@ -67,7 +67,11 @@ public final class ToolVisibilityProjection {
             storedTools = value
             return value
         }
-        fileprivate let source: ArraySlice<KimiMessage>
+        /// The window this prefix was projected from, or an equal window a later
+        /// update brought. Messages rebuilt from the same wire data compare equal
+        /// by value while carrying different payloads; keeping the newest copy
+        /// makes the next comparison the one on copied bytes again.
+        fileprivate var source: ArraySlice<KimiMessage>
         fileprivate let anchor: String
         fileprivate let sessionID: String
         fileprivate let online: Bool
@@ -91,7 +95,8 @@ public final class ToolVisibilityProjection {
     public final class Chunk {
         public let messages: [KimiMessage]
         public let tools: [String: VisibleTool]
-        fileprivate let source: ArraySlice<KimiMessage>
+        /// Like the prefix's: the turn's own window, or an equal rebuilt one.
+        fileprivate var source: ArraySlice<KimiMessage>
         fileprivate let anchor: String?
         fileprivate let online: Bool
         fileprivate let identities: Set<String>
@@ -203,7 +208,10 @@ public final class ToolVisibilityProjection {
         for (index, range) in bounds.enumerated() {
             let source = messages[range]
             let previous = chunks[source.first!.id]
-            let candidate = previous.flatMap { $0.source.count == source.count && $0.source.elementsEqual(source) ? $0 : nil }
+            let candidate = previous.flatMap { $0.source.count == source.count && KimiMessage.sameWindow(source, $0.source) ? $0 : nil }
+            // An equal window is adopted so the next comparison stays on the
+            // bytes a copy carries, even when this turn is projected again.
+            candidate?.source = source
             let own = candidate?.identities ?? Self.identities(in: source)
             for id in own where owner.updateValue(index, forKey: id) != nil { return nil }
             candidates.append(candidate); identities.append(own)
@@ -287,8 +295,11 @@ public final class ToolVisibilityProjection {
         guard prefix.sessionID == sessionID, prefix.source.count == split, prefix.anchor == messages[split].id,
               prefix.online == online, activeIDs.intersection(prefix.identities) == prefix.active,
               observedForPrefix(identities: prefix.identities, anchor: prefix.anchor) == prefix.observed else { return false }
-        return separates(messages[split...], from: prefix.identities, anchor: prefix.anchor)
-            && messages[..<split].elementsEqual(prefix.source)
+        guard separates(messages[split...], from: prefix.identities, anchor: prefix.anchor),
+              KimiMessage.sameWindow(messages[..<split], prefix.source) else { return false }
+        // An equal window is adopted so the next token compares copied bytes.
+        prefix.source = messages[..<split]
+        return true
     }
 
     private func separates(_ tail: ArraySlice<KimiMessage>, from identities: Set<String>, anchor: String) -> Bool {
