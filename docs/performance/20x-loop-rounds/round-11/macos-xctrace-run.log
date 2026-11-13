@@ -1,0 +1,32 @@
+=== prepare Fri Nov 13 22:31:56 CST 2026 ===
+From github.com:chenweigao/perch
+   a9bca95..d1590e4  main       -> origin/main
+Previous HEAD position was 9b3a728 test(core): pin cron envelope whitespace and near-miss boundaries
+HEAD is now at d1590e4 Merge pull request #330 from chenweigao/perf/20x-loop-10-20261113
+HEAD=d1590e449a56feb3b0f579b14a7c98eb78165666
+porcelain_before=0
+=== apply temporary cold-profile bench mode ===
+porcelain_applied=2
+=== build Fri Nov 13 22:32:00 CST 2026 ===
+build_exit=0
+b6398fe773a9be4b712abada266ffb472c2ec9cd909758b82e3872e09f80957c  .build/round11-profile/out/Products/Release/WorkbenchChecks
+=== record Fri Nov 13 22:33:08 CST 2026 ===
+Starting recording with the Time Profiler template. Launching process: WorkbenchChecks. Time limit: 40.0 s
+Ctrl-C to stop the recording
+Target app exited, ending recording...
+Recording completed. Saving output file...
+Output file saved as: cold.trace
+record_exit=0
+=== export Fri Nov 13 22:33:40 CST 2026 ===
+Finished export to the file: /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/round11/toc.xml
+Finished export to the file: /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/round11/time-profile.xml
+total 14360
+drwxr-xr-x   5 weigao-mini  staff      160 Nov 13 22:33 .
+drwxr-xr-x  22 weigao-mini  staff      704 Nov 13 22:33 ..
+drwxr-xr-x  10 weigao-mini  staff      320 Nov 13 22:33 cold.trace
+-rw-r--r--   1 weigao-mini  staff  7290768 Nov 13 22:33 time-profile.xml
+-rw-r--r--   1 weigao-mini  staff     7913 Nov 13 22:33 toc.xml
+=== revert Fri Nov 13 22:33:45 CST 2026 ===
+porcelain_after=0
+DONE Fri Nov 13 22:33:45 CST 2026
+exit=0
