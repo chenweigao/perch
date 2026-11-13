@@ -18,6 +18,9 @@ baseline = baseline or 'HEAD^'
 print(subprocess.check_output(['git', 'rev-parse', '--verify', '--end-of-options', baseline + '^{commit}'], text=True).strip())
 PY
 )"
+if [ "${PERCH_REUSE_PREBUILT:-0}" = "1" ] && ! git diff --quiet "$baseline" HEAD -- Sources/WorkbenchCore Package.resolved patches/swiftmath-app-resources.patch; then
+    export PERCH_REUSE_PREBUILT=0
+fi
 bash scripts/build-math-performance-preview.sh baseline "$baseline"
 bash scripts/build-math-performance-preview.sh candidate HEAD
 python3 scripts/run-math-performance.py \

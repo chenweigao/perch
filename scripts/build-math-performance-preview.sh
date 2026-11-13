@@ -46,7 +46,7 @@ metadata = {'variant': variant, 'revision': subprocess.check_output(['git', 'rev
             'toolchain': subprocess.check_output(['swift', '--version'], text=True).strip()}
 # Fingerprint the exported inputs, not the commit or output paths. Unrelated
 # changes must not turn an A/A measurement into a source-regression claim.
-# Both variants use this harness; candidate-only contract counters are intentional.
+# Timed variants share a compiler define; rendering contracts are built separately.
 digest = hashlib.sha256()
 inputs = [(str(path.relative_to(snapshot)), path.read_bytes())
           for path in sorted(Path(snapshot).rglob('*.swift'))]
@@ -96,15 +96,20 @@ for path in sorted(Path(sys.argv[1]).rglob('*.o')):
 PY
 )
 done
-flags=(-D MATH_PERFORMANCE_BASELINE)
-if [ "$variant" = candidate ]; then flags=(-D MATH_PERFORMANCE_CHECKS); fi
-swiftc -j "$(sysctl -n hw.ncpu 2>/dev/null || echo 4)" -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-library \
-    "${flags[@]}" -I "$bin_dir/Modules" \
-    -I "$checkouts_dir/swift-markdown/Sources/CAtomic/include" \
-    -I "$checkouts_dir/swift-cmark/src/include" \
-    -I "$checkouts_dir/swift-cmark/extensions/include" \
-    "$snapshot"/Sources/AgentWorkbench/*.swift Tests/MathPerformancePreview/App.swift \
-    "${objects[@]}" -o "$app_dir/Contents/MacOS/MathPerformance"
+build_executable() {
+    swiftc -j "$(sysctl -n hw.ncpu 2>/dev/null || echo 4)" -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-library \
+        -D "$1" -I "$bin_dir/Modules" \
+        -I "$checkouts_dir/swift-markdown/Sources/CAtomic/include" \
+        -I "$checkouts_dir/swift-cmark/src/include" \
+        -I "$checkouts_dir/swift-cmark/extensions/include" \
+        "$snapshot"/Sources/AgentWorkbench/*.swift Tests/MathPerformancePreview/App.swift \
+        "${objects[@]}" -o "$app_dir/Contents/MacOS/$2"
+}
+build_executable MATH_PERFORMANCE_BASELINE MathPerformance
+if [ "$variant" = candidate ]; then
+    build_executable MATH_PERFORMANCE_CHECKS MathPerformanceContracts
+    codesign --force --sign - "$app_dir/Contents/MacOS/MathPerformanceContracts"
+fi
 cp -R "$bin_dir/SwiftMath_SwiftMath.bundle" "$app_dir/Contents/Resources/"
 python3 - "$app_dir" "$variant" <<'PY'
 from pathlib import Path

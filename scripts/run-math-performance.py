@@ -162,14 +162,15 @@ def main():
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
     binaries = {"baseline": args.baseline_app.resolve() / "Contents/MacOS/MathPerformance",
-                "candidate": args.candidate_app.resolve() / "Contents/MacOS/MathPerformance"}
+                "candidate": args.candidate_app.resolve() / "Contents/MacOS/MathPerformance",
+                "contracts": args.candidate_app.resolve() / "Contents/MacOS/MathPerformanceContracts"}
     record = {"status": "running", "binary_sha256": {name: hashlib.sha256(path.read_bytes()).hexdigest() for name, path in binaries.items()},
               "order": schedule_order(args.baseline_app.resolve(), args.candidate_app.resolve())}
     runs = {"baseline": {}, "candidate": {}}
     try:
         contracts = output / "contracts"
         contracts.mkdir()
-        record["contracts"] = execute(binaries["candidate"], "contracts", 1, contracts)
+        record["contracts"] = execute(binaries["contracts"], "contracts", 1, contracts)
         for index, variant in enumerate(record["order"]):
             folder = output / f"round-{index + 1}-{variant}"
             folder.mkdir()

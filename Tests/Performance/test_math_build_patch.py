@@ -123,6 +123,64 @@ elif '--package-path' in args:
             self.assertNotEqual(baseline['source_input_sha256'], candidate['source_input_sha256'])
             self.assertNotEqual(baseline['swiftmath_patch_sha256'], candidate['swiftmath_patch_sha256'])
 
+    def test_timed_builds_match_flags_and_keep_contracts_separate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root, env, _ = self.prepare(directory)
+            compiler = root / 'stubs/swiftc'
+            compiler.write_text('#!' + sys.executable + '\n' + '''import json, os, pathlib, sys
+with open(os.environ['MATH_COMPILER_CALLS'], 'a') as out:
+    out.write(json.dumps(sys.argv[1:]) + '\\n')
+pathlib.Path(sys.argv[sys.argv.index('-o') + 1]).write_bytes(b'fixture executable')
+''')
+            codesign = root / 'stubs/codesign'
+            codesign.write_text('#!/bin/sh\nexit 0\n')
+            codesign.chmod(0o755)
+            (root / 'bin/SwiftMath_SwiftMath.bundle').mkdir()
+            calls = root / 'compiler.jsonl'
+            env = dict(env, MATH_COMPILER_CALLS=str(calls), PERCH_REUSE_PREBUILT='0')
+            for variant in ['baseline', 'candidate']:
+                result = subprocess.run(['bash', 'scripts/build-math-performance-preview.sh', variant],
+                                        cwd=root, env=env, text=True, capture_output=True)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            arguments = [json.loads(line) for line in calls.read_text().splitlines()]
+            self.assertEqual(len(arguments), 3)
+            for args in arguments[:2]:
+                self.assertEqual(args[args.index('-D') + 1], 'MATH_PERFORMANCE_BASELINE')
+                self.assertNotIn('MATH_PERFORMANCE_CHECKS', args)
+                self.assertEqual(Path(args[args.index('-o') + 1]).name, 'MathPerformance')
+            contract = arguments[2]
+            self.assertEqual(contract[contract.index('-D') + 1], 'MATH_PERFORMANCE_CHECKS')
+            self.assertEqual(Path(contract[contract.index('-o') + 1]).name, 'MathPerformanceContracts')
+            self.assertTrue((root / 'build/Math Performance candidate.app/Contents/MacOS/MathPerformanceContracts').is_file())
+            self.assertFalse((root / 'build/Math Performance baseline.app/Contents/MacOS/MathPerformanceContracts').exists())
+
+    def test_paired_builds_only_reuse_prebuilt_for_matching_inputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root, env, _ = self.prepare(directory)
+            shutil.copy2(ROOT / 'scripts/check-math-performance.sh', root / 'scripts')
+            (root / 'scripts/build-math-performance-preview.sh').write_text(
+                '#!/bin/bash\nprintf "%s|%s|%s\\n" "$1" "$2" "${PERCH_REUSE_PREBUILT:-0}" >> "$MATH_PAIR_CALLS"\n')
+            (root / 'scripts/run-math-performance.py').write_text('')
+            calls = root / 'paired-builds.log'
+            for name in ['Sources/WorkbenchCore/ReplyMath.swift', 'Package.resolved',
+                         'patches/swiftmath-app-resources.patch']:
+                baseline = self.git(root, 'rev-parse', 'HEAD').strip()
+                source = root / name
+                source.write_text(source.read_text() + '\n')
+                self.git(root, 'add', name)
+                self.git(root, 'commit', '-qm', 'Change comparison input')
+                for revision, reuse in [(baseline, '0'), ('HEAD', '1')]:
+                    with self.subTest(input=name, baseline=revision):
+                        calls.write_text('')
+                        result = subprocess.run(['bash', 'scripts/check-math-performance.sh', str(root / 'out')],
+                                                cwd=root, env=dict(env, WORKBENCH_MATH_BASELINE_REF=revision,
+                                                                  PERCH_REUSE_PREBUILT='1', MATH_PAIR_CALLS=str(calls)),
+                                                text=True, capture_output=True)
+                        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                        resolved = self.git(root, 'rev-parse', revision).strip()
+                        self.assertEqual(calls.read_text().splitlines(),
+                                         [f'baseline|{resolved}|{reuse}', f'candidate|HEAD|{reuse}'])
+
 
 if __name__ == '__main__':
     unittest.main()
