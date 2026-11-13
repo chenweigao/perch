@@ -733,8 +733,9 @@ final class NavigationRunner {
         defer { ConversationTurnRailProbe.sample = nil }
         navigator.hover.move(y: plain.y(for: 100), count: 200, height: railHeight)
         guard navigator.hover.previewY == nil else { throw NavigationError("preview opened without dwell") }
-        try await Task.sleep(for: .milliseconds(160))
-        guard navigator.hover.focus?.index == 100, let cardY = navigator.hover.previewY else {
+        guard await flushAndWait(host, until: {
+            navigator.hover.focus?.index == 100 && navigator.hover.previewY != nil
+        }) != nil, let cardY = navigator.hover.previewY else {
             throw NavigationError("dwell did not open local lens")
         }
         let lens = ConversationTurnRailGeometry(count: 200, height: railHeight, focus: navigator.hover.focus)
@@ -767,7 +768,9 @@ final class NavigationRunner {
         let animatedHeight = max(1, animatedWindow.contentView!.bounds.height - 32)
         let animatedPlain = ConversationTurnRailGeometry(count: 200, height: animatedHeight)
         animatedHover.move(y: animatedPlain.y(for: 100), count: 200, height: animatedHeight)
-        try await Task.sleep(for: .milliseconds(160))
+        guard await flushAndWait(animatedWindow.contentView!, until: {
+            animatedHover.focus?.index == 100 && animatedHover.previewY != nil
+        }) != nil else { throw NavigationError("animated dwell did not open local lens") }
         let animatedLens = ConversationTurnRailGeometry(count: 200, height: animatedHeight, focus: animatedHover.focus)
         for index in animatedLens.expanded {
             animatedHover.move(y: animatedLens.y(for: index), count: 200, height: animatedHeight)
