@@ -67,6 +67,46 @@ func checkCollapsedWhitespace() {
         precondition(text.collapsedWhitespace == expected,
                      "prepend fast-path miss at U+\(String(fusingValue, radix: 16, uppercase: true))")
     }
+    // Whitespace-adjacent exhaustive walk, pinning the never-binding prefilter:
+    // for every scalar, the byte path must equal exactly what the property
+    // logic that decides the strict fallback dictates. A scalar detected as a
+    // binder (or as non-ASCII whitespace) must yield the Character-accurate
+    // split/join; every other scalar — including all scalars inside the pinned
+    // never-binding ranges — must come back from the fast path as itself.
+    // Scalars whose real fusion disagrees with the property logic (Thai/Lao/
+    // Myanmar Sara-Am class, Apple corporate-PUA on macOS, emoji skin-tone
+    // modifiers) are a pre-existing fast-path contract gap; this walk
+    // characterizes them per platform, so a future fix — or Unicode drift —
+    // fails here loudly instead of moving excerpts silently.
+    var binding = 0, fastPath = 0, characterizedGap = 0
+    var misses: [String] = []
+    var probe: UInt32 = 0x80
+    while probe < 0x110000 {
+        if probe >= 0xD800 && probe <= 0xDFFF { probe = 0xE000; continue }
+        if let scalar = Unicode.Scalar(probe) {
+            let text = " " + String(scalar) + " "
+            let category = scalar.properties.generalCategory
+            let detected = probe == 0x200D || scalar.properties.isGraphemeExtend
+                || category == .nonspacingMark || category == .spacingMark || category == .enclosingMark
+                || scalar.properties.isWhitespace
+            // GB9b runs the other way: a Prepend scalar absorbs the trailing
+            // space of the probe, which also forces the strict path.
+            let prependFuses = (String(scalar) + " ").count == 1
+            let expected = (detected || prependFuses)
+                ? text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+                : String(scalar)
+            let got = text.collapsedWhitespace
+            if got != expected {
+                misses.append("U+\(String(probe, radix: 16, uppercase: true)) expected=\(expected.debugDescription) got=\(got.debugDescription)")
+            }
+            if detected { binding += 1 } else { fastPath += 1 }
+            if !detected, (" " + String(scalar)).count == 1 { characterizedGap += 1 }
+        }
+        probe += 1
+    }
+    for miss in misses { print("WHITESPACE-ADJACENT MISMATCH \(miss)") }
+    precondition(misses.isEmpty, "whitespace-adjacent walk: \(misses.count) mismatches")
+    print("PASS: collapsedWhitespace whitespace-adjacent walk (\(binding) strict-path, \(fastPath) fast-path, \(characterizedGap) characterized gaps)")
     print("PASS: collapsedWhitespace prepend set matches stdlib fusion (\(fusing.count) fusing scalars)")
     print("PASS: collapsedWhitespace equals Character-accurate split/join on adversarial whitespace")
 }

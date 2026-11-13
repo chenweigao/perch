@@ -47,12 +47,16 @@ extension String {
     /// scalar and fails if this set ever disagrees with the toolchain's own
     /// grapheme breaking, so a Unicode data update surfaces as a test
     /// failure, not a silent divergence. 0 means "previous byte was ASCII".
+    /// U+111C3 and U+113D1 were added when the whitespace-adjacent walk
+    /// surfaced them as Prepend in the current toolchain data; over-inclusion
+    /// is the safe direction (a needless strict fallback, never a wrong
+    /// answer), so the set may lead the data but must never lag it.
     private static func isPrependScalar(_ scalar: UInt32) -> Bool {
         switch scalar {
         case 0x0600...0x0605, 0x06DD, 0x070F, 0x0890...0x0891, 0x08E2,
-             0x0D4E, 0x110BD, 0x110CD, 0x111C2, 0x1193F, 0x11941,
-             0x11A3A, 0x11A84...0x11A89, 0x11D46, 0x11F02,
-             0x16D40...0x16D43:
+             0x0D4E, 0x110BD, 0x110CD, 0x111C2...0x111C3, 0x113D1,
+             0x1193F, 0x11941, 0x11A3A, 0x11A84...0x11A89, 0x11D46,
+             0x11F02, 0x16D40...0x16D43:
             return true
         default:
             return false
