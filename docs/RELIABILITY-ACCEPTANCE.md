@@ -30,17 +30,24 @@ The optional `WORKBENCH_LIVE_HOST` variable is removed from the suite environmen
 
 The `Functional checks` workflow runs these suites on PRs and main, alongside the
 existing publication checks, and retains logs/results for seven days. One native
-job builds and packages the app and Swift build tree once. Core, host lifecycle,
-and navigation restore that artifact in parallel on separate macOS runners.
-Native acceptance starts immediately because its fixture uses different compile
-flags; it restores the shared dependency cache instead of the app artifact.
-All groups execute the same checks as the full local suite.
+job builds and packages the production app and Swift build tree once. Core, math
+performance, navigation, and the host fixture builder restore that artifact on
+separate macOS runners; the core shard also runs scroll-following. The host fixture
+is compiled once, then two runners restore the same signed app for disjoint phase
+groups. Native acceptance uses different compile flags, so a parallel job builds
+its fixture once and two runners restore that app for disjoint mode groups. Every
+phase and mode still executes exactly once; no test is skipped by this split.
 A summary job named `Native build and interaction regression` fails if any group
 fails and publishes the combined `macos-results` evidence. Group reports retain
-individual and total durations. No test is skipped by this split.
+individual and total durations.
 
 For a targeted local run, add `--group build`, `--group core`, `--group host`,
-`--group native`, or `--group navigation` to the macOS command. Use separate GUI
+`--group native`, or `--group navigation` to the macOS command. These retain the
+full local behavior. To reproduce the CI host split, run `--group host-build` once,
+then `--group host-state` and `--group host-workspace` with the resulting
+`.local/host-fixture/HostLifecycleChecks.app`. For acceptance, `--group native-build`
+is followed by `--group native-streaming` and `--group native-session`; the core
+CI split uses `--group core-regression` and `--group core-math`. Use separate GUI
 sessions when running these groups concurrently. Do not open multiple interactive
 fixture suites in one desktop session. The runners use GitHub's
 [Xcode 27 preview image](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md)

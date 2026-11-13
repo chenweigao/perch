@@ -12,12 +12,56 @@ import time
 ROOT = Path(__file__).resolve().parents[1]
 
 
+HOST_PHASES = [
+    "startup", "seed", "restart", "removal", "connection-controls", "connection-restart",
+    "architecture", "interactions", "streaming-rendering", "streaming-cadence", "git-write",
+    "reading-design", "reading-controls", "goal-header", "reading-canvas", "sidebar-scroll",
+    "activity-bar", "reply-selection", "frame-hitch", "workspace-upgrade", "file-reader",
+    "code-reader", "workflow-polish", "document-reading", "task-context", "task-detail",
+    "task-summary", "native-design",
+]
+HOST_PHASE_GROUPS = {
+    "host-state": {
+        "startup", "seed", "restart", "removal", "connection-controls", "connection-restart",
+        "architecture", "interactions", "streaming-rendering", "streaming-cadence", "git-write",
+        "reading-design", "reading-controls", "goal-header", "reading-canvas", "sidebar-scroll",
+        "reply-selection", "frame-hitch", "code-reader",
+    },
+    "host-workspace": {
+        "activity-bar", "workspace-upgrade", "file-reader", "workflow-polish", "document-reading",
+        "task-context", "task-detail", "task-summary", "native-design",
+    },
+}
+NATIVE_MODES = [
+    "all", "switching", "detail-lifecycle", "inspector", "sidebar-invalidation", "sidebar-structure",
+    "sidebar-layout-order", "sidebar-layout-pins", "sidebar-layout-height", "dashboard", "joint",
+    "workspace", "review", "branch-review", "paging", "invalidation", "subagents", "input",
+]
+NATIVE_MODE_GROUPS = {
+    "native-streaming": {"all", "switching", "joint"},
+    "native-session": set(NATIVE_MODES) - {"all", "switching", "joint"},
+}
+HOST_FIXTURE_APP = ROOT / ".local/host-fixture/HostLifecycleChecks.app"
+
+
+def native_commands(out):
+    python = sys.executable
+    commands = [("native-" + mode, [python, "scripts/run-native-acceptance.py",
+        "--mode", mode, "--seconds", "60", "--output", str(out / ("native-" + mode))], 150)
+        for mode in NATIVE_MODES]
+    commands.append(("native-sidebar-projects", [python, "scripts/run-native-acceptance.py",
+        "--mode", "sidebar-projects", "--sidebar-variant", "projects", "--output", str(out / "native-sidebar-projects")], 150))
+    commands.append(("native-input-control", [python, "scripts/run-native-acceptance.py",
+        "--mode", "input", "--input-positive-control", "--output", str(out / "native-input-control")], 150))
+    return commands
+
+
 def macos_commands(group, out):
     python = sys.executable
     commands = []
     if group in ("all", "build"):
         commands.append(("build", ["bash", "scripts/build.sh"], 1200))
-    if group in ("all", "core"):
+    if group in ("all", "core", "core-regression"):
         commands += [
             ("app-launch", [python, "scripts/check-app-launch.py", "--output", str(out / "app-launch")], 90),
             ("signature", ["codesign", "--verify", "--deep", "--strict", "build/Perch.app"], 60),
@@ -26,23 +70,35 @@ def macos_commands(group, out):
             ("connections", ["swift", "run", "--build-system", "native", "-c", "release", "--skip-build", "ConnectionChecks"], 120),
             ("naming-lifecycle", [python, "scripts/check-naming-lifecycle.py"], 600),
             ("composer", ["bash", "scripts/check-composer.sh"], 120),
-            ("math-performance", ["bash", "scripts/check-math-performance.sh", str(out / "math-performance")], 600),
         ]
+    if group in ("all", "core", "core-math"):
+        commands.append(("math-performance", ["bash", "scripts/check-math-performance.sh", str(out / "math-performance")], 600))
+    if group == "core-regression":
+        commands.append(("scroll-following", [python, "scripts/check-scroll-following.py"], 120))
     if group in ("all", "host"):
         commands += [
             # Compiles the whole app before the isolated UI phases.
             ("host-lifecycle", [python, "scripts/check-host-lifecycle.py"], 900),
             ("scroll-following", [python, "scripts/check-scroll-following.py"], 120),
         ]
-    if group in ("all", "native"):
+    if group == "host-build":
+        commands.append(("host-build", [python, "scripts/check-host-lifecycle.py",
+            "--app", str(HOST_FIXTURE_APP), "--build-only"], 900))
+    if group in HOST_PHASE_GROUPS:
+        phase_command = [python, "scripts/check-host-lifecycle.py", "--app", str(HOST_FIXTURE_APP)]
+        for phase in HOST_PHASES:
+            if phase in HOST_PHASE_GROUPS[group]:
+                phase_command += ["--phase", phase]
+        commands.append(("host-lifecycle", phase_command, 900))
+    if group in ("all", "native", "native-build"):
         commands.append(("native-build", ["bash", "scripts/build-native-acceptance.sh"], 600))
-        for mode in ["all", "switching", "detail-lifecycle", "inspector", "sidebar-invalidation", "sidebar-structure", "sidebar-layout-order", "sidebar-layout-pins", "sidebar-layout-height", "dashboard", "joint", "workspace", "review", "branch-review", "paging", "invalidation", "subagents", "input"]:
-            commands.append(("native-" + mode, [python, "scripts/run-native-acceptance.py",
-                "--mode", mode, "--seconds", "60", "--output", str(out / ("native-" + mode))], 150))
-        commands.append(("native-sidebar-projects", [python, "scripts/run-native-acceptance.py",
-            "--mode", "sidebar-projects", "--sidebar-variant", "projects", "--output", str(out / "native-sidebar-projects")], 150))
-        commands.append(("native-input-control", [python, "scripts/run-native-acceptance.py",
-            "--mode", "input", "--input-positive-control", "--output", str(out / "native-input-control")], 150))
+    if group in ("all", "native"):
+        commands += native_commands(out)
+    if group in NATIVE_MODE_GROUPS:
+        selected = {"native-" + mode for mode in NATIVE_MODE_GROUPS[group]}
+        if group == "native-session":
+            selected |= {"native-sidebar-projects", "native-input-control"}
+        commands += [command for command in native_commands(out) if command[0] in selected]
     if group in ("all", "navigation"):
         commands.append(("navigation-build", ["bash", "scripts/build-navigation-preview.sh"], 600))
         for mode in ["reading", "interactions", "paragraphs", "claude", "user-rows", "assistant-rows", "streaming-rendering", "tool-card", "fast-scroll", "turns", "roundtrip"]:
@@ -58,7 +114,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("suite", choices=["portable", "macos"])
     parser.add_argument("--output", type=Path, required=True, help="New directory for this run")
-    parser.add_argument("--group", choices=["all", "build", "core", "host", "native", "navigation"], default="all")
+    parser.add_argument("--group", choices=[
+        "all", "build", "core", "core-regression", "core-math", "host", "host-build",
+        *HOST_PHASE_GROUPS, "native", "native-build", *NATIVE_MODE_GROUPS, "navigation",
+    ], default="all")
     args = parser.parse_args()
     if args.suite == "portable" and args.group != "all":
         parser.error("--group is only supported by the macos suite")
@@ -94,7 +153,7 @@ def main():
     env.pop("WORKBENCH_LIVE_HOST", None)
     env.pop("WORKBENCH_GIT_WRITE_HOST", None)
     env.pop("PERCH_ACCEPTANCE_ALLOW_INVALIDATION", None)
-    if args.suite == "macos" and args.group in ("all", "host"):
+    if args.suite == "macos" and args.group in ("all", "host", "host-workspace"):
         # Retain the native design phase's geometry and window captures with the logs.
         captures = out / "native-design"
         captures.mkdir()
