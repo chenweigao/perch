@@ -1,0 +1,38 @@
+{
+  "purpose": "Mac-side function-level attribution of the cold projection (round-10 report's next-round entry: Linux profiles do not extrapolate to Mac; sample natively before proposing a candidate)",
+  "host": "mac-mini (Apple Silicon, macOS 27.0.1), Apple Swift 6.4 (swiftlang-6.4.0.34.1)",
+  "base_ref": "d1590e449a56feb3b0f579b14a7c98eb78165666",
+  "method": "Temporary attribution-only bench mode 'cold-profile' (never committed; reverted after the run, porcelain 0 modified): the count=2000 cold fixture (2,333 messages) with a fresh ConversationPresentationModel per iteration, looping 25s. xcrun xctrace Time Profiler over the whole process; used for attribution only, never as a timing source.",
+  "job": "PerfRunner job 11-round11-xctrace (macos-xctrace-job.sh is the job script; runner log archived at macos-xctrace-run.log)",
+  "binary_sha256": "b6398fe773a9be4b712abada266ffb472c2ec9cd909758b82e3872e09f80957c",
+  "samples_total": 25036,
+  "samples_in_bench_loop": 25031,
+  "region_classification_percent": {
+    "note": "Each sample is attributed to the innermost frame matching a region; full leaf tables in macos-xctrace-attribution.txt",
+    "collapsedWhitespace": 29.99,
+    "excerpt_prefix_grapheme_walk": 20.81,
+    "ConversationTurnSummary.make_rest": 13.38,
+    "ConversationTimelineEntry.make": 10.36,
+    "ToolVisibilityProjection": 9.67,
+    "model_update_other": 7.59,
+    "bench_harness_other": 4.04,
+    "CronFireEnvelope_parse": 2.24,
+    "trimmingCharacters": 0.92,
+    "row_build": 0.88,
+    "narrative": 0.10
+  },
+  "key_leaves": {
+    "String.index(_:offsetBy:limitedBy:)": "10.18% self — the prefix(320) grapheme walk in excerpt",
+    "grapheme_break_machinery_total": "~10.6% self (hasBreakWhenPaired 4.17, _opaqueComplexCharacterStride 3.52, shouldBreak 2.88) — same prefix walk",
+    "String.collapsedWhitespace.getter": "5.75% self",
+    "validateUTF8": "3.87% self — String(decoding:) of the collapsed output",
+    "Array_reserveCapacity_getElement_memmove": "~6.3% self — the Array(utf8) input copy and out-array traffic",
+    "getGeneralCategory+getBinaryProperties": "~4.3% self — beginsBindingMark property lookups after whitespace before CJK",
+    "swift_retain+release+bridge variants": "~12% self across regions"
+  },
+  "conclusions": [
+    "Cold projection cost on Mac is dominated by the per-turn excerpt string construction: collapsedWhitespace (30%) plus the prefix(320) grapheme walk (21%) ≈ half of model.update.",
+    "trimmingCharacters is 0.9% on Mac — round 10's rejection mechanism confirmed by direct native attribution.",
+    "Round 11 hypothesis targets collapsedWhitespace's mechanical overhead: whole-input Array(utf8) copy, per-scalar slice-append machinery, and full Unicode property lookups for every non-ASCII scalar after a whitespace run (CJK-heavy text always pays them)."
+  ]
+}

@@ -14,10 +14,18 @@ A/B ≥5 轮取中位数 → 超噪声带（本机 <2%）才采纳 → Workbench
 `gh pr merge --merge --delete-branch` 自动合并并在此记录。任何门槛不满足→不合并，留 PR
 注明原因。禁止 merge 他人 PR、动主检出、碰用户真实数据/远端连接。
 
+**独立评审通道（用户指令 2026-11-13）**：一律用 `delegate_task` target
+`{providerInstanceId: "acpRegistry_kimi_code", model: "aone/gpt-6.1-sol"}`，只读共享检出；
+不再向 claudeAgent/claude-opus 派评审，也不要等 Claude。评审发现逐项处置后由同一模型
+复核（每次复核是新 delegate_task）；评审明示的逐字更正可直接照改并自行重算验证，
+不必再起一轮复核。每轮合并后，下一轮分支的**首个提交**按 ae4563f 先例专门定稿上一轮
+（INDEX 行 + 报告"合并记录"节），不与工作提交混在一起。
+
 分支纪律：工作在本线程 T3 worktree，各轮本地用 `codex/20x-loop-N-<日期>`，
 推独立 `perf/20x-loop-N-<日期>` PR 分支（round 8 起日期为 20261113）。底座：#320
 （Linux 可移植性）、#323（round 1）、#324（round 3）、#325（round 5）、#326（round 6）
-、#327（round 7）、#328（round 8）及 #329（round 9）均已合并，当前 base=a9bca95。
+、#327（round 7）、#328（round 8）、#329（round 9）及 #330（round 10）均已合并；
+main 另有 #331（CI 并行化，非循环产物，测量子树逐字节不变），round 11 base=93b9ad3。
 
 **macOS 测量通道**：`ssh -o BatchMode=yes mac-mini` 直达（反向隧道，launchd KeepAlive
 自愈）。GUI 应用类作业必须走 runner：写 bash 文件到 `~/Library/PerfRunner/jobs/<名>.job`，
@@ -51,7 +59,8 @@ Mac mini 同机 A/B 超过该轮实测噪声才采纳，不能把 Linux 特有�
 | 7 | 2026-11-12 | 无共同首尾/单行编辑免分行数组 | **修订候选：Mac stats -22.39%**，3.220→2.499ms@6400；保留全lazy否定与旧小输入偏慢证据，≤1024bytes走旧算法，50代表场景/完整原样本/各门槛通过，待新head评审CI | [round-7](2026-11-12-round-7.md)；[#327](https://github.com/chenweigao/perch/pull/327)；[短输入复核](round-7/short-input/README.md) |
 | 8 | 2026-11-13 | 复用窗口按副本字节比较（delta/翻页/查找缓存） | **已采纳/合并：Mac 每 delta 模型链 -47.60%**（1.145→0.600ms@16,142），tool_projection -91.60%、查找栏 -46.24%、翻页整链 -11.41%；CI 8/8 绿、GitHub Codex 评审同 head 无发现、mergeable CLEAN 后自动合并；Linux edit-lines fullLineDiff +23～31% 已证明是布局伪影（热点指令逐条相同、对照构建同向、Mac 无此退化）；自排独立评审三次被 Claude 限流打断，已明示 | [round-8](2026-11-13-round-8.md)；[#328](https://github.com/chenweigao/perch/pull/328)，merge=e160eec（18:37） |
 | 9 | 2026-11-13 | 长单轮状态栏派生免中间数组 | **已采纳/合并：Mac 单轮 activity -26.38%**（1.6545→1.2180ms@2,000 条）、-25.33%@400 条，六对区间分离；CI math 门槛在 3 CPU 共享 runner 上三次失败（每次卡的门槛与构建出的二进制 hash 都不同），Mac mini 静机同脚本/同 6 轮顺序/同门槛全绿（parse 0.97–1.00、typeset best 1.13/1.01/0.99），据此判为 runner 噪声，未改任何门槛或断言；证据随 docs 提交换新 head 后 8/8 全绿合并；自排独立评审五次被 Claude 限流未跑成，已明示 | [round-9](2026-11-13-round-9.md)；[#329](https://github.com/chenweigao/perch/pull/329)，merge=a9bca95（20:32）；[CI 取证](round-9/ci/math-gate-investigation.json) |
-| 10 | 2026-11-13 | 定时信封裁剪前的 O(1) 守卫 | **不采纳**：Linux 冷投影 -17.89%（51.595→42.365ms@2,333），Mac -0.96%（8.32→8.24ms，区间重叠、噪声内），是 corelibs `trimmingCharacters` 走 UTF-16 的 Linux 特有开销；候选构建 Mac edit64_bulk +15.04% 超其 13.88% spread，为回归信号、随撤回不保留；产品补丁已撤回，保留 8 条钉住既有空白/近似输入边界的断言（两端产品代码未改的匹配构建通过，Mac 验证构建 8b294a15）与两端六对数据；gpt-6.1-sol 独立评审两轮 BLOCKING 发现的逐项处置见报告"独立评审与修正记录" | [round-10](2026-11-13-round-10.md)；[撤回补丁](round-10/rejected-cron-guard.patch)；[Mac 提交配置验证](round-10/macos-committed-checks.json) |
+| 10 | 2026-11-13 | 定时信封裁剪前的 O(1) 守卫 | **不采纳**：Linux 冷投影 -17.89%（51.595→42.365ms@2,333），Mac -0.96%（8.32→8.24ms，区间重叠、噪声内），是 corelibs `trimmingCharacters` 走 UTF-16 的 Linux 特有开销；候选构建 Mac edit64_bulk +15.04% 超其 13.88% spread，为回归信号、随撤回不保留；产品补丁已撤回，保留 8 条钉住既有空白/近似输入边界的断言（两端产品代码未改的匹配构建通过，Mac 验证构建 8b294a15）与两端六对数据；gpt-6.1-sol 独立评审三轮（初审+两次复核）共 8 项 BLOCKING + 2 项非阻塞发现的逐项处置见报告"独立评审与修正记录"；首个 head 的 navigation-disclosure 超时未在其后三个 head 复现，判 runner 抖动 | [round-10](2026-11-13-round-10.md)；[#330](https://github.com/chenweigao/perch/pull/330)，merge=d1590e4（22:17）；[撤回补丁](round-10/rejected-cron-guard.patch)；[Mac 提交配置验证](round-10/macos-committed-checks.json) |
+| 11 | 2026-11-14 | collapsedWhitespace 零拷贝字节路径 + 永不绑定预过滤 | **候选：Mac 冷投影 -19.16%**（8.325→6.730ms@2,333，spread 4.75%，六对全分离），四尺寸 -17～-19%；xctrace 归因 collapsedWhitespace 30%+prefix 字素行走 20.8%+trim 仅 0.9%；穷举走查暴露 Prepend 集既有缺口（U+111C3/U+113D1）按契约先修，7 标量特征化缺口钉住未修；两次独立 run 二进制逐字节复现；display_messages_workspace +10µs（一格量化、区间重叠）已披露；Linux 筛选 -6.3% 同向；待评审/CI | [round-11](2026-11-14-round-11.md)；[归因](round-11/macos-xctrace-attribution.json) |
 
 ## 否定清单（勿重复尝试）
 
@@ -83,14 +92,15 @@ Mac mini 同机 A/B 超过该轮实测噪声才采纳，不能把 Linux 特有�
    `Array(messages.dropFirst(start))` 复制；`ConversationActivity.outputCharacters`
    对每个 text/thinking 走 `utf16.count`（可参照 `KimiInFlight` 的既有缓存口径，
    但不得引入全局 memo）。先复剖再立项。
-2. **冷投影剩余机制成本（需 Mac 侧归因）**：round 10 在 Linux 重跑 perf 得到
-   `ConversationTimelineEntry.make` 36.95%、`ConversationTurnSummary.make` 27.46%
-   （`excerpt` 26.73%）、`cronFire`→`parse` 13.00%、`String._fromCodeUnits` 43.83%
-   children、`IndexingIterator.next` 15.91%、`getEnumCaseMultiPayload` 9.34%；
-   但其中字符串类成本是 corelibs 特有，不可外推到 Mac（round 10 已证）。
-   Mac 冷投影 8.24ms@2,333（约 3.5µs/条）的大头尚未归因：下一步在 Mac 上对
-   `WORKBENCH_BENCH=1` 单独采样（xctrace 只用于归因，不替代无捕获 A/B），
-   候选方向仍是 `excerpt` 的字符串构造与 timeline 分组。
+2. **冷投影下一大头：excerpt 的 prefix(320) 字素行走**：round 11 的 Mac xctrace 归因
+   （优化前样本）：`collapsedWhitespace` 30%（round 11 已优化，冷投影 -19.16%）、
+   `prefix(320)` 字素行走 **20.81%**（`String.index(offsetBy:limitedBy:)` 10.18% +
+   字素断 machinery ~10.6%）= 现最大单块、`ConversationTurnSummary.make` 其余 13.4%、
+   `ConversationTimelineEntry.make` 10.4%、`trimmingCharacters` 仅 0.9%。320-Character
+   语义是产品行为不可改；方向：避免 `String(prefix)` 物化与 `" " +` 拼接的中间分配、
+   或 UTF-8 字节上做等价截断的保守快路径（纯 ASCII/无组合序列场景）；先设计等价性
+   钉法再动手（round 7 教训：勿以 lazy/全串相等原型直接上）。输出 `validateUTF8`
+   ~3.9% 无公开 API 绕过，暂挂。归因数据：round-11/macos-xctrace-attribution.json。
 3. **activity edit_stats 线性成本**：rounds 5–7 后 Mac 6,400 条已降到 ~2.51ms，仍随消息数
    线性；检查是否可增量/懒计算（已有部分增量逻辑，见 2026-10-24 报告）。round 9 已把
    单轮状态栏派生的机械拷贝去掉（-26%），edit_stats 本身未动。
@@ -102,7 +112,13 @@ Mac mini 同机 A/B 超过该轮实测噪声才采纳，不能把 Linux 特有�
    True）；SSH 与 GUI runner 两种上下文同样失败，GitHub CI 同代码通过——本机环境
    因素（候选假设：acceptance app 的偏好域残留、macOS 27.0.1 行为差异、显示器
    状态）。不阻塞轮次；归因前先跑一次全新偏好域 + --mode dashboard 单独复现。
-6. **macOS 侧（等用户输入，可选加速项）**：真机切换会话 1.3–1.6s 卡顿归因需要
+6. **collapsedWhitespace 7 标量契约缺口修复**：字节路径对 U+0E33/U+0EB3（泰/老
+   Sara-Am 类）与 U+1F3FB–1F3FF（emoji 肤色修饰符）在空白邻接下返回快路径结果，
+   而工具链实际把它们与前随空格融合成一个 Character，违反"等于 split/join"的文档
+   契约（既有缺口，round 11 穷举走查已按现状钉住并特征化，两端同为 7 个；macOS
+   另有 39 个 PUA 标量属安全反方向）。修复方向：为 `beginsBindingMark` 扩展钉死
+   融合集，与 Prepend 集同一处理（过包含安全 + 穷举校验）。单独轮次立项。
+7. **macOS 侧（等用户输入，可选加速项）**：真机切换会话 1.3–1.6s 卡顿归因需要
    用户日常使用中的诊断导出（perch-diagnostics.json）。合成 switching 基线已测：
    median 79–89ms，在产品目标内，无 20x 余量；冷启动 5/5 通过（时长指标待提取）。
    frames/hitch 校准为 2026-09-23 起已知未通过项。
