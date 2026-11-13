@@ -1,0 +1,154 @@
+{
+  "error": "Unclosed delimiter performance regressed",
+  "gate": "scripts/run-math-performance.py applies parse_unclosed_4096 candidate/baseline <= 1.25 only when the compiled inputs differ; they differ here because WorkbenchCore is part of the preview app's source hash",
+  "job": {
+    "attempt": 1,
+    "failed_check": "math-performance",
+    "failed_step": "python3 scripts/check-functional.py macos --group core --output .local/functional-core",
+    "id": 131853700464,
+    "name": "Native core interaction regression",
+    "run": 43415234542,
+    "url": "https://github.com/chenweigao/perch/actions/runs/43415234542/job/131853700464"
+  },
+  "parse_comparisons": {
+    "ordinary_backslashes": {
+      "baseline_median_ms": 8.9788,
+      "baseline_rounds_ms": [
+        10.3205,
+        8.9788,
+        8.1876
+      ],
+      "candidate_median_ms": 8.7174,
+      "candidate_rounds_ms": [
+        8.8903,
+        6.742,
+        8.7174
+      ],
+      "ratio": 0.9709
+    },
+    "plain": {
+      "baseline_median_ms": 6.6114,
+      "baseline_rounds_ms": [
+        17.205,
+        6.6114,
+        5.1583
+      ],
+      "candidate_median_ms": 8.071,
+      "candidate_rounds_ms": [
+        6.4363,
+        8.071,
+        12.2311
+      ],
+      "ratio": 1.2208
+    },
+    "reply": {
+      "baseline_median_ms": 3.9166,
+      "baseline_rounds_ms": [
+        6.4224,
+        2.437,
+        3.9166
+      ],
+      "candidate_median_ms": 5.803,
+      "candidate_rounds_ms": [
+        3.6619,
+        5.803,
+        8.073
+      ],
+      "ratio": 1.4816
+    },
+    "stream_16": {
+      "baseline_median_ms": 1.446,
+      "baseline_rounds_ms": [
+        2.2315,
+        1.446,
+        1.308
+      ],
+      "candidate_median_ms": 2.1486,
+      "candidate_rounds_ms": [
+        2.1865,
+        1.8471,
+        2.1486
+      ],
+      "ratio": 1.4859
+    },
+    "stream_64": {
+      "baseline_median_ms": 1.1904,
+      "baseline_rounds_ms": [
+        2.3848,
+        1.1693,
+        1.1904
+      ],
+      "candidate_median_ms": 2.3724,
+      "candidate_rounds_ms": [
+        2.6409,
+        1.508,
+        2.3724
+      ],
+      "ratio": 1.9929
+    },
+    "unclosed_1024": {
+      "baseline_median_ms": 1.3617,
+      "baseline_rounds_ms": [
+        1.438,
+        1.2072,
+        1.3617
+      ],
+      "candidate_median_ms": 1.366,
+      "candidate_rounds_ms": [
+        1.366,
+        1.1988,
+        1.3874
+      ],
+      "ratio": 1.0031
+    },
+    "unclosed_256": {
+      "baseline_median_ms": 0.4226,
+      "baseline_rounds_ms": [
+        0.4226,
+        0.3241,
+        0.7619
+      ],
+      "candidate_median_ms": 0.3817,
+      "candidate_rounds_ms": [
+        0.3817,
+        0.3356,
+        0.6642
+      ],
+      "ratio": 0.9032
+    },
+    "unclosed_4096": {
+      "baseline_median_ms": 5.7615,
+      "baseline_rounds_ms": [
+        11.9699,
+        5.7615,
+        4.6503
+      ],
+      "candidate_median_ms": 7.6515,
+      "candidate_rounds_ms": [
+        7.7084,
+        4.8996,
+        7.6515
+      ],
+      "ratio": 1.328
+    }
+  },
+  "reading": "The gated ratio is 1.328 from medians of three rounds each, on a shared three-CPU runner whose round-to-round spread reaches 2.6x on this metric (baseline 11.9699/5.7615/4.6503 ms, candidate 7.7084/4.8996/7.6515 ms). Ungated metrics in the same run show ratios from 0.903 to 1.993, and the slowest round overall is a baseline round. The check's own semantic gate (identical parsed semantics across baseline/candidate) passed before the ratio gate. The round 9 diff touches only ConversationActivity.init and ConversationTodo; nothing on the math parse path calls either.",
+  "runner": {
+    "binary_sha256": {
+      "baseline": "356fc3d34b4fb3461c24d540456547cf6869e08de6d9e3d7ba174dcb024e42bf",
+      "candidate": "36e07bd05739faf83aee0d3239015fdc7d96abba17150496144d885d92cc155f",
+      "contracts": "b40bc5b858b26d308e42da6cda83ce08232456b152db8ce5626d94c034ea84ce"
+    },
+    "cpu_count": 3,
+    "order": [
+      "baseline",
+      "candidate",
+      "candidate",
+      "baseline",
+      "baseline",
+      "candidate"
+    ],
+    "os": "Version 27.0.1 (Build 26A434)",
+    "physical_memory_bytes": 7516192768
+  }
+}

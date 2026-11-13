@@ -1,0 +1,34 @@
+{
+  "job": {
+    "assertion": "precondition(abs(reading.overviewOffset - 600) <= 2) in checkTaskContextReadingPositions, after scrolling a 320x360 window with 60 synthetic 36pt rows to y=600 and waiting up to 2 s for the reflected offset",
+    "attempt": 1,
+    "failed_phase": "task-context",
+    "failed_step": "python3 scripts/check-functional.py macos --group host --output .local/functional-host",
+    "failure_line": "compiled/TaskContextReadingChecks.swift:61: Precondition failed",
+    "id": 131853701015,
+    "name": "Native host lifecycle regression",
+    "run": 43415234542,
+    "url": "https://github.com/chenweigao/perch/actions/runs/43415234542/job/131853701015"
+  },
+  "local_reproduction": {
+    "baseline": {
+      "exit": 0,
+      "patch": "stashed, product at e160eec",
+      "phase": "task-context",
+      "seconds": 25.89
+    },
+    "candidate": {
+      "exit": 0,
+      "passed_lines": [
+        "PASS: native plan default disclosure, manual click, refresh/completion, host isolation, session return and remount",
+        "PASS: native inspector overview remount, session isolation, expansion memory and shorter-content clamp",
+        "PASS: task detail output follow, final read, transient failure, cancellation, source isolation and stop requests"
+      ],
+      "patch": "round 9 applied",
+      "phase": "task-context",
+      "seconds": 26.13
+    },
+    "machine": "Mac mini arm64 macOS 27.0.1, Aqua session through the perf runner"
+  },
+  "reading": "The failing assertion measures a SwiftUI scroll offset reflected into TaskContextReadingState over synthetic content the check itself supplies; it reads neither ConversationActivity nor ConversationTodo. The same phase passed on CI for PR #328's head e160eec one hour earlier and passes locally on both the candidate and the unmodified product, so this is treated as a runner timing flake, not as a round 9 regression. It is recorded rather than silenced."
+}
