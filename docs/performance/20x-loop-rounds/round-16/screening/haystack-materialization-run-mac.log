@@ -1,0 +1,22 @@
+build_exit=0
+[55 / 57] r16fb-product
+Build complete! (3.34秒)
+EQUIVALENCE: PASS (1155 variant comparisons, 5 queries, 77 texts)
+query=已经处理
+  v0-bridge: corpus64 2.865 ms/sweep  big120KB 2.860 ms/search  hashes=3
+  v1-nsinit: corpus64 3.488 ms/sweep  big120KB 3.483 ms/search  hashes=3
+  v2-cfchars: corpus64 3.414 ms/sweep  big120KB 3.423 ms/search  hashes=3
+  v3-mutable: corpus64 3.257 ms/sweep  big120KB 3.247 ms/search  hashes=3
+  v1-nsinit vs v0: corpus +21.7%  big +21.8%
+  v2-cfchars vs v0: corpus +19.2%  big +19.7%
+  v3-mutable vs v0: corpus +13.7%  big +13.5%
+query=inspect
+  v0-bridge: corpus64 1.326 ms/sweep  big120KB 1.333 ms/search  hashes=3
+  v1-nsinit: corpus64 1.275 ms/sweep  big120KB 1.237 ms/search  hashes=3
+  v2-cfchars: corpus64 1.203 ms/sweep  big120KB 1.181 ms/search  hashes=3
+  v3-mutable: corpus64 1.026 ms/sweep  big120KB 1.000 ms/search  hashes=3
+  v1-nsinit vs v0: corpus -3.9%  big -7.2%
+  v2-cfchars vs v0: corpus -9.3%  big -11.4%
+  v3-mutable vs v0: corpus -22.6%  big -25.0%
+SCREEN_DONE
+exit=0

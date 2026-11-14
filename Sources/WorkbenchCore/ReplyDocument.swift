@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(CoreFoundation)
+import CoreFoundation
+#endif
 import Markdown
 
 /// A semantic document shared by all native conversation providers.
@@ -135,7 +138,18 @@ public enum ReplyDocument {
         let ns = text as NSString
         let whole = NSRange(location: 0, length: ns.length)
 #if canImport(Darwin)
-        return linkDetector.matches(in: text, range: whole).compactMap { match in
+        // The data detector reads its input through per-character bridging
+        // (@objc __StringStorage.character(at:) and getCharacters(_:range:),
+        // both paying String.UTF16View index conversions). Round-16 cold
+        // find-bar attribution, nearest-product-frame accounting (archived
+        // with the trace under docs/performance/20x-loop-rounds/round-16/):
+        // linkMatches owns 66.6% of samples in total; the selected
+        // bridge/DD hot leaves subtotal 26.6% of all samples, 97.6% of them
+        // linkMatches-owned. Handing the detector the same characters in
+        // contiguous UTF-16 storage lets it read the buffer directly;
+        // detection results are unchanged (pinned by
+        // checkLinkScanContiguousUTF16; isolated screening -34.8%).
+        return linkDetector.matches(in: contiguousUTF16(text), range: whole).compactMap { match in
             guard let url = match.url, ["http", "https"].contains(url.scheme?.lowercased() ?? "") else { return nil }
             return (match.range, url)
         }
@@ -155,6 +169,21 @@ public enum ReplyDocument {
         }
 #endif
     }
+
+#if canImport(Darwin)
+    /// The same characters in contiguous UTF-16 storage: a materialized
+    /// CFString that survives the String round trip, so Objective-C consumers
+    /// scan the buffer directly instead of per-character Swift bridging. The
+    /// empty string keeps its storage (no buffer to materialize).
+    private static func contiguousUTF16(_ text: String) -> String {
+        guard !text.isEmpty else { return text }
+        var chars = Array(text.utf16)
+        let materialized = chars.withUnsafeMutableBufferPointer { buffer in
+            CFStringCreateWithCharacters(nil, buffer.baseAddress!, CFIndex(buffer.count)) as NSString
+        }
+        return materialized as String
+    }
+#endif
 
     private static func linkBareURLs(_ runs: [ReplyInline]) -> [ReplyInline] {
         runs.flatMap { run -> [ReplyInline] in

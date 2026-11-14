@@ -1,0 +1,12 @@
+build_exit=0
+[55 / 57] r16dd-product
+Build complete! (3.19秒)
+roundtrip_class=__NSCFString  native_class=NSTaggedPointerString
+EQUIVALENCE: PASS (156 comparisons, 78 texts)
+  d0-lazy: 86.679 ms/sweep(64 runs x5)  hashes=1
+  d1-cfchars: 56.527 ms/sweep(64 runs x5)  hashes=1
+  d2-mutable: 88.109 ms/sweep(64 runs x5)  hashes=1
+  d1-cfchars vs d0: -34.8%
+  d2-mutable vs d0: +1.6%
+SCREEN_DONE
+exit=0

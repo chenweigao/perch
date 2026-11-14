@@ -1,0 +1,68 @@
+{
+  "suite": "macos",
+  "group": "core-regression",
+  "scope": "offline synthetic checks; no SSH, real models or frame-rate certification",
+  "commit": "f0d91ce4cae6c420b9b1f8513fecf1661d1f14db",
+  "dirty": false,
+  "checks": [
+    {
+      "name": "app-launch",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/check-app-launch.py",
+        "--output",
+        "/Users/<runner>/work/perch/perch/.local/functional-core/app-launch"
+      ],
+      "log": "app-launch.log",
+      "exit_code": 0,
+      "seconds": 53.94,
+      "passed": true
+    },
+    {
+      "name": "signature",
+      "command": [
+        "codesign",
+        "--verify",
+        "--deep",
+        "--strict",
+        "build/Perch.app"
+      ],
+      "log": "signature.log",
+      "exit_code": 0,
+      "seconds": 0.05,
+      "passed": true
+    },
+    {
+      "name": "version",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/check-version.py",
+        "--app",
+        "build/Perch.app"
+      ],
+      "log": "version.log",
+      "exit_code": 0,
+      "seconds": 0.09,
+      "passed": true
+    },
+    {
+      "name": "workbench",
+      "command": [
+        "swift",
+        "run",
+        "--build-system",
+        "native",
+        "-c",
+        "release",
+        "--skip-build",
+        "WorkbenchChecks"
+      ],
+      "log": "workbench.log",
+      "exit_code": -5,
+      "seconds": 22.98,
+      "passed": false
+    }
+  ],
+  "status": "failed",
+  "seconds": 77.07
+}

@@ -1,0 +1,30 @@
+total_samples=21067
+
+== total ownership (nearest named product frame wins) ==
+  14041  66.6493%  linkMatches
+   2959  14.0457%  ReplyDocument.parse
+   1359   6.4508%  ReplyDocument.blocks
+   1269   6.0236%  ConversationSearch.search
+    437   2.0743%  sources(of:)
+    378   1.7943%  other/unattributed
+    305   1.4478%  ReplyDocument.inlines
+    122   0.5791%  linkBareURLs
+     88   0.4177%  ConversationTimelineEntry.make
+     54   0.2563%  renderedText
+     37   0.1756%  role(of:)
+     18   0.0854%  ConversationSearch.hits
+
+== selected leaves: ownership + explicit bridging frames ==
+_nativeGetIndex: total=1793 (8.5109% of all)  [linkMatches=1750, ConversationSearch.search=42, other/unattributed=1]  character(at:)=895 getCharacters=898
+langid_consume_string: total=1651 (7.8369% of all)  [linkMatches=1651]  character(at:)=0 getCharacters=0
+_DDScannerHandleState: total=683 (3.2420% of all)  [linkMatches=683]  character(at:)=0 getCharacters=0
+DDLexerDeterministicScan: total=465 (2.2072% of all)  [linkMatches=465]  character(at:)=0 getCharacters=0
+computeLexemsAtPosition: total=268 (1.2721% of all)  [linkMatches=268]  character(at:)=0 getCharacters=0
+__CF_IS_OBJC: total=444 (2.1076% of all)  [linkMatches=441, ConversationSearch.search=2, other/unattributed=1]  character(at:)=0 getCharacters=0
+objc_msgSend: total=303 (1.4383% of all)  [linkMatches=292, ConversationSearch.search=6, other/unattributed=3]  character(at:)=0 getCharacters=0
+_nativeCopy(into:alignedRange: total=515 (2.4446% of all)  [linkMatches=455, ConversationSearch.search=50, other/unattributed=10]  character(at:)=0 getCharacters=515
+CFStringFindWithOptionsAndLocale: total=585 (2.7769% of all)  [ConversationSearch.search=339, linkMatches=246]  character(at:)=0 getCharacters=0
+__CFStringFoldCharacterClusterAtIndex: total=761 (3.6123% of all)  [ConversationSearch.search=556, linkMatches=205]  character(at:)=0 getCharacters=0
+
+selected-7-leaf subtotal: 5607 (26.6151% of all)  [the figure previously mislabeled as total linkMatches ownership]
+CF query-match machinery under ConversationSearch.search (CFStringFindWithOptionsAndLocale + __CFStringFoldCharacterClusterAtIndex only): 895 (4.2484% of all)

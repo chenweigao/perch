@@ -1,0 +1,16 @@
+HEAD is now at 15f612f Merge pull request #337 from chenweigao/perf/20x-loop-15-20261114
+HEAD=15f612f251df742a57ab3d786d8857995ec0f0ce
+porcelain_before=0
+tests_patch=ok
+base_build_exit=0
+base_checks_exit=0 pass=98
+GOLDEN_CAPTURE link-scan digest: 97e345c9136b50c8
+PASS: link detection over contiguous UTF-16 matches the pinned corpus (3000 fuzz texts + structural cases, digest 97e345c9136b50c8)
+product_patch=ok
+cand_build_exit=0
+cand_checks_exit=0 pass=98
+GOLDEN_CAPTURE link-scan digest: 97e345c9136b50c8
+PASS: link detection over contiguous UTF-16 matches the pinned corpus (3000 fuzz texts + structural cases, digest 97e345c9136b50c8)
+base_digest=97e345c9136b50c8 cand_digest=97e345c9136b50c8 equal=YES
+porcelain_after=0
+DONE Sat Nov 14 22:59:06 CST 2026

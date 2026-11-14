@@ -1,0 +1,144 @@
+{
+ "suite": "portable",
+ "group": "all",
+ "scope": "offline synthetic checks; no SSH, real models or frame-rate certification",
+ "commit": "413bf860280878b1832a6103d564c7e631524e3b",
+ "dirty": true,
+ "checks": [
+  {
+   "name": "version",
+   "command": [
+    "/home/<dev>/.local/bin/python3",
+    "scripts/check-version.py"
+   ],
+   "log": "version.log",
+   "exit_code": 0,
+   "seconds": 0.03,
+   "passed": true
+  },
+  {
+   "name": "bridge",
+   "command": [
+    "/home/<dev>/.local/bin/python3",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "remote",
+    "-p",
+    "test_*.py"
+   ],
+   "log": "bridge.log",
+   "exit_code": 0,
+   "seconds": 1.87,
+   "passed": true
+  },
+  {
+   "name": "codex-schema",
+   "command": [
+    "/home/<dev>/.local/bin/python3",
+    "scripts/check-codex-schema.py"
+   ],
+   "log": "codex-schema.log",
+   "exit_code": 0,
+   "seconds": 0.16,
+   "passed": true
+  },
+  {
+   "name": "installer",
+   "command": [
+    "/home/<dev>/.local/bin/python3",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "Tests/RemoteSetup"
+   ],
+   "log": "installer.log",
+   "exit_code": 0,
+   "seconds": 0.26,
+   "passed": true
+  },
+  {
+   "name": "model-metadata",
+   "command": [
+    "/home/<dev>/.local/bin/python3",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "Tests/ModelMetadata"
+   ],
+   "log": "model-metadata.log",
+   "exit_code": 0,
+   "seconds": 0.06,
+   "passed": true
+  },
+  {
+   "name": "localization",
+   "command": [
+    "/home/<dev>/.local/bin/python3",
+    "scripts/check-localization.py"
+   ],
+   "log": "localization.log",
+   "exit_code": 0,
+   "seconds": 0.21,
+   "passed": true
+  },
+  {
+   "name": "localization-tests",
+   "command": [
+    "/home/<dev>/.local/bin/python3",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "Tests/Localization"
+   ],
+   "log": "localization-tests.log",
+   "exit_code": 0,
+   "seconds": 0.06,
+   "passed": true
+  },
+  {
+   "name": "radius",
+   "command": [
+    "/home/<dev>/.local/bin/python3",
+    "scripts/check-radius-tokens.py"
+   ],
+   "log": "radius.log",
+   "exit_code": 0,
+   "seconds": 0.06,
+   "passed": true
+  },
+  {
+   "name": "preview-sources",
+   "command": [
+    "/home/<dev>/.local/bin/python3",
+    "scripts/check-preview-sources.py"
+   ],
+   "log": "preview-sources.log",
+   "exit_code": 0,
+   "seconds": 8.57,
+   "passed": true
+  },
+  {
+   "name": "acceptance-supervisor",
+   "command": [
+    "/home/<dev>/.local/bin/python3",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "Tests/Performance"
+   ],
+   "log": "acceptance-supervisor.log",
+   "exit_code": 0,
+   "seconds": 4.37,
+   "passed": true
+  }
+ ],
+ "status": "passed",
+ "seconds": 15.68,
+ "note": "run at 413bf86; working tree dirty only with this round's uncommitted docs at run time"
+}
