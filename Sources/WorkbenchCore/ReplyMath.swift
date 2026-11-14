@@ -57,7 +57,7 @@ public enum ReplyMath {
     /// Resolve boundaries in bounded passes, including unmatched streaming input.
     /// The original source remains unchanged outside paired math delimiters.
     static func normalizeDelimiters(_ source: String) -> String {
-        guard source.utf8.contains(92), source.contains(#"\("#) || source.contains(#"\["#) else { return source }
+        guard hasDelimiterStart(source) else { return source }
         let bytes = Array(source.utf8)
         let boundaries = Boundaries(bytes)
         var result: [UInt8] = []
@@ -128,6 +128,44 @@ public enum ReplyMath {
         guard copyFrom > 0 else { return source }
         result.append(contentsOf: bytes[copyFrom...])
         return String(decoding: result, as: UTF8.self)
+    }
+
+    /// Equivalent of the previous guard `source.utf8.contains(92) &&
+    /// (source.contains("\(") || source.contains("\["))` — the two
+    /// grapheme-aware substring searches dominated this function on the
+    /// cold find-bar path (round-17 attribution: ~79% of its samples were
+    /// String-search machinery on tool-output sources full of escaped
+    /// backslashes). Byte adjacency of the ASCII pair is a necessary
+    /// condition for a Character-sequence match (UTF-8 self-synchronization:
+    /// ASCII bytes never occur inside multi-byte sequences), so sources
+    /// without the byte pair are rejected by the scan alone. A found pair is
+    /// grapheme-exact — and the search can stop — when the byte after it is
+    /// ASCII or absent: the backslash always forms its own Character (ASCII,
+    /// and CR pairs only with LF), and every scalar that could extend the
+    /// paren's grapheme (Extend, SpacingMark, ZWJ) is non-ASCII. A pair
+    /// followed by a non-ASCII byte is inconclusive at the byte level (the
+    /// next scalar might be a combining mark extending the paren), so the
+    /// grapheme-aware searches decide exactly as before — they are reached
+    /// only for sources that actually contain a delimiter-byte pair, never
+    /// for the common no-backslash-pair source.
+    private static func hasDelimiterStart(_ source: String) -> Bool {
+        var previous: UInt8 = 0
+        var sawPair = false
+        var pendingPair = false
+        for byte in source.utf8 {
+            if pendingPair {
+                if byte < 0x80 { return true }
+                pendingPair = false
+            }
+            if previous == 92, byte == 40 || byte == 91 {
+                sawPair = true
+                pendingPair = true
+            }
+            previous = byte
+        }
+        if pendingPair { return true }
+        guard sawPair else { return false }
+        return source.contains(#"\("#) || source.contains(#"\["#)
     }
 
     private static func isEscaped(_ bytes: [UInt8], at index: Int) -> Bool {
