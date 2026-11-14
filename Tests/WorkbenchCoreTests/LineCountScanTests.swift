@@ -12,7 +12,8 @@ import WorkbenchCore
 ///
 /// Every case goes through the public derive path (a synthesized Write call),
 /// so the pin covers the shipped call chain, not a private helper. Coverage:
-/// exhaustive piece combinations {\n, \r, \r\n, \n\r, a, 汉, ""} to depth 4,
+/// exhaustive piece combinations {\n, \r, \r\n, \n\r, \u{000B}, \u{000C},
+/// a, 汉, ""} to depth 4,
 /// a word-boundary length grid (0…40 around the 8-byte scan words, with
 /// separators at the boundaries and a leading-CR sandwich), and 20,000 seeded
 /// fuzz strings. The check compiles and passes on the matched baseline (the
@@ -30,6 +31,7 @@ func checkEditStatsLineCountScan() throws {
     }
     var cases = 0
     var vtffCases = 0
+    var adjacencyCases = 0
     func check(_ text: String) throws {
         let stats = SessionEditStats.derive(from: try writeWindow(text))
         let got = stats?.total.additions ?? -1
@@ -37,7 +39,14 @@ func checkEditStatsLineCountScan() throws {
         precondition(got == want && stats?.total.deletions == 0,
                      "line count mismatch for bytes \(Array(text.utf8)): got \(got), want \(want)")
         cases += 1
-        if text.utf8.contains(0x0B) || text.utf8.contains(0x0C) { vtffCases += 1 }
+        let caseBytes = Array(text.utf8)
+        if caseBytes.contains(0x0B) || caseBytes.contains(0x0C) { vtffCases += 1 }
+        // The borrow-propagation defect needs the offending ADJACENCY (an LF
+        // immediately followed by VT, or a CR immediately followed by FF),
+        // not mere presence of either byte; count both notions separately.
+        if zip(caseBytes, caseBytes.dropFirst()).contains(where: {
+            ($0 == 0x0A && $1 == 0x0B) || ($0 == 0x0D && $1 == 0x0C)
+        }) { adjacencyCases += 1 }
     }
 
     // Exhaustive separator/filler combinations.
@@ -100,6 +109,8 @@ func checkEditStatsLineCountScan() throws {
     }
     precondition(cases > 20000, "the corpus must stay exhaustive, got \(cases)")
     precondition(vtffCases > 2000,
-                 "the corpus must densely cover the VT/FF borrow-propagation family, got \(vtffCases)")
-    print("PASS: edit-stat line counting matches the Character-split oracle across \(cases) cases (\(vtffCases) with VT/FF adjacency)")
+                 "the corpus must densely cover VT/FF-containing cases, got \(vtffCases)")
+    precondition(adjacencyCases > 2000,
+                 "the corpus must densely cover the LF→VT / CR→FF borrow-propagation adjacencies, got \(adjacencyCases)")
+    print("PASS: edit-stat line counting matches the Character-split oracle across \(cases) cases (\(vtffCases) containing VT/FF, \(adjacencyCases) with an LF→VT or CR→FF adjacency)")
 }

@@ -40,8 +40,10 @@ review's counterexamples: `"\n\u{000B}aaaaaa"` → 3 vs 2 lines;
 screening corpus (no VT/FF bytes) could not expose it and the initial product
 pin shared the gap. The shipped implementation uses the carry-free exact form
 `~(((x&0x7F…)+0x7F…) | x | 0x7F…)` (one extra OR per word); the pin gained the
-counterexamples, VT/FF in both alphabets, and a family-coverage guard (27,885
-cases, 22,302 with VT/FF adjacency; demonstrated red on the unfixed build,
+counterexamples, VT/FF in both alphabets, and family-coverage guards (27,885
+cases: 22,302 containing VT/FF bytes and — via a dedicated counter added at the
+re-review, which found the original label overstated presence as adjacency —
+16,811 with an LF→VT or CR→FF adjacency; demonstrated red on the unfixed build,
 green after). Timing direction is unaffected (one extra OR per word); the v2
 A/B at the fixed head is the authoritative adoption measurement. Also (review
 NB4): screen v2 wrapped the scan in a local String copy + `withUTF8` while the
