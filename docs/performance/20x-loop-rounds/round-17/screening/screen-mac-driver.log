@@ -1,0 +1,28 @@
+HEAD is now at 76940c0 Merge pull request #338 from chenweigao/perf/20x-loop-16-20261114
+HEAD=76940c06ef47e8e6eb016c6d9e66e7b286b30fda
+porcelain_before=0
+tests_patch=ok
+base_build_exit=0
+product_patch=ok
+cand_build_exit=0
+eadadae75025b5467b330da705e28bea13f76d5c689bc99fd4dcae946e1fda14  .build/round17-base/out/Products/Release/WorkbenchChecks
+5e58f6b8a8e9811c7e06f7007a8045e8dacd9b939de266c5b79835773dd87b11  .build/round17-cand/out/Products/Release/WorkbenchChecks
+base_checks_exit=0 pass=99
+cand_checks_exit=0 pass=99
+GOLDEN_CAPTURE normalize-delimiters-guard digest: d90ac2cad4b58020 (math texts 412/3000)
+GOLDEN_CAPTURE normalize-delimiters-guard digest: d90ac2cad4b58020 (math texts 412/3000)
+=== in-context screening Sun Nov 15 02:58:10 CST 2026 ===
+it=1 side=base streaming exit=0
+it=1 side=base cold exit=0
+it=1 side=cand streaming exit=0
+it=1 side=cand cold exit=0
+it=2 side=base streaming exit=0
+it=2 side=base cold exit=0
+it=2 side=cand streaming exit=0
+it=2 side=cand cold exit=0
+it=3 side=base streaming exit=0
+it=3 side=base cold exit=0
+it=3 side=cand streaming exit=0
+it=3 side=cand cold exit=0
+porcelain_after=0
+DONE Sun Nov 15 02:59:04 CST 2026

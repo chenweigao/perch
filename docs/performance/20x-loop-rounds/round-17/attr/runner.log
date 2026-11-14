@@ -1,0 +1,40 @@
+=== prepare Sun Nov 15 02:30:27 CST 2026 ===
+From github.com:chenweigao/perch
+   15f612f..76940c0  main       -> origin/main
+Previous HEAD position was b731775 docs(performance): record round-16 final-head product gate pass in the checklist
+HEAD is now at 76940c0 Merge pull request #338 from chenweigao/perf/20x-loop-16-20261114
+HEAD=76940c06ef47e8e6eb016c6d9e66e7b286b30fda
+porcelain_before=0
+=== apply temporary profile loop modes ===
+porcelain_applied=4
+=== build Sun Nov 15 02:30:31 CST 2026 ===
+build_exit=0
+52fdcd07d6335de399637f82d1c417e2e0b6ed4843be9c707b546e25811cd910  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round17-profile/out/Products/Release/WorkbenchChecks
+=== record cold Sun Nov 15 02:31:41 CST 2026 ===
+Recording completed. Saving output file...
+Output file saved as: cold.trace
+record_cold_exit=0
+Finished export to the file: /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/round17/cold-time-profile.xml
+=== record streaming Sun Nov 15 02:32:09 CST 2026 ===
+Recording completed. Saving output file...
+Output file saved as: streaming.trace
+record_streaming_exit=0
+Finished export to the file: /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/round17/streaming-time-profile.xml
+=== record activity Sun Nov 15 02:32:43 CST 2026 ===
+Recording completed. Saving output file...
+Output file saved as: activity.trace
+record_activity_exit=0
+Finished export to the file: /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/round17/activity-time-profile.xml
+total 63512
+drwxr-xr-x   8 <mini>  staff       256 Nov 15 02:33 .
+drwxr-xr-x  26 <mini>  staff       832 Nov 15 02:31 ..
+-rw-r--r--   1 <mini>  staff  11243708 Nov 15 02:33 activity-time-profile.xml
+drwxr-xr-x  10 <mini>  staff       320 Nov 15 02:33 activity.trace
+-rw-r--r--   1 <mini>  staff   6189024 Nov 15 02:32 cold-time-profile.xml
+drwxr-xr-x  10 <mini>  staff       320 Nov 15 02:32 cold.trace
+-rw-r--r--   1 <mini>  staff  14095152 Nov 15 02:32 streaming-time-profile.xml
+drwxr-xr-x  10 <mini>  staff       320 Nov 15 02:32 streaming.trace
+=== revert Sun Nov 15 02:33:11 CST 2026 ===
+porcelain_after=0
+DONE Sun Nov 15 02:33:11 CST 2026
+exit=0

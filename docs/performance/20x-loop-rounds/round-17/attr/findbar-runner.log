@@ -1,0 +1,32 @@
+=== prepare Sun Nov 15 02:33:16 CST 2026 ===
+HEAD is now at 76940c0 Merge pull request #338 from chenweigao/perf/20x-loop-16-20261114
+HEAD=76940c06ef47e8e6eb016c6d9e66e7b286b30fda
+porcelain_before=0
+=== apply temporary profile loop mode ===
+porcelain_applied=2
+=== build Sun Nov 15 02:33:20 CST 2026 ===
+build_exit=0
+ec175ccd61372803c7c1bea863f521beefa53ac6cc5d8d5d48d29927fea7a19b  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round17-profile/out/Products/Release/WorkbenchChecks
+=== timing context run (5s, untraced) Sun Nov 15 02:33:52 CST 2026 ===
+findbar_cold_iterations=4
+findbar_cold_median_ms=1295.942 min_ms=1280.838 max_ms=1314.466
+=== record findbar Sun Nov 15 02:33:58 CST 2026 ===
+Recording completed. Saving output file...
+Output file saved as: findbar.trace
+record_findbar_exit=0
+Finished export to the file: /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/round17/findbar-time-profile.xml
+total 81952
+drwxr-xr-x  10 <mini>  staff       320 Nov 15 02:34 .
+drwxr-xr-x  26 <mini>  staff       832 Nov 15 02:31 ..
+-rw-r--r--   1 <mini>  staff  11243708 Nov 15 02:33 activity-time-profile.xml
+drwxr-xr-x  10 <mini>  staff       320 Nov 15 02:33 activity.trace
+-rw-r--r--   1 <mini>  staff   6189024 Nov 15 02:32 cold-time-profile.xml
+drwxr-xr-x  10 <mini>  staff       320 Nov 15 02:32 cold.trace
+-rw-r--r--   1 <mini>  staff   8946450 Nov 15 02:34 findbar-time-profile.xml
+drwxr-xr-x  10 <mini>  staff       320 Nov 15 02:34 findbar.trace
+-rw-r--r--   1 <mini>  staff  14095152 Nov 15 02:32 streaming-time-profile.xml
+drwxr-xr-x  10 <mini>  staff       320 Nov 15 02:32 streaming.trace
+=== revert Sun Nov 15 02:34:26 CST 2026 ===
+porcelain_after=0
+DONE Sun Nov 15 02:34:26 CST 2026
+exit=0
