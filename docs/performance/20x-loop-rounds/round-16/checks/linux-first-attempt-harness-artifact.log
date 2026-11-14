@@ -1,0 +1,372 @@
+PASS: step reading preserves order, edit identities, historical patches and outcome-aware churn
+PASS: phase reading groups Bash and thoughts, preserves edit receipts, separates historical failures from pending work and uses grounded command labels
+PASS: live public summaries, completed process folding, manual expansion, uniform folding of edits and failures
+PASS: PI steady streaming cadence, Unicode boundaries, replacement and immediate completion
+PASS: parsed-block release retains Unicode, styling, links and complete rich Markdown
+PASS: incremental reply parse matches full parses at every streaming prefix
+PASS: live progress, missing summaries, thinking-only output, tool-only notice and provider model groups
+PASS: process fold groups completed turns, preserves order, keeps the running turn live
+PASS: presentation parity, same-ID edits, pagination, epoch/language/live handoff, scoped LRU, oversized active state and metrics
+PASS: presentation history reuse matches complete recomputation across tokens, paging, crossings, language, epoch and overlays
+PASS: paging and new prompts reuse unchanged earlier turns and match complete recomputation (19/20 pages)
+PASS: window identity reuse ends at any earlier in-place edit, survives a rebuilt window and matches complete recomputation
+PASS: find-bar entry reuse equals a complete search across growth, isolated payload edits, reroutes, rebuilds, pages, running flips and query/option switches
+PROBE PASS: prefix zero-sign flip under an unchanged query
+PROBE PASS: NFD regex query after the canonically equal NFC query, and back
+PROBE PASS: payload NFC to NFD swap under an unchanged regex query
+PROBE PASS: object-key NFC to NFD swap under an unchanged regex query
+PROBE PASS: case-sensitive literal NFD query after the canonically equal NFC query, and back
+PASS: find-bar cache-hole probes (prefix zero sign, regex and literal query encoding round trips, payload encoding, key encoding) equal complete searches
+PASS: collapsedWhitespace whitespace-adjacent walk (2662 strict-path, 1109274 fast-path, 7 characterized gaps)
+PASS: collapsedWhitespace prepend set matches stdlib fusion (27 fusing scalars)
+PASS: collapsedWhitespace equals Character-accurate split/join on adversarial whitespace
+PASS: single-part excerpt fast path equals original Character budgets across Unicode boundaries and mixed parts
+PASS: compaction summary display strips harness scaffolding
+PASS: unified activity narratives, source priority, bounded external refinement and Codex metadata
+PASS: bounded task Recap input, privacy boundary, request/response contract, stable cache, and session overview
+PASS: file references preserve Unicode line selection; diff feedback distinguishes old/new lines and exact snapshot
+PASS: workspace progress migration, independent checkpoints, safe outcome links, stable action order
+PASS: grouping rejects unknown/duplicate memberships, preserves manual changes, undo conflicts and bounded metadata
+PASS: session naming config migration, placeholder detection, excerpt bounds, request shape, sanitization
+PASS: cron-fire envelope parsing, turn anchoring, naming excerpt
+PASS: tool visibility handoff, deduplication, late/orphan results, failure, approval, disconnection and native turn scope
+PASS: status-line tools equal the full projection walk across scenarios and 2000 seeded differential cases
+PASS: TodoList writes, queries, failure, turn boundaries and floating-list lifecycle
+Conversation activity: live/history dedup, result precedence, disconnect, approval, stop and turn isolation passed
+PASS: turn status headlines, requests, ended results, turn-scoped edits, stall thresholds, the minute clock and turn edit paths
+PASS: session turn facts for Kimi and native rows and snapshots, shared precedence, sections and notification edges
+PASS: task panel document links, host-relative paths, deduplication and write evidence
+PASS: task detail routes, row detail lines, output and stop capabilities, output tail truncation
+PASS: request/observed timing, session switching, wait accounting, completion freeze and turn isolation
+PASS: frame hitch recorder — steady frames, long gap, nested/partial attribution, scroll flag, histogram, worst-60 cap, ring overwrite, chain breaks, JSON report
+PASS: auto-compact decisions — gates, threshold edge, anti-spin, resume guards
+PASS: safe link allowlist — http/https/mailto/perch-file, scheme and case rejection
+PASS: session edit stats — diff middle, write lines, patch headers, accumulation, URL/unknown rejection, Character line boundaries
+PASS: edit-stat line counting matches the Character-split oracle across 27885 cases (22302 containing VT/FF, 16811 with an LF→VT or CR→FF adjacency)
+PASS: edit/write/patch line scans equal the Character oracle on CRLF, canonical Unicode, boundary and seeded mixed corpora
+PASS: line fast paths preserve prefix/suffix overlap, final empty lines, CRLF and canonical Unicode boundaries
+PASS: edit tool classification preserves known/unknown aliases, Unicode folding, path precedence, URL rejection and normalized changes
+PASS: project slash commands — script, parse, frontmatter, dedup, expansion
+PASS: app version check — tag picking, suffix stripping, numeric compare
+PASS: 1000 text edits coalesce; queue saves are immediate; flush cancels stale writes
+PASS: durable drafts and attachments, safe outbox recovery, file references, search, navigation and task events
+PASS: attention routing by event, level and reader context; Dock badge counts
+Document reading contracts passed
+PASS: transcript geometry boundaries, reading anchors and bounded retention across 10,000 rows in both directions
+PASS: reply paragraphs, nested lists, tables, safe links, bare URLs and partial streaming Markdown
+PASS: link detection over contiguous UTF-16 matches the pinned corpus (3000 fuzz texts + structural cases, digest 5dd61f867727616a)
+PASS: reply math — dollar/backslash delimiters, display blocks, currency guard, code isolation, Unicode and unmatched boundaries
+SKIP: math rendering smoke check requires AppKit
+PASS: reply alerts — typed block, marker consumed, case-insensitive, unknown stays quote
+PASS: reply plain text, cross-view selection spans
+PASS: reply table column widths, narrow-column floors, capped surplus, deterministic rounding
+PASS: table serialization keeps Chinese, quotes, commas, line breaks and empty cells
+PASS: Claude user-role tool results, skill context, four navigation turns and 104 linked results
+PASS: chronological tool summaries, native identity, permission catalogs, wire decoding and default migration
+PASS: subagent entries decode every protocol 7 key, tolerate missing, mistyped and unknown values, and label interactions
+PASS: snapshot roster decodes; deltas and full windows replace it only when they carry it; pages and other sessions keep their own
+PASS: subagent transcript decoding, full reset, index deltas, stale revisions, epoch reset, resync and older pages
+PASS: native subagents project onto roster rows with Kimi's status, phase, clock, output and stop vocabulary
+PASS: Agent, Task and agent/spawnAgent read as subagent calls with the subagent action label
+PASS: shared subagent transcript rows for native messages and Kimi turns, matching the Kimi sheet's flattening
+PASS: transcript delta append/edit/truncate, prepend race, history epoch reset, gap and stale-base rejection
+PASS: cached directory search matches prior Unicode/token semantics, catalog changes and locale invalidation
+PASS: Kimi UTF-16 streaming, overlap, gaps, epochs, business errors, interactions
+PASS: subagent roster decoding, lifecycle events, background task list, deduplication and snapshot boundaries
+PASS: subagent transcript page, operation folding, reset watermarks, older pages and tool frame mapping
+PASS: Kimi API closes with a pending request and rejects late polling
+PASS: WebSocket heartbeat duplicate, concurrent and late callbacks; first result preserved
+PASS: Kimi pending queue recovery, identity reconciliation, no duplicate bubble
+PASS: legacy workspace migration, mixed provider identity, ordered scene restoration, group resume, Kimi queue semantics and review version
+PASS: favorites, local archive persistence, deletion reference cleanup, ordered background saves, bounded recent conversation cache
+PASS: completion semantics, batch planning, cross-host identity, revalidation, bounded concurrency, retry and undo sets
+PASS: verified-capability delivery modes, stop state machine with turn binding and unknown results, queue ownership, idempotent retry, stop-paused drafts and actionable queue recovery
+PASS: local/SSH environment identity, GUI-safe discovery paths, version gating, explicit approval launch and probe-derived capabilities
+PASS: version parsing, installed/serving comparison, stale and managed notices, start timestamps and meta decoding
+
+*** Signal 4: Backtracing from 0x55b155b92131... done ***
+
+*** Swift runtime failure: precondition failure ***
+
+Platform: x86_64 Linux (Alibaba Cloud Linux 3 (Soaring Falcon))
+
+Thread 0 "base-checks":
+
+  0      0x00007f77ab36938a __sigsuspend + 74 in libc-2.32.so
+  1 [ra] 0x00007f77ac8bcc59 _dispatch_sig_thread + 8 in libdispatch.so
+...
+
+Thread 1:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 2:
+
+  0      0x00007f77ab45989e epoll_wait + 94 in libc-2.32.so
+  1 [ra] 0x00007f77ac8bc022 _dispatch_mgr_invoke + 129 in libdispatch.so
+  2 [ra] 0x00007f77ac8bbf8d _dispatch_mgr_thread + 108 in libdispatch.so
+  3 [ra] 0x00007f77ac8bf195 _dispatch_worker_thread + 628 in libdispatch.so
+...
+
+Thread 3:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 4:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 5:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 6:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 7:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 8:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 9:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 10:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 11 crashed:
+
+  0 [inlined] [system] 0x000055b155b92131 Swift runtime failure: precondition failure in base-checks at //<compiler-generated>
+  1                    0x000055b155b92131 checkRemoteSetup() + 1569 in base-checks at /tmp/r16-ab-base/Tests/WorkbenchCoreTests/RemoteSetupTests.swift:171:15
+  2 [async]            0x000055b155b51bc0 specialized static ProtocolTests.main() in base-checks at /tmp/r16-ab-base/Tests/WorkbenchCoreTests/ProtocolTests.swift:107
+  3 [async] [system]   0x000055b155b4a8a0 specialized thunk for @escaping @convention(thin) @async () -> () in base-checks at //<compiler-generated>
+  4 [async]            0x00007f77ad274190 completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*) in libswift_Concurrency.so
+...
+
+Thread 12:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 13:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 14:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 15:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 16:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 17:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 18:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 19:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 20:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 21:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 22:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 23:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 24:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 25:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 26:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 27:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 28:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 29:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 30:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 31:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 32:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 33:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 34:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 35:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 36:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 37:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 38:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 39:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 40:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 41:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 42:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 43:
+
+  0      0x00007f77ab44d33e ppoll + 174 in libc-2.32.so
+  1 [ra] 0x00007f77ac51e2a8 __CFRunLoopRun + 1047 in libFoundation.so
+  2 [ra] 0x00007f77ac51dbe8 CFRunLoopRunSpecific + 503 in libFoundation.so
+  3 [ra] 0x00007f77ac4aa6a9 closure #1 in closure #1 in static Process.setup() + 680 in libFoundation.so
+  4 [ra] 0x00007f77ac6519e9 Thread.main() + 24 in libFoundation.so
+  5 [ra] 0x00007f77ac4bf427 NSThreadStart(_:) + 150 in libFoundation.so
+...
+
+Thread 44:
+
+  0  0x00007f77ab44f8fb select + 107 in libc-2.32.so
+...
+
+Thread 45:
+
+  0  0x00007f77ac0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+
+Registers:
+
+rax 0x0000000000000001  1
+rdx 0xeb00000000656c62  16933534598919711842
+rcx 0x00007f77740008d0  07 00 06 00 05 00 07 00 07 00 03 00 07 00 05 00  ················
+rbx 0x0000000000000004  4
+rsi 0x00007f708375654f  140121218573647
+rdi 0x00007f777401f240  4f 65 75 83 70 7f 00 00 d0 08 00 74 77 7f 00 00  Oeu·p···Ð··tw···
+rbp 0x00007f778effca60  c0 ca ff 8e 77 7f 00 00 c0 fb 26 ad 77 7f 00 00  ÀÊÿ·w···Àû&­w···
+rsp 0x00007f778effc970  10 ca ff 8e 77 7f 00 00 cc 58 27 ad 77 7f 00 00  ·Êÿ·w···ÌX'­w···
+ r8 0x0000000000000000  0
+ r9 0x0000000200000000  8589934592
+r10 0x0000000100000003  4294967299
+r11 0x0000000000000000  0
+r12 0x00007f777401f240  4f 65 75 83 70 7f 00 00 d0 08 00 74 77 7f 00 00  Oeu·p···Ð··tw···
+r13 0x0000000074000801  1946159105
+r14 0x00007f77a0020080  40 55 86 57 b1 55 00 00 c0 1b b5 55 b1 55 00 00  @U·W±U··À·µU±U··
+r15 0x00007f777401d610  bd 49 75 83 70 7f 00 00 d0 08 00 74 77 7f 00 00  ½Iu·p···Ð··tw···
+rip 0x000055b155b92131  0f 0b 66 66 66 66 2e 0f 1f 84 00 00 00 00 00 55  ··ffff.········U
+
+rflags 0x0000000000010246  ZF PF
+
+cs 0x0033  fs 0x0000  gs 0x0000
+
+
+Images (44 omitted):
+
+0x000055b155800000–0x000055b155fb7740 7c992fa713b9f5d05416af9fbe3f3178ed4dd991 base-checks             <worktree>/.local/round16/base-checks
+0x00007f77ab315000–0x00007f77ab499c5c 960891d022c59cee678476b8696e9224608859d0 libc-2.32.so            /usr/lib64/libc-2.32.so
+0x00007f77ac0bf000–0x00007f77ac0d4ce1 ddd6cd0bb97a6a9a3ab90896f32eab60963bdfcb libpthread-2.32.so      /usr/lib64/libpthread-2.32.so
+0x00007f77ac200000–0x00007f77ac6ef2b8 6ee3d6799f35b8e29e407f71257d255b14984765 libFoundation.so        /home/<dev>/.local/swift/6.3.3/usr/lib/swift/linux/libFoundation.so
+0x00007f77ac88a000–0x00007f77ac8d2218 d08a244d278d89eeb5cfd6afd8bb084f99cd2acd libdispatch.so          /home/<dev>/.local/swift/6.3.3/usr/lib/swift/linux/libdispatch.so
+0x00007f77ad1e8000–0x00007f77ad27b660 ab7a387eca696d31db096d9ebebea096c2cf1bc3 libswift_Concurrency.so /home/<dev>/.local/swift/6.3.3/usr/lib/swift/linux/libswift_Concurrency.so
+
+Backtrace took 0.61s
+

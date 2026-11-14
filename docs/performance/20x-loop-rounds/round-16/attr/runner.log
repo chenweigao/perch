@@ -1,0 +1,29 @@
+=== prepare Sat Nov 14 21:47:38 CST 2026 ===
+From github.com:chenweigao/perch
+   9c12eb9..15f612f  main       -> origin/main
+Previous HEAD position was 9c12eb9 Merge pull request #336 from chenweigao/perf/20x-loop-14-20261114
+HEAD is now at 15f612f Merge pull request #337 from chenweigao/perf/20x-loop-15-20261114
+HEAD=15f612f251df742a57ab3d786d8857995ec0f0ce
+porcelain_before=0
+=== apply temporary profile loop mode ===
+porcelain_applied=2
+=== build Sat Nov 14 21:47:42 CST 2026 ===
+build_exit=0
+0a2c1d707c1b657f628c7bbb14ac0ab9d1f0c65216bf9d2b26f1faea2dde081f  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round16-profile/out/Products/Release/WorkbenchChecks
+=== timing context run (5s, untraced) Sat Nov 14 21:48:52 CST 2026 ===
+findbar_cold_iterations=4
+findbar_cold_median_ms=1597.433 min_ms=1590.693 max_ms=1620.503
+=== record findbar Sat Nov 14 21:49:00 CST 2026 ===
+Recording completed. Saving output file...
+Output file saved as: findbar.trace
+record_findbar_exit=0
+Finished export to the file: /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/round16/findbar-time-profile.xml
+total 18440
+drwxr-xr-x   4 <mini>  staff      128 Nov 14 21:49 .
+drwxr-xr-x  25 <mini>  staff      800 Nov 14 21:48 ..
+-rw-r--r--   1 <mini>  staff  9179764 Nov 14 21:49 findbar-time-profile.xml
+drwxr-xr-x  10 <mini>  staff      320 Nov 14 21:49 findbar.trace
+=== revert Sat Nov 14 21:49:29 CST 2026 ===
+porcelain_after=0
+DONE Sat Nov 14 21:49:30 CST 2026
+exit=0
