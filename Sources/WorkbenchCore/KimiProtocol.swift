@@ -366,6 +366,13 @@ extension KimiMessage {
     }
 
     private static func sameRenderedMessage(_ lhs: KimiMessage, _ rhs: KimiMessage) -> Bool {
+        // A shared content buffer carries identical parts by definition; the
+        // timeline's per-update synthesized arrays fall through to the walk,
+        // where CoW-shared string and JSON payloads shortcut per field.
+        let shared = lhs.content.withContiguousStorageIfAvailable { left in
+            rhs.content.withContiguousStorageIfAvailable { right in left.baseAddress == right.baseAddress } ?? false
+        } ?? false
+        if shared { return true }
         guard lhs.content.count == rhs.content.count else { return false }
         for (left, right) in zip(lhs.content, rhs.content) where !sameRenderedPart(left, right) { return false }
         return true
@@ -425,15 +432,34 @@ extension JSONValue {
         case (.number(let a), .number(let b)): return a.bitPattern == b.bitPattern
         case (.string(let a), .string(let b)): return sameRenderedUTF8(a, b)
         case (.array(let a), .array(let b)):
+            // Copy-on-write storage shared between the two copies is identical
+            // by definition; timeline synthesis hands over fresh one-element
+            // arrays per update, so shared payloads must shortcut here or the
+            // per-delta path would walk every retained JSON tree.
+            let sharedArray = a.withContiguousStorageIfAvailable { left in
+                b.withContiguousStorageIfAvailable { right in left.baseAddress == right.baseAddress } ?? false
+            } ?? false
+            if sharedArray { return true }
             guard a.count == b.count else { return false }
             for (left, right) in zip(a, b) where !left.rendersIdentically(to: right) { return false }
             return true
         case (.object(let a), .object(let b)):
+            let sharedObject = a.withContiguousStorageIfAvailable { left in
+                b.withContiguousStorageIfAvailable { right in left.baseAddress == right.baseAddress } ?? false
+            } ?? false
+            if sharedObject { return true }
             guard a.count == b.count else { return false }
-            for (key, value) in a {
-                guard let match = b.first(where: { $0.key == key }),
-                      sameRenderedUTF8(key, match.key),
-                      value.rendersIdentically(to: match.value) else { return false }
+            // Canonical sorting aligns canonically equal keys at equal indices
+            // (a dictionary holds at most one key per canonical class), so the
+            // byte comparison below decides encoding drift in O(k log k)
+            // instead of a linear search per key.
+            let leftKeys = a.keys.sorted()
+            let rightKeys = b.keys.sorted()
+            for index in leftKeys.indices {
+                let leftKey = leftKeys[index], rightKey = rightKeys[index]
+                guard sameRenderedUTF8(leftKey, rightKey),
+                      let leftValue = a[leftKey], let rightValue = b[rightKey],
+                      leftValue.rendersIdentically(to: rightValue) else { return false }
             }
             return true
         default: return false

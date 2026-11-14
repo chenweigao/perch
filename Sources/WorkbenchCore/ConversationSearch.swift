@@ -148,7 +148,7 @@ public final class ConversationSearch {
             let previous = lookup(entry.id)
             let text: NSString
             let sourceEnds: [Int]
-            if let previous, previous.sources == sources {
+            if let previous, Self.sameRenderedSources(previous.sources, sources) {
                 text = previous.text
                 sourceEnds = previous.sourceEnds
             } else {
@@ -197,6 +197,17 @@ public final class ConversationSearch {
     /// whose value semantics deliberately treat a rebuilt window as unchanged.
     private static func sameQueryKey(_ lhs: String, _ rhs: String) -> Bool {
         lhs.utf8.elementsEqual(rhs.utf8)
+    }
+
+    /// The rendered-text cache is keyed by the sources' bytes, not their
+    /// canonical value: a canonically equal but encoding-distinct source (an
+    /// NFC/NFD payload swap) renders different search bytes, so reusing the
+    /// cached NSString for it would search stale text — the same reasoning
+    /// as the query key, applied to the rendered side.
+    private static func sameRenderedSources(_ lhs: [String], _ rhs: [String]) -> Bool {
+        guard lhs.count == rhs.count else { return false }
+        for (left, right) in zip(lhs, rhs) where !sameRenderedUTF8(left, right) { return false }
+        return true
     }
 
     /// User prompts, tool activity and assistant text search separately. Tool
