@@ -26,7 +26,7 @@ func checkSearchEntryReuse() throws {
             ["id": "f0", "role": "assistant", "created_at": "000004",
              "content": [["type": "text", "text": answer]]],
             ["id": "u1", "role": "user", "created_at": "000005",
-             "content": [["type": "text", "text": "第 1 轮：继续推进。"]]],
+             "content": [["type": "text", "text": "第 1 轮：继续推进 caf\u{00e9}。"]]],
         ]
     }
     func decoded(_ raw: [[String: Any]]) throws -> [KimiMessage] {
@@ -39,7 +39,7 @@ func checkSearchEntryReuse() throws {
                       "content": [["type": "text",
                                    "text": String(repeating: "推理 BETA 段。", count: tokens)]]]])
     }
-    let answer = "第 0 轮完成，ALPHA 已经处理：\(prose)"
+    let answer = "第 0 轮完成，ALPHA 已经处理：\(prose) caf\u{00e9}。"
     let editedAnswer = answer.replacingOccurrences(of: "ALPHA", with: "ALPHB")
     precondition(answer.utf8.count == editedAnswer.utf8.count,
                  "The in-place edit keeps the answer's byte length")
@@ -100,6 +100,31 @@ func checkSearchEntryReuse() throws {
     assistantOnly.role = .assistant
     equalsOracle(window, "ALPHA", running: true, options: assistantOnly, "assistant-role filter")
     equalsOracle(window, "ALPHA", running: true, "role filter back to all")
+    // Canonically equal queries are different search keys: a regex pattern is
+    // syntax, and an NFC/NFD pair matches differently. Both the prefix-level
+    // (Earlier) and the per-entry caches must key on the exact encoding. On the
+    // unoptimized matched baseline this transition fails by design: its
+    // pre-existing Earlier cache compares queries canonically and serves the
+    // NFC query's prefix hits to the NFD query.
+    let nfc = "caf\u{00e9}"
+    let nfd = "cafe\u{0301}"
+    precondition(nfc == nfd && !nfc.utf8.elementsEqual(nfd.utf8),
+                 "canonical equality must not imply encoding equality")
+    var regexKey = ConversationFindOptions()
+    regexKey.regex = true
+    let composed = equalsOracle(window, nfc, running: true, options: regexKey, "regex NFC query")
+    precondition(!composed.hits.isEmpty, "the precomposed pattern matches the precomposed fixture text")
+    let decomposed = equalsOracle(window, nfd, running: true, options: regexKey,
+                                  "regex NFD query after the canonically equal NFC query")
+    precondition(decomposed.hits.isEmpty, "the decomposed pattern must not match the precomposed text")
+    equalsOracle(window, nfc, running: true, options: regexKey, "regex NFC query again after the NFD query")
+    var literalKey = ConversationFindOptions()
+    literalKey.caseSensitive = true
+    equalsOracle(window, nfc, running: true, options: literalKey, "literal NFC query, case sensitive")
+    equalsOracle(window, nfd, running: true, options: literalKey,
+                 "literal NFD query after the canonically equal NFC query")
+    equalsOracle(window, nfc, running: true, options: literalKey, "literal NFC query again")
+    equalsOracle(window, "ALPHA", running: true, "default query after the encoding-key transitions")
     // Running flips rebuild the latest turn's entries under the other flag.
     equalsOracle(window, "ALPHA", running: false, "running flip off")
     equalsOracle(window, "BETA", running: false, "running flip off, latest-turn query")

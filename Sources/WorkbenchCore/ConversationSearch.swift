@@ -98,7 +98,7 @@ public final class ConversationSearch {
         let split = messages.lastIndex(where: \.isUserPrompt) ?? 0
         let prefix = messages[..<split]
         var hits: [ConversationSearchHit]
-        if let earlier, earlier.query == query, earlier.options == options,
+        if let earlier, Self.sameQueryKey(earlier.query, query), earlier.options == options,
            earlier.source.count == prefix.count, KimiMessage.sameWindow(prefix, earlier.source) {
             hits = earlier.hits
             self.earlier?.source = prefix
@@ -127,7 +127,7 @@ public final class ConversationSearch {
             // an equal role, and an entry the filter skipped earlier is absent
             // from the cache, so it takes the regular path and is skipped again.
             if let previous = lookup(entry.id), previous.isRunning == isRunning,
-               previous.query == query, previous.options == options,
+               Self.sameQueryKey(previous.query, query), previous.options == options,
                KimiMessage.sameWindow(entry.messages[...], previous.messages[...]) {
                 var adopted = previous
                 adopted.messages = entry.messages
@@ -181,6 +181,16 @@ public final class ConversationSearch {
             hits += entryHits
         }
         return hits
+    }
+
+    /// The query is the search key and, in regex mode, the pattern syntax
+    /// itself: canonically equal queries in different encodings (NFC vs NFD)
+    /// are different patterns with different matches, and even literal
+    /// matching is not guaranteed to fold them alike. Cache reuse therefore
+    /// requires encoding-exact query equality — unlike the message window,
+    /// whose value semantics deliberately treat a rebuilt window as unchanged.
+    private static func sameQueryKey(_ lhs: String, _ rhs: String) -> Bool {
+        lhs.utf8.elementsEqual(rhs.utf8)
     }
 
     /// User prompts, tool activity and assistant text search separately. Tool
