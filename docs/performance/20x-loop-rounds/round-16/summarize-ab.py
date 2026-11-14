@@ -11,6 +11,9 @@ first use; see self-check at the bottom):
 - max_spread_percent: max over the two variants of (max-min)/min * 100
 - positives_beyond_spread: rounded-2dp change > rounded-2dp spread AND
   rounded-2dp worst > 0 (review NB5: compare rounded values, not floats)
+- zero-grid convention (finding 7 extended): pairs with a zero baseline sample
+  drop out of the per-pair percentage set; a zero-minimum variant contributes
+  spread 0 instead of an undefined division
 
 Metric extraction rules:
 - mode "1":  source_slots=N ... cold_median_ms=X ... append_median_ms=Z
@@ -120,12 +123,16 @@ def collect(pair_dir):
 
 def stats(b, c):
     bm, cm = statistics.median(b), statistics.median(c)
-    p = [(ci - bi) / bi * 100 for bi, ci in zip(b, c)]
+    # Zero-grid convention (extends re-review finding 7): pairs whose baseline
+    # sample is 0 (print-grid zero at 0.001ms resolution) are excluded from the
+    # per-pair percentage set; a variant whose minimum sample is 0 contributes
+    # spread 0 instead of the undefined division.
+    p = [(ci - bi) / bi * 100 for bi, ci in zip(b, c) if bi > 0]
     spread = max((max(b) - min(b)) / min(b) * 100 if min(b) > 0 else 0.0,
                  (max(c) - min(c)) / min(c) * 100 if min(c) > 0 else 0.0)
     return {"baseline_median": bm, "candidate_median": cm,
             "change_percent": (cm - bm) / bm * 100 if bm else float("nan"),
-            "worst_pair_percent": max(p), "max_spread_percent": spread,
+            "worst_pair_percent": max(p) if p else 0.0, "max_spread_percent": spread,
             "baseline_samples": b, "candidate_samples": c}
 
 

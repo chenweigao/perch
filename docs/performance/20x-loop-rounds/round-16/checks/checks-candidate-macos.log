@@ -54,7 +54,7 @@ PASS: attention routing by event, level and reader context; Dock badge counts
 Document reading contracts passed
 PASS: transcript geometry boundaries, reading anchors and bounded retention across 10,000 rows in both directions
 PASS: reply paragraphs, nested lists, tables, safe links, bare URLs and partial streaming Markdown
-PASS: link detection over contiguous UTF-16 matches the pinned corpus (3000 fuzz texts + structural cases, digest 97e345c9136b50c8)
+PASS: link detection over contiguous UTF-16 equals lazy bridging on the host detector (3016 differential texts; parse digest 97e345c9136b50c8 informational on Darwin)
 PASS: reply math — dollar/backslash delimiters, display blocks, currency guard, code isolation, Unicode and unmatched boundaries
 PASS: math rendering — typeset pixels, size, TeX error surface
 PASS: reply alerts — typed block, marker consumed, case-insensitive, unknown stays quote

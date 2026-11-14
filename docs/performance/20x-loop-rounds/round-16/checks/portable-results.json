@@ -2,8 +2,8 @@
  "suite": "portable",
  "group": "all",
  "scope": "offline synthetic checks; no SSH, real models or frame-rate certification",
- "commit": "9e7bc198f4723c9821af9e6efeca829f53e38edd",
- "dirty": false,
+ "commit": "413bf860280878b1832a6103d564c7e631524e3b",
+ "dirty": true,
  "checks": [
   {
    "name": "version",
@@ -119,7 +119,7 @@
    ],
    "log": "preview-sources.log",
    "exit_code": 0,
-   "seconds": 8.47,
+   "seconds": 8.57,
    "passed": true
   },
   {
@@ -139,5 +139,6 @@
   }
  ],
  "status": "passed",
- "seconds": 15.58
+ "seconds": 15.68,
+ "note": "run at 413bf86; working tree dirty only with this round's uncommitted docs at run time"
 }

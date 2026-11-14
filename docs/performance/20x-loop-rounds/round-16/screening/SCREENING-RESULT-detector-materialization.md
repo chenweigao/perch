@@ -59,6 +59,10 @@ unknown scheme (filtered out, no split), while the Linux regex fallback
 includes `$` in its RFC-3986 class and stops at CJK. The pin therefore uses
 CJK-separated shapes for its fixed structural cases and per-platform golden
 digests for the fuzz corpus. An initial fixed case encoding the glued shape
-trapped on Mac only (exit 133 at 49 PASS on both sides — archived
-`checks/macos-pin-divergence-trap.log`) and was replaced before any
-measurement; no product behavior was ever affected.
+trapped on Mac only — the archived `checks/macos-pin-divergence-trap.log`
+corroborates the stop point (49 PASS lines ending immediately before the
+pin); the exit-133 status and the candidate-side run come from the session's
+driver output, whose log was overwritten by the rerun and is not archived
+(re-review finding 4: claims narrowed to what the archive shows). The fix
+preceded the golden capture and all A/B measurement; no product behavior
+was ever affected (the trap lived in the test assertion only).

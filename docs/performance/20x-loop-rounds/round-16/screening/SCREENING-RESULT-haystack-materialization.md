@@ -36,7 +36,10 @@ Timing (SwiftPM release, 9 alternating blocks, medians):
 | inspect | big120KB | 1.333 | -7.2% | **-11.4%** | -25.0% |
 
 **Decision: REJECTED — do not open a round.** For the CJK query every
-materialization variant is 13.5–21.8% SLOWER. Mechanism (inference): CF keeps
+materialization variant is 13.5–21.8% SLOWER (for ASCII the all-variant
+range is -3.9…-25.0%: v1 -3.9/-7.2%, v2 -9.3/-11.4%, v3 -22.6/-25.0% —
+re-review finding 9 corrected an earlier "-9…-25%" summary that covered
+only v2/v3). Mechanism (inference): CF keeps
 a direct UTF-8 fast path for lazily bridged Swift-native strings (the
 `_CFStringGetCStringPtrInternal` leaf in the same traces); forcing UTF-16
 storage gives that up, and only the ASCII/DD-lexer-heavy path benefits. The
