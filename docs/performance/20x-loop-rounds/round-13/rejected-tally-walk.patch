@@ -1,0 +1,91 @@
+diff --git a/Sources/WorkbenchCore/SessionEditStats.swift b/Sources/WorkbenchCore/SessionEditStats.swift
+index f8c2363..fd383f7 100644
+--- a/Sources/WorkbenchCore/SessionEditStats.swift
++++ b/Sources/WorkbenchCore/SessionEditStats.swift
+@@ -27,31 +27,63 @@ public enum SessionEditStats {
+     }
+ 
+     /// Per-file tallies only add up, so any split of the messages sums to the same result.
++    /// Indexed walks over borrowed storage: the iterator form copied every
++    /// message and every part — retaining and releasing their strings and
++    /// payloads — while the tally reads exactly two fields, and only of the
++    /// tool_use parts. Order, payload switch and accumulation are untouched.
+     static func tally(_ messages: ArraySlice<KimiMessage>, into perFile: inout [String: SessionEditStat]) {
+-        for message in messages {
+-            for part in message.content where part.type == "tool_use" {
+-                guard let tool = part.toolName, let input = part.input else { continue }
+-                let edits: [(stat: SessionEditStat, path: String?)]
+-                if tool.lowercased() == "apply_patch", !input["changes"].array.isEmpty {
+-                    // Codex fileChange is normalized by native-agent-service.py to
+-                    // one changes array, with a path and unified diff or raw body per file.
+-                    edits = input["changes"].array.compactMap { change in
+-                        guard let path = change["path"].string, !path.contains("://"),
+-                              let diff = change["diff"].string else { return nil }
+-                        let kind = change["kind"]["type"].string ?? change["kind"].string
+-                        return (changeStat(kind: kind, diff: diff), path)
+-                    }
+-                } else {
+-                    edits = compute(tool: tool, input: input).map { [$0] } ?? []
+-                }
+-                for edit in edits {
+-                    guard let path = edit.path else { continue }
+-                    var accumulated = perFile[path] ?? SessionEditStat(additions: 0, deletions: 0)
+-                    accumulated.additions += edit.stat.additions
+-                    accumulated.deletions += edit.stat.deletions
+-                    perFile[path] = accumulated
+-                }
++        let borrowed = messages.withContiguousStorageIfAvailable { (buffer: UnsafeBufferPointer<KimiMessage>) -> Bool in
++            for index in 0..<buffer.count {
++                tallyContent(buffer[index].content, into: &perFile)
++            }
++            return true
++        } ?? false
++        guard !borrowed else { return }
++        // Foreign/non-contiguous storage: indexed walk, still without iterators.
++        for index in messages.indices {
++            tallyContent(messages[index].content, into: &perFile)
++        }
++    }
++
++    private static func tallyContent(_ content: [KimiPart], into perFile: inout [String: SessionEditStat]) {
++        let borrowed = content.withContiguousStorageIfAvailable { (parts: UnsafeBufferPointer<KimiPart>) -> Bool in
++            for index in 0..<parts.count {
++                guard parts[index].type == "tool_use",
++                      let tool = parts[index].toolName,
++                      let input = parts[index].input else { continue }
++                tallyTool(tool: tool, input: input, into: &perFile)
+             }
++            return true
++        } ?? false
++        guard !borrowed else { return }
++        for index in content.indices {
++            guard content[index].type == "tool_use",
++                  let tool = content[index].toolName,
++                  let input = content[index].input else { continue }
++            tallyTool(tool: tool, input: input, into: &perFile)
++        }
++    }
++
++    private static func tallyTool(tool: String, input: JSONValue, into perFile: inout [String: SessionEditStat]) {
++        let edits: [(stat: SessionEditStat, path: String?)]
++        if tool.lowercased() == "apply_patch", !input["changes"].array.isEmpty {
++            // Codex fileChange is normalized by native-agent-service.py to
++            // one changes array, with a path and unified diff or raw body per file.
++            edits = input["changes"].array.compactMap { change in
++                guard let path = change["path"].string, !path.contains("://"),
++                      let diff = change["diff"].string else { return nil }
++                let kind = change["kind"]["type"].string ?? change["kind"].string
++                return (changeStat(kind: kind, diff: diff), path)
++            }
++        } else {
++            edits = compute(tool: tool, input: input).map { [$0] } ?? []
++        }
++        for edit in edits {
++            guard let path = edit.path else { continue }
++            var accumulated = perFile[path] ?? SessionEditStat(additions: 0, deletions: 0)
++            accumulated.additions += edit.stat.additions
++            accumulated.deletions += edit.stat.deletions
++            perFile[path] = accumulated
+         }
+     }
+ 
