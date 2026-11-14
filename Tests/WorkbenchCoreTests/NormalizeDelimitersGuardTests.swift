@@ -16,7 +16,19 @@ import WorkbenchCore
 /// colons, slashes, at-signs) so link detection never fires differently
 /// between the Darwin data detector and the Linux regex fallback: one golden
 /// digest holds on every platform and CI can enforce it (the round-16
-/// lesson — DataDetectors output is macOS-build-dependent).
+/// lesson — DataDetectors output is macOS-build-dependent). It likewise
+/// excludes GB9b Prepend scalars: the re-review's counterexample
+/// ("\u{0600}\(x\)") exposed that the ORIGINAL guard already behaved
+/// differently per platform there. macOS Characters fuse a Prepend sign with
+/// the backslash (GB9b), so contains("\(") misses and the source stays
+/// literal. On Linux the corelibs substring SEARCH does not apply GB9b (it
+/// admits the pair and the source converts) while the stdlib Character
+/// iteration used downstream DOES fuse (the converted "$" absorbs the sign,
+/// so no math extracts) — mechanism inferred from the probe records
+/// (round-17/checks/), behavior pinned per platform as-is. The byte guard's
+/// inconclusive-pair fallback delegates to each platform's own contains, so
+/// it reproduces both legacy behaviors exactly; the structural cases pin
+/// each side.
 func checkNormalizeDelimitersByteGuard() {
     func serRuns(_ runs: [ReplyInline]) -> String {
         runs.map { run in
@@ -58,6 +70,12 @@ func checkNormalizeDelimitersByteGuard() {
         }
         return hash
     }
+    func joinedParagraphText(_ blocks: [ReplyBlock]) -> String {
+        blocks.map { block -> String in
+            if case .paragraph(let runs) = block { return runs.map(\.text).joined() }
+            return ""
+        }.joined(separator: "\n")
+    }
     func hasMath(_ blocks: [ReplyBlock]) -> Bool {
         blocks.contains { block in
             switch block {
@@ -86,12 +104,29 @@ func checkNormalizeDelimitersByteGuard() {
     let extended = "\\(\u{0308}x\\)"
     let extendedBlocks = ReplyDocument.parse(extended)
     precondition(!hasMath(extendedBlocks), "extended-paren pair alone must stay literal")
+    // Exact output, not just absence of math: cmark resolves the backslash
+    // escapes, so the literal paragraph is "(◌̈x)". A wrongly admitted
+    // source would normalize to "$◌̈x$" — splitInline still extracts no math
+    // there (the opener's Character carries the mark), so only the text
+    // comparison catches the admission change (re-review finding 4).
+    // Both platforms: the mark-carrying paren Character never equals "(",
+    // so neither contains search admits and cmark unescapes to "(◌̈x)".
+    precondition(joinedParagraphText(extendedBlocks) == "(\u{0308}x)",
+                 "extended-paren source stays byte-literal on both platforms")
 
     // Extended paren WITH an earlier exact pair: the gate opens on the exact
     // pair and the byte-level Boundaries pass converts BOTH pairs — the
     // documented guard/scan asymmetry the byte guard must reproduce exactly.
     let mixed = "\\(a\\) \\(\u{0308}b\\)"
-    precondition(hasMath(ReplyDocument.parse(mixed)), "exact pair opens the gate for the extended one")
+    let mixedBlocks = ReplyDocument.parse(mixed)
+    precondition(hasMath(mixedBlocks), "exact pair opens the gate for the extended one")
+    // Exact shape: normalization converts BOTH pairs (the byte-level
+    // Boundaries pass runs once the gate opened), giving "$a$ $◌̈b$";
+    // splitInline extracts only the first pair as math (the second opener's
+    // Character carries the mark), so the literal tail keeps the dollars.
+    precondition(ser(mixedBlocks).contains("m{a}"), "the first pair extracts as math")
+    precondition(joinedParagraphText(mixedBlocks) == "\u{FFFC} $\u{0308}b$",
+                 "mixed source exact shape")
 
     // Even backslash run before the paren: guard sees the byte pair, the scan
     // finds no odd-run marker and returns the source unchanged.
@@ -104,6 +139,36 @@ func checkNormalizeDelimitersByteGuard() {
     precondition(hasMath(ReplyDocument.parse("汉\\(甲\\)汉")), "CJK-adjacent pair converts")
     // Bracket pair.
     precondition(hasMath(ReplyDocument.parse("p\\[q\\]s")), "bracket pair converts")
+
+    // GB9b Prepend corner (re-review finding 1): U+0600 fuses FORWARD with
+    // the backslash into one Character, so the original contains("\(") never
+    // matches and the whole source must stay literal — the byte pair alone
+    // must NOT fast-accept. Asserted on the exact cmark-unescaped text.
+    let prepend = "\u{0600}\\(x\\)"
+    let prependBlocks = ReplyDocument.parse(prepend)
+    precondition(!hasMath(prependBlocks), "Prepend-fused backslash must not open the gate")
+    #if canImport(Darwin)
+    // macOS Characters fuse U+0600 with the backslash (GB9b), so the
+    // grapheme-aware contains("\(") never matches: the source stays literal
+    // and cmark resolves the escapes to "(x)".
+    precondition(joinedParagraphText(prependBlocks) == "\u{0600}(x)",
+                 "macOS: Prepend-fused source must stay literal")
+    #else
+    // Legacy corelibs behavior: its substring search matches the pair
+    // through the Prepend sign, so the source converts — but the converted
+    // opening "$" then fuses with the sign into one Character and splitInline
+    // extracts no math. The guard's fallback reproduces exactly this.
+    precondition(joinedParagraphText(prependBlocks) == "\u{0600}$x$",
+                 "Linux: legacy conversion with sign-fused dollars")
+    #endif
+    precondition(!hasMath(ReplyDocument.parse("\u{0600}\\(")), "Prepend-fused EOF pair stays literal")
+    // Positive control for the fallback flavor: a CJK (non-Prepend,
+    // non-ASCII) predecessor is inconclusive at byte level, falls back to
+    // the grapheme search, and admits exactly as before.
+    let cjkAdjacent = "汉\\(x\\)汉"
+    precondition(hasMath(ReplyDocument.parse(cjkAdjacent)), "CJK-adjacent pair converts via fallback")
+    precondition(joinedParagraphText(ReplyDocument.parse(cjkAdjacent)) == "汉\u{FFFC}汉",
+                 "CJK-adjacent exact shape")
 
     // --- fuzz corpus digest (platform-independent by construction) ---
     let pieces = ["\\(", "\\)", "\\[", "\\]", "\\", "(", ")", "[", "]", "$", "$$",
@@ -132,10 +197,13 @@ func checkNormalizeDelimitersByteGuard() {
         digest = (digest ^ fnv1a(first)) &* 0x100_0000_01b3
     }
     precondition(mathTexts > 100, "the corpus must exercise the converting path densely, got \(mathTexts)")
-    // Golden captured on the UNMODIFIED product (76940c0 + this test) and
+    // Golden captured on the UNMODIFIED product (76940c0 + this pin) and
     // identical on macOS 27.0.1 arm64 and Alibaba Cloud Linux 3 x86-64 — the
-    // URL-free corpus keeps both link backends out of the digest, so one
-    // value pins every platform (and CI).
+    // URL-free corpus keeps both link backends out, so one value pins every
+    // platform (and CI). The fuzz pieces deliberately exclude GB9b Prepend
+    // scalars: there the two platforms' substring-search semantics for the
+    // OLD guard legitimately diverge (structural cases above pin each
+    // platform's own legacy behavior), which would split the golden.
     let expected = "d90ac2cad4b58020"
     let got = String(format: "%016llx", digest)
     precondition(got == expected, "normalize-delimiters guard corpus digest changed: \(got) != \(expected)")

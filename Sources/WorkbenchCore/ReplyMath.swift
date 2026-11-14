@@ -142,18 +142,35 @@ public enum ReplyMath {
     /// escaped backslashes). Byte adjacency of the ASCII pair is a necessary
     /// condition for a Character-sequence match (UTF-8 self-synchronization:
     /// ASCII bytes never occur inside multi-byte sequences), so sources
-    /// without the byte pair are rejected by the scan alone. A found pair is
-    /// grapheme-exact — and the search can stop — when the byte after it is
-    /// ASCII or absent: the backslash always forms its own Character (ASCII,
-    /// and CR pairs only with LF), and every scalar that could extend the
-    /// paren's grapheme (Extend, SpacingMark, ZWJ) is non-ASCII. A pair
-    /// followed by a non-ASCII byte is inconclusive at the byte level (the
-    /// next scalar might be a combining mark extending the paren), so the
-    /// grapheme-aware searches decide exactly as before — they are reached
-    /// only for sources that actually contain a delimiter-byte pair, never
-    /// for the common no-backslash-pair source.
+    /// without the byte pair are rejected by the scan alone.
+    ///
+    /// A found pair fast-accepts — grapheme-exact, search over — only when
+    /// BOTH boundaries are proven at the byte level:
+    /// - trailing: the byte after the paren is ASCII or absent, since every
+    ///   scalar that could extend the paren's grapheme (Extend, SpacingMark,
+    ///   ZWJ) is non-ASCII;
+    /// - leading: the byte before the backslash is ASCII or the backslash
+    ///   starts the string. A backslash forms its own Character unless a
+    ///   GCB=Prepend scalar precedes it — GB9b joins Prepend × Any, so e.g.
+    ///   U+0600 fuses FORWARD with the backslash into one Character and the
+    ///   original contains("\(") finds no match (the hazard is long recorded
+    ///   in ConversationProjection). Every Prepend scalar is non-ASCII, and
+    ///   the only ASCII-to-ASCII grapheme fusion is CR×LF, which cannot
+    ///   swallow a following backslash — so an ASCII (or absent) predecessor
+    ///   proves the boundary.
+    ///
+    /// A pair with a non-ASCII byte on either side is inconclusive at the
+    /// byte level (Prepend before the backslash, or a combining mark
+    /// extending the paren), so the grapheme-aware searches decide exactly
+    /// as before — reached only for sources that actually contain a
+    /// delimiter-byte pair, never for the common no-pair source. Re-review
+    /// finding 1: the initial fast path lacked the leading check and wrongly
+    /// admitted "\u{0600}\(x\)", which must stay literal; the Prepend corner
+    /// is baseline-pinned in checkNormalizeDelimitersByteGuard.
     private static func hasDelimiterStart(_ source: String) -> Bool {
         var previous: UInt8 = 0
+        var beforePrevious: UInt8 = 0
+        var position = 0
         var sawPair = false
         var pendingPair = false
         for byte in source.utf8 {
@@ -163,9 +180,14 @@ public enum ReplyMath {
             }
             if previous == 92, byte == 40 || byte == 91 {
                 sawPair = true
-                pendingPair = true
+                // The backslash sits at position-1: its leading boundary is
+                // proven when it starts the string (position == 1) or the
+                // byte before it is ASCII.
+                if position == 1 || beforePrevious < 0x80 { pendingPair = true }
             }
+            beforePrevious = previous
             previous = byte
+            position += 1
         }
         if pendingPair { return true }
         guard sawPair else { return false }
