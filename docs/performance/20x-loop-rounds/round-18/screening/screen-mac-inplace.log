@@ -1,0 +1,39 @@
+HEAD is now at a13aee2 Merge pull request #339 from chenweigao/perf/20x-loop-17-20261115
+HEAD=a13aee23d8d39af7bf7bfa5b0d00d30aa52ade56
+=== base build ===
+base_build_exit=0
+=== apply patch + cand build ===
+product_patch=ok
+cand_build_exit=0
+d724bc97b23f73d0b5c99bc42d6e22cf53ad9fcbad8a8d96f49fd95ed2ac174f  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round18-base/out/Products/Release/WorkbenchChecks
+236fe4a3d7975efffcc8a701365fb670425a222a5959f32092812cb100753bd4  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round18-cand/out/Products/Release/WorkbenchChecks
+=== correctness: mode-1 rows identical? ===
+base-rows lines:       16
+ROWS_IDENTICAL_NONEMPTY
+=== cold screen: 6 alternating, mode 1, cold@2000 + cold@1000 ===
+1 base cold@1000=3.40
+1 base cold@2000=6.72
+1 cand cold@1000=3.37
+1 cand cold@2000=6.69
+2 base cold@1000=3.47
+2 base cold@2000=6.84
+2 cand cold@1000=3.34
+2 cand cold@2000=6.65
+3 base cold@1000=3.42
+3 base cold@2000=6.72
+3 cand cold@1000=3.44
+3 cand cold@2000=6.85
+4 base cold@1000=3.49
+4 base cold@2000=6.88
+4 cand cold@1000=3.36
+4 cand cold@2000=6.70
+5 base cold@1000=3.51
+5 base cold@2000=6.92
+5 cand cold@1000=3.42
+5 cand cold@2000=6.80
+6 base cold@1000=3.40
+6 base cold@2000=6.72
+6 cand cold@1000=3.37
+6 cand cold@2000=6.66
+porcelain_after=0
+DONE Sun Nov 15 06:29:34 CST 2026

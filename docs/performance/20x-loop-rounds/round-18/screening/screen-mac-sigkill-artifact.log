@@ -1,0 +1,32 @@
+From github.com:chenweigao/perch
+   76940c0..a13aee2  main       -> origin/main
+Previous HEAD position was 9e1eb88 docs(performance): record round 17 v3 adoption data and BLOCKING-fix dispositions
+HEAD is now at a13aee2 Merge pull request #339 from chenweigao/perf/20x-loop-17-20261115
+HEAD=a13aee23d8d39af7bf7bfa5b0d00d30aa52ade56
+=== base build (unmodified a13aee2) ===
+base_build_exit=0
+=== apply product patch + cand build ===
+product_patch=ok
+cand_build_exit=0
+=== correctness: mode-1 rows must match ===
+ROWS_IDENTICAL
+=== cold screen: 5 alternating, mode 1 ===
+1 base cold@2000=
+1 cand cold@2000=
+2 base cold@2000=
+2 cand cold@2000=
+3 base cold@2000=
+3 cand cold@2000=
+4 base cold@2000=
+4 cand cold@2000=
+5 base cold@2000=
+5 cand cold@2000=
+porcelain_after=0
+DONE Sun Nov 15 06:21:45 CST 2026
+
+=== SIGKILL evidence recapture (re-review finding 4b, 2026-11-15) ===
+The copied screening binary still on the Mac at
+/Users/<mini>/Library/Logs/perf-loop-20261115/screen18/base was re-executed
+during the disposition: WORKBENCH_BENCH=1 <copied binary> -> exit_code=137
+(SIGKILL), reproducing the original failure mode live. The in-place SwiftPM
+product of the same source runs normally (99 PASS, full bench output).

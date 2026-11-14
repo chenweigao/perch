@@ -1,0 +1,28 @@
+diff --git a/Sources/WorkbenchCore/ConversationTimeline.swift b/Sources/WorkbenchCore/ConversationTimeline.swift
+index 216ea33..b41c74a 100644
+--- a/Sources/WorkbenchCore/ConversationTimeline.swift
++++ b/Sources/WorkbenchCore/ConversationTimeline.swift
+@@ -46,10 +46,22 @@ public struct ConversationTimelineEntry: Identifiable, Equatable {
+         return "\(channel):\(messages[0].id):\(partOffset)"
+     }
+ 
++    /// Equivalent to `s.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty`
++    /// without allocating a trimmed copy: trimmingCharacters returns empty iff
++    /// every Unicode scalar of `s` is a member of the set, and `allSatisfy`
++    /// short-circuits on the first non-whitespace scalar (the common case for
++    /// visible text). Round 18: removes a per-part trimmed String copy from the
++    /// cold projection's hot path. Uses the exact same CharacterSet, so the
++    /// membership semantics (including Unicode whitespace) are byte-identical.
++    private static let whitespaceSet = CharacterSet.whitespacesAndNewlines
++    static func isAllWhitespace(_ s: String) -> Bool {
++        s.unicodeScalars.allSatisfy { whitespaceSet.contains($0) }
++    }
++
+     public static func make(_ messages: [KimiMessage], isRunning: Bool = false) -> [Self] {
+         var entries: [Self] = [], turn: [KimiMessage] = []
+         func visible(_ part: KimiPart) -> Bool {
+-            (part.type == "text" && !part.isRuntimeContext && !(part.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
++            (part.type == "text" && !part.isRuntimeContext && !Self.isAllWhitespace(part.text ?? ""))
+                 || ["image", "file", "video"].contains(part.type)
+         }
+         func thinking(_ part: KimiPart) -> Bool { part.type == "thinking" && !(part.thinking ?? "").isEmpty }
