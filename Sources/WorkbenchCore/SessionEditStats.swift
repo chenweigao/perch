@@ -163,13 +163,46 @@ public enum SessionEditStats {
 
     /// A trailing newline ends the last line rather than starting another —
     /// but keep parity with ccgui's JS split, which counts it.
+    ///
+    /// A separator is exactly an LF whose previous byte is not a CR, so the
+    /// count is (all LF bytes) − (adjacent CR-LF pairs). Both terms scan as
+    /// 8-byte words: the has-zero trick marks every byte equal to the pattern
+    /// with a 0x80 bit, popcount totals them, and a CR mask shifted one byte
+    /// up (plus the cross-word carry flag) marks exactly the LF-after-CR pairs.
+    /// The scalar predicate it replaces re-reads `bytes[offset - 1]` per byte
+    /// and never vectorizes.
     private static func lineCount(_ text: String) -> Int {
         if let count = text.utf8.withContiguousStorageIfAvailable({ bytes -> Int in
-            var count = 1
-            for offset in bytes.indices where bytes[offset] == 0x0A && (offset == 0 || bytes[offset - 1] != 0x0D) {
-                count += 1
+            let n = bytes.count
+            guard let base = bytes.baseAddress else { return 1 }
+            let lfPattern: UInt64 = 0x0A0A0A0A0A0A0A0A
+            let crPattern: UInt64 = 0x0D0D0D0D0D0D0D0D
+            var lf = 0
+            var crlf = 0
+            var i = 0
+            var prevByteIsCR = false
+            while i + 8 <= n {
+                let word = UnsafeRawPointer(base).loadUnaligned(fromByteOffset: i, as: UInt64.self)
+                let lfBits = hasByteEqualTo(word, lfPattern)
+                let crBits = hasByteEqualTo(word, crPattern)
+                lf += lfBits.nonzeroBitCount
+                // Little-endian: the CR of byte k-1 carries bit 8(k-1)+7, so a
+                // one-byte left shift aligns it under byte k's LF bit.
+                crlf += (lfBits & (crBits << 8)).nonzeroBitCount
+                // The pair spanning the word boundary: this word's byte 0 is an
+                // LF and the previous word ended with a CR.
+                if prevByteIsCR && (lfBits & 0x80) != 0 { crlf += 1 }
+                prevByteIsCR = (crBits & 0x8000000000000000) != 0
+                i += 8
             }
-            return count
+            while i < n {
+                if bytes[i] == 0x0A {
+                    lf += 1
+                    if i > 0, bytes[i - 1] == 0x0D { crlf += 1 }
+                }
+                i += 1
+            }
+            return 1 + lf - crlf
         }) { return count }
         var count = 1
         var previous: UInt8 = 0
@@ -178,6 +211,14 @@ public enum SessionEditStats {
             previous = byte
         }
         return count
+    }
+
+    /// Sets the high bit of every byte of `word` that equals the corresponding
+    /// byte of the repeated pattern `c` (classic SWAR has-zero test on v ^ c).
+    @inline(__always)
+    private static func hasByteEqualTo(_ word: UInt64, _ c: UInt64) -> UInt64 {
+        let x = word ^ c
+        return (x &- 0x0101010101010101) & ~x & 0x8080808080808080
     }
 
     /// These ranges end only at LF separators (except CRLF) or the buffer
