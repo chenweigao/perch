@@ -1,0 +1,35 @@
+=== prepare Sat Nov 14 03:04:11 CST 2026 ===
+From github.com:chenweigao/perch
+   93b9ad3..7d5ba26  main       -> origin/main
+Previous HEAD position was 93b9ad3 Merge pull request #331 from chenweigao/perf/ci-speed-20261113
+HEAD is now at 7d5ba26 Merge pull request #333 from chenweigao/perf/20x-loop-11-20261113
+HEAD=7d5ba26ac45775b5d7bd624a6384964313b4ccf3
+porcelain_before=0
+=== apply temporary profile loop modes ===
+porcelain_applied=3
+=== build Sat Nov 14 03:04:16 CST 2026 ===
+build_exit=0
+06a99d3799ecbd2fbe8e541a618283ec41940205db1082e47fc1ada198f23e51  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round12-profile/out/Products/Release/WorkbenchChecks
+=== record streaming Sat Nov 14 03:05:23 CST 2026 ===
+Target app exited, ending recording...
+Recording completed. Saving output file...
+Output file saved as: streaming.trace
+record_streaming_exit=0
+Finished export to the file: /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/round12/streaming-time-profile.xml
+=== record activity Sat Nov 14 03:05:55 CST 2026 ===
+Target app exited, ending recording...
+Recording completed. Saving output file...
+Output file saved as: activity.trace
+record_activity_exit=0
+Finished export to the file: /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/round12/activity-time-profile.xml
+total 53264
+drwxr-xr-x   6 <mini>  staff       192 Nov 14 03:06 .
+drwxr-xr-x  23 <mini>  staff       736 Nov 14 03:05 ..
+-rw-r--r--   1 <mini>  staff  10824458 Nov 14 03:06 activity-time-profile.xml
+drwxr-xr-x  10 <mini>  staff       320 Nov 14 03:06 activity.trace
+-rw-r--r--   1 <mini>  staff  15106975 Nov 14 03:05 streaming-time-profile.xml
+drwxr-xr-x  10 <mini>  staff       320 Nov 14 03:05 streaming.trace
+=== revert Sat Nov 14 03:06:23 CST 2026 ===
+porcelain_after=0
+DONE Sat Nov 14 03:06:23 CST 2026
+exit=0
