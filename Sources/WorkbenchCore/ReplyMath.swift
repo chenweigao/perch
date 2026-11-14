@@ -258,7 +258,18 @@ public enum ReplyMath {
     /// and no digit right after the closer (Pandoc's rule).
     public static func splitInline(_ runs: [ReplyInline]) -> [ReplyInline] {
         runs.flatMap { run -> [ReplyInline] in
-            guard run.link == nil, !run.code, run.math == nil, run.text.contains("$") else { return [run] }
+            // Byte-level presence guard: 0x24 is self-synchronizing in UTF-8,
+            // and a Character equal to "$" requires the scalar, so runs
+            // without the byte are skipped without a per-Character walk —
+            // that walk dominated $-free runs on the cold full-window search
+            // (round-19 attribution: the splitInline closure ~3.7% of samples
+            // although the bench corpus contains no literal math). The byte
+            // test is an exact superset: the extra admitted runs are those
+            // whose every "$" scalar is fused into a larger Character (GB9b
+            // after a Prepend scalar), where split() finds no bare "$"
+            // Character and returns one value-equal run — parse output is
+            // unchanged (pinned by checkSplitInlineByteGuard).
+            guard run.link == nil, !run.code, run.math == nil, run.text.utf8.contains(36) else { return [run] }
             return split(run)
         }
     }

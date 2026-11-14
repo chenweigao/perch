@@ -80,6 +80,7 @@ struct ProtocolTests {
         checkReplyDocument()
         checkLinkScanContiguousUTF16()
         checkNormalizeDelimitersByteGuard()
+        checkSplitInlineByteGuard()
         checkReplyMath()
 #if canImport(AppKit)
         checkMathRendering()
