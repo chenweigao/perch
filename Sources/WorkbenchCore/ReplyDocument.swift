@@ -138,12 +138,15 @@ public enum ReplyDocument {
         let ns = text as NSString
         let whole = NSRange(location: 0, length: ns.length)
 #if canImport(Darwin)
-        // The data detector reads its input through character(at:); on a
-        // lazily bridged Swift string every access pays a String.UTF16View
-        // index conversion (round-16 attribution: linkMatches owns ~26% of a
-        // cold full-window find-bar search, including 98% of the
-        // _nativeGetIndex samples). Handing the detector the same characters
-        // in contiguous UTF-16 storage lets it read the buffer directly;
+        // The data detector reads its input through per-character bridging
+        // (@objc __StringStorage.character(at:) and getCharacters(_:range:),
+        // both paying String.UTF16View index conversions). Round-16 cold
+        // find-bar attribution, nearest-product-frame accounting (archived
+        // with the trace under docs/performance/20x-loop-rounds/round-16/):
+        // linkMatches owns 66.6% of samples in total; the selected
+        // bridge/DD hot leaves subtotal 26.6% of all samples, 97.6% of them
+        // linkMatches-owned. Handing the detector the same characters in
+        // contiguous UTF-16 storage lets it read the buffer directly;
         // detection results are unchanged (pinned by
         // checkLinkScanContiguousUTF16; isolated screening -34.8%).
         return linkDetector.matches(in: contiguousUTF16(text), range: whole).compactMap { match in
