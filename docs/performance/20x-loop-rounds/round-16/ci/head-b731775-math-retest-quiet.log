@@ -1,0 +1,19 @@
+=== prepare Sun Nov 15 02:11:07 CST 2026 ===
+From github.com:chenweigao/perch
+   07127c6..b731775  perf/20x-loop-16-20261114 -> origin/perf/20x-loop-16-20261114
+Previous HEAD position was 07127c6 docs(performance): record round 16 v2 adoption data and full review dispositions
+HEAD is now at b731775 docs(performance): record round-16 final-head product gate pass in the checklist
+HEAD=b731775ff364954f9cafa07582702a675939a67d
+porcelain_before=0
+=== math gate Sun Nov 15 02:11:11 CST 2026 ===
+math_exit=0
+  },
+  "scope": "same-runner sequential synthetic A/B; window timings are not hardware input latency or FPS"
+}
+summary_status: passed | error: None
+typeset-32: base_rounds=[47.4, 41.7, 38.9] cand_rounds=[39.2, 42.5, 38.2] best_ratio=0.9810
+typeset-128: base_rounds=[137.8, 124.7, 125.0] cand_rounds=[130.3, 125.6, 125.8] best_ratio=1.0077
+typeset-512: base_rounds=[499.0, 488.2, 489.3] cand_rounds=[490.2, 495.1, 488.9] best_ratio=1.0014
+porcelain_after=0
+DONE Sun Nov 15 02:14:00 CST 2026
+exit=0

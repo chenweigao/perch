@@ -1,0 +1,70 @@
+Round-16 CI math gate failure analysis (run 43623026896, head b731775, job 132534741737).
+
+Gate error: "Typeset/draw regression exceeds 15% at 128".
+Gate statistic (per recorded protocol): best-of-3 rounds of
+(cold_attachment.total_ms + first_light_dark_draw.total_ms), threshold 1.15.
+
+Per-round gate totals from the retained CI artifact (math-performance/round-*):
+
+== typeset-32 ==
+  round 1-baseline: gate_total=137.46ms
+  round 2-candidate: gate_total=111.11ms
+  round 3-candidate: gate_total=212.91ms
+  round 4-baseline: gate_total=140.21ms
+  round 5-baseline: gate_total=111.10ms
+  round 6-candidate: gate_total=154.91ms
+  best-of-3: baseline=111.10 candidate=111.11 ratio=1.0001
+
+== typeset-128 ==
+  round 1-baseline: gate_total=316.46ms
+  round 2-candidate: gate_total=404.77ms
+  round 3-candidate: gate_total=808.07ms
+  round 4-baseline: gate_total=604.41ms
+  round 5-baseline: gate_total=390.39ms
+  round 6-candidate: gate_total=644.03ms
+  best-of-3: baseline=316.46 candidate=404.77 ratio=1.2791
+
+== typeset-512 ==
+  round 1-baseline: gate_total=1250.29ms
+  round 2-candidate: gate_total=1578.98ms
+  round 3-candidate: gate_total=2116.20ms
+  round 4-baseline: gate_total=2062.66ms
+  round 5-baseline: gate_total=1760.04ms
+  round 6-candidate: gate_total=2051.51ms
+  best-of-3: baseline=1250.29 candidate=1578.98 ratio=1.2629
+
+Noise signatures in the SAME artifact:
+- typeset-128 round-to-round swing ~1.9x baseline (316..604) and ~2.0x
+  candidate (405..808); distributions overlap heavily (cand min 405 < base
+  max 604).
+- window-128 scheduled_tick_gap: candidate round 2 = 6508.85ms vs 2584..2755
+  in all other five rounds (2.5x outlier on a 3-CPU shared runner;
+  cpu_count=3 in every round's JSON).
+- Candidate exceeds baseline in all three typeset-128 round pairs
+  (+28%/+34%/+65%) — directional consistency noted honestly; a sign test on
+  three pairs is not decisive (p=0.125), and the round-14 precedent showed
+  similar swings resolving to ~1.00 on a quiet machine.
+
+Disposition per the recorded protocol (rounds 12/14): quiet-machine retest
+of the real gate on the Mac mini (PerfRunner job 16-round16-math-retest,
+WORKBENCH_MATH_BASELINE_REF=15f612f, head b731775), then same-head CI rerun
+if the retest passes. No gate or threshold changes.
+
+Note: the measurement JSONs record candidate revision 1dbb796272a9… — a
+CI-side ephemeral checkout object not present in the public repo; the run
+was triggered by the b731775 push and the math harness builds candidate
+from the checked-out HEAD (which contains 413bf86's product state).
+
+
+=== QUIET-MACHINE RETEST RESULT (Mac mini, PerfRunner job 16-round16-math-retest, head b731775, WORKBENCH_MATH_BASELINE_REF=15f612f) ===
+summary_status: passed, math_exit=0, porcelain 0/0.
+Gate statistic (best-of-3 of cold_attachment.total_ms + first_light_dark_draw.total_ms):
+  typeset-32:  base_rounds=[47.4, 41.7, 38.9]   cand_rounds=[39.2, 42.5, 38.2]   best_ratio=0.9810
+  typeset-128: base_rounds=[137.8, 124.7, 125.0] cand_rounds=[130.3, 125.6, 125.8] best_ratio=1.0077
+  typeset-512: base_rounds=[499.0, 488.2, 489.3] cand_rounds=[490.2, 495.1, 488.9] best_ratio=1.0014
+Round-to-round spread on the quiet machine is tight (no 2x swings); the CI
+failure (1.2791@128 / 1.2629@512) and its "candidate higher in all three
+pairs" directionality did NOT reproduce. Verdict: shared-runner noise, same
+family as rounds 12/14. Disposition: same-head rerun of the failed CI jobs
+(run 43623026896 --failed), no gate or threshold changes, no product changes.
+Retest log: round-16/ci/head-b731775-math-retest-quiet.log
