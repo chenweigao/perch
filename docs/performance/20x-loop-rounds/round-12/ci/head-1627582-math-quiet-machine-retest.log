@@ -1,0 +1,29 @@
+=== prepare Sat Nov 14 14:31:50 CST 2026 ===
+HEAD=1627582149c055fc0fb6c77feaf747c6ef228e6c
+porcelain_before=0
+=== math retest Sat Nov 14 14:31:51 CST 2026 ===
+math_exit=0
+    "relative_performance_gates": "applied"
+  },
+  "scope": "same-runner sequential synthetic A/B; window timings are not hardware input latency or FPS"
+}
+=== summary Sat Nov 14 14:34:39 CST 2026 ===
+{
+ "status": "passed",
+ "order": [
+  "baseline",
+  "candidate",
+  "candidate",
+  "baseline",
+  "baseline",
+  "candidate"
+ ],
+ "binary_sha256": {
+  "baseline": "ffbf05bf7b91e6e92d6b1765a46912872a79a8ebbec2fa8110876d3acc3c990e",
+  "candidate": "5cd0ab087f05a4a9a772338834990494a01cc9409f8bacf573128a561e58281b",
+  "contracts": "152bb77e9703de6ad7665a30a800362f48bf873eefed0175354ce4e9aff6350b"
+ }
+}
+porcelain_after=0
+DONE Sat Nov 14 14:34:40 CST 2026
+exit=0

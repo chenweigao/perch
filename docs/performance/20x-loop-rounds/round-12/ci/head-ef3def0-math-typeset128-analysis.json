@@ -60,5 +60,63 @@
    1.441
   ],
   "note": "best-of-3 fails (1.238>1.15) only because one baseline round printed a fast outlier (1.115); medians are 1.335 vs 1.398 (ratio 1.047, inside the gate) and the candidate range lies inside the baseline range. The diff does not touch the math typesetting path. Round-9 precedent: authoritative quiet-machine retest decides; queued on the Mac mini at the final head with WORKBENCH_MATH_BASELINE_REF=7d5ba26."
- }
+ },
+ "gate_statistic": {
+  "definition": "run-math-performance.py gate: best-of-3 of (cold_attachment.total_ms + first_light_dark_draw.total_ms) per variant; typeset-N (N<=128) fails when candidate_best > baseline_best * 1.15",
+  "typeset_128_totals_ms_per_round": {
+   "baseline": [
+    [
+     "round-1-baseline",
+     334.3255,
+     153.4049,
+     180.9206
+    ],
+    [
+     "round-4-baseline",
+     470.0391,
+     213.3215,
+     256.7177
+    ],
+    [
+     "round-5-baseline",
+     428.1346,
+     198.0569,
+     230.0777
+    ]
+   ],
+   "candidate": [
+    [
+     "round-2-candidate",
+     467.1157,
+     225.2679,
+     241.8478
+    ],
+    [
+     "round-3-candidate",
+     441.901,
+     230.3776,
+     211.5234
+    ],
+    [
+     "round-6-candidate",
+     399.6343,
+     193.4397,
+     206.1946
+    ]
+   ]
+  },
+  "baseline_best_ms": 334.3255,
+  "candidate_best_ms": 399.6343,
+  "best_ratio": 1.1953,
+  "baseline_median_ms": 428.1346,
+  "candidate_median_ms": 441.901,
+  "median_ratio": 1.0322
+ },
+ "correction_note": "The earlier 'analysis' block quoted cold_cpu medians — a diagnostic, NOT the enforcement statistic (re-review N3). The gate statistic above is computed from the same archived per-round JSONs. The quiet-machine retest verdict stands on the real gate: run-math-performance.py's own typeset-128 best_ratio was 1.0048 (status passed).",
+ "binary_sha256": {
+  "baseline": "621d52be9fa55c1c606af7888c4ed9edbbcd5bd93fbc0cd14166b264401dbd8b",
+  "candidate": "b5dfa49d596108eb270a80354e4ceced3bde15f6218e028736cd5ff4cfa357c7",
+  "contracts": "e6517078964fedabe5fd5f5e5b0b0f6ff5532b82fe2b3bf8fdf1cfaf6dfef90f"
+ },
+ "note": "Companion raw log: head-ef3def0-math-typeset128-failure.log. The cold_cpu figures under 'analysis' are DIAGNOSTIC ONLY; see gate_statistic for the enforcement numbers (N3 correction)."
 }

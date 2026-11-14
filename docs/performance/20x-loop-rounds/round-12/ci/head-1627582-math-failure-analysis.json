@@ -1,0 +1,23 @@
+{
+ "source": "GitHub Actions run 43565145612, job 132359028499, head 1627582",
+ "rounds": {
+  "typeset-512": {
+   "round-1-baseline": {
+    "cold_cpu": 0.948,
+    "draw_cpu": 0.975
+   }
+  },
+  "typeset-32": {
+   "round-1-baseline": {
+    "cold_cpu": 0.978,
+    "draw_cpu": 1.05
+   }
+  },
+  "typeset-128": {
+   "round-1-baseline": {
+    "cold_cpu": 0.94,
+    "draw_cpu": 0.95
+   }
+  }
+ }
+}
