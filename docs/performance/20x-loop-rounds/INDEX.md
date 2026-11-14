@@ -65,7 +65,7 @@ Mac mini 同机 A/B 超过该轮实测噪声才采纳，不能把 Linux 特有�
 | 9 | 2026-11-13 | 长单轮状态栏派生免中间数组 | **已采纳/合并：Mac 单轮 activity -26.38%**（1.6545→1.2180ms@2,000 条）、-25.33%@400 条，六对区间分离；CI math 门槛在 3 CPU 共享 runner 上三次失败（每次卡的门槛与构建出的二进制 hash 都不同），Mac mini 静机同脚本/同 6 轮顺序/同门槛全绿（parse 0.97–1.00、typeset best 1.13/1.01/0.99），据此判为 runner 噪声，未改任何门槛或断言；证据随 docs 提交换新 head 后 8/8 全绿合并；自排独立评审五次被 Claude 限流未跑成，已明示 | [round-9](2026-11-13-round-9.md)；[#329](https://github.com/chenweigao/perch/pull/329)，merge=a9bca95（20:32）；[CI 取证](round-9/ci/math-gate-investigation.json) |
 | 10 | 2026-11-13 | 定时信封裁剪前的 O(1) 守卫 | **不采纳**：Linux 冷投影 -17.89%（51.595→42.365ms@2,333），Mac -0.96%（8.32→8.24ms，区间重叠、噪声内），是 corelibs `trimmingCharacters` 走 UTF-16 的 Linux 特有开销；候选构建 Mac edit64_bulk +15.04% 超其 13.88% spread，为回归信号、随撤回不保留；产品补丁已撤回，保留 8 条钉住既有空白/近似输入边界的断言（两端产品代码未改的匹配构建通过，Mac 验证构建 8b294a15）与两端六对数据；gpt-6.1-sol 独立评审三轮（初审+两次复核）共 8 项 BLOCKING + 2 项非阻塞发现的逐项处置见报告"独立评审与修正记录"；首个 head 的 navigation-disclosure 超时未在其后三个 head 复现，判 runner 抖动 | [round-10](2026-11-13-round-10.md)；[#330](https://github.com/chenweigao/perch/pull/330)，merge=d1590e4（22:17）；[撤回补丁](round-10/rejected-cron-guard.patch)；[Mac 提交配置验证](round-10/macos-committed-checks.json) |
 | 11 | 2026-11-14 | collapsedWhitespace 零拷贝字节路径 + 永不绑定预过滤 | **已采纳/合并：Mac 冷投影 -19.16%**（8.325→6.730ms@2,333，spread 4.75%，六对全分离），四尺寸 -17～-19%；xctrace 归因 collapsedWhitespace 30%+prefix 字素行走 20.8%+trim 仅 0.9%；穷举走查暴露 Prepend 集既有缺口（U+111C3/U+113D1）按契约先修，7 标量特征化缺口钉住未修；两次独立 run 二进制逐字节复现；display_messages_workspace +10µs（一格量化、区间重叠）已披露；Linux 筛选 -6.3% 同向；gpt-6.1-sol 评审 CLEAN（3 处非阻塞措辞已修复）、CI 13/13 绿 | [round-11](2026-11-14-round-11.md)；[#333](https://github.com/chenweigao/perch/pull/333)，merge=7d5ba26（03:01）；[归因](round-11/macos-xctrace-attribution.json) |
-| 12 | 2026-11-14 | find-bar 未变条目 hits 整体复用（开查找栏 streaming） | **候选：Mac find_bar_query_update -44.00%**（0.500→0.280ms@16,142 条，spread 7.69%，六对全分离，最差对 -42.86%），Linux 筛选 -34.16% 同向分离；streaming/activity 复剖：search 区域占 streaming 全样本 52.6%（locale 匹配机制 langid+DD lexer+fold ~13.4% + UTF16 索引转换 5.1%）、SessionEditStats 占 activity 测量段 57.3%（下一轮队列首位）；条目 hits 为 (messages,isRunning,query,options) 纯函数，用 round-8 窗口同一性比较校验后整体复用并收养新副本；checkSearchEntryReuse 等价矩阵在匹配基线与候选两侧都 93+1 SKIP（Linux）/94（Mac）全过；display_messages_workspace +10µs（一格量化，与 round 11 同度量同幅度）与 Linux edit-lines -16～-24%（Mac 仅 -0.1～-3.1% 且区间重叠，布局伪影）已披露；prefix(320) 立项前 Mac 粗筛否决入否定清单；待评审/CI | [round-12](2026-11-14-round-12.md)；[归因](round-12/macos-xctrace-streaming-activity-attribution.json) |
+| 12 | 2026-11-14 | find-bar 未变条目 hits 整体复用（开查找栏 streaming） | **候选（v3=23bebb2）：Mac find_bar_query_update -44.00%**（0.500→0.280ms@16,142 条，spread 7.41%，六对全分离 -210～-230µs），Linux 筛选 -32.92% 同向分离；复剖：search 区域占 streaming 全样本 52.6%（locale 匹配 langid+DD lexer+fold ~13.4% + UTF16 索引转换 5.1%）、SessionEditStats 占 activity 测量段 57.3%（队列首位）；条目 hits 为 (messages,isRunning,query,options) 纯函数，编码精确查询键 + sameSearchableWindow（字节层 ∨ 值层∧渲染字节层：数值 bitPattern、字符串/对象键 UTF-8 字节）三重校验后整体复用并收养新副本；两轮评审处置：Codex P2（NFC/NFD 查询键洞，含 round-8 起 Earlier 同洞）+ 独立评审 4 BLOCKING（-0.0 渲染分歧、钉死缺口、出处夸大、披露失实）→ v1→v3 三轮六对全分离幅度一致；matched baseline 按设计败于零号符号翻转转换（exit 132/133、其前 12 PASS——暴露 round 8 既有洞），候选两端全绿（93+1 SKIP/94 PASS）；portable 10/10、提交树重建逐字节一致；伪影披露（评审更正后）：display_messages_workspace ±1 打印格双向抖动、Linux edit-lines v1→v3 摆动 ~20pp（crlf 两行为唯一正向超 spread，归布局伪影推断）、Mac activity_init@320/stage_total 均匀单格正向平移；prefix(320) 立项前粗筛否决入否定清单（ERRATUM 更正单位/归属 + 重跑验证日志）；待复核/CI | [round-12](2026-11-14-round-12.md)；[归因](round-12/macos-xctrace-streaming-activity-attribution.json) |
 
 ## 否定清单（勿重复尝试）
 
@@ -85,12 +85,15 @@ Mac mini 同机 A/B 超过该轮实测噪声才采纳，不能把 Linux 特有�
   不要把 Mac 复测放到最后（round 10）。
 - excerpt 的 `prefix(320)` 字素行走/物化开销：round 12 立项前的 Mac 粗筛（SwiftPM
   scratch 包，9×20,000 次交替、64 轮换输入、哈希消费防提升）否决——`prefix(320)`
-  本就把全部下游 collapse 工作截到 ≤320 字符，超过 320 标量的文本要先付整文长的
-  collapse/count 遍：v1 融合截断折叠 +20.1%/+20.7%（CJK 337/368 标量 fixture），
-  v2 先计数+就地折叠 +4.4%/+4.9%，longAscii +27.8%/+1.8%；仅 14 标量短文本 -37%。
-  标量计数上界只能对 ≤320 标量证明 prefix==whole，stdlib 字素行走没有更便宜的
-  sound 替代。等价性设计本身可行（41,092 对差分 fuzz 零失败），是性能不成立；
-  证据见 round-12/prefix320-screening/（round 12）。
+  本就把全部下游 collapse 工作截到 ≤320 字符，超过 320 标量的文本要先付一次到
+  321 标量才中止的带上限 collapse/count 扫描（仍覆盖大半文本）：v1 融合截断折叠
+  +20.1%/+20.7%（CJK 337/368 标量 fixture），v2 先计数+就地折叠 +4.4%/+4.9%，
+  longAscii +27.8%/+1.8%；仅 14 标量短文本 -37%。标量计数上界只能对 ≤320 标量
+  证明 prefix==whole；这两类实现被否决不构成"不存在更便宜 sound 替代"的证明，
+  但未找到可用替代。等价性设计本身可行（41,092 对差分 fuzz 零失败——注意语料
+  覆盖的是融合原型变体，非被计时的 count-first 变体），是性能不成立；证据与
+  更正见 round-12/prefix320-screening/（含 ERRATUM.md：单位实为 ms、归属更正、
+  重跑验证日志）（round 12）。
 
 ## 候选队列（按当前证据排序）
 

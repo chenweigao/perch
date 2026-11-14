@@ -1,0 +1,12 @@
+Build complete! (0.41秒)
+user(339sc,CJK): chars=337 scalars=337 bytes=505
+assistant(368sc,CJK): chars=368 scalars=368 bytes=540
+short: chars=14 scalars=14 bytes=38
+longAscii: chars=2400 scalars=2400 bytes=2400
+
+µs/call median of 9 blocks, 20000 iters/block, 64 rotating inputs
+user(339sc,CJK): v0=0.0036 v1=0.0043 (+20.6%) v2=0.0037 (+4.1%)
+assistant(368sc,CJK): v0=0.0035 v1=0.0043 (+21.3%) v2=0.0037 (+4.3%)
+short: v0=0.0004 v1=0.0003 (-36.5%) v2=0.0003 (-37.1%)
+longAscii: v0=0.0013 v1=0.0017 (+29.0%) v2=0.0013 (+2.0%)
+variants agree on all bench texts

@@ -1,5 +1,8 @@
 # Round-12 candidate screening (Mac mini, 2026-11-14) — REJECTED before round start
 
+> **注意：本文件保留原始记录原样；单位标注（µs 实为 ms）、"whole-text" 措辞与
+> fuzz 语料归属已由 [ERRATUM.md](ERRATUM.md) 更正，以 erratum 为准。**
+
 Candidate: avoid the prefix(320) grapheme walk / String materialization in
 ConversationTurnSummary.excerpt's single-part path via (v1) fused scalar-capped
 collapse or (v2) count-first + in-place substring collapse.
