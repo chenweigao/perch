@@ -1,0 +1,99 @@
+PASS: step reading preserves order, edit identities, historical patches and outcome-aware churn
+PASS: phase reading groups Bash and thoughts, preserves edit receipts, separates historical failures from pending work and uses grounded command labels
+PASS: live public summaries, completed process folding, manual expansion, uniform folding of edits and failures
+PASS: PI steady streaming cadence, Unicode boundaries, replacement and immediate completion
+PASS: parsed-block release retains Unicode, styling, links and complete rich Markdown
+PASS: incremental reply parse matches full parses at every streaming prefix
+PASS: live progress, missing summaries, thinking-only output, tool-only notice and provider model groups
+PASS: process fold groups completed turns, preserves order, keeps the running turn live
+PASS: presentation parity, same-ID edits, pagination, epoch/language/live handoff, scoped LRU, oversized active state and metrics
+PASS: presentation history reuse matches complete recomputation across tokens, paging, crossings, language, epoch and overlays
+PASS: paging and new prompts reuse unchanged earlier turns and match complete recomputation (19/20 pages)
+PASS: window identity reuse ends at any earlier in-place edit, survives a rebuilt window and matches complete recomputation
+PASS: find-bar entry reuse equals a complete search across growth, isolated payload edits, reroutes, rebuilds, pages, running flips and query/option switches
+PROBE PASS: prefix zero-sign flip under an unchanged query
+PROBE PASS: NFD regex query after the canonically equal NFC query, and back
+PROBE PASS: payload NFC to NFD swap under an unchanged regex query
+PROBE PASS: object-key NFC to NFD swap under an unchanged regex query
+PROBE PASS: case-sensitive literal NFD query after the canonically equal NFC query, and back
+PASS: find-bar cache-hole probes (prefix zero sign, regex and literal query encoding round trips, payload encoding, key encoding) equal complete searches
+PASS: collapsedWhitespace whitespace-adjacent walk (2662 strict-path, 1109274 fast-path, 7 characterized gaps)
+PASS: collapsedWhitespace prepend set matches stdlib fusion (27 fusing scalars)
+PASS: collapsedWhitespace equals Character-accurate split/join on adversarial whitespace
+PASS: single-part excerpt fast path equals original Character budgets across Unicode boundaries and mixed parts
+PASS: compaction summary display strips harness scaffolding
+PASS: unified activity narratives, source priority, bounded external refinement and Codex metadata
+PASS: bounded task Recap input, privacy boundary, request/response contract, stable cache, and session overview
+PASS: file references preserve Unicode line selection; diff feedback distinguishes old/new lines and exact snapshot
+PASS: workspace progress migration, independent checkpoints, safe outcome links, stable action order
+PASS: grouping rejects unknown/duplicate memberships, preserves manual changes, undo conflicts and bounded metadata
+PASS: session naming config migration, placeholder detection, excerpt bounds, request shape, sanitization
+PASS: cron-fire envelope parsing, turn anchoring, naming excerpt
+PASS: tool visibility handoff, deduplication, late/orphan results, failure, approval, disconnection and native turn scope
+PASS: status-line tools equal the full projection walk across scenarios and 2000 seeded differential cases
+PASS: TodoList writes, queries, failure, turn boundaries and floating-list lifecycle
+Conversation activity: live/history dedup, result precedence, disconnect, approval, stop and turn isolation passed
+PASS: turn status headlines, requests, ended results, turn-scoped edits, stall thresholds, the minute clock and turn edit paths
+PASS: session turn facts for Kimi and native rows and snapshots, shared precedence, sections and notification edges
+PASS: task panel document links, host-relative paths, deduplication and write evidence
+PASS: task detail routes, row detail lines, output and stop capabilities, output tail truncation
+PASS: request/observed timing, session switching, wait accounting, completion freeze and turn isolation
+PASS: frame hitch recorder — steady frames, long gap, nested/partial attribution, scroll flag, histogram, worst-60 cap, ring overwrite, chain breaks, JSON report
+PASS: auto-compact decisions — gates, threshold edge, anti-spin, resume guards
+PASS: safe link allowlist — http/https/mailto/perch-file, scheme and case rejection
+PASS: session edit stats — diff middle, write lines, patch headers, accumulation, URL/unknown rejection, Character line boundaries
+
+*** Signal 4: Backtracing from 0x561322effba1... done ***
+
+*** Swift runtime failure: precondition failure ***
+
+Platform: x86_64 Linux (Alibaba Cloud Linux 3 (Soaring Falcon))
+
+Thread 0 "WorkbenchChecks" crashed:
+
+  0 [inlined] [system] 0x0000561322effba1 Swift runtime failure: precondition failure in WorkbenchChecks at //<compiler-generated>
+  1                    0x0000561322effba1 specialized check #1 (_:) in checkEditStatsLineCountScan() + 257 in WorkbenchChecks at <worktree>/Tests/WorkbenchCoreTests/LineCountScanTests.swift:37:9
+  2 [ra]               0x0000561322effbdf specialized walk #1 (_:depth:) in checkEditStatsLineCountScan() + 46 in WorkbenchChecks at <worktree>/Tests/WorkbenchCoreTests/LineCountScanTests.swift:46:13
+  3 [ra]               0x0000561322effc9a specialized walk #1 (_:depth:) in checkEditStatsLineCountScan() + 233 in WorkbenchChecks at <worktree>/Tests/WorkbenchCoreTests/LineCountScanTests.swift:48:35
+  4 [ra]               0x0000561322effc9a specialized walk #1 (_:depth:) in checkEditStatsLineCountScan() + 233 in WorkbenchChecks at <worktree>/Tests/WorkbenchCoreTests/LineCountScanTests.swift:48:35
+  5 [ra]               0x0000561322effc9a specialized walk #1 (_:depth:) in checkEditStatsLineCountScan() + 233 in WorkbenchChecks at <worktree>/Tests/WorkbenchCoreTests/LineCountScanTests.swift:48:35
+  6 [ra]               0x0000561322effc9a specialized walk #1 (_:depth:) in checkEditStatsLineCountScan() + 233 in WorkbenchChecks at <worktree>/Tests/WorkbenchCoreTests/LineCountScanTests.swift:48:35
+  7 [ra]               0x0000561322efe867 checkEditStatsLineCountScan() + 102 in WorkbenchChecks at <worktree>/Tests/WorkbenchCoreTests/LineCountScanTests.swift:50:9
+  8 [ra]               0x0000561322f4e794 specialized static ProtocolTests.main() + 851 in WorkbenchChecks at <worktree>/Tests/WorkbenchCoreTests/ProtocolTests.swift:70:13
+  9 [async] [system]   0x0000561322f47a20 specialized thunk for @escaping @convention(thin) @async () -> () in WorkbenchChecks at //<compiler-generated>
+ 10 [async]            0x00007fd733685190 completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*) in libswift_Concurrency.so
+...
+
+
+Registers:
+
+rax 0x0000000000000001  1
+rdx 0xa800000000000000  12105675798371893248
+rcx 0x000056132351d010  06 00 07 00 07 00 07 00 07 00 07 00 07 00 07 00  ················
+rbx 0x0000000000000007  7
+rsi 0x00005616424318f5  94653600962805
+rdi 0x0000561323545820  f5 18 43 42 16 56 00 00 10 d0 51 23 13 56 00 00  õ·CB·V···ÐQ#·V··
+rbp 0x00007fff7b894ce0  60 4d 89 7b ff 7f 00 00 df fb ef 22 13 56 00 00  `M·{ÿ···ßûï"·V··
+rsp 0x00007fff7b894c90  0a 0b e6 b1 89 00 00 00 e0 4f 89 7b ff 7f 00 00  ··æ±····àO·{ÿ···
+ r8 0x0000000000000000  0
+ r9 0x0000000200000000  8589934592
+r10 0x0000000100000003  4294967299
+r11 0x0000000000000000  0
+r12 0x0000000000000000  0
+r13 0x0000000000000003  3
+r14 0x0000561323545820  f5 18 43 42 16 56 00 00 10 d0 51 23 13 56 00 00  õ·CB·V···ÐQ#·V··
+r15 0xa800000000000000  12105675798371893248
+rip 0x0000561322effba1  0f 0b 0f 0b 66 66 2e 0f 1f 84 00 00 00 00 00 55  ····ff.········U
+
+rflags 0x0000000000010206  PF
+
+cs 0x0033  fs 0x0000  gs 0x0000
+
+
+Images (48 omitted):
+
+0x0000561322c00000–0x00005613233b42b0 283a7a72cb6ee3d2787b46fd65d54844788f9f43 WorkbenchChecks         <worktree>/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+0x00007fd7335f9000–0x00007fd73368c660 ab7a387eca696d31db096d9ebebea096c2cf1bc3 libswift_Concurrency.so /home/<dev>/.local/swift/6.3.3/usr/lib/swift/linux/libswift_Concurrency.so
+
+Backtrace took 0.73s
+

@@ -1,0 +1,46 @@
+=== prepare Sat Nov 14 18:09:45 CST 2026 ===
+From github.com:chenweigao/perch
+   924b3ef..b6fe994  perf/20x-loop-14-20261114 -> origin/perf/20x-loop-14-20261114
+Previous HEAD position was 924b3ef docs(performance): record round 14 candidate with attribution and A/B evidence
+HEAD is now at b6fe994 docs(performance): apply round-14 review non-blocking corrections
+HEAD=b6fe99490d9af2b525c81967d3a8f7cb1c2148aa
+porcelain_before=0
+=== math retest Sat Nov 14 18:09:49 CST 2026 ===
+math_exit=0
+    "relative_performance_gates": "applied"
+  },
+  "scope": "same-runner sequential synthetic A/B; window timings are not hardware input latency or FPS"
+}
+=== summary Sat Nov 14 18:12:41 CST 2026 ===
+{
+ "status": "passed",
+ "order": [
+  "baseline",
+  "candidate",
+  "candidate",
+  "baseline",
+  "baseline",
+  "candidate"
+ ],
+ "binary_sha256": {
+  "baseline": "d3ea970dd80c41bfb1354af642607c0b4ebf5f22703621ab0c9ccecd70940d79",
+  "candidate": "c18278cb79441d4c2f9f26831d91eee47aa78ca78a4cf5ac9dfa58e4cd922258",
+  "contracts": "6f99427152d4a7212dbafda664ac1f60bb6a917f9ea0a20dfc8b7a0c5fc9302b"
+ }
+}
+parse_ordinary_backslashes {"baseline_median_ms": 2.4436666863039136, "candidate_median_ms": 2.5274583604186773, "ratio": 1.0342893221012477}
+parse_plain {"baseline_median_ms": 2.949333400465548, "candidate_median_ms": 3.1060000183060765, "ratio": 1.0531193312413574}
+parse_reply {"baseline_median_ms": 1.7700833268463612, "candidate_median_ms": 1.8549582455307245, "ratio": 1.047949674118212}
+parse_stream_16 {"baseline_median_ms": 0.6623333320021629, "candidate_median_ms": 0.6375833181664348, "ratio": 0.962632087742117}
+parse_stream_64 {"baseline_median_ms": 0.6644583772867918, "candidate_median_ms": 0.6621666252613068, "ratio": 0.9965509472017751}
+parse_unclosed_256 {"baseline_median_ms": 0.16404164489358664, "candidate_median_ms": 0.1767083304002881, "ratio": 1.0772162795302274}
+parse_unclosed_1024 {"baseline_median_ms": 0.6208749255165458, "candidate_median_ms": 0.6455415859818459, "ratio": 1.039728872034538}
+parse_unclosed_4096 {"baseline_median_ms": 2.4934583343565464, "candidate_median_ms": 2.5342500302940607, "ratio": 1.0163594856891967}
+typeset-32 {"baseline_cold_and_draw_ms": 42.07683331333101, "candidate_cold_and_draw_ms": 38.7226251186803, "baseline_best_ms": 39.438333245925605, "candidate_best_ms": 38.26083382591605, "ratio": 0.9202837302495382, "best_ratio": 0.9701432762721736, "baseline_rss_growth_bytes": 21037056, "candidate_rss_growth_bytes": 20742144, "baseline_warm_median_ms": 0.002666609361767769, "candidate_warm_median_ms": 0.002750079147517681}
+typeset-128 {"baseline_cold_and_draw_ms": 126.69083324726671, "candidate_cold_and_draw_ms": 126.57683389261365, "baseline_best_ms": 125.0046247150749, "candidate_best_ms": 126.11987581476569, "ratio": 0.9991001767710331, "best_ratio": 1.00892167871575, "baseline_rss_growth_bytes": 62029824, "candidate_rss_growth_bytes": 61751296, "baseline_warm_median_ms": 0.002541695721447468, "candidate_warm_median_ms": 0.0027082860469818115}
+typeset-512 {"baseline_cold_and_draw_ms": 490.58145994786173, "candidate_cold_and_draw_ms": 495.1685826526955, "baseline_best_ms": 490.42049946729094, "candidate_best_ms": 492.6517062122002, "ratio": 1.009350379252655, "best_ratio": 1.0045495788763579, "baseline_rss_growth_bytes": 65847296, "candidate_rss_growth_bytes": 69976064, "baseline_warm_median_ms": 0.002749962732195854, "candidate_warm_median_ms": 0.002750079147517681}
+window-30 {"initial_layout_display_ms": {"baseline": 85.08608338888735, "candidate": 82.36412506084889, "baseline_median_ms": 86.87666663900018, "candidate_median_ms": 83.45224999357015}, "scroll_work": {"baseline_p95_ms": 8.126250002533197, "candidate_p95_ms": 7.999916677363217}, "scheduled_tick_gap": {"baseline_p95_ms": 40.234249900095165, "candidate_p95_ms": 39.49383331928402}, "rss_growth_bytes": {"baseline": 48054272, "candidate": 47841280}}
+window-128 {"initial_layout_display_ms": {"baseline": 186.57745840027928, "candidate": 183.86379175353795, "baseline_median_ms": 201.86216663569212, "candidate_median_ms": 186.54208327643573}, "scroll_work": {"baseline_p95_ms": 14.519333257339895, "candidate_p95_ms": 16.232250025495887}, "scheduled_tick_gap": {"baseline_p95_ms": 37.90983324870467, "candidate_p95_ms": 41.3687500404194}, "rss_growth_bytes": {"baseline": 71139328, "candidate": 71417856}}
+porcelain_after=0
+DONE Sat Nov 14 18:12:41 CST 2026
+exit=0

@@ -67,6 +67,7 @@ struct ProtocolTests {
         checkAutoCompact()
         checkSafeLink()
         try checkSessionEditStats()
+        try checkEditStatsLineCountScan()
         try checkEditLineScans()
         try checkEditLineDiffBoundaries()
         try checkEditToolClassification()

@@ -1,0 +1,78 @@
+diff --git a/Sources/WorkbenchCore/SessionEditStats.swift b/Sources/WorkbenchCore/SessionEditStats.swift
+index f8c2363..a589796 100644
+--- a/Sources/WorkbenchCore/SessionEditStats.swift
++++ b/Sources/WorkbenchCore/SessionEditStats.swift
+@@ -163,13 +163,46 @@ public enum SessionEditStats {
+ 
+     /// A trailing newline ends the last line rather than starting another —
+     /// but keep parity with ccgui's JS split, which counts it.
++    ///
++    /// A separator is exactly an LF whose previous byte is not a CR, so the
++    /// count is (all LF bytes) − (adjacent CR-LF pairs). Both terms scan as
++    /// 8-byte words: the has-zero trick marks every byte equal to the pattern
++    /// with a 0x80 bit, popcount totals them, and a CR mask shifted one byte
++    /// up (plus the cross-word carry flag) marks exactly the LF-after-CR pairs.
++    /// The scalar predicate it replaces re-reads `bytes[offset - 1]` per byte
++    /// and never vectorizes.
+     private static func lineCount(_ text: String) -> Int {
+         if let count = text.utf8.withContiguousStorageIfAvailable({ bytes -> Int in
+-            var count = 1
+-            for offset in bytes.indices where bytes[offset] == 0x0A && (offset == 0 || bytes[offset - 1] != 0x0D) {
+-                count += 1
++            let n = bytes.count
++            guard let base = bytes.baseAddress else { return 1 }
++            let lfPattern: UInt64 = 0x0A0A0A0A0A0A0A0A
++            let crPattern: UInt64 = 0x0D0D0D0D0D0D0D0D
++            var lf = 0
++            var crlf = 0
++            var i = 0
++            var prevByteIsCR = false
++            while i + 8 <= n {
++                let word = UnsafeRawPointer(base).loadUnaligned(fromByteOffset: i, as: UInt64.self)
++                let lfBits = hasByteEqualTo(word, lfPattern)
++                let crBits = hasByteEqualTo(word, crPattern)
++                lf += lfBits.nonzeroBitCount
++                // Little-endian: the CR of byte k-1 carries bit 8(k-1)+7, so a
++                // one-byte left shift aligns it under byte k's LF bit.
++                crlf += (lfBits & (crBits << 8)).nonzeroBitCount
++                // The pair spanning the word boundary: this word's byte 0 is an
++                // LF and the previous word ended with a CR.
++                if prevByteIsCR && (lfBits & 0x80) != 0 { crlf += 1 }
++                prevByteIsCR = (crBits & 0x8000000000000000) != 0
++                i += 8
++            }
++            while i < n {
++                if bytes[i] == 0x0A {
++                    lf += 1
++                    if i > 0, bytes[i - 1] == 0x0D { crlf += 1 }
++                }
++                i += 1
+             }
+-            return count
++            return 1 + lf - crlf
+         }) { return count }
+         var count = 1
+         var previous: UInt8 = 0
+@@ -180,6 +213,22 @@ public enum SessionEditStats {
+         return count
+     }
+ 
++    /// Sets the high bit of exactly those bytes of `word` that equal the
++    /// corresponding byte of the repeated pattern `c`. The classic subtraction
++    /// form `((x − 0x01…) & ~x & 0x80…)` is NOT positionally exact: borrow
++    /// propagation also marks a 0x01 byte that follows a zero byte, so an LF
++    /// followed by a vertical tab (0x0A, 0x0B) or a CR followed by a form feed
++    /// (0x0D, 0x0C) fakes an extra marker — and at byte 7 corrupts the
++    /// cross-word carry. The carry-free addition form marks bit 7 of a byte
++    /// exactly when that byte is zero: `(b & 0x7F) + 0x7F` peaks at 0xFE, so
++    /// no byte can carry into the next, and bit 7 stays clear only for b == 0.
++    @inline(__always)
++    private static func hasByteEqualTo(_ word: UInt64, _ c: UInt64) -> UInt64 {
++        let x = word ^ c
++        let mask7 = 0x7F7F7F7F7F7F7F7F as UInt64
++        return ~(((x & mask7) &+ mask7) | x | mask7)
++    }
++
+     /// These ranges end only at LF separators (except CRLF) or the buffer
+     /// bounds. Converting them back into the original text therefore preserves
+     /// scalar boundaries and canonical Substring comparisons.

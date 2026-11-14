@@ -1,0 +1,35 @@
+{
+ "source": "GitHub Actions run 43581953781, job 132410520389, head 924b3ef (superseded by b6fe994)",
+ "gate_error": "Typeset/draw regression exceeds 15% at 32",
+ "gate_statistic": {
+  "definition": "best-of-3 of (cold_attachment.total_ms + first_light_dark_draw.total_ms); typeset-32 gate <= 1.15",
+  "typeset-32": {
+   "baseline_totals_ms": [
+    120.3936,
+    66.5096,
+    61.9283
+   ],
+   "candidate_totals_ms": [
+    111.511,
+    78.4762,
+    106.5384
+   ],
+   "best_ratio": 1.2672,
+   "median_ratio": 1.6018
+  },
+  "typeset-128": {
+   "baseline_totals_ms": [
+    276.9164,
+    248.2308,
+    225.77
+   ],
+   "candidate_totals_ms": [
+    281.7906,
+    272.8919,
+    270.8223
+   ],
+   "best_ratio": 1.1995,
+   "median_ratio": 1.0993
+  }
+ }
+}

@@ -1,0 +1,20 @@
+=== prepare Sat Nov 14 21:06:52 CST 2026 ===
+Previous HEAD position was 52a81ab docs(performance): record round 15 v2 adoption data after the review-driven exact-mask fix
+HEAD is now at 9c12eb9 Merge pull request #336 from chenweigao/perf/20x-loop-14-20261114
+HEAD=9c12eb99b05b1e6a886769e2a26e36e7370ad440
+porcelain_before=0
+=== tests patch + baseline build Sat Nov 14 21:06:56 CST 2026 ===
+tests_patch=ok
+baseline_build_exit=0
+=== product patch + candidate build Sat Nov 14 21:08:08 CST 2026 ===
+product_patch=ok
+candidate_build_exit=0
+0542945749b9104c15394ec68d1ce1b6b434a36e8eee7e0bab972a1fd3b90411  .build/round15-baseline-final/out/Products/Release/WorkbenchChecks
+be307d1409d9ab8fc6bc1766d89bbe1b88c37146d6dbc12e2ec9219dbad5cb8b  .build/round15-candidate-final/out/Products/Release/WorkbenchChecks
+=== check suites Sat Nov 14 21:09:18 CST 2026 ===
+baseline_checks_exit=0 pass=97
+candidate_checks_exit=0 pass=97
+PASS: edit-stat line counting matches the Character-split oracle across 27885 cases (22302 containing VT/FF, 16811 with an LF→VT or CR→FF adjacency)
+=== cleanup Sat Nov 14 21:10:03 CST 2026 ===
+porcelain_after=0
+DONE Sat Nov 14 21:10:03 CST 2026
