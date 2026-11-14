@@ -57,7 +57,11 @@ public enum ReplyMath {
     /// Resolve boundaries in bounded passes, including unmatched streaming input.
     /// The original source remains unchanged outside paired math delimiters.
     static func normalizeDelimiters(_ source: String) -> String {
-        guard hasDelimiterStart(source) else { return source }
+        // The byte-level contains(92) stays as the first gate: it rejects the
+        // common no-backslash source through the standard library's fast
+        // search, keeping the per-byte pair scan (below) off paths like the
+        // warm streaming update whose sources rarely carry backslashes.
+        guard source.utf8.contains(92), hasDelimiterStart(source) else { return source }
         let bytes = Array(source.utf8)
         let boundaries = Boundaries(bytes)
         var result: [UInt8] = []
@@ -130,12 +134,12 @@ public enum ReplyMath {
         return String(decoding: result, as: UTF8.self)
     }
 
-    /// Equivalent of the previous guard `source.utf8.contains(92) &&
-    /// (source.contains("\(") || source.contains("\["))` — the two
-    /// grapheme-aware substring searches dominated this function on the
-    /// cold find-bar path (round-17 attribution: ~79% of its samples were
-    /// String-search machinery on tool-output sources full of escaped
-    /// backslashes). Byte adjacency of the ASCII pair is a necessary
+    /// Replaces the two grapheme-aware `contains("\(")` / `contains("\[")`
+    /// searches of the previous guard (run after the byte-level contains(92)
+    /// fast reject, which stays in front of this scan) — they dominated this
+    /// function on the cold find-bar path (round-17 attribution: ~79% of its
+    /// samples were String-search machinery on tool-output sources full of
+    /// escaped backslashes). Byte adjacency of the ASCII pair is a necessary
     /// condition for a Character-sequence match (UTF-8 self-synchronization:
     /// ASCII bytes never occur inside multi-byte sequences), so sources
     /// without the byte pair are rejected by the scan alone. A found pair is
