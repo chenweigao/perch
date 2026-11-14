@@ -178,6 +178,10 @@ func checkSearchEntryReuse() throws {
         precondition(result.hits.first?.toolID == "read-9",
                      "hit tool routing follows the rerouted call id")
     }
+    window = base + (try F.live(9))
+    let restoredRoute = equalsOracle(window, "File0.swift", running: true, "tool call id restored")
+    precondition(restoredRoute.hits.first?.toolID == "read-0",
+                 "hit tool routing follows the restored call id")
     try isolatedMutation({ $0.answer = F.editedAnswer }, query: "ALPHA",
                          "answer edited in place at the same byte length") { result in
         precondition(result.hits.count == 1, "only the prompt keeps the pre-edit spelling")
@@ -204,10 +208,14 @@ func checkSearchEntryReuse() throws {
     precondition(afterLive.hits.contains { $0.entryID == "thinking:a0:0" },
                  "the byte-identical prefix keeps its reused negative-zero hit")
 
-    // Running flips rebuild the latest turn's entries under the other flag.
-    equalsOracle(window, "ALPHA", running: false, "running flip off")
-    equalsOracle(window, "BETA", running: false, "running flip off, latest-turn query")
-    equalsOracle(window, "ALPHA", running: true, "running flip on")
+    // Running flips with the window, query and options all held constant: flag
+    // validation must not be masked by query invalidation (re-review Q4).
+    equalsOracle(window, "ALPHA", running: true, "before the running flip")
+    equalsOracle(window, "ALPHA", running: false, "running flip off, same window/query/options")
+    equalsOracle(window, "ALPHA", running: true, "running flip on, same window/query/options")
+    equalsOracle(window, "BETA", running: true, "latest-turn query before the second flip")
+    equalsOracle(window, "BETA", running: false, "running flip off, latest-turn query held")
+    equalsOracle(window, "BETA", running: true, "running flip on, latest-turn query held")
     window = base + (try F.live(10))
     equalsOracle(window, "ALPHA", running: true, "growth after the flips")
     // A rebuilt window is value-equal with different payloads: reuse survives
@@ -238,16 +246,22 @@ func checkSearchEntryReuse() throws {
 ///
 ///   P1 prefix zero-sign flip: -0.0 == 0.0 as values while `display` renders
 ///      the sign — round 8's Earlier reuse serves stale "-0" prefix hits.
-///   P2 NFD regex query after the canonically equal NFC query: round 8's
-///      Earlier compares queries with `==` and serves the NFC prefix hits.
+///   P2 NFD regex query after the canonically equal NFC query, and back:
+///      round 8's Earlier compares queries with `==` and serves the NFC
+///      prefix hits.
 ///   P3 payload NFC→NFD swap under an unchanged NFC regex query: the
 ///      sources-equality text cache compares canonically and keeps searching
 ///      the stale NFC rendering.
 ///   P4 object-key NFC→NFD swap under an unchanged NFC regex query: same
 ///      fallback, through the rendered input key.
+///   P5 case-sensitive literal encoding round trip: pins the query-key
+///      encoding independent of regex semantics (whether it mismatches on
+///      the baseline depends on how Foundation folds literal searches; on
+///      the candidate it must always equal the oracle).
 ///
-/// The candidate passes all four; the baseline is expected to print four
-/// MISMATCH lines and then fail the terminal precondition.
+/// The candidate passes all five; the baseline is expected to print MISMATCH
+/// lines for the holes it has (P1–P4 demonstrated) and then fail the terminal
+/// precondition.
 func checkSearchCacheHoleProbes() throws {
     let F = SearchReuseFixtures.self
     var failures: [String] = []
@@ -290,12 +304,15 @@ func checkSearchCacheHoleProbes() throws {
                  "canonical equality must not imply encoding equality")
     var regexKey = ConversationFindOptions()
     regexKey.regex = true
-    probe("NFD regex query after the canonically equal NFC query") { search in
+    probe("NFD regex query after the canonically equal NFC query, and back") { search in
         let window = base + (try F.live(6))
         _ = search.hits(in: window, query: nfc, running: true, options: regexKey)
         let warm = search.hits(in: window, query: nfd, running: true, options: regexKey)
         let oracle = ConversationSearch().hits(in: window, query: nfd, running: true, options: regexKey)
-        return (warm, oracle, oracle.hits.isEmpty)
+        // Return transition: the NFC query again must not keep NFD-era results.
+        let warmBack = search.hits(in: window, query: nfc, running: true, options: regexKey)
+        let oracleBack = ConversationSearch().hits(in: window, query: nfc, running: true, options: regexKey)
+        return (warm, oracle, oracle.hits.isEmpty && warmBack == oracleBack)
     }
 
     // P3: the answer payload swaps to its NFD spelling under an unchanged
@@ -328,7 +345,22 @@ func checkSearchCacheHoleProbes() throws {
         return (warm, oracle, oracle.hits.isEmpty)
     }
 
+    // P5: the same encoding round trip under a case-sensitive LITERAL query —
+    // pins the query-key encoding independent of regex semantics and of how
+    // Foundation folds literal searches.
+    var literalKey = ConversationFindOptions()
+    literalKey.caseSensitive = true
+    probe("case-sensitive literal NFD query after the canonically equal NFC query, and back") { search in
+        let window = base + (try F.live(6))
+        _ = search.hits(in: window, query: nfc, running: true, options: literalKey)
+        let warm = search.hits(in: window, query: nfd, running: true, options: literalKey)
+        let oracle = ConversationSearch().hits(in: window, query: nfd, running: true, options: literalKey)
+        let warmBack = search.hits(in: window, query: nfc, running: true, options: literalKey)
+        let oracleBack = ConversationSearch().hits(in: window, query: nfc, running: true, options: literalKey)
+        return (warm, oracle, warmBack == oracleBack)
+    }
+
     precondition(failures.isEmpty,
                  "find-bar cache-hole probes served stale hits: \(failures.joined(separator: ", "))")
-    print("PASS: find-bar cache-hole probes (prefix zero sign, query encoding, payload encoding, key encoding) equal complete searches")
+    print("PASS: find-bar cache-hole probes (prefix zero sign, regex and literal query encoding round trips, payload encoding, key encoding) equal complete searches")
 }

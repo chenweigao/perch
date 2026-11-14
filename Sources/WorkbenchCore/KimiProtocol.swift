@@ -379,7 +379,21 @@ extension KimiMessage {
     }
 
     private static func sameRenderedPart(_ lhs: KimiPart, _ rhs: KimiPart) -> Bool {
-        sameRenderedUTF8(lhs.type, rhs.type)
+        // Bitwise-equal struct bytes carry the very same field objects — the
+        // steady state when both copies descend from one window's storage
+        // (timeline synthesis copies the part value into a fresh one-element
+        // array, so the array buffer differs while the part bytes do not).
+        // Padding noise or rebuilt payloads fall through to the field walk.
+        let size = MemoryLayout<KimiPart>.size
+        let bitwise = withUnsafeBytes(of: lhs) { left in
+            withUnsafeBytes(of: rhs) { right -> Bool in
+                guard let a = left.baseAddress, let b = right.baseAddress,
+                      left.count >= size, right.count >= size else { return false }
+                return memcmp(a, b, size) == 0
+            }
+        }
+        if bitwise { return true }
+        return sameRenderedUTF8(lhs.type, rhs.type)
             && sameRenderedOptionalUTF8(lhs.text, rhs.text)
             && sameRenderedOptionalUTF8(lhs.toolName, rhs.toolName)
             && sameRenderedOptionalUTF8(lhs.name, rhs.name)
@@ -426,28 +440,32 @@ extension JSONValue {
     /// insertion order cannot change the rendering — but the keys' own
     /// encodings can, and are compared byte-wise.
     fileprivate func rendersIdentically(to other: JSONValue) -> Bool {
+        // Bitwise-equal enum storage is the same case carrying the same
+        // buffers — the steady state for copy-on-write payloads retained
+        // across updates. Dictionary lends no contiguous element storage, so
+        // this struct-level probe is the only identity shortcut that engages
+        // for shared objects; padding noise or rebuilt payloads fall through
+        // to the structural walk (a false negative costs time, never
+        // correctness: unequal bytes never authorize reuse by themselves).
+        let size = MemoryLayout<JSONValue>.size
+        let bitwise = withUnsafeBytes(of: self) { left in
+            withUnsafeBytes(of: other) { right -> Bool in
+                guard let a = left.baseAddress, let b = right.baseAddress,
+                      left.count >= size, right.count >= size else { return false }
+                return memcmp(a, b, size) == 0
+            }
+        }
+        if bitwise { return true }
         switch (self, other) {
         case (.null, .null): return true
         case (.bool(let a), .bool(let b)): return a == b
         case (.number(let a), .number(let b)): return a.bitPattern == b.bitPattern
         case (.string(let a), .string(let b)): return sameRenderedUTF8(a, b)
         case (.array(let a), .array(let b)):
-            // Copy-on-write storage shared between the two copies is identical
-            // by definition; timeline synthesis hands over fresh one-element
-            // arrays per update, so shared payloads must shortcut here or the
-            // per-delta path would walk every retained JSON tree.
-            let sharedArray = a.withContiguousStorageIfAvailable { left in
-                b.withContiguousStorageIfAvailable { right in left.baseAddress == right.baseAddress } ?? false
-            } ?? false
-            if sharedArray { return true }
             guard a.count == b.count else { return false }
             for (left, right) in zip(a, b) where !left.rendersIdentically(to: right) { return false }
             return true
         case (.object(let a), .object(let b)):
-            let sharedObject = a.withContiguousStorageIfAvailable { left in
-                b.withContiguousStorageIfAvailable { right in left.baseAddress == right.baseAddress } ?? false
-            } ?? false
-            if sharedObject { return true }
             guard a.count == b.count else { return false }
             // Canonical sorting aligns canonically equal keys at equal indices
             // (a dictionary holds at most one key per canonical class), so the
