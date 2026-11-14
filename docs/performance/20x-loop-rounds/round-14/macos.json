@@ -1880,7 +1880,7 @@
   "baseline": "exit 0, 96 PASS (no expected failures this round)",
   "candidate": "exit 0, 96 PASS"
  },
- "positives_beyond_spread": "NONE",
+ "positives_beyond_spread": "NONE on the median criterion (no row's median change exceeds its own spread with same-direction pairs); individual pairs may exceed (e.g. Linux older_page_full_chain worst +11.94% vs spread 9.33%, median +1.96%)",
  "disclosures": {
   "find_bar_query_update_per_pair_delta_us": [
    20,
@@ -1890,6 +1890,6 @@
    0,
    10
   ],
-  "note": "find_bar (+3.64% median, worst=spread=7.41%) is print-grid jitter at the untouched search path ([+20,0,+10,0,0,+10]us); conversation_activity on Mac sits at the 0.01ms print grid (0.03->0.03, spread 50%) while Linux resolves the same stage at -28.57%; small-value rows (activity_init@320/@6400 with 16.67/25% spreads at the 0.001-0.002ms grid) are quantization-scaled, quoted as-is."
+  "note": "find_bar (+3.64% median, worst=spread=7.41%) is print-grid-level movement at the untouched search path ([+20,0,+10,0,0,+10]us) — grid/layout attribution is an INFERENCE from step size and pattern consistency, not proven by the untouched source alone; conversation_activity: both platforms print on the same 0.01ms grid — Linux shows a uniform -20us (two steps) per pair, Mac per-pair deltas stay under the grid (0.03->0.03, spread 50%); activity_init small-value rows move two steps of the 0.001ms activity grid (0.006->0.004), percentages amplified by scale. Independent review VERDICT CLEAN at 924b3ef; its three non-blocking items are record-precision corrections applied to the docs only (no product/test change; A/B evidence unaffected)."
  }
 }

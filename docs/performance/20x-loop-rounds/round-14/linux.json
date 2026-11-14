@@ -1884,7 +1884,9 @@
  "checks": {
   "baseline": "exit 0, 95 PASS + 1 SKIP",
   "candidate": "exit 0, 95 PASS + 1 SKIP",
-  "portable_suite": "10/10 at the round-14 head (scripts/check-functional.py portable, .local/round14/portable)"
+  "portable_suite": "10/10 at the round-14 head (scripts/check-functional.py portable, .local/round14/portable)",
+  "candidate_stdout": "archived at round-14/checks/checks-cand-linux.log (95 PASS + 1 SKIP, exit 0)",
+  "baseline_stdout": "archived at round-14/checks/checks-base-linux.log (95 PASS + 1 SKIP, exit 0)"
  },
- "positives_beyond_spread": "NONE"
+ "positives_beyond_spread": "NONE on the median criterion (no row's median change exceeds its own spread with same-direction pairs); individual pairs may exceed (e.g. Linux older_page_full_chain worst +11.94% vs spread 9.33%, median +1.96%)"
 }
