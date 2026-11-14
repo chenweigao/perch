@@ -1,21 +1,22 @@
-=== prepare Sun Nov 15 03:23:24 CST 2026 ===
+=== prepare Sun Nov 15 04:44:58 CST 2026 ===
+Previous HEAD position was 2264a55 docs(performance): record round 17 candidate with four-scenario attribution, dual-platform screening and A/B evidence
 HEAD is now at 76940c0 Merge pull request #338 from chenweigao/perf/20x-loop-16-20261114
 HEAD=76940c06ef47e8e6eb016c6d9e66e7b286b30fda
 porcelain_before=0
-=== apply tests patch + baseline build Sun Nov 15 03:23:28 CST 2026 ===
+=== apply tests patch + baseline build Sun Nov 15 04:45:02 CST 2026 ===
 tests_patch=ok
 baseline_build_exit=0
-=== apply product patch + candidate build Sun Nov 15 03:24:41 CST 2026 ===
+=== apply product patch + candidate build Sun Nov 15 04:46:14 CST 2026 ===
 product_patch=ok
 candidate_build_exit=0
-2967745bbcf717572bb4655d3d2d5fcbc67c9196e9ad64ab6217548439f2436f  .build/round17-baseline-d/out/Products/Release/WorkbenchChecks
-c0733a4efd509233dea02172d3ee0e0ac8c832fc0bf8c680ce27e6d904bd752b  .build/round17-candidate-d/out/Products/Release/WorkbenchChecks
-=== check suites Sun Nov 15 03:25:52 CST 2026 ===
+5c90857112ac1a59be77371068ba46ef34325f23370bd1fbe7461ccf3cb4a480  .build/round17-baseline-e/out/Products/Release/WorkbenchChecks
+10f48e97dbbb0e6f8fc7dd8c08314079144ae65485b8a90e9156d1d5fc38bedf  .build/round17-candidate-e/out/Products/Release/WorkbenchChecks
+=== check suites Sun Nov 15 04:47:24 CST 2026 ===
 baseline_checks_exit=0 pass=99
 candidate_checks_exit=0 pass=99
-/Users/<mini>/Library/Logs/perf-loop-20261115/ab17/checks-baseline.log:PASS: link detection over contiguous UTF-16 equals lazy bridging on the host detector (3016 differential texts; parse digest 97e345c9136b50c8 informational on Darwin)
-/Users/<mini>/Library/Logs/perf-loop-20261115/ab17/checks-candidate.log:PASS: link detection over contiguous UTF-16 equals lazy bridging on the host detector (3016 differential texts; parse digest 97e345c9136b50c8 informational on Darwin)
-=== pairs Sun Nov 15 03:26:38 CST 2026 ===
+/Users/<mini>/Library/Logs/perf-loop-20261115/ab17e/checks-baseline.log:PASS: link detection over contiguous UTF-16 equals lazy bridging on the host detector (3016 differential texts; parse digest 97e345c9136b50c8 informational on Darwin)
+/Users/<mini>/Library/Logs/perf-loop-20261115/ab17e/checks-candidate.log:PASS: link detection over contiguous UTF-16 equals lazy bridging on the host detector (3016 differential texts; parse digest 97e345c9136b50c8 informational on Darwin)
+=== pairs Sun Nov 15 04:48:10 CST 2026 ===
 pair=1 variant=baseline mode=1 exit=0
 pair=1 variant=baseline mode=streaming exit=0
 pair=1 variant=baseline mode=activity exit=0
@@ -76,7 +77,7 @@ pair=6 variant=candidate mode=streaming exit=0
 pair=6 variant=candidate mode=activity exit=0
 pair=6 variant=candidate mode=edit-lines exit=0
 pair=6 variant=candidate mode=presentation-token exit=0
-2967745bbcf717572bb4655d3d2d5fcbc67c9196e9ad64ab6217548439f2436f  .build/round17-baseline-d/out/Products/Release/WorkbenchChecks
-c0733a4efd509233dea02172d3ee0e0ac8c832fc0bf8c680ce27e6d904bd752b  .build/round17-candidate-d/out/Products/Release/WorkbenchChecks
+5c90857112ac1a59be77371068ba46ef34325f23370bd1fbe7461ccf3cb4a480  .build/round17-baseline-e/out/Products/Release/WorkbenchChecks
+10f48e97dbbb0e6f8fc7dd8c08314079144ae65485b8a90e9156d1d5fc38bedf  .build/round17-candidate-e/out/Products/Release/WorkbenchChecks
 porcelain_after=0
-DONE Sun Nov 15 03:28:33 CST 2026
+DONE Sun Nov 15 04:50:05 CST 2026

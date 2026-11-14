@@ -5,7 +5,7 @@
 set -u
 cd "$HOME/_worktrees/20x-loop-20261112/perch"
 LOGS="$HOME/Library/Logs/perf-loop-20261115"
-RES="$LOGS/ab17"
+RES="$LOGS/ab17e"
 mkdir -p "$RES"
 echo "=== prepare $(date) ==="
 git fetch origin
@@ -15,19 +15,19 @@ echo "HEAD=$(git rev-parse HEAD)"
 echo "porcelain_before=$(git status --porcelain | wc -l | tr -d ' ')"
 rm -rf .build/round17-baseline .build/round17-candidate .build/round17-verify2
 echo "=== apply tests patch + baseline build $(date) ==="
-git apply "$LOGS/r17-tests-final.patch" && echo tests_patch=ok
-swift build -c release --product WorkbenchChecks --scratch-path .build/round17-baseline-d > "$RES/baseline-build.log" 2>&1
+git apply "$LOGS/r17-tests-final2.patch" && echo tests_patch=ok
+swift build -c release --product WorkbenchChecks --scratch-path .build/round17-baseline-e > "$RES/baseline-build.log" 2>&1
 baseline_build_exit=$?
 echo "baseline_build_exit=$baseline_build_exit"
 [ "$baseline_build_exit" = 0 ] || { echo ABORT_BUILD; echo "DONE $(date)"; exit 1; }
 echo "=== apply product patch + candidate build $(date) ==="
-git apply "$LOGS/r17-product-final.patch" && echo product_patch=ok
-swift build -c release --product WorkbenchChecks --scratch-path .build/round17-candidate-d > "$RES/candidate-build.log" 2>&1
+git apply "$LOGS/r17-product-final2.patch" && echo product_patch=ok
+swift build -c release --product WorkbenchChecks --scratch-path .build/round17-candidate-e > "$RES/candidate-build.log" 2>&1
 candidate_build_exit=$?
 echo "candidate_build_exit=$candidate_build_exit"
 [ "$candidate_build_exit" = 0 ] || { echo ABORT_BUILD; echo "DONE $(date)"; exit 1; }
-baseline=.build/round17-baseline-d/out/Products/Release/WorkbenchChecks
-candidate=.build/round17-candidate-d/out/Products/Release/WorkbenchChecks
+baseline=.build/round17-baseline-e/out/Products/Release/WorkbenchChecks
+candidate=.build/round17-candidate-e/out/Products/Release/WorkbenchChecks
 shasum -a 256 "$baseline" "$candidate" | tee "$RES/binary-hashes.txt"
 shasum -a 256 Tests/WorkbenchCoreTests/PresentationBench.swift Tests/WorkbenchCoreTests/StreamingBench.swift Tests/WorkbenchCoreTests/ActivityBench.swift Tests/WorkbenchCoreTests/EditLineBench.swift Tests/WorkbenchCoreTests/BenchClock.swift Tests/WorkbenchCoreTests/LinkScanMaterializeTests.swift > "$RES/fixture-hashes.txt"
 echo "=== check suites $(date) ==="
@@ -53,6 +53,6 @@ done
 shasum -a 256 "$baseline" "$candidate" | tee "$RES/binary-hashes-final.txt"
 git checkout -- .
 git clean -fdq Tests/
-rm -rf .build/round17-baseline-d .build/round17-candidate-d
+rm -rf .build/round17-baseline-e .build/round17-candidate-e
 echo "porcelain_after=$(git status --porcelain | wc -l | tr -d ' ')"
 echo "DONE $(date)"

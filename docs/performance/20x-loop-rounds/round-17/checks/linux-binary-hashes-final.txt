@@ -1,2 +1,2 @@
-14f3be41b66372a949a84e984f977da3615c397018db8508a2aeadb36501f056  .local/round17/base-checks17
-bcada79ebb8be65c396aeb0a3bf1a7243d00bde3e1c5ba82938b05b7bc417a93  .local/round17/cand-checks17
+de4f73b15f42689419e4bcd83c98a5d6fe2e981ad7153180ec862242e4fb6703  .local/round17/base-checks17c
+a6958765e3dc7e5ce73cdfe1a5d15afe4649110a7e8be8c32939ff4b4c3639c9  .local/round17/cand-checks17c

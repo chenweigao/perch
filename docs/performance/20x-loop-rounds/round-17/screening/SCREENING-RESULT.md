@@ -51,5 +51,6 @@ PASSED on both platforms — opened the formal round (six-pair A/B at the
 golden-embedded head 815aa65). Watch items carried into the formal run: the
 Linux warm-path/chain_total +1-grid/+1% screening signals (expected print-grid
 noise; the warm path re-renders only the latest turn per delta, where the
-guard now also runs — it cannot get slower by construction, but the six-pair
-spread decides).
+guard now also runs — by construction the guard only gets cheaper per source,
+but "by construction" is not measurement: the six-pair spread decides, and the
+formal run's warm metric is disclosed with its per-pair samples.
