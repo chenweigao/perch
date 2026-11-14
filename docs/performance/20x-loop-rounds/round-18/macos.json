@@ -1944,7 +1944,7 @@
  },
  "positives_beyond_spread": "NONE",
  "screening_history": {
-  "linux_5_iterations": "cold@2000 700.38-family -> ~21.5ms, -55%, 5/5 separated (screening)",
+  "linux_5_iterations": "in-session first run: cold@2000 base 47.89-48.71 -> cand 21.49-21.60 ms (-55%, 5/5 separated); archived screen-linux-cold.log is a post-hoc rerun for archival: base 48.09-48.63 -> cand 21.52-21.91, medians 48.23 -> 21.61 (-55.19%) \u2014 consistent bands. (re-review finding 3: an earlier metadata line wrongly cited a '700.38-family' baseline that belongs to round-17 find_bar_cold_query.)",
   "mac_screen_attempt1_ARTIFACT": "copied binaries were SIGKILLed by macOS (exit 137) \u2014 the ROWS_IDENTICAL result of that attempt was an empty==empty FALSE POSITIVE; disclosed and superseded",
   "mac_screen_attempt2_in_place": "6 alternating runs: cold@2000 base median 6.78 vs cand 6.695 (-1.25%), cold@1000 -2.2%, distributions overlapping, rows identical non-empty",
   "formal_six_pair": "this file \u2014 confirms non-separation with full spread statistics"

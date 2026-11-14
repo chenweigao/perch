@@ -48,4 +48,3 @@ under threshold. Same shared-runner family as rounds 12/14/16.
 
 Disposition: same-head rerun of the failed jobs (no gate changes, no product
 changes, no retest needed given the identical-product green pass at 9e1eb88).
-

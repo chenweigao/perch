@@ -23,3 +23,10 @@ ROWS_IDENTICAL
 5 cand cold@2000=
 porcelain_after=0
 DONE Sun Nov 15 06:21:45 CST 2026
+
+=== SIGKILL evidence recapture (re-review finding 4b, 2026-11-15) ===
+The copied screening binary still on the Mac at
+/Users/<mini>/Library/Logs/perf-loop-20261115/screen18/base was re-executed
+during the disposition: WORKBENCH_BENCH=1 <copied binary> -> exit_code=137
+(SIGKILL), reproducing the original failure mode live. The in-place SwiftPM
+product of the same source runs normally (99 PASS, full bench output).
