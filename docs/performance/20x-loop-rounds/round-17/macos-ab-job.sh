@@ -1,7 +1,8 @@
 #!/bin/bash
-# Round 16 Mac mini A/B at 413bf86 (pin compile fix; product comment-corrected
-# 4f0ea7b + differential pin bcbdd91 lineage). Aborts before pairs if any
-# build or check side fails.
+# Round 17 Mac mini A/B (v3 run at 66a94d5: baseline 76940c0 + final tests,
+# candidate + normalizeDelimiters byte-guard patches r17-*-final2). Generated
+# from the round-16 template — header corrected at the re-review cleanup (F9).
+# Aborts before pairs if any build or check side fails.
 set -u
 cd "$HOME/_worktrees/20x-loop-20261112/perch"
 LOGS="$HOME/Library/Logs/perf-loop-20261115"

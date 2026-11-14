@@ -51,6 +51,7 @@ PASSED on both platforms — opened the formal round (six-pair A/B at the
 golden-embedded head 815aa65). Watch items carried into the formal run: the
 Linux warm-path/chain_total +1-grid/+1% screening signals (expected print-grid
 noise; the warm path re-renders only the latest turn per delta, where the
-guard now also runs — by construction the guard only gets cheaper per source,
-but "by construction" is not measurement: the six-pair spread decides, and the
-formal run's warm metric is disclosed with its per-pair samples.
+guard now also runs. No construction argument is offered — measurement
+decides: the formal v3 run measured warm at 0.00% median on Mac (worst
++3.70% within 7.41% spread) and +1.87% on Linux (worst 5.77% within 7.69%
+spread), both in band; per-pair samples are in the JSONs.

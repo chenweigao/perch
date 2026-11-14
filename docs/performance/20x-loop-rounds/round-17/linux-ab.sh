@@ -1,9 +1,10 @@
 #!/bin/bash
-# Round 16 Linux A/B (rerun with fixed harness): the checks binary embeds
-# #filePath, so build trees must stay alive while checks run, and the rebuild
-# verification must happen at the SAME path. Candidate builds in the main
-# worktree (HEAD=9e7bc19, porcelain 0 = committed tree); baseline in a scratch
-# worktree kept alive through its check run.
+# Round 17 Linux A/B (v3 run at 66a94d5; generated from the round-16
+# fixed-harness template — header corrected at the re-review cleanup, F9).
+# The checks binary embeds #filePath, so build trees stay alive while checks
+# run, and the rebuild verification happens at the SAME path. Candidate
+# builds in the main worktree (HEAD=66a94d5 at run time, tracked tree
+# clean); baseline in a scratch worktree at 76940c0 + tests from 66a94d5.
 set -u
 export PATH=$HOME/.local/swift/6.3.3/usr/bin:$PATH
 FINAL=66a94d5
