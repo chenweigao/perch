@@ -1,0 +1,51 @@
+Round-17 CI math gate failure analysis (run 43643425866, head 3ac42fb, job 132597597903).
+
+Gate error: "Typeset/draw regression exceeds 15% at 128".
+Gate statistic: best-of-3 of (cold_attachment.total_ms + first_light_dark_draw.total_ms), threshold 1.15.
+
+DECISIVE CONTEXT: 3ac42fb is a DOCS-ONLY commit — `git diff 9e1eb88..3ac42fb
+-- Sources Tests` is EMPTY. The identical product bytes passed this exact gate
+in the immediately preceding CI run at 9e1eb88 (15/15 green), and the earlier
+product head 2264a55 also passed 15/15. A quiet-machine retest was therefore
+NOT repeated this time (round 16 precedent retested because that was the
+product's first math run; here the product already has a green CI math pass).
+
+Per-round gate totals from the retained artifact:
+
+== typeset-32 ==
+  round round-1-baseline: gate_total=209.93ms
+  round round-2-candidate: gate_total=124.74ms
+  round round-3-candidate: gate_total=115.52ms
+  round round-4-baseline: gate_total=158.22ms
+  round round-5-baseline: gate_total=97.00ms
+  round round-6-candidate: gate_total=91.18ms
+  best-of-3: baseline=97.00 candidate=91.18 ratio=0.9400
+
+== typeset-128 ==
+  round round-1-baseline: gate_total=392.19ms
+  round round-2-candidate: gate_total=595.89ms
+  round round-3-candidate: gate_total=385.62ms
+  round round-4-baseline: gate_total=467.86ms
+  round round-5-baseline: gate_total=331.42ms
+  round round-6-candidate: gate_total=399.81ms
+  best-of-3: baseline=331.42 candidate=385.62 ratio=1.1635
+
+== typeset-512 ==
+  round round-1-baseline: gate_total=1560.29ms
+  round round-2-candidate: gate_total=1442.11ms
+  round round-3-candidate: gate_total=1509.85ms
+  round round-4-baseline: gate_total=1513.88ms
+  round round-5-baseline: gate_total=1219.15ms
+  round round-6-candidate: gate_total=1350.10ms
+  best-of-3: baseline=1219.15 candidate=1350.10 ratio=1.1074
+
+Noise signatures: typeset-32 baseline swings 97.0..209.9 (2.2x) within one
+run; typeset-128 baseline 331.4..467.9 (1.4x) and candidate 385.6..595.9
+(1.5x); the 128 ratio 1.1635 is marginal against the 1.15 threshold and is
+driven by the baseline hitting a fast outlier round (331.4) while the
+candidate's fast round (385.6) landed higher. typeset-512 ratio 1.1074 is
+under threshold. Same shared-runner family as rounds 12/14/16.
+
+Disposition: same-head rerun of the failed jobs (no gate changes, no product
+changes, no retest needed given the identical-product green pass at 9e1eb88).
+
