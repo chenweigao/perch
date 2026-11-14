@@ -439,6 +439,73 @@ public final class ToolVisibilityProjection {
         }
     }
 
+    /// The visible tools of one turn, in the exact order and with the exact
+    /// values the `update(...)` snapshot walk produces — without materializing
+    /// the normalized messages, the snapshot, or part copies in the lookup
+    /// dictionaries. The status line derives this per update over the current
+    /// turn; calls/results record part positions instead of copying parts, and
+    /// tools are emitted straight into the result: each first-seen `tool_use`
+    /// in source order (duplicate calls keep the first slot but the last
+    /// recorded call's data, like the projection), each message's orphan
+    /// results after that message's own tools, then the observed live tools
+    /// that never appear in the window, in observation order.
+    public static func visibleTools(in messages: [KimiMessage], live: [KimiLiveTool] = [],
+                                    running: Set<String> = [], online: Bool = true) -> [VisibleTool] {
+        // A fresh projection observes `live` in order: first occurrence fixes
+        // the observation order, the last occurrence wins the payload.
+        var order: [String] = []
+        var observed: [String: KimiLiveTool] = [:]
+        for tool in live {
+            if observed[tool.id] == nil { order.append(tool.id) }
+            observed[tool.id] = tool
+        }
+        var calls: [String: (message: Int, part: Int)] = [:]
+        var results: [String: (message: Int, part: Int)] = [:]
+        for (messageIndex, message) in messages.enumerated() {
+            for (partIndex, part) in message.content.enumerated() {
+                guard let id = part.toolCallId else { continue }
+                if part.type == "tool_use" { calls[id] = (messageIndex, partIndex) }
+                if part.type == "tool_result" { results[id] = (messageIndex, partIndex) }
+            }
+        }
+        let activeIDs = running.union(live.map(\.id))
+        func part(at position: (message: Int, part: Int)) -> KimiPart { messages[position.message].content[position.part] }
+        func present(id: String, call: KimiPart?, result: KimiPart?) -> VisibleTool {
+            let known = observed[id]
+            let active = activeIDs.contains(id)
+            let status: VisibleTool.Status
+            if let result {
+                status = result.isError == true ? .failed : result.isError == false ? .succeeded : .returned
+            } else { status = !online ? .disconnected : active ? .running : .missingResult }
+            let name = call?.toolName ?? known?.name ?? L("工具结果")
+            return VisibleTool(id: id, name: name, input: call?.input ?? known?.args,
+                               output: result?.output, progress: known?.lastProgress,
+                               status: status, hasCall: call != nil || known != nil)
+        }
+        var tools: [VisibleTool] = []
+        var emitted = Set<String>()
+        for message in messages {
+            var orphans: [VisibleTool] = []
+            for (partIndex, part) in message.content.enumerated() {
+                guard part.type == "tool_use" || part.type == "tool_result" else { continue }
+                let id = part.toolCallId ?? "unidentified:\(message.id):\(partIndex)"
+                if part.type == "tool_use" {
+                    guard emitted.insert(id).inserted else { continue }
+                    let call = calls[id].map(part(at:)) ?? part
+                    tools.append(present(id: id, call: call, result: results[id].map(part(at:))))
+                    continue
+                }
+                guard calls[id] == nil, emitted.insert(id).inserted else { continue }
+                orphans.append(present(id: id, call: nil, result: results[id].map(part(at:)) ?? part))
+            }
+            tools.append(contentsOf: orphans)
+        }
+        for id in order where calls[id] == nil && results[id] == nil && emitted.insert(id).inserted {
+            tools.append(present(id: id, call: nil, result: nil))
+        }
+        return tools
+    }
+
     /// Native adapters expose busy at session level. Only unresolved calls in the
     /// current turn can be considered running; older missing results stay unknown.
     public static func runningIDs(in messages: [KimiMessage], busy: Bool) -> Set<String> {

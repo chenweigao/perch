@@ -55,6 +55,7 @@ struct ProtocolTests {
         try checkSessionNaming()
         try checkCronFireEnvelope()
         try checkToolVisibility()
+        try checkActivityToolsMatchProjection()
         try checkConversationTodos()
         try checkConversationActivity()
         try checkTurnStatus()
