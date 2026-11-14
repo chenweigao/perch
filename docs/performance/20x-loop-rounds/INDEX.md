@@ -68,6 +68,7 @@ Mac mini 同机 A/B 超过该轮实测噪声才采纳，不能把 Linux 特有�
 | 12 | 2026-11-14 | find-bar 未变条目 hits 整体复用（开查找栏 streaming） | **已采纳/合并（v5=13933f8）：Mac find_bar_query_update -45.10%**（0.510→0.280ms@16,142 条，spread 6.12%，六对全分离 -220～-240µs），Linux 筛选 -33.33% 同向分离；复剖：search 区域占 streaming 全样本 52.6%（locale 匹配 langid+DD lexer+fold ~13.4% + UTF16 索引转换 5.1%）、SessionEditStats 占 activity 测量段 57.3%（队列首位）；条目 hits 为 (messages,isRunning,query,options) 纯函数，编码精确查询键 + sameSearchableWindow（字节层 ∨ 值层∧渲染字节层：数值 bitPattern、字符串/对象键 UTF-8 字节、JSONValue/KimiPart 结构级位比较短路、排序键对齐 O(k log k)）+ sources 字节比较三重校验后整体复用并收养新副本；钉死拆分矩阵/探针：矩阵（单字段差异+同查询夹逼+running 翻转三恒定夹逼）在未优化产品全过，五探针一次运行记录四个既有洞（prefix 零号符号、NFD 查询键往返、payload/对象键 NFC→NFD——round-8 起 Earlier/Tier-2 规范比较漏洞；字面量探针基线通过仅钉候选）；评审处置：Codex P2 + 独立评审三轮共 12 项 BLOCKING（含两轮余留驳回：Tier-2 规范比较、字典快路径不生效 O(k²)、running 翻转掩蔽、math 执法统计量误引与规则误托先例）逐项修复并五轮复测（v1→v5 每轮六对全分离幅度一致）；候选 94+1 SKIP（Linux）/95（Mac）全绿、基线按设计 13 PASS 后 4 MISMATCH + exit 132/133；portable 10/10（v5）、提交树重建逐字节一致（342d0e11）、Mac 产品构建+5/5 冷启动+静机 math 复测 passed（真实门槛 best_ratio 1.0026/1.0048；CI ef3def0 失败实为 best_ratio 1.1953 受基线单轮离群值驱动、1627582 为 GUI app 180s 超时，均取证归档）；伪影披露程序化计算：display_messages_workspace 九组逐对数组 ±3 打印格双向抖动、Linux edit-lines 四版摆动（v1 -24.3～-15.9% → v5 -0.1～+2.1%，v4 六行正向超 spread 全属该族且 v5 归零）归布局伪影推断、v1/v3 报告失实表述全部勘误；prefix(320) 立项前粗筛否决入否定清单（ERRATUM + 重跑验证日志）；四轮复核全部收尾（N7/N8 逐字修复并与复核方独立重算逐值一致，按机制免新复核轮）；CI 于 fd25e14 与重跑后的 9c6e2a1 均 15/15 绿——本 PR 三次 GUI 超时（reading-design 60s、math app 180s、acceptance streaming 120s）均判共享 runner 抖动并取证，math 另有静机真实门槛复测 passed（best_ratio 1.0026/1.0048）佐证 | [round-12](2026-11-14-round-12.md)；[归因](round-12/macos-xctrace-streaming-activity-attribution.json)；[math 取证](round-12/ci/head-ef3def0-math-typeset128-analysis.json)；[#334](https://github.com/chenweigao/perch/pull/334)，merge=8f92c27（15:56） |
 | 13 | 2026-11-14 | SessionEditStats.tally 借用索引遍历（去迭代器逐元素拷贝） | **不采纳（候选已撤回）**：Mac edit_stats@6400 -1.65%（最差对 +0.47% 正向、spread 3.91%，区间重叠低于噪声带），@1280/@320 持平，Linux 持平（-0.32%/-0.20%/+0.40%）；归因依据扎实（Mac activity 测量段 IndexingIterator.next() 8.64% self）但未转化为收益——self-time 占比不等于可转化量，教训入否定清单；Mac edit64_bulk +12.07% 超 spread（场景选择性、64/512 子集其余 18 行全在 -2.40～+1.26% 带内，布局伪影嫌疑——round 10 同签名且当年未作机制结论——按 round-10 先例作回归信号处置、强化否决）；activity_init@320 中位数 +1µs（逐对 [+1×5,-1]，打印格级，非均匀位移——复核 B1 更正；路径被触，不能完全排除 codegen 效应）；等价性零变化：既有四处钉死两侧全绿（94+1 SKIP/95 PASS）、全 fixture checksum 逐字节一致；Linux 基线二进制与 round-12 Linux 候选逐字节相同（确定性构建，Linux 范围；Mac 跨轮构建上下文不同不主张）；Codex 2 P2 + 独立评审 3 BLOCKING（B2/B3 数字转写 a90ae8b 已修、B1 均匀性表述及精确项逐字更正）全部处置且重算一致；本 PR 期间共享 runner GUI 抖动六例（reading-design/math parse/acceptance streaming/dashboard 录制/task-context 反射/navigation-turns hover 断言竞争——后者以 main 同树 run 全绿为判定依据）全部经同 head 重跑或静机复测化解，dfd8c36 重跑 15/15 绿后合并；停止规则计数 1/3 | [round-13](2026-11-14-round-13.md)；[补丁](round-13/rejected-tally-walk.patch)；[数据](round-13/macos.json)；[#335](https://github.com/chenweigao/perch/pull/335)，merge=6c8241c（17:08）；[CI 取证](round-13/ci/) |
 | 14 | 2026-11-14 | 状态栏工具列表免完整投影（tools-only 投影出口） | **已采纳/合并：Mac single_turn_activity@2000 -37.16%**（1.2150→0.7635ms，spread 7.55%，六对全分离，最差对 -36.21%），@400 -36.69%、activity_init 三档 -33%；Linux 筛选 -36.34%/-34.00% 同向分离、streaming conversation_activity 段 -28.57%（六对差值一致）；归因：ToolVisibilityProjection 帧占 activity 测量段 18.3%（round-12 复剖），机制为每次状态栏派生以全新实例走完整 update()（part 拷贝入字典 + 整轮 normalized 消息重建 + Snapshot）；改动：visibleTools 静态出口——calls/results 记位置不拷 part、直接产出，顺序/值逐点复刻（首槽位末数据、orphan 位置、live 观察序、位置身份、状态矩阵），其他投影调用方零改动、AgentWorkbench 零差异；钉死：checkActivityToolsMatchProjection 仅用既有 API（matched baseline 可编译且全绿），9 手工场景 + 2000 种子差分（评审方独立重放：1982/2000 非空、六状态全覆盖）+ 语料非空占比断言；两侧检查全绿**无预期失败**（95+1 SKIP / 96 PASS）、portable 10/10、重建逐字节一致（29f05887）、两端六对无正向超 spread 行（中位数口径；单对可越界、无方向一致性）；披露：find_bar +3.64% 为 ±2 打印格抖动（逐对 [+20,0,+10,0,0,+10]µs，路径零改动）、Mac conversation_activity 0.00% 系 0.01ms 打印网格分辨率不足（Linux 细刻度同段 -28.57%）、activity_init 小值档 spread 为 0.001ms 刻度效应；独立评审 VERDICT: CLEAN（3 非阻塞=记录精确性与单轮契约边界反例记录，已照改免新复核轮）；Mac 产品门槛 build+5/5 冷启动通过；924b3ef CI math typeset-32 失败（best 1.2672/中位数 1.6018、两变体轮间摆动近 2 倍）经 b6fe994 静机同口径复测判定 runner 噪声（best_ratio 0.9701/1.0089/1.0045 全过、status passed），b6fe994 CI 15/15 绿 | [round-14](2026-11-14-round-14.md)；[数据](round-14/macos.json)；[#336](https://github.com/chenweigao/perch/pull/336)，merge=9c12eb9（18:18）；[math 取证与复测](round-14/ci/) |
+| 15 | 2026-11-14 | edit-stat 行计数 8 字节 SWAR 扫描（LF 总数−CRLF 对数） | **候选（采纳 Mac 仲裁，Linux 上下文回归全量披露）：Mac edit_stats@6400 -39.01%**（2.4915→1.5195ms，spread 3.34%，六对全分离，逐对 -0.943～-1.020ms），@1280 -39.46%、@320 -42.13%；Linux 六对 **+27.78% 一致性回归**（三档齐一、区间分离），定位于被改函数在 Linux 产品构建上下文的执行（同平台孤立粗筛 -20.8%），机制未解（推断：codegen/内联上下文交互）——按规则采纳（Linux 筛选、Mac 仲裁；产品为 macOS 原生客户端，Linux 无发行面/性能门槛）并全量披露；复剖（base=9c12eb9）：edit-stats 占 activity 测量段 64.1%（lineCount 闭包 5.56%）、cold collapsedWhitespace 余 24.4%、streaming search 52.1% 为首查询冷搜构成；粗筛#1 collapsedWhitespace 字节路径重写等价 PASS 但 +16.56% 更慢（9/9 块）否决入否定清单；粗筛#2 SWAR Mac -69.2%/-66.8%（9/9 块稳定）通过；钉死：checkEditStatsLineCountScan 经公开 derive 路径对照 Character-split oracle 23,211 例（组合穷举+字边界网格+20k fuzz），两侧 96+1 SKIP/97 PASS 全绿无预期失败；portable 10/10、重建逐字节一致（6279b3fc）、Mac 无正向超 spread；**教训入否定清单：孤立微基准两个方向都不可外推（round13 归因不转化 / round15 孤立通过→上下文平台分裂），机械类候选必须双端上下文内粗筛**；待评审/CI | [round-15](2026-11-14-round-15.md)；[数据](round-15/macos.json)；[粗筛](round-15/screening/)；[复剖](round-15/attr/) |
 
 ## 否定清单（勿重复尝试）
 
@@ -104,23 +105,33 @@ Mac mini 同机 A/B 超过该轮实测噪声才采纳，不能把 Linux 特有�
   转化**——优化器对索引访问的字段级加载消除可能已覆盖迭代器大部分机械
   成本；SessionEditStats 家族的机械微优候选立项前先做 Mac 一对目标场景
   粗筛（与绕 Foundation 类同规则）。勿单独重试 tally 遍历形态。
+- collapsedWhitespace 字节路径的循环形态重写（去 Range 见证、ASCII 批量
+  append、属性块表快速拒绝；round 15 粗筛）：三路差分等价全过（35 固定 +
+  40,000 fuzz）但 Mac **+16.56% 更慢**（9/9 块一致 +10.5～+24.1%）。
+  append(contentsOf:) 切片分派/ASCII 双遍/块表间接层的机制假设均为推断。
+  勿重试该方向，除非有指令级新证据（round 15）。
+- **孤立微基准两个方向都不可外推**（rounds 13+15 合并教训）：round 13 归因
+  self-time 8.64% 未在上下文转化为收益；round 15 lineCount SWAR 孤立粗筛
+  Mac -69%/Linux -21%，上下文内 Mac -39%（采纳）而 **Linux +27.78% 回归**
+  （定位在被改函数于产品构建上下文的执行，机制未解）。机械类候选立项前
+  必须在**双端 bench 模式内**（上下文内）粗筛；单端上下文回归需全量披露
+  并按"Linux 筛选、Mac 仲裁"规则处置（round 15）。
 
 ## 候选队列（按当前证据排序）
 
-依据 round-12 复剖（streaming/activity 双场景 Mac xctrace，base=7d5ba26，
-[归因](round-12/macos-xctrace-streaming-activity-attribution.json)）重排：
+依据 round-12 复剖（base=7d5ba26）与 round-15 三场景复剖（base=9c12eb9，
+[归因](round-15/attr/)）重排：
 
-1. **find-bar 每 delta 的固定地板**：round 12 条目级 hits 复用后（Mac
-   find_bar_query_update -44%），每 delta 仍剩 prefix 全窗 sameWindow memcmp
-   （~16k 消息）、数千 hit 数组的 CoW 拼接、最近轮 entry 的
-   `ConversationTimelineEntry.make` 与 live entry 重搜。涉及
-   `ConversationFindResult` API 形状的改动会波及 UI，红线内先评估。
-2. **SessionEditStats 残余：`lineCount` 字节循环（5.24% self）与每 tool_use 的
-   `lowercased()` 分配（0.22%）**：tally 遍历形态已被 round 13 否决；本家族其余
-   机械候选立项前先做 Mac 一对目标场景粗筛（否定清单规则）。方向：lineCount
-   扫描指针化或 LF 总数−CRLF 对计数（CRLF 语义按 lines() 契约注释钉死）；
-   工具名 ASCII 大小写比较需先穷举非 ASCII 映射边界。edit-lines 的 Linux 场景
-   对代码布局敏感（round 8），结论只认 Mac 同机 A/B。
+1. **find-bar 冷首搜与每 delta 地板**：round-15 复剖澄清 streaming profile 的
+   search 区域（52.1%）主体是**每轮首查询的全窗冷搜**（产品对应开查找栏输入
+   首字符；bench 每轮新建 ConversationSearch），由 CF locale 匹配（语义红线）
+   与 ReplyDocument 渲染构成——优化空间在渲染/缓存结构而非匹配语义；每 delta
+   温路径地板（prefix memcmp、hits CoW 拼接、最近轮 `ConversationTimelineEntry.make`）
+   涉及 `ConversationFindResult` API 形状的改动会波及 UI，红线内先评估。
+2. **SessionEditStats 残余（小项）**：`lowercased()` 每 tool_use 分配（0.22%）；
+   `lines()` 的 Substring 构建扫描（lineCount 已由 round 15 SWAR 化——Mac -39%
+   采纳、Linux 上下文回归已披露；`lines()` 若仿此改造必须先双端上下文内粗筛，
+   round-15 教训）。工具名 ASCII 大小写比较需先穷举非 ASCII 映射边界。
 3. **小机械拷贝**：`TurnStatus.swift:89` 的 `Array(messages.dropFirst(start))`
    复制；`ConversationActivity.outputCharacters` 对每个 text/thinking 走
    `utf16.count`（可参照 `KimiInFlight` 的既有缓存口径，不得引入全局 memo）。

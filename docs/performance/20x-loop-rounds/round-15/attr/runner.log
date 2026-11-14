@@ -1,0 +1,40 @@
+=== prepare Sat Nov 14 18:23:29 CST 2026 ===
+From github.com:chenweigao/perch
+   6c8241c..9c12eb9  main       -> origin/main
+Previous HEAD position was b6fe994 docs(performance): apply round-14 review non-blocking corrections
+HEAD is now at 9c12eb9 Merge pull request #336 from chenweigao/perf/20x-loop-14-20261114
+HEAD=9c12eb99b05b1e6a886769e2a26e36e7370ad440
+porcelain_before=0
+=== apply temporary profile loop modes ===
+porcelain_applied=4
+=== build Sat Nov 14 18:23:33 CST 2026 ===
+build_exit=0
+e473cb19efd7b469ebf9788a7039a1f040d3b77fb9626f528bb772482d728092  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round15-profile/out/Products/Release/WorkbenchChecks
+=== record cold Sat Nov 14 18:24:42 CST 2026 ===
+Recording completed. Saving output file...
+Output file saved as: cold.trace
+record_cold_exit=0
+Finished export to the file: /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/round15/cold-time-profile.xml
+=== record streaming Sat Nov 14 18:25:11 CST 2026 ===
+Recording completed. Saving output file...
+Output file saved as: streaming.trace
+record_streaming_exit=0
+Finished export to the file: /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/round15/streaming-time-profile.xml
+=== record activity Sat Nov 14 18:25:41 CST 2026 ===
+Recording completed. Saving output file...
+Output file saved as: activity.trace
+record_activity_exit=0
+Finished export to the file: /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/round15/activity-time-profile.xml
+total 65560
+drwxr-xr-x   8 <mini>  staff       256 Nov 14 18:26 .
+drwxr-xr-x  24 <mini>  staff       768 Nov 14 18:24 ..
+-rw-r--r--   1 <mini>  staff  10807579 Nov 14 18:26 activity-time-profile.xml
+drwxr-xr-x  10 <mini>  staff       320 Nov 14 18:26 activity.trace
+-rw-r--r--   1 <mini>  staff   6202676 Nov 14 18:25 cold-time-profile.xml
+drwxr-xr-x  10 <mini>  staff       320 Nov 14 18:25 cold.trace
+-rw-r--r--   1 <mini>  staff  14965032 Nov 14 18:25 streaming-time-profile.xml
+drwxr-xr-x  10 <mini>  staff       320 Nov 14 18:25 streaming.trace
+=== revert Sat Nov 14 18:26:09 CST 2026 ===
+porcelain_after=0
+DONE Sat Nov 14 18:26:09 CST 2026
+exit=0

@@ -1,0 +1,14 @@
+EQUIVALENCE: PASS (35 fixed + 40000 fuzz, three-way)
+inputs: 64, bytes 1464...1464
+block 0: v0=0.002876ms v1=0.003315ms
+block 1: v0=0.002871ms v1=0.003304ms
+block 2: v0=0.002834ms v1=0.003252ms
+block 3: v0=0.002816ms v1=0.003242ms
+block 4: v0=0.002828ms v1=0.003283ms
+block 5: v0=0.002814ms v1=0.003234ms
+block 6: v0=0.002818ms v1=0.003498ms
+block 7: v0=0.003044ms v1=0.003363ms
+block 8: v0=0.002932ms v1=0.003313ms
+median ms/call over 9 blocks (each labeled ms but divided per call): v0=0.002834 v1=0.003304 change=+16.56%
+per-block changes: +15.3% +15.1% +14.8% +15.1% +16.1% +14.9% +24.1% +10.5% +13.0%
+exit=0
