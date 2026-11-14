@@ -1,0 +1,64 @@
+{
+ "source": "GitHub Actions run 43560691563, job 132345409568, head ef3def0 (superseded by b87488c)",
+ "gate_error": "Typeset/draw regression exceeds 15% at 128",
+ "runner": "macOS shared runner, cpu_count=3",
+ "round_order": [
+  "baseline",
+  "candidate",
+  "candidate",
+  "baseline",
+  "baseline",
+  "candidate"
+ ],
+ "typeset128_median_ms_per_round": {
+  "round-1-baseline": {
+   "cold_attachment": 1.1493,
+   "cold_cpu": 1.115,
+   "draw_cpu": 1.225,
+   "first_light_dark_draw": 1.2184
+  },
+  "round-2-candidate": {
+   "cold_attachment": 1.3966,
+   "cold_cpu": 1.38,
+   "draw_cpu": 1.332,
+   "first_light_dark_draw": 1.4304
+  },
+  "round-3-candidate": {
+   "cold_attachment": 1.4693,
+   "cold_cpu": 1.441,
+   "draw_cpu": 1.313,
+   "first_light_dark_draw": 1.3247
+  },
+  "round-4-baseline": {
+   "cold_attachment": 1.5205,
+   "cold_cpu": 1.512,
+   "draw_cpu": 1.584,
+   "first_light_dark_draw": 1.5835
+  },
+  "round-5-baseline": {
+   "cold_attachment": 1.3367,
+   "cold_cpu": 1.335,
+   "draw_cpu": 1.451,
+   "first_light_dark_draw": 1.4327
+  },
+  "round-6-candidate": {
+   "cold_attachment": 1.404,
+   "cold_cpu": 1.398,
+   "draw_cpu": 1.459,
+   "first_light_dark_draw": 1.4338
+  }
+ },
+ "analysis": {
+  "cold_cpu_best_of_3_ratio": 1.238,
+  "cold_cpu_median_ratio": 1.047,
+  "baseline_cold_cpu_spread_within_variant": [
+   1.115,
+   1.512
+  ],
+  "candidate_cold_cpu_range": [
+   1.38,
+   1.441
+  ],
+  "note": "best-of-3 fails (1.238>1.15) only because one baseline round printed a fast outlier (1.115); medians are 1.335 vs 1.398 (ratio 1.047, inside the gate) and the candidate range lies inside the baseline range. The diff does not touch the math typesetting path. Round-9 precedent: authoritative quiet-machine retest decides; queued on the Mac mini at the final head with WORKBENCH_MATH_BASELINE_REF=7d5ba26."
+ }
+}
