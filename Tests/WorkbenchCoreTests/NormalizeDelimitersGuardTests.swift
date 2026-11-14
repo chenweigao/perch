@@ -132,12 +132,12 @@ func checkNormalizeDelimitersByteGuard() {
         digest = (digest ^ fnv1a(first)) &* 0x100_0000_01b3
     }
     precondition(mathTexts > 100, "the corpus must exercise the converting path densely, got \(mathTexts)")
-    let expected = "GOLDEN_PENDING"
+    // Golden captured on the UNMODIFIED product (76940c0 + this test) and
+    // identical on macOS 27.0.1 arm64 and Alibaba Cloud Linux 3 x86-64 — the
+    // URL-free corpus keeps both link backends out of the digest, so one
+    // value pins every platform (and CI).
+    let expected = "d90ac2cad4b58020"
     let got = String(format: "%016llx", digest)
-    if expected.hasSuffix("PENDING") {
-        print("GOLDEN_CAPTURE normalize-delimiters-guard digest: \(got) (math texts \(mathTexts)/3000)")
-    } else {
-        precondition(got == expected, "normalize-delimiters guard corpus digest changed: \(got) != \(expected)")
-    }
+    precondition(got == expected, "normalize-delimiters guard corpus digest changed: \(got) != \(expected)")
     print("PASS: normalizeDelimiters byte guard preserves parse output across structural corners and 3000 fuzz texts (digest \(got), \(mathTexts) converting)")
 }
