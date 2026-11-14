@@ -78,6 +78,7 @@ struct ProtocolTests {
         try checkDocumentReading()
         checkConversationRowGeometry()
         checkReplyDocument()
+        checkLinkScanContiguousUTF16()
         checkReplyMath()
 #if canImport(AppKit)
         checkMathRendering()

@@ -225,6 +225,20 @@ func benchStreamingDelta() throws {
         released.append(ms(t))
         precondition(held == nil)
     }
+    // Round 16: the cold full-window first-query cost — a fresh
+    // ConversationSearch per iteration, so every run pays the complete
+    // render + match pass (the find bar pays it per open; workspace history
+    // search pays it per keystroke per session). Measured last so it cannot
+    // disturb the other metrics' timing.
+    let coldWindow = conversation.displayMessages
+    var coldFind: [Double] = []
+    for _ in 0..<5 {
+        let fresh = ConversationSearch()
+        let t = benchNow()
+        let found = fresh.hits(in: coldWindow, query: "已经处理", running: true)
+        coldFind.append(ms(t))
+        precondition(found.hits.count >= completedTurns)
+    }
     func median(_ values: [Double]) -> Double { values.sorted()[values.count / 2] }
     func line(_ name: String, _ value: Double, indent: String = "  ") -> String {
         indent + name.padding(toLength: 28, withPad: " ", startingAt: 0) + String(format: "median_ms=%8.2f", value)
@@ -240,6 +254,7 @@ func benchStreamingDelta() throws {
         print(line(name, median(presentationStages[name]!), indent: "    "))
     }
     print(line("find_bar_query_update", median(findStage)))
+    print(line("find_bar_cold_query", median(coldFind)))
     print(line("older_page_full_chain", median(paged)))
     for name in ["presentation_update", "presented_rows", "conversation_activity"] {
         print(line(name, median(pageStages[name]!), indent: "    "))
