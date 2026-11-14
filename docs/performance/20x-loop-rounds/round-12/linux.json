@@ -1847,7 +1847,7 @@
   ".local/round12/base-checks-matched-v5": "c13f74d0a8d3e441a41e464b36ac9fd171f53b9ce238bfa90bb74dacbc52801f",
   ".local/round12/cand-checks": "342d0e118c603520f27643ea6d71824778b26e1c0b50e3fc4cce0290313d5a0b"
  },
- "candidate_rebuild_from_committed_tree_sha256": "342d0e118c603520f27643ea6d71824778b26e1c0b50e3fc4cce0290313d5a0b",
+ "candidate_rebuild_from_committed_tree_sha256": "PENDING",
  "checks": {
   "candidate": "exit 0, 94 PASS + 1 SKIP (math skipped on Linux); stdout archived at round-12/checks/checks-cand-v5-linux.log",
   "matched_baseline": "the matched baseline passes the whole checkSearchEntryReuse matrix (13 PASS) and then fails checkSearchCacheHoleProbes by design (exit 132 Linux / 133 Mac): the four pre-existing cache holes print PROBE MISMATCH lines with stale-hit counts (prefix zero-sign flip 1v0, NFD regex round trip 1v0, payload NFC->NFD 2v1, object-key NFC->NFD 1v0); the fifth probe (case-sensitive literal encoding round trip) PASSES on the baseline and pins candidate behavior only. Evidence: round-12/checks/.",
@@ -1899,8 +1899,6 @@
     2.05
    ]
   },
-  "edit_lines_note": "four candidate builds, SessionEditStats untouched throughout; the v4 positive-beyond-spread rows (edit512_first/insert/last/unchanged, edit64_insert, edit64_crlf) all belong to this family while Mac v4/v5 keep the same rows inside noise — layout-artifact INFERENCE, not claimed as gain or proven regression. v1's report band '-13~-24%' over-generalized across canonical/bulk/crlf and is corrected here with computed per-family bands."
- },
- "rebuild_matches_tested_binary": true,
- "portable_suite_note": "re-run at v5 recorded in the report gate list"
+  "edit_lines_note": "four candidate builds, SessionEditStats untouched throughout; the v4 positive-beyond-spread rows (edit512_first/insert/last/unchanged, edit64_insert, edit64_crlf) all belong to this family while Mac v4/v5 keep the same rows inside noise \u2014 layout-artifact INFERENCE, not claimed as gain or proven regression. v1's report band '-13~-24%' over-generalized across canonical/bulk/crlf and is corrected here with computed per-family bands."
+ }
 }

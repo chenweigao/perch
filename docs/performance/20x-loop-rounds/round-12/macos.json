@@ -1961,7 +1961,7 @@
     10
    ]
   },
-  "display_messages_workspace_note": "printed-precision jitter (10us grid, medians printed at 0.01ms): deltas oscillate in BOTH directions within ~1-3 steps across every run at an untouched code path; medians never exceed their spread as a regression signal. The v1 claim of a uniform one-tick shift and the v3 claim of uniform activity_init@320/stage_total shifts were false and are retracted; actual arrays: activity_init@320 v3 [], stage_total v4 [], v5 [].",
+  "display_messages_workspace_note": "printed-precision jitter (10us grid, medians printed at 0.01ms): deltas stay within ~3 print steps of zero at an untouched code path and oscillate in BOTH directions ACROSS runs \u2014 an individual run may be one-sided (v5 mac is all <=0, v5 linux all >=0); no median exceeds its spread as a regression signal. The v1 claim of a uniform one-tick shift and the v3 claim of uniform activity_init@320/stage_total shifts were false and are retracted; recomputed arrays (us): activity_init@320 v3 [1, 1, 1, 1, 1, 0], stage_total v4 [0, 10, 10, -10, 0, 0], stage_total v5 [10, 10, 10, -10, -10, 0].",
   "edit_lines_note": "Linux line-position edit rows swing with build layout, not code (SessionEditStats untouched in every round-12 build); bands per run are quoted in linux.json. Mac v5 keeps every edit-lines row inside its noise band. Layout-artifact attribution is an INFERENCE (round-8 negative-list mechanism) corroborated by the multi-build swing."
  }
 }
