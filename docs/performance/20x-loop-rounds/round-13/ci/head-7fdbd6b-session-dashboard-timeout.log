@@ -1,0 +1,21 @@
+    820
+  ],
+  "history_turns": 200,
+  "catalog_sessions": 500,
+  "resident_snapshot_count": 8,
+  "binary_sha256": "bfdec8b6fe0ae412ad78e537476131fcc072bada00e03b4049bf23e0010254cc",
+  "capture": "none",
+  "mode": "dashboard",
+  "sidebar_variant": "flat",
+  "responsiveness_control": false,
+  "input_positive_control": false,
+  "positive_control": false,
+  "joint_seconds": null,
+  "supervisor_pid": 8966,
+  "failure": "recording or fixture timed out; incomplete trace is not acceptance",
+  "elapsed_s": 134.92035845799995,
+  "behavior_passed": false
+}
+
+##[error]Process completed with exit code 1.
+##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

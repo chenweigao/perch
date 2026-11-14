@@ -1,0 +1,67 @@
+{
+  "suite": "macos",
+  "group": "navigation-interaction",
+  "scope": "offline synthetic checks; no SSH, real models or frame-rate certification",
+  "commit": "77ef6c91d7f388027d828b0223e9b4cb34d6eeb0",
+  "dirty": false,
+  "checks": [
+    {
+      "name": "navigation-streaming-rendering",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/run-navigation-check.py",
+        "streaming-rendering",
+        "--output",
+        "/Users/<runner>/work/perch/perch/.local/functional-navigation-interaction/navigation-streaming-rendering"
+      ],
+      "log": "navigation-streaming-rendering.log",
+      "exit_code": 0,
+      "seconds": 12.5,
+      "passed": true
+    },
+    {
+      "name": "navigation-tool-card",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/run-navigation-check.py",
+        "tool-card",
+        "--output",
+        "/Users/<runner>/work/perch/perch/.local/functional-navigation-interaction/navigation-tool-card"
+      ],
+      "log": "navigation-tool-card.log",
+      "exit_code": 0,
+      "seconds": 4.74,
+      "passed": true
+    },
+    {
+      "name": "navigation-fast-scroll",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/run-navigation-check.py",
+        "fast-scroll",
+        "--output",
+        "/Users/<runner>/work/perch/perch/.local/functional-navigation-interaction/navigation-fast-scroll"
+      ],
+      "log": "navigation-fast-scroll.log",
+      "exit_code": 0,
+      "seconds": 24.1,
+      "passed": true
+    },
+    {
+      "name": "navigation-turns",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/run-navigation-check.py",
+        "turns",
+        "--output",
+        "/Users/<runner>/work/perch/perch/.local/functional-navigation-interaction/navigation-turns"
+      ],
+      "log": "navigation-turns.log",
+      "exit_code": 1,
+      "seconds": 6.7,
+      "passed": false
+    }
+  ],
+  "status": "failed",
+  "seconds": 48.05
+}

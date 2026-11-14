@@ -1,0 +1,15 @@
+Passed host lifecycle phase: workflow-polish (5.06 s)
+Running host lifecycle phase: document-reading
+Document restored offset from 2878.0
+Document reading UI passed: relative links, anchors, search, typography, selection, positions, library and narrow/light/dark windows
+Passed host lifecycle phase: document-reading (12.88 s)
+Running host lifecycle phase: task-context
+compiled/TaskContextReadingChecks.swift:61: Precondition failed
+Cleaning up host lifecycle preferences
+Host lifecycle cleanup complete
+Traceback (most recent call last):
+  File "/Users/<runner>/work/perch/perch/scripts/check-host-lifecycle.py", line 141, in <module>
+    raise subprocess.CalledProcessError(process.returncode, command)
+subprocess.CalledProcessError: Command '['/Users/<runner>/work/perch/perch/.local/host-fixture/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks', 'task-context']' died with <Signals.SIGTRAP: 5>.
+
+##[error]Process completed with exit code 1.
