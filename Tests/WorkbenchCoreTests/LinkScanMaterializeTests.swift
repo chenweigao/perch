@@ -171,7 +171,12 @@ func checkLinkScanContiguousUTF16() {
     }
     var differential = 0
     for text in adversarial + [surrounding, mathAndURL, spanning] + corpus {
-        precondition(detect(text, materialize: false) == detect(text, materialize: true),
+        // Element-wise: arrays of tuples have no == (tuples do not conform to
+        // Equatable), which only surfaces when this Darwin block compiles.
+        let lazy = detect(text, materialize: false)
+        let materialized = detect(text, materialize: true)
+        precondition(lazy.count == materialized.count
+                         && zip(lazy, materialized).allSatisfy { $0.0 == $1.0 && $0.1 == $1.1 },
                      "detector differential mismatch for bytes \(Array(text.utf8))")
         differential += 1
     }
