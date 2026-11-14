@@ -1,0 +1,35 @@
+# Mac mode-1 row/part/byte fields (base vs candidate) — ROWS_IDENTICAL_NONEMPTY
+## base
+source_slots=100
+cold_rows=117
+appended_rows=117
+text_bytes=43079
+source_slots=500
+cold_rows=583
+appended_rows=584
+text_bytes=216839
+source_slots=1000
+cold_rows=1167
+appended_rows=1167
+text_bytes=433229
+source_slots=2000
+cold_rows=2333
+appended_rows=2334
+text_bytes=867923
+## cand
+source_slots=100
+cold_rows=117
+appended_rows=117
+text_bytes=43079
+source_slots=500
+cold_rows=583
+appended_rows=584
+text_bytes=216839
+source_slots=1000
+cold_rows=1167
+appended_rows=1167
+text_bytes=433229
+source_slots=2000
+cold_rows=2333
+appended_rows=2334
+text_bytes=867923

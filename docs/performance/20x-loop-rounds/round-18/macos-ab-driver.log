@@ -1,0 +1,80 @@
+=== prepare Sun Nov 15 06:32:43 CST 2026 ===
+HEAD is now at a13aee2 Merge pull request #339 from chenweigao/perf/20x-loop-17-20261115
+HEAD=a13aee23d8d39af7bf7bfa5b0d00d30aa52ade56
+porcelain_before=0
+=== baseline build (unmodified) Sun Nov 15 06:32:47 CST 2026 ===
+baseline_build_exit=0
+=== apply product patch + candidate build Sun Nov 15 06:33:58 CST 2026 ===
+product_patch=ok
+ M Sources/WorkbenchCore/ConversationTimeline.swift
+candidate_build_exit=0
+16b851bd01950c3af526bae2185ac30758918e25f5adc9479c9469e492b3e22e  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round18-baseline/out/Products/Release/WorkbenchChecks
+ceca9c9da2a543fa536150192b98d2141140fc355576fd1ec78476fcb37bebea  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round18-candidate/out/Products/Release/WorkbenchChecks
+=== check suites Sun Nov 15 06:35:09 CST 2026 ===
+baseline_checks_exit=0 pass=99
+candidate_checks_exit=0 pass=99
+=== pairs Sun Nov 15 06:35:56 CST 2026 ===
+pair=1 variant=baseline mode=1 exit=0
+pair=1 variant=baseline mode=streaming exit=0
+pair=1 variant=baseline mode=activity exit=0
+pair=1 variant=baseline mode=edit-lines exit=0
+pair=1 variant=baseline mode=presentation-token exit=0
+pair=1 variant=candidate mode=1 exit=0
+pair=1 variant=candidate mode=streaming exit=0
+pair=1 variant=candidate mode=activity exit=0
+pair=1 variant=candidate mode=edit-lines exit=0
+pair=1 variant=candidate mode=presentation-token exit=0
+pair=2 variant=baseline mode=1 exit=0
+pair=2 variant=baseline mode=streaming exit=0
+pair=2 variant=baseline mode=activity exit=0
+pair=2 variant=baseline mode=edit-lines exit=0
+pair=2 variant=baseline mode=presentation-token exit=0
+pair=2 variant=candidate mode=1 exit=0
+pair=2 variant=candidate mode=streaming exit=0
+pair=2 variant=candidate mode=activity exit=0
+pair=2 variant=candidate mode=edit-lines exit=0
+pair=2 variant=candidate mode=presentation-token exit=0
+pair=3 variant=baseline mode=1 exit=0
+pair=3 variant=baseline mode=streaming exit=0
+pair=3 variant=baseline mode=activity exit=0
+pair=3 variant=baseline mode=edit-lines exit=0
+pair=3 variant=baseline mode=presentation-token exit=0
+pair=3 variant=candidate mode=1 exit=0
+pair=3 variant=candidate mode=streaming exit=0
+pair=3 variant=candidate mode=activity exit=0
+pair=3 variant=candidate mode=edit-lines exit=0
+pair=3 variant=candidate mode=presentation-token exit=0
+pair=4 variant=baseline mode=1 exit=0
+pair=4 variant=baseline mode=streaming exit=0
+pair=4 variant=baseline mode=activity exit=0
+pair=4 variant=baseline mode=edit-lines exit=0
+pair=4 variant=baseline mode=presentation-token exit=0
+pair=4 variant=candidate mode=1 exit=0
+pair=4 variant=candidate mode=streaming exit=0
+pair=4 variant=candidate mode=activity exit=0
+pair=4 variant=candidate mode=edit-lines exit=0
+pair=4 variant=candidate mode=presentation-token exit=0
+pair=5 variant=baseline mode=1 exit=0
+pair=5 variant=baseline mode=streaming exit=0
+pair=5 variant=baseline mode=activity exit=0
+pair=5 variant=baseline mode=edit-lines exit=0
+pair=5 variant=baseline mode=presentation-token exit=0
+pair=5 variant=candidate mode=1 exit=0
+pair=5 variant=candidate mode=streaming exit=0
+pair=5 variant=candidate mode=activity exit=0
+pair=5 variant=candidate mode=edit-lines exit=0
+pair=5 variant=candidate mode=presentation-token exit=0
+pair=6 variant=baseline mode=1 exit=0
+pair=6 variant=baseline mode=streaming exit=0
+pair=6 variant=baseline mode=activity exit=0
+pair=6 variant=baseline mode=edit-lines exit=0
+pair=6 variant=baseline mode=presentation-token exit=0
+pair=6 variant=candidate mode=1 exit=0
+pair=6 variant=candidate mode=streaming exit=0
+pair=6 variant=candidate mode=activity exit=0
+pair=6 variant=candidate mode=edit-lines exit=0
+pair=6 variant=candidate mode=presentation-token exit=0
+16b851bd01950c3af526bae2185ac30758918e25f5adc9479c9469e492b3e22e  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round18-baseline/out/Products/Release/WorkbenchChecks
+ceca9c9da2a543fa536150192b98d2141140fc355576fd1ec78476fcb37bebea  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round18-candidate/out/Products/Release/WorkbenchChecks
+porcelain_after=0
+DONE Sun Nov 15 06:37:47 CST 2026
