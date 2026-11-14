@@ -213,12 +213,20 @@ public enum SessionEditStats {
         return count
     }
 
-    /// Sets the high bit of every byte of `word` that equals the corresponding
-    /// byte of the repeated pattern `c` (classic SWAR has-zero test on v ^ c).
+    /// Sets the high bit of exactly those bytes of `word` that equal the
+    /// corresponding byte of the repeated pattern `c`. The classic subtraction
+    /// form `((x − 0x01…) & ~x & 0x80…)` is NOT positionally exact: borrow
+    /// propagation also marks a 0x01 byte that follows a zero byte, so an LF
+    /// followed by a vertical tab (0x0A, 0x0B) or a CR followed by a form feed
+    /// (0x0D, 0x0C) fakes an extra marker — and at byte 7 corrupts the
+    /// cross-word carry. The carry-free addition form marks bit 7 of a byte
+    /// exactly when that byte is zero: `(b & 0x7F) + 0x7F` peaks at 0xFE, so
+    /// no byte can carry into the next, and bit 7 stays clear only for b == 0.
     @inline(__always)
     private static func hasByteEqualTo(_ word: UInt64, _ c: UInt64) -> UInt64 {
         let x = word ^ c
-        return (x &- 0x0101010101010101) & ~x & 0x8080808080808080
+        let mask7 = 0x7F7F7F7F7F7F7F7F as UInt64
+        return ~(((x & mask7) &+ mask7) | x | mask7)
     }
 
     /// These ranges end only at LF separators (except CRLF) or the buffer

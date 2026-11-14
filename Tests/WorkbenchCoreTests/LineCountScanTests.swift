@@ -29,6 +29,7 @@ func checkEditStatsLineCountScan() throws {
         return try KimiWire.decoder().decode([KimiMessage].self, from: JSONSerialization.data(withJSONObject: raw))
     }
     var cases = 0
+    var vtffCases = 0
     func check(_ text: String) throws {
         let stats = SessionEditStats.derive(from: try writeWindow(text))
         let got = stats?.total.additions ?? -1
@@ -36,10 +37,11 @@ func checkEditStatsLineCountScan() throws {
         precondition(got == want && stats?.total.deletions == 0,
                      "line count mismatch for bytes \(Array(text.utf8)): got \(got), want \(want)")
         cases += 1
+        if text.utf8.contains(0x0B) || text.utf8.contains(0x0C) { vtffCases += 1 }
     }
 
     // Exhaustive separator/filler combinations.
-    let pieces = ["\n", "\r", "\r\n", "\n\r", "a", "汉", ""]
+    let pieces = ["\n", "\r", "\r\n", "\n\r", "\u{000B}", "\u{000C}", "a", "汉", ""]
     func walk(_ prefix: String, depth: Int) throws {
         try check(prefix)
         guard depth < 4 else { return }
@@ -63,18 +65,41 @@ func checkEditStatsLineCountScan() throws {
         try check("\r" + String(repeating: "\n", count: len))
     }
 
+    // Review B1 regression pins: the inexact SWAR subtraction mask marked
+    // 0x01-valued bytes following a zero byte through borrow propagation —
+    // LF followed by vertical tab and CR followed by form feed corrupted the
+    // LF/CR masks (and at byte 7 the cross-word carry). These are the exact
+    // counterexamples from the review, plus the same adjacency placed at every
+    // offset across a word boundary and inside the scalar tail.
+    try check("\n\u{000B}aaaaaa")
+    try check("\r\u{000C}\naaaaa")
+    try check("aaaaaa\r\u{000C}\naaaaaaa")
+    for filler in 0...12 {
+        let pad = String(repeating: "a", count: filler)
+        try check(pad + "\n\u{000B}rest")
+        try check(pad + "\r\u{000C}\nrest")
+        try check(pad + "\n\u{000C}\r\nrest")
+        try check(pad + "\u{000B}\nrest")
+        try check(pad + "\u{000C}\rrest")
+        try check("\n\u{000B}" + pad + "\r\u{000C}\n" + pad)
+        try check(pad + "\r\u{000B}\na")
+    }
+
     // Seeded fuzz over separator-heavy pieces.
     var seed: UInt64 = 0x7231_356C_6300_0000
     func next() -> UInt64 {
         seed = seed &* 6364136223846793005 &+ 1442695040888963407
         return seed >> 11
     }
-    let fuzzPieces = ["a", "b", "\n", "\r", "\r\n", "\n\r", "\r\r", "\n\n", "汉", " ", "x\ty"]
+    let fuzzPieces = ["a", "b", "\n", "\r", "\r\n", "\n\r", "\r\r", "\n\n", "\u{000B}", "\u{000C}",
+                      "\n\u{000B}", "\r\u{000C}", "汉", " ", "x\ty"]
     for _ in 0..<20000 {
         var text = ""
         for _ in 0..<(1 + Int(next() % 24)) { text += fuzzPieces[Int(next() % UInt64(fuzzPieces.count))] }
         try check(text)
     }
     precondition(cases > 20000, "the corpus must stay exhaustive, got \(cases)")
-    print("PASS: edit-stat line counting matches the Character-split oracle across \(cases) exhaustive, boundary and fuzz cases")
+    precondition(vtffCases > 2000,
+                 "the corpus must densely cover the VT/FF borrow-propagation family, got \(vtffCases)")
+    print("PASS: edit-stat line counting matches the Character-split oracle across \(cases) cases (\(vtffCases) with VT/FF adjacency)")
 }
