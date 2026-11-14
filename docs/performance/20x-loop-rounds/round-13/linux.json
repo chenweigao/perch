@@ -1,5 +1,5 @@
 {
- "benchmark": "round-13 linux screening A/B \u2014 flat, no signal",
+ "benchmark": "round-13 linux screening A/B — flat, no signal",
  "platform": "Alibaba Cloud Linux 3 x86_64, Swift 6.3.3",
  "base_ref": "8f92c270e68ef8bcae5782d93052ea36aee7369f",
  "candidate_ref": "6f7df6717bf59a7180fdf7895ccf72791b0838f2",
@@ -1878,5 +1878,5 @@
   "baseline": "exit 0, 94 PASS + 1 SKIP",
   "candidate": "exit 0, 94 PASS + 1 SKIP; activity fixture checksums identical to baseline at all sizes"
  },
- "note": "Linux edit64 family +1.6..+3.7% beyond spread is the known layout-swing family (screening only; Mac same-batch rows within noise)."
+ "note": "Linux beyond-spread positives are 16 rows, all in the edit-lines family: nine edit64 rows +1.59..+3.65% and seven edit512 rows +1.95..+3.60% — the known layout-swing family (screening only; causal attribution for this round's touched path remains an inference, not an extension of the family's prior conclusions). Mac same-batch rows are within noise."
 }

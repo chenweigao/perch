@@ -1,10 +1,10 @@
 {
- "benchmark": "round-13 macos A/B (adoption decider) \u2014 REJECTED",
+ "benchmark": "round-13 macos A/B (adoption decider) — REJECTED",
  "platform": "darwin arm64 macOS 27.0.1 (Mac mini, Apple Swift 6.4)",
  "base_ref": "8f92c270e68ef8bcae5782d93052ea36aee7369f",
  "candidate_ref": "6f7df6717bf59a7180fdf7895ccf72791b0838f2",
  "pairs": 6,
- "verdict": "REJECTED: Mac edit_stats@6400 -1.65% (worst pair +0.47%, spread 3.91%) does not exceed the noise band; @1280 -0.40%, @320 +0.39%; Linux screening flat (-0.32%/-0.20%/+0.40%). Mac edit64_bulk +12.07% (worst +15.38%, spread 4.16) exceeds spread on a touched code path (derive->tally) \u2014 scenario-selective (the other 12 edit-lines rows stay within -2.4..+1.26%), matching the round-10 pure-layout signature rather than uniform mechanical regression; treated as a regression signal per round-10 precedent, reinforcing rejection. activity_init@320 uniform +1us print-step at the 0.001ms grid (layout/quantization family; the path is touched so a codegen effect cannot be fully excluded \u2014 disclosed, not claimed).",
+ "verdict": "REJECTED: Mac edit_stats@6400 -1.65% (worst pair +0.47%, spread 3.91%) does not exceed the noise band; @1280 -0.40%, @320 +0.39%; Linux screening flat (-0.32%/-0.20%/+0.40%). Mac edit64_bulk +12.07% (worst +15.38%, spread 4.16) exceeds spread on a touched code path (derive->tally) — scenario-selective (the other 18 rows of the 64/512 subset stay within -2.40..+1.26%), matching the signature recorded at round-10 (which itself drew no mechanism conclusion) rather than uniform mechanical regression; treated as a regression signal per round-10 precedent, reinforcing rejection. activity_init@320 per-pair deltas [+1,+1,+1,+1,+1,-1]us at the 0.001ms print grid (median +16.67%; NOT a uniform shift — corrected per review B1; layout/quantization family, the path is touched so a codegen effect cannot be fully excluded — disclosed, not claimed).",
  "headline": {
   "edit_stats@6400": {
    "baseline_median": 2.5465,
@@ -1854,5 +1854,6 @@
   0,
   -10,
   0
- ]
+ ],
+ "review_note": "Independent review at 7fdbd6b (VERDICT: BLOCKING 3): B2/B3 (bulk medians, hash platform attribution, Linux-scoped reproduction) fixed in a90ae8b and confirmed by the reviewer; B1 (activity_init@320 not uniform: [+1,+1,+1,+1,+1,-1]us) and the non-blocking precision items (18-row band, round-10 no-mechanism-conclusion, Linux edit512 rows, scoped diff --check, force-push-before-PR disclosure) corrected verbatim in the follow-up docs commit and verified by independent recomputation."
 }
