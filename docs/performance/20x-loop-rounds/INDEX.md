@@ -24,8 +24,9 @@ A/B ≥5 轮取中位数 → 超噪声带（本机 <2%）才采纳 → Workbench
 分支纪律：工作在本线程 T3 worktree，各轮本地用 `codex/20x-loop-N-<日期>`，
 推独立 `perf/20x-loop-N-<日期>` PR 分支（round 8 起日期为 20261113）。底座：#320
 （Linux 可移植性）、#323（round 1）、#324（round 3）、#325（round 5）、#326（round 6）
-、#327（round 7）、#328（round 8）、#329（round 9）及 #330（round 10）均已合并；
-main 另有 #331（CI 并行化，非循环产物，测量子树逐字节不变），round 11 base=93b9ad3。
+、#327（round 7）、#328（round 8）、#329（round 9）、#330（round 10）及 #333
+（round 11）均已合并；main 另有 #331（CI 并行化，非循环产物，测量子树逐字节不变），
+当前 base=7d5ba26。
 
 **macOS 测量通道**：`ssh -o BatchMode=yes mac-mini` 直达（反向隧道，launchd KeepAlive
 自愈）。GUI 应用类作业必须走 runner：写 bash 文件到 `~/Library/PerfRunner/jobs/<名>.job`，
@@ -33,6 +34,9 @@ LaunchAgent `local.perf.runner`（Aqua 会话内）自动执行，结果在
 `~/Library/PerfRunner/results/<名>.log`+`.done`。round 5 起 Mac A/B 使用两个相同默认
 SwiftPM builder 的独立 scratch 产品路径，逐对及最终验证二进制hash恒定；归档copied
 native checks曾exit137，不能当成功测量，不用带调试权限的xctrace跑数替代无捕获A/B。
+裸 `swiftc` 独立二进制在 mini 上被系统 SIGKILL（hello-world 可复现，/tmp 与 $HOME 均
+exit 137；SwiftPM 构建正常）：临时 Mac 测量一律用 SwiftPM scratch 包，解释器模式
+（`swift file.swift`）微基准对这类代码无效（stdlib 原生 vs 解释闭包偏斜，round 12 diag）。
 SSH 直接拉 GUI 应用会被 TCC 拒绝
 （Operation not permitted）。Mac 工作树：`~/_worktrees/20x-loop-20261112/perch`，用前
 fetch+checkout 到本轮 base。冷启动经 runner 验证可用（5/5，2026-11-12）。
@@ -60,7 +64,8 @@ Mac mini 同机 A/B 超过该轮实测噪声才采纳，不能把 Linux 特有�
 | 8 | 2026-11-13 | 复用窗口按副本字节比较（delta/翻页/查找缓存） | **已采纳/合并：Mac 每 delta 模型链 -47.60%**（1.145→0.600ms@16,142），tool_projection -91.60%、查找栏 -46.24%、翻页整链 -11.41%；CI 8/8 绿、GitHub Codex 评审同 head 无发现、mergeable CLEAN 后自动合并；Linux edit-lines fullLineDiff +23～31% 已证明是布局伪影（热点指令逐条相同、对照构建同向、Mac 无此退化）；自排独立评审三次被 Claude 限流打断，已明示 | [round-8](2026-11-13-round-8.md)；[#328](https://github.com/chenweigao/perch/pull/328)，merge=e160eec（18:37） |
 | 9 | 2026-11-13 | 长单轮状态栏派生免中间数组 | **已采纳/合并：Mac 单轮 activity -26.38%**（1.6545→1.2180ms@2,000 条）、-25.33%@400 条，六对区间分离；CI math 门槛在 3 CPU 共享 runner 上三次失败（每次卡的门槛与构建出的二进制 hash 都不同），Mac mini 静机同脚本/同 6 轮顺序/同门槛全绿（parse 0.97–1.00、typeset best 1.13/1.01/0.99），据此判为 runner 噪声，未改任何门槛或断言；证据随 docs 提交换新 head 后 8/8 全绿合并；自排独立评审五次被 Claude 限流未跑成，已明示 | [round-9](2026-11-13-round-9.md)；[#329](https://github.com/chenweigao/perch/pull/329)，merge=a9bca95（20:32）；[CI 取证](round-9/ci/math-gate-investigation.json) |
 | 10 | 2026-11-13 | 定时信封裁剪前的 O(1) 守卫 | **不采纳**：Linux 冷投影 -17.89%（51.595→42.365ms@2,333），Mac -0.96%（8.32→8.24ms，区间重叠、噪声内），是 corelibs `trimmingCharacters` 走 UTF-16 的 Linux 特有开销；候选构建 Mac edit64_bulk +15.04% 超其 13.88% spread，为回归信号、随撤回不保留；产品补丁已撤回，保留 8 条钉住既有空白/近似输入边界的断言（两端产品代码未改的匹配构建通过，Mac 验证构建 8b294a15）与两端六对数据；gpt-6.1-sol 独立评审三轮（初审+两次复核）共 8 项 BLOCKING + 2 项非阻塞发现的逐项处置见报告"独立评审与修正记录"；首个 head 的 navigation-disclosure 超时未在其后三个 head 复现，判 runner 抖动 | [round-10](2026-11-13-round-10.md)；[#330](https://github.com/chenweigao/perch/pull/330)，merge=d1590e4（22:17）；[撤回补丁](round-10/rejected-cron-guard.patch)；[Mac 提交配置验证](round-10/macos-committed-checks.json) |
-| 11 | 2026-11-14 | collapsedWhitespace 零拷贝字节路径 + 永不绑定预过滤 | **候选：Mac 冷投影 -19.16%**（8.325→6.730ms@2,333，spread 4.75%，六对全分离），四尺寸 -17～-19%；xctrace 归因 collapsedWhitespace 30%+prefix 字素行走 20.8%+trim 仅 0.9%；穷举走查暴露 Prepend 集既有缺口（U+111C3/U+113D1）按契约先修，7 标量特征化缺口钉住未修；两次独立 run 二进制逐字节复现；display_messages_workspace +10µs（一格量化、区间重叠）已披露；Linux 筛选 -6.3% 同向；待评审/CI | [round-11](2026-11-14-round-11.md)；[归因](round-11/macos-xctrace-attribution.json) |
+| 11 | 2026-11-14 | collapsedWhitespace 零拷贝字节路径 + 永不绑定预过滤 | **已采纳/合并：Mac 冷投影 -19.16%**（8.325→6.730ms@2,333，spread 4.75%，六对全分离），四尺寸 -17～-19%；xctrace 归因 collapsedWhitespace 30%+prefix 字素行走 20.8%+trim 仅 0.9%；穷举走查暴露 Prepend 集既有缺口（U+111C3/U+113D1）按契约先修，7 标量特征化缺口钉住未修；两次独立 run 二进制逐字节复现；display_messages_workspace +10µs（一格量化、区间重叠）已披露；Linux 筛选 -6.3% 同向；gpt-6.1-sol 评审 CLEAN（3 处非阻塞措辞已修复）、CI 13/13 绿 | [round-11](2026-11-14-round-11.md)；[#333](https://github.com/chenweigao/perch/pull/333)，merge=7d5ba26（03:01）；[归因](round-11/macos-xctrace-attribution.json) |
+| 12 | 2026-11-14 | find-bar 未变条目 hits 整体复用（开查找栏 streaming） | **候选（v5=13933f8）：Mac find_bar_query_update -45.10%**（0.510→0.280ms@16,142 条，spread 6.12%，六对全分离 -220～-240µs），Linux 筛选 -33.33% 同向分离；复剖：search 区域占 streaming 全样本 52.6%（locale 匹配 langid+DD lexer+fold ~13.4% + UTF16 索引转换 5.1%）、SessionEditStats 占 activity 测量段 57.3%（队列首位）；条目 hits 为 (messages,isRunning,query,options) 纯函数，编码精确查询键 + sameSearchableWindow（字节层 ∨ 值层∧渲染字节层：数值 bitPattern、字符串/对象键 UTF-8 字节、JSONValue/KimiPart 结构级位比较短路、排序键对齐 O(k log k)）+ sources 字节比较三重校验后整体复用并收养新副本；钉死拆分矩阵/探针：矩阵（单字段差异+同查询夹逼+running 翻转三恒定夹逼）在未优化产品全过，五探针一次运行记录四个既有洞（prefix 零号符号、NFD 查询键往返、payload/对象键 NFC→NFD——round-8 起 Earlier/Tier-2 规范比较漏洞；字面量探针基线通过仅钉候选）；评审处置：Codex P2 + 独立评审三轮共 12 项 BLOCKING（含两轮余留驳回：Tier-2 规范比较、字典快路径不生效 O(k²)、running 翻转掩蔽、math 执法统计量误引与规则误托先例）逐项修复并五轮复测（v1→v5 每轮六对全分离幅度一致）；候选 94+1 SKIP（Linux）/95（Mac）全绿、基线按设计 13 PASS 后 4 MISMATCH + exit 132/133；portable 10/10（v5）、提交树重建逐字节一致（342d0e11）、Mac 产品构建+5/5 冷启动+静机 math 复测 passed（真实门槛 best_ratio 1.0026/1.0048；CI ef3def0 失败实为 best_ratio 1.1953 受基线单轮离群值驱动、1627582 为 GUI app 180s 超时，均取证归档）；伪影披露程序化计算：display_messages_workspace 九组逐对数组 ±3 打印格双向抖动、Linux edit-lines 四版摆动（v1 -24.3～-15.9% → v5 -0.1～+2.1%，v4 六行正向超 spread 全属该族且 v5 归零）归布局伪影推断、v1/v3 报告失实表述全部勘误；prefix(320) 立项前粗筛否决入否定清单（ERRATUM + 重跑验证日志）；四轮复核除 N7（披露生成器静默空数组/双向性措辞）外全部验收，N7/N8 逐字修复并与复核方独立重算逐值一致；CI：1627582 同代码重跑 15/15 绿（math 噪声判定获佐证），9c6e2a1 session-streaming GUI 120s 超时（同族第三例，已取证、代码侧回归已排除）重跑中 | [round-12](2026-11-14-round-12.md)；[归因](round-12/macos-xctrace-streaming-activity-attribution.json)；[math 取证](round-12/ci/head-ef3def0-math-typeset128-analysis.json) |
 
 ## 否定清单（勿重复尝试）
 
@@ -78,35 +83,43 @@ Mac mini 同机 A/B 超过该轮实测噪声才采纳，不能把 Linux 特有�
   -17.89%），Mac CFString 无超噪声改善（-0.96%）。round 2 已记过同一机制，round 10
   在不同位置重演。此类候选先在 Mac 上跑一对目标场景粗筛再决定是否投入整轮，
   不要把 Mac 复测放到最后（round 10）。
+- excerpt 的 `prefix(320)` 字素行走/物化开销：round 12 立项前的 Mac 粗筛（SwiftPM
+  scratch 包，9×20,000 次交替、64 轮换输入、哈希消费防提升）否决——`prefix(320)`
+  本就把全部下游 collapse 工作截到 ≤320 字符，超过 320 标量的文本要先付一次到
+  321 标量才中止的带上限 collapse/count 扫描（仍覆盖大半文本）：v1 融合截断折叠
+  +20.1%/+20.7%（CJK 337/368 标量 fixture），v2 先计数+就地折叠 +4.4%/+4.9%，
+  longAscii +27.8%/+1.8%；仅 14 标量短文本 -37%。标量计数上界只能对 ≤320 标量
+  证明 prefix==whole；这两类实现被否决不构成"不存在更便宜 sound 替代"的证明，
+  但未找到可用替代。等价性设计本身可行（41,092 对差分 fuzz 零失败——注意语料
+  覆盖的是融合原型变体，非被计时的 count-first 变体），是性能不成立；证据与
+  更正见 round-12/prefix320-screening/（含 ERRATUM.md：单位实为 ms、归属更正、
+  重跑验证日志）（round 12）。
 
 ## 候选队列（按当前证据排序）
 
-1. **round9之后重排热点**：长单轮状态栏派生还剩 1.218ms@2,000 条（Mac），perf children
-   里 `ToolVisibilityProjection.project` 3.67% 是最大块——它为状态栏重建整轮 normalized
-   消息与 content 数组，而 `ConversationActivity` 只按顺序取工具；考虑给投影加一个
-   "只要工具顺序"的出口，但不得改其他调用方的语义。每 delta 链 0.600ms 里
-   `displayMessages` 两次调用共 0.18ms（`messages + [live]` 每 delta 复制整个窗口，
-   受 API 形状约束，改动会波及 UI，红线内先不动）、narrative 0.16ms。翻页路径
-   model_total 3.375ms 里 turn_projection 1.15ms、tool_projection 0.91ms、
-   retained_cost 0.77ms，另有 presented_rows 0.79ms。`TurnStatus.swift:89` 仍有
-   `Array(messages.dropFirst(start))` 复制；`ConversationActivity.outputCharacters`
-   对每个 text/thinking 走 `utf16.count`（可参照 `KimiInFlight` 的既有缓存口径，
-   但不得引入全局 memo）。先复剖再立项。
-2. **冷投影下一大头：excerpt 的 prefix(320) 字素行走**：round 11 的 Mac xctrace 归因
-   （优化前样本）：`collapsedWhitespace` 30%（round 11 已优化，冷投影 -19.16%）、
-   `prefix(320)` 字素行走 **20.81%**（`String.index(offsetBy:limitedBy:)` 10.18% +
-   字素断 machinery ~10.6%）= 现最大单块、`ConversationTurnSummary.make` 其余 13.4%、
-   `ConversationTimelineEntry.make` 10.4%、`trimmingCharacters` 仅 0.9%。320-Character
-   语义是产品行为不可改；方向：避免 `String(prefix)` 物化与 `" " +` 拼接的中间分配、
-   或 UTF-8 字节上做等价截断的保守快路径（纯 ASCII/无组合序列场景）；先设计等价性
-   钉法再动手（round 7 教训：勿以 lazy/全串相等原型直接上）。输出 `validateUTF8`
-   ~3.9% 无公开 API 绕过，暂挂。归因数据：round-11/macos-xctrace-attribution.json。
-3. **activity edit_stats 线性成本**：rounds 5–7 后 Mac 6,400 条已降到 ~2.51ms，仍随消息数
-   线性；检查是否可增量/懒计算（已有部分增量逻辑，见 2026-10-24 报告）。round 9 已把
-   单轮状态栏派生的机械拷贝去掉（-26%），edit_stats 本身未动。
-4. **streaming 每 delta 的 tool_projection**：round 8 已把 O(prefix) 的窗口校验
-   改为按副本字节比较，Mac 0.595→0.050ms、Linux 1.57→0.07ms；剩余部分是尾轮投影，
-   不再是 chain 大头。
+依据 round-12 复剖（streaming/activity 双场景 Mac xctrace，base=7d5ba26，
+[归因](round-12/macos-xctrace-streaming-activity-attribution.json)）重排：
+
+1. **SessionEditStats 残余机械开销**（activity 测量段 57.3%）：`tally` 的
+   `for message`/`for part in` 迭代器逐元素拷贝（`IndexingIterator.next()`
+   8.64% self + 伴随 refcount）、`lineCount` 连续字节循环闭包 5.24%、
+   `firstLine`/`lastLine`+`substring` 的索引转换 ~1.5%、每 tool_use 一次
+   `lowercased()` 分配 0.22%。方向：tally 改下标/借用遍历（round 9 同款）、
+   lineCount 扫描指针化或 LF 计数−CRLF 对计数、工具名 ASCII 大小写比较
+   （非 ASCII 大小写映射边界需先穷举钉住）。edit-lines 的 Linux 场景对代码布局
+   敏感（round 8 否定清单），结论只认 Mac 同机 A/B。
+2. **find-bar 每 delta 的固定地板**：round 12 条目级 hits 复用后（Mac
+   find_bar_query_update -44%），每 delta 仍剩 prefix 全窗 sameWindow memcmp
+   （~16k 消息）、数千 hit 数组的 CoW 拼接、最近轮 entry 的
+   `ConversationTimelineEntry.make` 与 live entry 重搜。涉及
+   `ConversationFindResult` API 形状的改动会波及 UI，红线内先评估。
+3. **ToolVisibilityProjection.project 的只要工具顺序出口**（activity 测量段
+   running-ids 18.3%，refcount+字典散列主导）：`ConversationActivity` 只按顺序
+   取工具，而投影为状态栏重建整轮 normalized 消息与 content 数组；给投影加一个
+   "只要工具顺序"的出口，不得改其他调用方的语义（round 9 队列遗留）。
+4. **小机械拷贝**：`TurnStatus.swift:89` 的 `Array(messages.dropFirst(start))`
+   复制；`ConversationActivity.outputCharacters` 对每个 text/thinking 走
+   `utf16.count`（可参照 `KimiInFlight` 的既有缓存口径，不得引入全局 memo）。
 5. **Mac mini dashboard 归因（低优先）**：`--mode all`/`dashboard` 在 Mac mini 上
    确定性失败（Missing directory scroll view，mounted=False 但 projection_matches=
    True）；SSH 与 GUI runner 两种上下文同样失败，GitHub CI 同代码通过——本机环境

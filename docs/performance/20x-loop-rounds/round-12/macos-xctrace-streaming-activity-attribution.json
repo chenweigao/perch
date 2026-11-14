@@ -1,0 +1,72 @@
+{
+  "purpose": "Mac-side re-profiling of the two tracked non-cold scenarios (streaming per-delta chain with an open find bar; activity/edit-stats derivation), as required by candidate-queue item 1's 're-profile before opening a round'. Produced the round-12 candidate and re-ranked the queue.",
+  "host": "mac-mini (Apple Silicon, macOS 27.0.1), Apple Swift 6.4",
+  "base_ref": "7d5ba26ac45775b5d7bd624a6384964313b4ccf3",
+  "method": "PerfRunner job 12-round12-attr (script archived as xctrace-streaming-activity.job in the round worktree's .local; runner log 12-round12-attr.log). Temporary attribution-only bench modes streaming-profile/activity-profile loop the existing benches for 20s each (never committed; porcelain 0 before and after). xcrun xctrace Time Profiler over the whole process; attribution only, never a timing source. Region tables: macos-xctrace-streaming-attribution.txt / macos-xctrace-activity-attribution.txt (analyzer: analyze_streaming_activity.py, same innermost-matching-frame method as round 11).",
+  "binary_sha256": "06a99d3799ecbd2fbe8e541a618283ec41940205db1082e47fc1ada198f23e51",
+  "streaming_profile": {
+    "total_samples": 22656,
+    "setup_share_percent": 30.9,
+    "setup_note": "The loop re-runs the whole bench, so JSON fixture encoding + wire decoding (setup-json 27.79%, setup-wire-decode 3.11%) is classified apart; %nonsetup below excludes it.",
+    "region_percent_of_all": {
+      "search": 52.63,
+      "teardown": 4.02,
+      "bench-harness": 3.40,
+      "tool-visibility": 2.70,
+      "timeline-entry": 2.43,
+      "model-update": 2.13,
+      "narrative": 0.55,
+      "turn-summary": 0.48,
+      "displayMessages": 0.34,
+      "row-build": 0.28,
+      "presented-fold": 0.09,
+      "edit-stats": 0.02,
+      "todo": 0.01
+    },
+    "search_region_top_leaves_percent_of_all": {
+      "String.UTF16View._nativeGetIndex(for:)": 5.06,
+      "langid_consume_string": 4.54,
+      "BidirectionalCollection._index(_:offsetBy:)": 2.33,
+      "__CFStringFoldCharacterClusterAtIndex": 2.19,
+      "_DDScannerHandleState": 1.96,
+      "CFStringFindWithOptionsAndLocale": 1.62,
+      "DDLexerDeterministicScan": 1.42,
+      "String.UTF16View._nativeCopy(into:alignedRange:)": 1.38,
+      "__CF_IS_OBJC": 1.25,
+      "computeLexemsAtPosition": 0.84,
+      "getNext(StateQueryIterator*)": 0.71,
+      "DDTokenCacheGetItemAtIndexCreateIfNeeded": 0.68,
+      "objc_msgSend": 0.63
+    }
+  },
+  "activity_profile": {
+    "total_samples": 20074,
+    "setup_share_percent": 62.1,
+    "region_percent_of_nonsetup": {
+      "edit-stats": 57.30,
+      "running-ids": 18.32,
+      "teardown": 13.41,
+      "activity-init": 7.78,
+      "todo": 3.01
+    },
+    "edit_stats_region_top_leaves_percent_of_all": {
+      "specialized IndexingIterator.next()": 8.64,
+      "closure #1 in static SessionEditStats.lineCount(_:)": 5.24,
+      "Substring.subscript.getter": 0.98,
+      "Substring.index(_:offsetBy:)": 0.77,
+      "String._uncheckedFromUTF8": 0.47,
+      "_allASCII": 0.43,
+      "_stringCompareWithSmolCheck": 0.40,
+      "SessionEditStats.lastLine": 0.27,
+      "SessionEditStats.firstLine": 0.22,
+      "String.lowercased()": 0.22
+    }
+  },
+  "conclusions": [
+    "Streaming with an open find bar is dominated by ConversationSearch: 52.6% of all samples (76.2% of non-setup). The per-delta update re-ran locale matching (case+diacritic folding via CFStringFindWithOptionsAndLocale -> language identification, DataDetectors lexer/token scanning, cluster folding ~13.4% of all samples in leaves) plus UTF-16 index conversion and excerpt building over every latest-turn entry, including entries whose messages were unchanged and whose rendered text cache already hit. Round-12 candidate: per-entry reuse of the whole hit list under (messages, isRunning, query, options) validation.",
+    "The model chain around it is now small: tool-visibility 2.7%, timeline-entry 2.4%, model-update 2.1%, narrative 0.55%, turn-summary 0.48% of all samples (rounds 8/9/11 landed).",
+    "edit-stats is ~0 in the streaming profile: the status line derives only the current turn, so per-delta streaming pays no whole-window SessionEditStats cost.",
+    "Activity bench: SessionEditStats.derive is 57.3% of measured samples; leaves are iterator element copies in tally (IndexingIterator.next() 8.64% self) and the lineCount byte-loop closure (5.24%). running-ids (ToolVisibilityProjection) 18.3% is refcount/dict-hash dominated. activity-init is down to 7.8% (round 9 held). These become the next queue items.",
+    "Environment side finding (job 12-round12-diag): bare swiftc standalone binaries are SIGKILLed on the mini (hello-world reproduces in /tmp and $HOME, exit 137); SwiftPM-built binaries run fine. Ad-hoc Mac measurement must use SwiftPM scratch packages; interpreter-mode microbenchmarks are invalid for this kind of code."
+  ]
+}

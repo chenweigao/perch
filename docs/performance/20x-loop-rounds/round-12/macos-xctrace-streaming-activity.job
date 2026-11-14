@@ -1,0 +1,73 @@
+#!/bin/bash
+# Round 12 attribution: Time Profiler over (a) the streaming per-delta chain and
+# (b) the activity/status-line bench, at round-12 base (fill BASE_SHA after the
+# round-11 merge). Temporary loop-harness bench modes, reverted after the run.
+# xctrace is for attribution only; it never replaces uncaptured A/B timing.
+set -e
+cd "$HOME/_worktrees/20x-loop-20261112/perch"
+BASE_SHA=7d5ba26ac45775b5d7bd624a6384964313b4ccf3
+echo "=== prepare $(date) ==="
+git fetch origin
+git checkout --detach "$BASE_SHA"
+echo "HEAD=$(git rev-parse HEAD)"
+echo "porcelain_before=$(git status --porcelain | wc -l | tr -d ' ')"
+
+echo "=== apply temporary profile loop modes ==="
+python3 - <<'PYEOF'
+path = 'Tests/WorkbenchCoreTests/ProtocolTests.swift'
+s = open(path).read()
+anchor = 'case "1":'
+assert anchor in s, 'anchor missing'
+s = s.replace(anchor, 'case "streaming-profile":\n            try benchStreamingProfileLoop()\n            return\n        case "activity-profile":\n            try benchActivityProfileLoop()\n            return\n        ' + anchor, 1)
+open(path, 'w').write(s)
+PYEOF
+cat >> Tests/WorkbenchCoreTests/StreamingBench.swift <<'SWIFTEOF'
+
+/// Attribution-only harness (never committed): re-run the streaming delta chain
+/// continuously so a Time Profiler capture gets enough samples.
+func benchStreamingProfileLoop() throws {
+    let deadline = Date().timeIntervalSince1970 + 20
+    var iterations = 0
+    while Date().timeIntervalSince1970 < deadline {
+        try benchStreamingDelta()
+        iterations += 1
+    }
+    print("streaming_profile_iterations=\(iterations)")
+}
+SWIFTEOF
+cat >> Tests/WorkbenchCoreTests/ActivityBench.swift <<'SWIFTEOF'
+
+/// Attribution-only harness (never committed): re-run the activity bench
+/// continuously so a Time Profiler capture gets enough samples.
+func benchActivityProfileLoop() throws {
+    let deadline = Date().timeIntervalSince1970 + 20
+    var iterations = 0
+    while Date().timeIntervalSince1970 < deadline {
+        try benchConversationActivity()
+        iterations += 1
+    }
+    print("activity_profile_iterations=\(iterations)")
+}
+SWIFTEOF
+echo "porcelain_applied=$(git status --porcelain | wc -l | tr -d ' ')"
+
+echo "=== build $(date) ==="
+swift build -c release --product WorkbenchChecks --scratch-path .build/round12-profile > /tmp/round12-profile-build.log 2>&1
+echo "build_exit=$?"
+BIN="$PWD/.build/round12-profile/out/Products/Release/WorkbenchChecks"
+shasum -a 256 "$BIN"
+
+mkdir -p .local/round12
+for mode in streaming activity; do
+  echo "=== record $mode $(date) ==="
+  rm -rf ".local/round12/$mode.trace" ".local/round12/$mode-time-profile.xml"
+  WORKBENCH_BENCH=$mode-profile xcrun xctrace record --template 'Time Profiler' --launch "$BIN" --output ".local/round12/$mode.trace" --time-limit 40s 2>&1 | tail -3
+  echo "record_${mode}_exit=$?"
+  xcrun xctrace export --input ".local/round12/$mode.trace" --xpath '/trace-toc/run[1]/data/table[@schema="time-profile"]' --output ".local/round12/$mode-time-profile.xml" 2>&1 | tail -1
+done
+ls -la .local/round12/
+
+echo "=== revert $(date) ==="
+git checkout -- Tests/
+echo "porcelain_after=$(git status --porcelain | wc -l | tr -d ' ')"
+echo "DONE $(date)"

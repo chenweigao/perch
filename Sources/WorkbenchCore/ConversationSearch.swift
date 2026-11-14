@@ -53,6 +53,20 @@ public final class ConversationSearch {
         let text: NSString
         let sourceEnds: [Int]
         let role: ConversationFindOptions.Role
+        /// The entry's hits with every input they were made from. An entry's hits
+        /// are a pure function of (messages, isRunning, query, options), so when
+        /// the query keys are encoding-exactly equal and the searchable window
+        /// identity — bitwise equal storage, else value equality plus
+        /// byte-identical rendered fields — says the messages are unchanged, the
+        /// cached hits are exactly what re-searching would produce, and the
+        /// update skips source rendering, locale matching and excerpt building.
+        /// `messages` is adopted on reuse so the next comparison reads the
+        /// freshest payload copy.
+        var messages: [KimiMessage]
+        let isRunning: Bool
+        let query: String
+        let options: ConversationFindOptions
+        let hits: [ConversationSearchHit]
     }
     private struct Earlier {
         /// The window these hits were made from, or an equal window a later update
@@ -86,46 +100,63 @@ public final class ConversationSearch {
         let split = messages.lastIndex(where: \.isUserPrompt) ?? 0
         let prefix = messages[..<split]
         var hits: [ConversationSearchHit]
-        if let earlier, earlier.query == query, earlier.options == options,
-           earlier.source.count == prefix.count, KimiMessage.sameWindow(prefix, earlier.source) {
+        if let earlier, Self.sameQueryKey(earlier.query, query), earlier.options == options,
+           earlier.source.count == prefix.count, KimiMessage.sameSearchableWindow(prefix, earlier.source) {
             hits = earlier.hits
             self.earlier?.source = prefix
         } else {
             var found: [String: Entry] = [:]
             let previous = earlier?.entries ?? [:]
             hits = search(ConversationTimelineEntry.make(Array(prefix), isRunning: false), query: query, regex: regex,
-                          options: options, cached: { previous[$0] ?? self.entries[$0] }, into: &found)
+                          options: options, isRunning: false, cached: { previous[$0] ?? self.entries[$0] }, into: &found)
             earlier = Earlier(source: prefix, query: query, options: options, hits: hits, entries: found)
         }
         var next: [String: Entry] = [:]
         let held = earlier?.entries ?? [:]
         hits += search(ConversationTimelineEntry.make(Array(messages[split...]), isRunning: running), query: query, regex: regex,
-                       options: options, cached: { self.entries[$0] ?? held[$0] }, into: &next)
+                       options: options, isRunning: running, cached: { self.entries[$0] ?? held[$0] }, into: &next)
         entries = next
         return ConversationFindResult(hits: hits, queryError: nil)
     }
 
     private func search(_ timeline: [ConversationTimelineEntry], query: String, regex: NSRegularExpression?,
-                        options: ConversationFindOptions, cached lookup: (String) -> Entry?,
+                        options: ConversationFindOptions, isRunning: Bool, cached lookup: (String) -> Entry?,
                         into next: inout [String: Entry]) -> [ConversationSearchHit] {
         var hits: [ConversationSearchHit] = []
         for entry in timeline {
+            // Unchanged entries reuse their whole hit list. The role filter needs
+            // no re-derivation here: equal messages under an equal build flag give
+            // an equal role, and an entry the filter skipped earlier is absent
+            // from the cache, so it takes the regular path and is skipped again.
+            // The window comparison is the searchable identity: bitwise equal
+            // storage, or value equality plus byte-identical rendered fields —
+            // canonical value equality alone is weaker than search equivalence
+            // (a zero sign or a string encoding can render differently).
+            if let previous = lookup(entry.id), previous.isRunning == isRunning,
+               Self.sameQueryKey(previous.query, query), previous.options == options,
+               KimiMessage.sameSearchableWindow(entry.messages[...], previous.messages[...]) {
+                var adopted = previous
+                adopted.messages = entry.messages
+                next[entry.id] = adopted
+                hits += previous.hits
+                continue
+            }
             let role = Self.role(of: entry)
             guard options.role == .all || role == options.role else { continue }
             let pieces = Self.sources(of: entry, role: role)
             let sources = pieces.map(\.text)
-            let cached: Entry
-            if let previous = lookup(entry.id), previous.sources == sources {
-                cached = previous
+            let previous = lookup(entry.id)
+            let text: NSString
+            let sourceEnds: [Int]
+            if let previous, Self.sameRenderedSources(previous.sources, sources) {
+                text = previous.text
+                sourceEnds = previous.sourceEnds
             } else {
                 let rendered = sources.map { Self.renderedText(ReplyDocument.parse($0)) }
                 var end = 0
-                let ends = rendered.map { text in end += (text as NSString).length + 1; return end }
-                cached = Entry(sources: sources, text: rendered.joined(separator: "\n") as NSString,
-                               sourceEnds: ends, role: role)
+                sourceEnds = rendered.map { text in end += (text as NSString).length + 1; return end }
+                text = rendered.joined(separator: "\n") as NSString
             }
-            next[entry.id] = cached
-            let text = cached.text
             var matches: [NSRange] = []
             if let regex {
                 matches = regex.matches(in: text as String, range: NSRange(location: 0, length: text.length)).map(\.range)
@@ -139,18 +170,44 @@ public final class ConversationSearch {
                 }
             }
             var toolOccurrences: [String: Int] = [:]
+            var entryHits: [ConversationSearchHit] = []
             for (index, found) in matches.enumerated() {
                 let start = max(0, found.location - 50), end = min(text.length, NSMaxRange(found) + 80)
                 let excerptRange = text.rangeOfComposedCharacterSequences(for: NSRange(location: start, length: end - start))
-                let sourceIndex = cached.sourceEnds.firstIndex { found.location < $0 }
+                let sourceIndex = sourceEnds.firstIndex { found.location < $0 }
                 let toolID = sourceIndex.flatMap { pieces[$0].toolID }
                 let toolOccurrence = toolID.map { toolOccurrences[$0, default: 0] }
-                hits.append(.init(entryID: entry.id, occurrence: index, excerpt: text.substring(with: excerptRange),
-                                  toolID: toolID, toolOccurrence: toolOccurrence))
+                entryHits.append(.init(entryID: entry.id, occurrence: index, excerpt: text.substring(with: excerptRange),
+                                       toolID: toolID, toolOccurrence: toolOccurrence))
                 if let toolID { toolOccurrences[toolID, default: 0] += 1 }
             }
+            next[entry.id] = Entry(sources: sources, text: text, sourceEnds: sourceEnds, role: role,
+                                   messages: entry.messages, isRunning: isRunning,
+                                   query: query, options: options, hits: entryHits)
+            hits += entryHits
         }
         return hits
+    }
+
+    /// The query is the search key and, in regex mode, the pattern syntax
+    /// itself: canonically equal queries in different encodings (NFC vs NFD)
+    /// are different patterns with different matches, and even literal
+    /// matching is not guaranteed to fold them alike. Cache reuse therefore
+    /// requires encoding-exact query equality — unlike the message window,
+    /// whose value semantics deliberately treat a rebuilt window as unchanged.
+    private static func sameQueryKey(_ lhs: String, _ rhs: String) -> Bool {
+        lhs.utf8.elementsEqual(rhs.utf8)
+    }
+
+    /// The rendered-text cache is keyed by the sources' bytes, not their
+    /// canonical value: a canonically equal but encoding-distinct source (an
+    /// NFC/NFD payload swap) renders different search bytes, so reusing the
+    /// cached NSString for it would search stale text — the same reasoning
+    /// as the query key, applied to the rendered side.
+    private static func sameRenderedSources(_ lhs: [String], _ rhs: [String]) -> Bool {
+        guard lhs.count == rhs.count else { return false }
+        for (left, right) in zip(lhs, rhs) where !sameRenderedUTF8(left, right) { return false }
+        return true
     }
 
     /// User prompts, tool activity and assistant text search separately. Tool

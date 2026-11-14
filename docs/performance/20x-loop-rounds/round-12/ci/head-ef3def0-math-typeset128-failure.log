@@ -1,0 +1,111 @@
+2411 | }
+2412 | @MainActor private final class DocumentSelectionAction: NSObject {
+/Users/<runner>/work/perch/perch/build/Math Performance candidate.app/Contents/MacOS/MathPerformanceContracts: replacing existing signature
+/Users/<runner>/work/perch/perch/build/Math Performance candidate.app: replacing existing signature
+/Users/<runner>/work/perch/perch/build/Math Performance candidate.app
+1 baseline: parse-30
+1 baseline: typeset-32
+1 baseline: typeset-128
+1 baseline: typeset-512
+1 baseline: window-30
+1 baseline: window-128
+2 candidate: parse-30
+2 candidate: typeset-32
+2 candidate: typeset-128
+2 candidate: typeset-512
+2 candidate: window-30
+2 candidate: window-128
+3 candidate: parse-30
+3 candidate: typeset-32
+3 candidate: typeset-128
+3 candidate: typeset-512
+3 candidate: window-30
+3 candidate: window-128
+4 baseline: parse-30
+4 baseline: typeset-32
+4 baseline: typeset-128
+4 baseline: typeset-512
+4 baseline: window-30
+4 baseline: window-128
+5 baseline: parse-30
+5 baseline: typeset-32
+5 baseline: typeset-128
+5 baseline: typeset-512
+5 baseline: window-30
+5 baseline: window-128
+6 candidate: parse-30
+6 candidate: typeset-32
+6 candidate: typeset-128
+6 candidate: typeset-512
+6 candidate: window-30
+6 candidate: window-128
+{
+  "status": "failed",
+  "binary_sha256": {
+    "baseline": "621d52be9fa55c1c606af7888c4ed9edbbcd5bd93fbc0cd14166b264401dbd8b",
+    "candidate": "b5dfa49d596108eb270a80354e4ceced3bde15f6218e028736cd5ff4cfa357c7",
+    "contracts": "e6517078964fedabe5fd5f5e5b0b0f6ff5532b82fe2b3bf8fdf1cfaf6dfef90f"
+  },
+  "order": [
+    "baseline",
+    "candidate",
+    "candidate",
+    "baseline",
+    "baseline",
+    "candidate"
+  ],
+  "contracts": {
+    "cpu_count": 3,
+    "dependencies": {
+      "swift-cmark": {
+        "revision": "924936d0427cb25a61169739a7660230bffa6ea6",
+        "version": "0.8.0"
+      },
+      "swift-markdown": {
+        "revision": "3c6f9523da3a1ec2fd829673e472d95b8097a3b8",
+        "version": "0.8.0"
+      },
+      "swiftmath": {
+        "revision": "fa8244ed032f4a1ade4cb0571bf87d2f1a9fd2d7",
+        "version": "1.7.3"
+      }
+    },
+    "fixture": "synthetic; no sessions or network",
+    "measurements": {
+      "cache": {
+        "cache_hits": 128,
+        "cost_estimate_bytes": 17790152,
+        "entries": 1,
+        "failed_bytes": 65508,
+        "failures": 106,
+        "inline_entries": 1,
+        "requests": 1288,
+        "typesets": 1808
+      },
+      "checks": [
+        "nonblank light/dark, font-size geometry, boxed border dimensions and explicit TeX color",
+        "native inks typeset once each; cache hits and appearance revisits do not typeset",
+        "display images generate only requested native ink and reuse appearances",
+        "128-formula inline working set is reused without typesetting",
+        "successful and failed cache entry/byte budgets under churn"
+      ]
+    },
+    "mode": "contracts",
+    "os": "Version 27.0.1 (Build 26A434)",
+    "physical_memory_bytes": 7516192768,
+    "revision": "ba64e6f2caf5b0238f3d6ac8d1d578d2fed74dbd",
+    "scope": "isolated synthetic AppKit/SwiftUI work; not hardware input latency or certified FPS",
+    "source_input_sha256": "c84c325c822d1c6ecce251b9ab1db7bd4bcba770edc9252f6b7ac83016558368",
+    "status": "passed",
+    "suffix_search": false,
+    "swiftmath_patch_sha256": "68686f9cd8fbe4b1134ace3a22f162828b9d4bd89eb84816f050379aa06bb855",
+    "toolchain": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+    "variant": "candidate"
+  },
+  "error": "Typeset/draw regression exceeds 15% at 128"
+}
+
+##[error]Process completed with exit code 1.
+##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+with:
+  name: macos-results-native-math

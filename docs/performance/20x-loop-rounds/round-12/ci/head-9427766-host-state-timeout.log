@@ -1,0 +1,601 @@
+﻿2026-11-14T04:02:00.4728420Z Current runner version: '2.338.2'
+2026-11-14T04:02:00.4748480Z ##[group]Runner Image Provisioner
+2026-11-14T04:02:00.4749150Z Hosted Compute Agent
+2026-11-14T04:02:00.4749610Z Version: 20261103.629
+2026-11-14T04:02:00.4750190Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+2026-11-14T04:02:00.4750880Z Build Date: 2026-11-03T17:26:59Z
+2026-11-14T04:02:00.4751390Z Worker ID: {55ce4776-636b-4c0e-833e-a2ee1edf97ca}
+2026-11-14T04:02:00.4752180Z Region: westus
+2026-11-14T04:02:00.4755020Z Cloud: MacCloud
+2026-11-14T04:02:00.4756590Z ##[endgroup]
+2026-11-14T04:02:00.4760230Z ##[group]Operating System
+2026-11-14T04:02:00.4760710Z macOS
+2026-11-14T04:02:00.4761240Z 27.0.1
+2026-11-14T04:02:00.4761780Z 26A434
+2026-11-14T04:02:00.4762270Z ##[endgroup]
+2026-11-14T04:02:00.4762690Z ##[group]Runner Image
+2026-11-14T04:02:00.4763290Z Image: xcode-27-arm64
+2026-11-14T04:02:00.4763880Z Version: 20261104.0337.1
+2026-11-14T04:02:00.4765030Z Included Software: https://github.com/actions/runner-images/blob/xcode-27-arm64/20261104.0337/images/macos/xcode-27-arm64-Readme.md
+2026-11-14T04:02:00.4766340Z Image Release: https://github.com/actions/runner-images/releases/tag/xcode-27-arm64%2F20261104.0337
+2026-11-14T04:02:00.4767230Z ##[endgroup]
+2026-11-14T04:02:00.4768130Z ##[group]GITHUB_TOKEN Permissions
+2026-11-14T04:02:00.4770000Z Contents: read
+2026-11-14T04:02:00.4770590Z Metadata: read
+2026-11-14T04:02:00.4771050Z ##[endgroup]
+2026-11-14T04:02:00.4772740Z Secret source: Actions
+2026-11-14T04:02:00.4773620Z Cache mode: write
+2026-11-14T04:02:00.4774290Z Prepare workflow directory
+2026-11-14T04:02:00.5228150Z Prepare all required actions
+2026-11-14T04:02:00.5293490Z Getting action download info
+2026-11-14T04:02:00.8554530Z Download action repository 'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803' (SHA:d23441a48e516b6c34aea4fa41551a30e30af803)
+2026-11-14T04:02:01.3724710Z Download action repository 'actions/download-artifact@v4' (SHA:d3f86a106a0bac45b974a628896c90dbdf5c8093)
+2026-11-14T04:02:01.9193970Z Download action repository 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-14T04:02:02.2417860Z Complete job name: Native host lifecycle regression (state)
+2026-11-14T04:02:02.3299950Z ##[group]Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+2026-11-14T04:02:02.3302340Z with:
+2026-11-14T04:02:02.3303260Z   persist-credentials: false
+2026-11-14T04:02:02.3304270Z   fetch-depth: 0
+2026-11-14T04:02:02.3305210Z   repository: chenweigao/perch
+2026-11-14T04:02:02.3312850Z   token: ***
+2026-11-14T04:02:02.3313860Z   ssh-strict: true
+2026-11-14T04:02:02.3314760Z   ssh-user: git
+2026-11-14T04:02:02.3315630Z   clean: true
+2026-11-14T04:02:02.3316580Z   sparse-checkout-cone-mode: true
+2026-11-14T04:02:02.3317660Z   fetch-tags: false
+2026-11-14T04:02:02.3318590Z   show-progress: true
+2026-11-14T04:02:02.3319810Z   lfs: false
+2026-11-14T04:02:02.3320730Z   submodules: false
+2026-11-14T04:02:02.3321710Z   set-safe-directory: true
+2026-11-14T04:02:02.3322820Z   allow-unsafe-pr-checkout: false
+2026-11-14T04:02:02.3324490Z ##[endgroup]
+2026-11-14T04:02:03.0049260Z Syncing repository: chenweigao/perch
+2026-11-14T04:02:03.0051660Z ##[group]Getting Git version info
+2026-11-14T04:02:03.0052430Z Working directory is '/Users/<runner>/work/perch/perch'
+2026-11-14T04:02:03.0053570Z [command]/opt/homebrew/bin/git version
+2026-11-14T04:02:03.0784760Z git version 2.56.0
+2026-11-14T04:02:03.0828460Z ##[endgroup]
+2026-11-14T04:02:03.0841650Z Copying '/Users/<runner>/.gitconfig' to '/Users/<runner>/work/_temp/d71db258-52a9-4243-928e-572903e32890/.gitconfig'
+2026-11-14T04:02:03.0848470Z Temporarily overriding HOME='/Users/<runner>/work/_temp/d71db258-52a9-4243-928e-572903e32890' before making global git config changes
+2026-11-14T04:02:03.0853150Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-14T04:02:03.0860440Z [command]/opt/homebrew/bin/git config --global --add safe.directory /Users/<runner>/work/perch/perch
+2026-11-14T04:02:03.1124310Z Deleting the contents of '/Users/<runner>/work/perch/perch'
+2026-11-14T04:02:03.1131280Z ##[group]Determining repository object format
+2026-11-14T04:02:03.1134590Z ##[endgroup]
+2026-11-14T04:02:03.1136360Z ##[group]Initializing the repository
+2026-11-14T04:02:03.1143820Z [command]/opt/homebrew/bin/git init /Users/<runner>/work/perch/perch
+2026-11-14T04:02:03.1597480Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-14T04:02:03.1599930Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-14T04:02:03.1601730Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-14T04:02:03.1602360Z hint: call:
+2026-11-14T04:02:03.1602770Z hint:
+2026-11-14T04:02:03.1603220Z hint: 	git config --global init.defaultBranch <name>
+2026-11-14T04:02:03.1603690Z hint:
+2026-11-14T04:02:03.1604150Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-14T04:02:03.1606220Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-14T04:02:03.1608080Z hint:
+2026-11-14T04:02:03.1609040Z hint: 	git branch -m <name>
+2026-11-14T04:02:03.1610150Z hint:
+2026-11-14T04:02:03.1611630Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-14T04:02:03.1614750Z Initialized empty Git repository in /Users/<runner>/work/perch/perch/.git/
+2026-11-14T04:02:03.1622580Z [command]/opt/homebrew/bin/git remote add origin https://github.com/chenweigao/perch
+2026-11-14T04:02:03.1753960Z ##[endgroup]
+2026-11-14T04:02:03.1755760Z ##[group]Disabling automatic garbage collection
+2026-11-14T04:02:03.1758000Z [command]/opt/homebrew/bin/git config --local gc.auto 0
+2026-11-14T04:02:03.1865030Z ##[endgroup]
+2026-11-14T04:02:03.1867830Z ##[group]Setting up auth
+2026-11-14T04:02:03.1869860Z Removing SSH command configuration
+2026-11-14T04:02:03.1874040Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-14T04:02:03.2014410Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-14T04:02:03.3768090Z Removing HTTP extra header
+2026-11-14T04:02:03.3770390Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-14T04:02:03.3875310Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-14T04:02:03.6812210Z Removing includeIf entries pointing to credentials config files
+2026-11-14T04:02:03.6914860Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-14T04:02:03.7219620Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-14T04:02:03.9433950Z [command]/opt/homebrew/bin/git config --file /Users/<runner>/work/_temp/git-credentials-e70e77fb-34fa-471e-9087-c2c9aefefb65.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-14T04:02:03.9658130Z [command]/opt/homebrew/bin/git config --local includeIf.gitdir:/Users/<runner>/work/perch/perch/.git.path /Users/<runner>/work/_temp/git-credentials-e70e77fb-34fa-471e-9087-c2c9aefefb65.config
+2026-11-14T04:02:03.9785700Z [command]/opt/homebrew/bin/git config --local includeIf.gitdir:/Users/<runner>/work/perch/perch/.git/worktrees/*.path /Users/<runner>/work/_temp/git-credentials-e70e77fb-34fa-471e-9087-c2c9aefefb65.config
+2026-11-14T04:02:03.9909330Z [command]/opt/homebrew/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-e70e77fb-34fa-471e-9087-c2c9aefefb65.config
+2026-11-14T04:02:04.0082040Z [command]/opt/homebrew/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-e70e77fb-34fa-471e-9087-c2c9aefefb65.config
+2026-11-14T04:02:04.0185230Z ##[endgroup]
+2026-11-14T04:02:04.0187570Z ##[group]Fetching the repository
+2026-11-14T04:02:04.0194760Z [command]/opt/homebrew/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/* +95c2f90f60f3184c7fa3538b7b19cc745a263efa:refs/remotes/pull/334/merge
+2026-11-14T04:02:05.7850070Z From https://github.com/chenweigao/perch
+2026-11-14T04:02:05.7871230Z  * [new branch]      chore/release-v0.7.0-20261106            -> origin/chore/release-v0.7.0-20261106
+2026-11-14T04:02:05.8007550Z  * [new branch]      chore/version-0.2.0                      -> origin/chore/version-0.2.0
+2026-11-14T04:02:05.8008800Z  * [new branch]      ci/native-parallel                       -> origin/ci/native-parallel
+2026-11-14T04:02:05.8009720Z  * [new branch]      codex/compact-chrome-20261028            -> origin/codex/compact-chrome-20261028
+2026-11-14T04:02:05.8010750Z  * [new branch]      codex/fluency-layout-acceptance          -> origin/codex/fluency-layout-acceptance
+2026-11-14T04:02:05.8012070Z  * [new branch]      codex/fluency-phase4-acceptance          -> origin/codex/fluency-phase4-acceptance
+2026-11-14T04:02:05.8013170Z  * [new branch]      codex/idle-render-20261103               -> origin/codex/idle-render-20261103
+2026-11-14T04:02:05.8014320Z  * [new branch]      codex/mac-mini-body-scroll               -> origin/codex/mac-mini-body-scroll
+2026-11-14T04:02:05.8015750Z  * [new branch]      codex/mac-mini-incremental-loading       -> origin/codex/mac-mini-incremental-loading
+2026-11-14T04:02:05.8016810Z  * [new branch]      codex/mac-mini-performance-followup      -> origin/codex/mac-mini-performance-followup
+2026-11-14T04:02:05.8018570Z  * [new branch]      codex/native-adaptive-polling            -> origin/codex/native-adaptive-polling
+2026-11-14T04:02:05.8021860Z  * [new branch]      codex/perch-assistant-code-rows          -> origin/codex/perch-assistant-code-rows
+2026-11-14T04:02:05.8023040Z  * [new branch]      codex/perch-assistant-native-rows        -> origin/codex/perch-assistant-native-rows
+2026-11-14T04:02:05.8025390Z  * [new branch]      codex/perch-bird-brand-20261102          -> origin/codex/perch-bird-brand-20261102
+2026-11-14T04:02:05.8026600Z  * [new branch]      codex/perch-branch-review-20260928       -> origin/codex/perch-branch-review-20260928
+2026-11-14T04:02:05.8027690Z  * [new branch]      codex/perch-composer-simplify            -> origin/codex/perch-composer-simplify
+2026-11-14T04:02:05.8028720Z  * [new branch]      codex/perch-fast-scroll                  -> origin/codex/perch-fast-scroll
+2026-11-14T04:02:05.8029850Z  * [new branch]      codex/perch-file-reference-polish-20260928 -> origin/codex/perch-file-reference-polish-20260928
+2026-11-14T04:02:05.8031600Z  * [new branch]      codex/perch-integration-20260924         -> origin/codex/perch-integration-20260924
+2026-11-14T04:02:05.8032700Z  * [new branch]      codex/perch-kimi-session-crash           -> origin/codex/perch-kimi-session-crash
+2026-11-14T04:02:05.8033760Z  * [new branch]      codex/perch-local-agents                 -> origin/codex/perch-local-agents
+2026-11-14T04:02:05.8035660Z  * [new branch]      codex/perch-macos26-baseline             -> origin/codex/perch-macos26-baseline
+2026-11-14T04:02:05.8036910Z  * [new branch]      codex/perch-merge-20260928               -> origin/codex/perch-merge-20260928
+2026-11-14T04:02:05.8100940Z  * [new branch]      codex/perch-new-session-design           -> origin/codex/perch-new-session-design
+2026-11-14T04:02:05.8102060Z  * [new branch]      codex/perch-new-task-references-20260928 -> origin/codex/perch-new-task-references-20260928
+2026-11-14T04:02:05.8103170Z  * [new branch]      codex/perch-observation-foundation       -> origin/codex/perch-observation-foundation
+2026-11-14T04:02:05.8104020Z  * [new branch]      codex/perch-polish-20260925              -> origin/codex/perch-polish-20260925
+2026-11-14T04:02:05.8114430Z  * [new branch]      codex/perch-preview-theme-followup       -> origin/codex/perch-preview-theme-followup
+2026-11-14T04:02:05.8126470Z  * [new branch]      codex/perch-prompt-history               -> origin/codex/perch-prompt-history
+2026-11-14T04:02:05.8133290Z  * [new branch]      codex/perch-real-session-scroll          -> origin/codex/perch-real-session-scroll
+2026-11-14T04:02:05.8155480Z  * [new branch]      codex/perch-reliability-acceptance       -> origin/codex/perch-reliability-acceptance
+2026-11-14T04:02:05.8164220Z  * [new branch]      codex/perch-review-continuity-20260928   -> origin/codex/perch-review-continuity-20260928
+2026-11-14T04:02:05.8165210Z  * [new branch]      codex/perch-scroll-skill-20261012        -> origin/codex/perch-scroll-skill-20261012
+2026-11-14T04:02:05.8176760Z  * [new branch]      codex/perch-sidebar-archive-motion       -> origin/codex/perch-sidebar-archive-motion
+2026-11-14T04:02:05.8183280Z  * [new branch]      codex/perch-thinking-picker              -> origin/codex/perch-thinking-picker
+2026-11-14T04:02:05.8184130Z  * [new branch]      codex/perch-transcript-scroll            -> origin/codex/perch-transcript-scroll
+2026-11-14T04:02:05.8200930Z  * [new branch]      codex/perch-ui-layout-hang               -> origin/codex/perch-ui-layout-hang
+2026-11-14T04:02:05.8204100Z  * [new branch]      codex/perch-workflow-polish-20260928     -> origin/codex/perch-workflow-polish-20260928
+2026-11-14T04:02:05.8212620Z  * [new branch]      codex/presentation-cost                  -> origin/codex/presentation-cost
+2026-11-14T04:02:05.8220270Z  * [new branch]      codex/progress-reading-rhythm-20261029   -> origin/codex/progress-reading-rhythm-20261029
+2026-11-14T04:02:05.8222190Z  * [new branch]      codex/reader-top-gutter-20261029         -> origin/codex/reader-top-gutter-20261029
+2026-11-14T04:02:05.8224270Z  * [new branch]      codex/remote-directory-zsh               -> origin/codex/remote-directory-zsh
+2026-11-14T04:02:05.8225250Z  * [new branch]      codex/reply-table-width                  -> origin/codex/reply-table-width
+2026-11-14T04:02:05.8226080Z  * [new branch]      codex/responsibility-split-20261029      -> origin/codex/responsibility-split-20261029
+2026-11-14T04:02:05.8227560Z  * [new branch]      codex/review-i18n-zh-en                  -> origin/codex/review-i18n-zh-en
+2026-11-14T04:02:05.8228270Z  * [new branch]      codex/secret-guards                      -> origin/codex/secret-guards
+2026-11-14T04:02:05.8228980Z  * [new branch]      codex/session-switch-flicker-20261029    -> origin/codex/session-switch-flicker-20261029
+2026-11-14T04:02:05.8231010Z  * [new branch]      codex/showcase-refresh-20261029          -> origin/codex/showcase-refresh-20261029
+2026-11-14T04:02:05.8232780Z  * [new branch]      codex/sidebar-hover-preview              -> origin/codex/sidebar-hover-preview
+2026-11-14T04:02:05.8234430Z  * [new branch]      codex/sidebar-performance                -> origin/codex/sidebar-performance
+2026-11-14T04:02:05.8235930Z  * [new branch]      codex/sidebar-project-tree               -> origin/codex/sidebar-project-tree
+2026-11-14T04:02:05.8237960Z  * [new branch]      codex/task-summary-contrast-20261029     -> origin/codex/task-summary-contrast-20261029
+2026-11-14T04:02:05.8239910Z  * [new branch]      codex/test-performance-paths             -> origin/codex/test-performance-paths
+2026-11-14T04:02:05.8241860Z  * [new branch]      codex/visual-hierarchy-20261028          -> origin/codex/visual-hierarchy-20261028
+2026-11-14T04:02:05.8243800Z  * [new branch]      codex/windows-client-mvp                 -> origin/codex/windows-client-mvp
+2026-11-14T04:02:05.8245480Z  * [new branch]      codex/workbench-layout-hang              -> origin/codex/workbench-layout-hang
+2026-11-14T04:02:05.8247200Z  * [new branch]      docs/release-notes-v0.8.0                -> origin/docs/release-notes-v0.8.0
+2026-11-14T04:02:05.8248950Z  * [new branch]      docs/release-notes-v0.8.1                -> origin/docs/release-notes-v0.8.1
+2026-11-14T04:02:05.8250720Z  * [new branch]      feat/activity-narrative                  -> origin/feat/activity-narrative
+2026-11-14T04:02:05.8253890Z  * [new branch]      feat/agent-line-marks                    -> origin/feat/agent-line-marks
+2026-11-14T04:02:05.8255440Z  * [new branch]      feat/attention-routing                   -> origin/feat/attention-routing
+2026-11-14T04:02:05.8257040Z  * [new branch]      feat/attributed-memo                     -> origin/feat/attributed-memo
+2026-11-14T04:02:05.8258650Z  * [new branch]      feat/auto-compact                        -> origin/feat/auto-compact
+2026-11-14T04:02:05.8260310Z  * [new branch]      feat/brand-glass                         -> origin/feat/brand-glass
+2026-11-14T04:02:05.8261170Z  * [new branch]      feat/brand-line                          -> origin/feat/brand-line
+2026-11-14T04:02:05.8261980Z  * [new branch]      feat/bridge-row-update                   -> origin/feat/bridge-row-update
+2026-11-14T04:02:05.8262620Z  * [new branch]      feat/bridge-version                      -> origin/feat/bridge-version
+2026-11-14T04:02:05.8263400Z  * [new branch]      feat/cite-composer-20261110              -> origin/feat/cite-composer-20261110
+2026-11-14T04:02:05.8264040Z  * [new branch]      feat/claude-code                         -> origin/feat/claude-code
+2026-11-14T04:02:05.8264780Z  * [new branch]      feat/claude-model-controls               -> origin/feat/claude-model-controls
+2026-11-14T04:02:05.8265530Z  * [new branch]      feat/codex-async-questions               -> origin/feat/codex-async-questions
+2026-11-14T04:02:05.8266650Z  * [new branch]      feat/codex-mark-invert                   -> origin/feat/codex-mark-invert
+2026-11-14T04:02:05.8267480Z  * [new branch]      feat/codex-permissions                   -> origin/feat/codex-permissions
+2026-11-14T04:02:05.8268170Z  * [new branch]      feat/codex-runtime-isolation             -> origin/feat/codex-runtime-isolation
+2026-11-14T04:02:05.8268950Z  * [new branch]      feat/codex-subagents-20261019            -> origin/feat/codex-subagents-20261019
+2026-11-14T04:02:05.8270000Z  * [new branch]      feat/command-line-island                 -> origin/feat/command-line-island
+2026-11-14T04:02:05.8271430Z  * [new branch]      feat/connection-controls                 -> origin/feat/connection-controls
+2026-11-14T04:02:05.8272210Z  * [new branch]      feat/conversation-file-roots             -> origin/feat/conversation-file-roots
+2026-11-14T04:02:05.8273030Z  * [new branch]      feat/conversation-scroll-ux              -> origin/feat/conversation-scroll-ux
+2026-11-14T04:02:05.8273820Z  * [new branch]      feat/core-optimizations                  -> origin/feat/core-optimizations
+2026-11-14T04:02:05.8274520Z  * [new branch]      feat/core-optimizations-clean            -> origin/feat/core-optimizations-clean
+2026-11-14T04:02:05.8275200Z  * [new branch]      feat/cron-fire-collapse                  -> origin/feat/cron-fire-collapse
+2026-11-14T04:02:05.8275730Z  * [new branch]      feat/dark-mode                           -> origin/feat/dark-mode
+2026-11-14T04:02:05.8276350Z  * [new branch]      feat/dashboard-polish                    -> origin/feat/dashboard-polish
+2026-11-14T04:02:05.8276960Z  * [new branch]      feat/disclosure-regression               -> origin/feat/disclosure-regression
+2026-11-14T04:02:05.8277560Z  * [new branch]      feat/document-reading-20261023           -> origin/feat/document-reading-20261023
+2026-11-14T04:02:05.8278130Z  * [new branch]      feat/dsh-prose-20261108                  -> origin/feat/dsh-prose-20261108
+2026-11-14T04:02:05.8278720Z  * [new branch]      feat/editorial-two-tier-header           -> origin/feat/editorial-two-tier-header
+2026-11-14T04:02:05.8279400Z  * [new branch]      feat/error-banner-scroll                 -> origin/feat/error-banner-scroll
+2026-11-14T04:02:05.8279940Z  * [new branch]      feat/fold-edit-stats                     -> origin/feat/fold-edit-stats
+2026-11-14T04:02:05.8280630Z  * [new branch]      feat/frame-hitch-diagnostics-20261020    -> origin/feat/frame-hitch-diagnostics-20261020
+2026-11-14T04:02:05.8281250Z  * [new branch]      feat/framed-cards-20261026               -> origin/feat/framed-cards-20261026
+2026-11-14T04:02:05.8282160Z  * [new branch]      feat/github-alerts                       -> origin/feat/github-alerts
+2026-11-14T04:02:05.8282680Z  * [new branch]      feat/goal-header                         -> origin/feat/goal-header
+2026-11-14T04:02:05.8283270Z  * [new branch]      feat/goal-status                         -> origin/feat/goal-status
+2026-11-14T04:02:05.8284160Z  * [new branch]      feat/harness-permission-levels           -> origin/feat/harness-permission-levels
+2026-11-14T04:02:05.8284830Z  * [new branch]      feat/i18n-zh-en                          -> origin/feat/i18n-zh-en
+2026-11-14T04:02:05.8285640Z  * [new branch]      feat/icon-coral                          -> origin/feat/icon-coral
+2026-11-14T04:02:05.8286270Z  * [new branch]      feat/inline-turn-status                  -> origin/feat/inline-turn-status
+2026-11-14T04:02:05.8286970Z  * [new branch]      feat/inspector-plan-priority             -> origin/feat/inspector-plan-priority
+2026-11-14T04:02:05.8287690Z  * [new branch]      feat/inspector-polish                    -> origin/feat/inspector-polish
+2026-11-14T04:02:05.8290670Z  * [new branch]      feat/island-sibling-sheet                -> origin/feat/island-sibling-sheet
+2026-11-14T04:02:05.8291480Z  * [new branch]      feat/kimi-acp-20261111                   -> origin/feat/kimi-acp-20261111
+2026-11-14T04:02:05.8292170Z  * [new branch]      feat/kimi-immediate-restart              -> origin/feat/kimi-immediate-restart
+2026-11-14T04:02:05.8292850Z  * [new branch]      feat/kimi-managed-web                    -> origin/feat/kimi-managed-web
+2026-11-14T04:02:05.8293570Z  * [new branch]      feat/link-scheme-whitelist               -> origin/feat/link-scheme-whitelist
+2026-11-14T04:02:05.8294390Z  * [new branch]      feat/live-tail-and-blocked-phase         -> origin/feat/live-tail-and-blocked-phase
+2026-11-14T04:02:05.8294990Z  * [new branch]      feat/math-rendering                      -> origin/feat/math-rendering
+2026-11-14T04:02:05.8295570Z  * [new branch]      feat/mermaid                             -> origin/feat/mermaid
+2026-11-14T04:02:05.8296750Z  * [new branch]      feat/native-model-picker                 -> origin/feat/native-model-picker
+2026-11-14T04:02:05.8297340Z  * [new branch]      feat/new-task-thinking                   -> origin/feat/new-task-thinking
+2026-11-14T04:02:05.8297890Z  * [new branch]      feat/opus-ui-acceptance                  -> origin/feat/opus-ui-acceptance
+2026-11-14T04:02:05.8298400Z  * [new branch]      feat/perch-hop                           -> origin/feat/perch-hop
+2026-11-14T04:02:05.8298940Z  * [new branch]      feat/perch-sidebar-collapse              -> origin/feat/perch-sidebar-collapse
+2026-11-14T04:02:05.8299510Z  * [new branch]      feat/perf-diagnostics                    -> origin/feat/perf-diagnostics
+2026-11-14T04:02:05.8300030Z  * [new branch]      feat/phase-motion                        -> origin/feat/phase-motion
+2026-11-14T04:02:05.8300560Z  * [new branch]      feat/process-fold-all                    -> origin/feat/process-fold-all
+2026-11-14T04:02:05.8301150Z  * [new branch]      feat/project-slash-commands              -> origin/feat/project-slash-commands
+2026-11-14T04:02:05.8301800Z  * [new branch]      feat/prose-running-polish-20261111       -> origin/feat/prose-running-polish-20261111
+2026-11-14T04:02:05.8302400Z  * [new branch]      feat/qoder-intl                          -> origin/feat/qoder-intl
+2026-11-14T04:02:05.8303030Z  * [new branch]      feat/qoder-layout-20261110               -> origin/feat/qoder-layout-20261110
+2026-11-14T04:02:05.8303650Z  * [new branch]      feat/qoder-layout-20261111               -> origin/feat/qoder-layout-20261111
+2026-11-14T04:02:05.8304210Z  * [new branch]      feat/qoder-model-catalog                 -> origin/feat/qoder-model-catalog
+2026-11-14T04:02:05.8304780Z  * [new branch]      feat/qoder-polish-20261112               -> origin/feat/qoder-polish-20261112
+2026-11-14T04:02:05.8305690Z  * [new branch]      feat/qoder-weight-20261111               -> origin/feat/qoder-weight-20261111
+2026-11-14T04:02:05.8306270Z  * [new branch]      feat/queue-recovery-ux                   -> origin/feat/queue-recovery-ux
+2026-11-14T04:02:05.8306840Z  * [new branch]      feat/reading-canvas                      -> origin/feat/reading-canvas
+2026-11-14T04:02:05.8307360Z  * [new branch]      feat/reading-controls                    -> origin/feat/reading-controls
+2026-11-14T04:02:05.8308050Z  * [new branch]      feat/reading-design-unify-20261028       -> origin/feat/reading-design-unify-20261028
+2026-11-14T04:02:05.8308760Z  * [new branch]      feat/reading-first-body                  -> origin/feat/reading-first-body
+2026-11-14T04:02:05.8309370Z  * [new branch]      feat/reading-visual-polish-20261023      -> origin/feat/reading-visual-polish-20261023
+2026-11-14T04:02:05.8309970Z  * [new branch]      feat/release-pipeline                    -> origin/feat/release-pipeline
+2026-11-14T04:02:05.8310520Z  * [new branch]      feat/release-script                      -> origin/feat/release-script
+2026-11-14T04:02:05.8311040Z  * [new branch]      feat/remove-herdr                        -> origin/feat/remove-herdr
+2026-11-14T04:02:05.8311550Z  * [new branch]      feat/rename-suggestion                   -> origin/feat/rename-suggestion
+2026-11-14T04:02:05.8312080Z  * [new branch]      feat/restore-outcome                     -> origin/feat/restore-outcome
+2026-11-14T04:02:05.8312650Z  * [new branch]      feat/runtime-version-freshness           -> origin/feat/runtime-version-freshness
+2026-11-14T04:02:05.8313240Z  * [new branch]      feat/session-host-label                  -> origin/feat/session-host-label
+2026-11-14T04:02:05.8313770Z  * [new branch]      feat/settings-polish                     -> origin/feat/settings-polish
+2026-11-14T04:02:05.8314330Z  * [new branch]      feat/settings-split-view                 -> origin/feat/settings-split-view
+2026-11-14T04:02:05.8314970Z  * [new branch]      feat/settings-update-row                 -> origin/feat/settings-update-row
+2026-11-14T04:02:05.8315690Z  * [new branch]      feat/settle-selection                    -> origin/feat/settle-selection
+2026-11-14T04:02:05.8316650Z  * [new branch]      feat/sidebar-float-glass                 -> origin/feat/sidebar-float-glass
+2026-11-14T04:02:05.8326870Z  * [new branch]      feat/sidebar-new-session                 -> origin/feat/sidebar-new-session
+2026-11-14T04:02:05.8327460Z  * [new branch]      feat/sidebar-polish                      -> origin/feat/sidebar-polish
+2026-11-14T04:02:05.8328140Z  * [new branch]      feat/sidebar-row-ux-20261112             -> origin/feat/sidebar-row-ux-20261112
+2026-11-14T04:02:05.8328720Z  * [new branch]      feat/sidebar-settings                    -> origin/feat/sidebar-settings
+2026-11-14T04:02:05.8329340Z  * [new branch]      feat/status-line-liveness                -> origin/feat/status-line-liveness
+2026-11-14T04:02:05.8329910Z  * [new branch]      feat/status-line-shimmer                 -> origin/feat/status-line-shimmer
+2026-11-14T04:02:05.8330570Z  * [new branch]      feat/step-aware-reading                  -> origin/feat/step-aware-reading
+2026-11-14T04:02:05.8331160Z  * [new branch]      feat/subagent-tasks                      -> origin/feat/subagent-tasks
+2026-11-14T04:02:05.8331740Z  * [new branch]      feat/summary-context-events              -> origin/feat/summary-context-events
+2026-11-14T04:02:05.8332320Z  * [new branch]      feat/table-actions                       -> origin/feat/table-actions
+2026-11-14T04:02:05.8333000Z  * [new branch]      feat/task-context-panel-20261023         -> origin/feat/task-context-panel-20261023
+2026-11-14T04:02:05.8333730Z  * [new branch]      feat/task-detail-inspector-20261029      -> origin/feat/task-detail-inspector-20261029
+2026-11-14T04:02:05.8334380Z  * [new branch]      feat/task-panel-quiet                    -> origin/feat/task-panel-quiet
+2026-11-14T04:02:05.8334940Z  * [new branch]      feat/task-recap                          -> origin/feat/task-recap
+2026-11-14T04:02:05.8335970Z  * [new branch]      feat/textview-append                     -> origin/feat/textview-append
+2026-11-14T04:02:05.8336590Z  * [new branch]      feat/thought-polish                      -> origin/feat/thought-polish
+2026-11-14T04:02:05.8337280Z  * [new branch]      feat/transcript-design-upgrade           -> origin/feat/transcript-design-upgrade
+2026-11-14T04:02:05.8338010Z  * [new branch]      feat/turn-rail-interaction-20261029      -> origin/feat/turn-rail-interaction-20261029
+2026-11-14T04:02:05.8338660Z  * [new branch]      feat/turn-status                         -> origin/feat/turn-status
+2026-11-14T04:02:05.8339340Z  * [new branch]      feat/type-legibility-20261023            -> origin/feat/type-legibility-20261023
+2026-11-14T04:02:05.8340110Z  * [new branch]      feat/typography-unify-20261028           -> origin/feat/typography-unify-20261028
+2026-11-14T04:02:05.8340810Z  * [new branch]      feat/ui-polish                           -> origin/feat/ui-polish
+2026-11-14T04:02:05.8341370Z  * [new branch]      feat/ui-radius-polish                    -> origin/feat/ui-radius-polish
+2026-11-14T04:02:05.8342010Z  * [new branch]      feat/unified-workbench                   -> origin/feat/unified-workbench
+2026-11-14T04:02:05.8342600Z  * [new branch]      feat/unpin-codex-version                 -> origin/feat/unpin-codex-version
+2026-11-14T04:02:05.8343260Z  * [new branch]      feat/ux-sweep                            -> origin/feat/ux-sweep
+2026-11-14T04:02:05.8343880Z  * [new branch]      feat/visual-refresh-20261014             -> origin/feat/visual-refresh-20261014
+2026-11-14T04:02:05.8344550Z  * [new branch]      feat/woodcut-logo                        -> origin/feat/woodcut-logo
+2026-11-14T04:02:05.8345130Z  * [new branch]      feat/workbench-group-scope               -> origin/feat/workbench-group-scope
+2026-11-14T04:02:05.8345720Z  * [new branch]      feat/workbench-home-20261029             -> origin/feat/workbench-home-20261029
+2026-11-14T04:02:05.8346470Z  * [new branch]      feat/workflow-polish-20261023            -> origin/feat/workflow-polish-20261023
+2026-11-14T04:02:05.8347560Z  * [new branch]      feat/workspace-upgrade-20261022          -> origin/feat/workspace-upgrade-20261022
+2026-11-14T04:02:05.8348250Z  * [new branch]      fix/activity-fold-label                  -> origin/fix/activity-fold-label
+2026-11-14T04:02:05.8348900Z  * [new branch]      fix/activity-narrative-handoff           -> origin/fix/activity-narrative-handoff
+2026-11-14T04:02:05.8349630Z  * [new branch]      fix/activity-popover-latency             -> origin/fix/activity-popover-latency
+2026-11-14T04:02:05.8350300Z  * [new branch]      fix/ats-http-endpoint                    -> origin/fix/ats-http-endpoint
+2026-11-14T04:02:05.8350900Z  * [new branch]      fix/auto-naming-friction                 -> origin/fix/auto-naming-friction
+2026-11-14T04:02:05.8351560Z  * [new branch]      fix/body-reading-20261111                -> origin/fix/body-reading-20261111
+2026-11-14T04:02:05.8352220Z  * [new branch]      fix/bridge-upgrade-transition            -> origin/fix/bridge-upgrade-transition
+2026-11-14T04:02:05.8352970Z  * [new branch]      fix/claude-context-resolved-window       -> origin/fix/claude-context-resolved-window
+2026-11-14T04:02:05.8353650Z  * [new branch]      fix/claude-context-window                -> origin/fix/claude-context-window
+2026-11-14T04:02:05.8354340Z  * [new branch]      fix/claude-session-compat                -> origin/fix/claude-session-compat
+2026-11-14T04:02:05.8355060Z  * [new branch]      fix/code-scroll-parity-20261014          -> origin/fix/code-scroll-parity-20261014
+2026-11-14T04:02:05.8355700Z  * [new branch]      fix/codex-app-server-proxy-env           -> origin/fix/codex-app-server-proxy-env
+2026-11-14T04:02:05.8356350Z  * [new branch]      fix/codex-queue-restart                  -> origin/fix/codex-queue-restart
+2026-11-14T04:02:05.8357000Z  * [new branch]      fix/compaction-summary-ribbon            -> origin/fix/compaction-summary-ribbon
+2026-11-14T04:02:05.8358020Z  * [new branch]      fix/disclosure-latency                   -> origin/fix/disclosure-latency
+2026-11-14T04:02:05.8358680Z  * [new branch]      fix/elapsed-time                         -> origin/fix/elapsed-time
+2026-11-14T04:02:05.8359440Z  * [new branch]      fix/file-resolution-and-timers           -> origin/fix/file-resolution-and-timers
+2026-11-14T04:02:05.8360230Z  * [new branch]      fix/floating-sidebar-20261026            -> origin/fix/floating-sidebar-20261026
+2026-11-14T04:02:05.8360940Z  * [new branch]      fix/fold-header-overlap                  -> origin/fix/fold-header-overlap
+2026-11-14T04:02:05.8362830Z  * [new branch]      fix/grouping-truncation                  -> origin/fix/grouping-truncation
+2026-11-14T04:02:05.8364690Z  * [new branch]      fix/header-cwd-fixes                     -> origin/fix/header-cwd-fixes
+2026-11-14T04:02:05.8366430Z  * [new branch]      fix/hover-tooltip                        -> origin/fix/hover-tooltip
+2026-11-14T04:02:05.8367980Z  * [new branch]      fix/inspector-reading-memory             -> origin/fix/inspector-reading-memory
+2026-11-14T04:02:05.8369850Z  * [new branch]      fix/kimi-acp-bridge-v14-20261112         -> origin/fix/kimi-acp-bridge-v14-20261112
+2026-11-14T04:02:05.8371850Z  * [new branch]      fix/kimi-background-turn-state           -> origin/fix/kimi-background-turn-state
+2026-11-14T04:02:05.8373700Z  * [new branch]      fix/kimi-early-session-naming            -> origin/fix/kimi-early-session-naming
+2026-11-14T04:02:05.8375500Z  * [new branch]      fix/kimi-echo-title-placeholder          -> origin/fix/kimi-echo-title-placeholder
+2026-11-14T04:02:05.8377110Z  * [new branch]      fix/kimi-heartbeat-crash                 -> origin/fix/kimi-heartbeat-crash
+2026-11-14T04:02:05.8378650Z  * [new branch]      fix/kimi-manual-restart-guidance         -> origin/fix/kimi-manual-restart-guidance
+2026-11-14T04:02:05.8382130Z  * [new branch]      fix/kimi-remote-setup                    -> origin/fix/kimi-remote-setup
+2026-11-14T04:02:05.8384470Z  * [new branch]      fix/latex-delimiters                     -> origin/fix/latex-delimiters
+2026-11-14T04:02:05.8387080Z  * [new branch]      fix/linux-portability-20261112           -> origin/fix/linux-portability-20261112
+2026-11-14T04:02:05.8389030Z  * [new branch]      fix/liquid-glass-window-20261027         -> origin/fix/liquid-glass-window-20261027
+2026-11-14T04:02:05.8390790Z  * [new branch]      fix/main-build-fill-20261029             -> origin/fix/main-build-fill-20261029
+2026-11-14T04:02:05.8392220Z  * [new branch]      fix/math-performance                     -> origin/fix/math-performance
+2026-11-14T04:02:05.8393720Z  * [new branch]      fix/math-window-gate                     -> origin/fix/math-window-gate
+2026-11-14T04:02:05.8395180Z  * [new branch]      fix/math-window-record                   -> origin/fix/math-window-record
+2026-11-14T04:02:05.8396800Z  * [new branch]      fix/naming-quality                       -> origin/fix/naming-quality
+2026-11-14T04:02:05.8398380Z  * [new branch]      fix/narrative-summary-hierarchy          -> origin/fix/narrative-summary-hierarchy
+2026-11-14T04:02:05.8400410Z  * [new branch]      fix/native-design-parity-20261026        -> origin/fix/native-design-parity-20261026
+2026-11-14T04:02:05.8402300Z  * [new branch]      fix/navigation-interactions              -> origin/fix/navigation-interactions
+2026-11-14T04:02:05.8403920Z  * [new branch]      fix/newtask-paste-store                  -> origin/fix/newtask-paste-store
+2026-11-14T04:02:05.8405580Z  * [new branch]      fix/old-session-reload                   -> origin/fix/old-session-reload
+2026-11-14T04:02:05.8407240Z  * [new branch]      fix/perch-composer-native-glass          -> origin/fix/perch-composer-native-glass
+2026-11-14T04:02:05.8408840Z  * [new branch]      fix/perch-idle-socket                    -> origin/fix/perch-idle-socket
+2026-11-14T04:02:05.8410340Z  * [new branch]      fix/perch-switch-refresh                 -> origin/fix/perch-switch-refresh
+2026-11-14T04:02:05.8414470Z  * [new branch]      fix/perf-sweep-20261024                  -> origin/fix/perf-sweep-20261024
+2026-11-14T04:02:05.8415270Z  * [new branch]      fix/performance-paths                    -> origin/fix/performance-paths
+2026-11-14T04:02:05.8415910Z  * [new branch]      fix/qoder-account-scoped-model-catalog   -> origin/fix/qoder-account-scoped-model-catalog
+2026-11-14T04:02:05.8416610Z  * [new branch]      fix/queue-recovery                       -> origin/fix/queue-recovery
+2026-11-14T04:02:05.8417150Z  * [new branch]      fix/quiet-activity-rows                  -> origin/fix/quiet-activity-rows
+2026-11-14T04:02:05.8417720Z  * [new branch]      fix/reading-process-status               -> origin/fix/reading-process-status
+2026-11-14T04:02:05.8418280Z  * [new branch]      fix/reading-stage-rhythm                 -> origin/fix/reading-stage-rhythm
+2026-11-14T04:02:05.8418810Z  * [new branch]      fix/recap-en-l10n                        -> origin/fix/recap-en-l10n
+2026-11-14T04:02:05.8419330Z  * [new branch]      fix/refresh-shrink-pin                   -> origin/fix/refresh-shrink-pin
+2026-11-14T04:02:05.8419890Z  * [new branch]      fix/release-runner-xcode                 -> origin/fix/release-runner-xcode
+2026-11-14T04:02:05.8420500Z  * [new branch]      fix/rename-suggestion-localization       -> origin/fix/rename-suggestion-localization
+2026-11-14T04:02:05.8421100Z  * [new branch]      fix/restore-i18n-polish                  -> origin/fix/restore-i18n-polish
+2026-11-14T04:02:05.8421860Z  * [new branch]      fix/reviewed-composer                    -> origin/fix/reviewed-composer
+2026-11-14T04:02:05.8422400Z  * [new branch]      fix/reviewed-edit-stats                  -> origin/fix/reviewed-edit-stats
+2026-11-14T04:02:05.8422940Z  * [new branch]      fix/reviewed-git-panel                   -> origin/fix/reviewed-git-panel
+2026-11-14T04:02:05.8423480Z  * [new branch]      fix/reviewed-interactions                -> origin/fix/reviewed-interactions
+2026-11-14T04:02:05.8424050Z  * [new branch]      fix/reviewed-stream-reveal               -> origin/fix/reviewed-stream-reveal
+2026-11-14T04:02:05.8437030Z  * [new branch]      fix/reviewed-updates                     -> origin/fix/reviewed-updates
+2026-11-14T04:02:05.8438610Z  * [new branch]      fix/session-hover-ci-20261111            -> origin/fix/session-hover-ci-20261111
+2026-11-14T04:02:05.8439270Z  * [new branch]      fix/session-hover-onscreen-20261111      -> origin/fix/session-hover-onscreen-20261111
+2026-11-14T04:02:05.8439950Z  * [new branch]      fix/session-popover-appearance-20261111  -> origin/fix/session-popover-appearance-20261111
+2026-11-14T04:02:05.8440740Z  * [new branch]      fix/session-restore-stall-20261028       -> origin/fix/session-restore-stall-20261028
+2026-11-14T04:02:05.8441420Z  * [new branch]      fix/setup-wizard-layout                  -> origin/fix/setup-wizard-layout
+2026-11-14T04:02:05.8442060Z  * [new branch]      fix/sidebar-actions-alignment-20261028   -> origin/fix/sidebar-actions-alignment-20261028
+2026-11-14T04:02:05.8442720Z  * [new branch]      fix/sidebar-no-hover-actions             -> origin/fix/sidebar-no-hover-actions
+2026-11-14T04:02:05.8443320Z  * [new branch]      fix/sidebar-preview-metadata             -> origin/fix/sidebar-preview-metadata
+2026-11-14T04:02:05.8443950Z  * [new branch]      fix/sidebar-preview-panel-20261112       -> origin/fix/sidebar-preview-panel-20261112
+2026-11-14T04:02:05.8444560Z  * [new branch]      fix/sidebar-scroll-position              -> origin/fix/sidebar-scroll-position
+2026-11-14T04:02:05.8445260Z  * [new branch]      fix/sidebar-selected-regular-20261029    -> origin/fix/sidebar-selected-regular-20261029
+2026-11-14T04:02:05.8445850Z  * [new branch]      fix/sidebar-time-slot                    -> origin/fix/sidebar-time-slot
+2026-11-14T04:02:05.8447010Z  * [new branch]      fix/sidebar-turn-running                 -> origin/fix/sidebar-turn-running
+2026-11-14T04:02:05.8447670Z  * [new branch]      fix/skill-tool-load-fold                 -> origin/fix/skill-tool-load-fold
+2026-11-14T04:02:05.8448710Z  * [new branch]      fix/streaming-projection-20261023        -> origin/fix/streaming-projection-20261023
+2026-11-14T04:02:05.8449300Z  * [new branch]      fix/summary-duplicate                    -> origin/fix/summary-duplicate
+2026-11-14T04:02:05.8449840Z  * [new branch]      fix/summary-naming-quality               -> origin/fix/summary-naming-quality
+2026-11-14T04:02:05.8450430Z  * [new branch]      fix/summary-parser-resilience            -> origin/fix/summary-parser-resilience
+2026-11-14T04:02:05.8451000Z  * [new branch]      fix/summary-result-window                -> origin/fix/summary-result-window
+2026-11-14T04:02:05.8451540Z  * [new branch]      fix/tail-follow-bounce                   -> origin/fix/tail-follow-bounce
+2026-11-14T04:02:05.8452130Z  * [new branch]      fix/task-context-inspector-20261025      -> origin/fix/task-context-inspector-20261025
+2026-11-14T04:02:05.8452730Z  * [new branch]      fix/tool-exit-code-display               -> origin/fix/tool-exit-code-display
+2026-11-14T04:02:05.8453300Z  * [new branch]      fix/tool-failure-attention               -> origin/fix/tool-failure-attention
+2026-11-14T04:02:05.8453870Z  * [new branch]      fix/tool-path-middle-20261111            -> origin/fix/tool-path-middle-20261111
+2026-11-14T04:02:05.8454470Z  * [new branch]      fix/transcript-duplicate-id              -> origin/fix/transcript-duplicate-id
+2026-11-14T04:02:05.8455060Z  * [new branch]      fix/turn-rail-motion-acceptance          -> origin/fix/turn-rail-motion-acceptance
+2026-11-14T04:02:05.8455720Z  * [new branch]      fix/user-bubble-background               -> origin/fix/user-bubble-background
+2026-11-14T04:02:05.8456340Z  * [new branch]      fix/user-bubble-centering-20261029       -> origin/fix/user-bubble-centering-20261029
+2026-11-14T04:02:05.8456990Z  * [new branch]      fix/user-bubble-optical-alignment        -> origin/fix/user-bubble-optical-alignment
+2026-11-14T04:02:05.8457580Z  * [new branch]      fix/user-message-bubbles                 -> origin/fix/user-message-bubbles
+2026-11-14T04:02:05.8458060Z  * [new branch]      main                                     -> origin/main
+2026-11-14T04:02:05.8458820Z  * [new branch]      perf/20x-loop-12-20261114                -> origin/perf/20x-loop-12-20261114
+2026-11-14T04:02:05.8459390Z  * [new branch]      perf/20x-loop-20261112                   -> origin/perf/20x-loop-20261112
+2026-11-14T04:02:05.8459910Z  * [new branch]      perf/20x-loop-4-20261112                 -> origin/perf/20x-loop-4-20261112
+2026-11-14T04:02:05.8460420Z  * [new branch]      perf/20x-loop-7-20261112                 -> origin/perf/20x-loop-7-20261112
+2026-11-14T04:02:05.8461020Z  * [new branch]      perf/ci-speed-and-stability-20261112     -> origin/perf/ci-speed-and-stability-20261112
+2026-11-14T04:02:05.8461860Z  * [new branch]      perf/grouping-phase-memo                 -> origin/perf/grouping-phase-memo
+2026-11-14T04:02:05.8462510Z  * [new branch]      perf/mermaid-prewarm-bytes               -> origin/perf/mermaid-prewarm-bytes
+2026-11-14T04:02:05.8463100Z  * [new branch]      perf/narrative-memo                      -> origin/perf/narrative-memo
+2026-11-14T04:02:05.8463780Z  * [new branch]      refactor/turn-status-consumers           -> origin/refactor/turn-status-consumers
+2026-11-14T04:02:05.8464350Z  * [new branch]      t3/kimi-native-acp-bridge                -> origin/t3/kimi-native-acp-bridge
+2026-11-14T04:02:05.8464930Z  * [new branch]      t3/perch-body-scroll-performance         -> origin/t3/perch-body-scroll-performance
+2026-11-14T04:02:05.8465420Z  * [new tag]         v0.1.0                                   -> v0.1.0
+2026-11-14T04:02:05.8467620Z  * [new tag]         v0.2.0                                   -> v0.2.0
+2026-11-14T04:02:05.8468680Z  * [new tag]         v0.2.1                                   -> v0.2.1
+2026-11-14T04:02:05.8469610Z  * [new tag]         v0.3.0                                   -> v0.3.0
+2026-11-14T04:02:05.8470540Z  * [new tag]         v0.4.0                                   -> v0.4.0
+2026-11-14T04:02:05.8472960Z  * [new tag]         v0.5.0                                   -> v0.5.0
+2026-11-14T04:02:05.8473940Z  * [new tag]         v0.6.0                                   -> v0.6.0
+2026-11-14T04:02:05.8474880Z  * [new tag]         v0.7.0                                   -> v0.7.0
+2026-11-14T04:02:05.8475810Z  * [new tag]         v0.8.0                                   -> v0.8.0
+2026-11-14T04:02:05.8476730Z  * [new tag]         v0.8.1                                   -> v0.8.1
+2026-11-14T04:02:05.8477770Z  * [new ref]         95c2f90f60f3184c7fa3538b7b19cc745a263efa -> pull/334/merge
+2026-11-14T04:02:05.8480860Z ##[endgroup]
+2026-11-14T04:02:05.8481760Z ##[group]Determining the checkout info
+2026-11-14T04:02:05.8482730Z ##[endgroup]
+2026-11-14T04:02:05.8483400Z [command]/opt/homebrew/bin/git sparse-checkout disable
+2026-11-14T04:02:05.8485400Z [command]/opt/homebrew/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-14T04:02:05.8487800Z ##[group]Checking out the ref
+2026-11-14T04:02:05.8488900Z [command]/opt/homebrew/bin/git checkout --progress --force refs/remotes/pull/334/merge
+2026-11-14T04:02:06.1942260Z HEAD is now at 95c2f90 Merge 94277665b3f387a14741ebb3951d8f98a52c777f into 7d5ba26ac45775b5d7bd624a6384964313b4ccf3
+2026-11-14T04:02:06.2252700Z ##[endgroup]
+2026-11-14T04:02:06.2561070Z [command]/opt/homebrew/bin/git log -1 --format=%H
+2026-11-14T04:02:06.2664520Z 95c2f90f60f3184c7fa3538b7b19cc745a263efa
+2026-11-14T04:02:06.2933760Z ##[group]Removing auth
+2026-11-14T04:02:06.3036650Z Removing SSH command configuration
+2026-11-14T04:02:06.3138940Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-14T04:02:06.3439830Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-14T04:02:06.5031520Z Removing HTTP extra header
+2026-11-14T04:02:06.5133650Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-14T04:02:06.5451580Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-14T04:02:06.8620810Z Removing includeIf entries pointing to credentials config files
+2026-11-14T04:02:06.8754540Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-14T04:02:06.8872360Z includeif.gitdir:/Users/<runner>/work/perch/perch/.git.path
+2026-11-14T04:02:06.8985810Z includeif.gitdir:/Users/<runner>/work/perch/perch/.git/worktrees/*.path
+2026-11-14T04:02:06.9094540Z includeif.gitdir:/github/workspace/.git.path
+2026-11-14T04:02:06.9197550Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-14T04:02:06.9515510Z [command]/opt/homebrew/bin/git config --local --get-all includeif.gitdir:/Users/<runner>/work/perch/perch/.git.path
+2026-11-14T04:02:06.9617790Z /Users/<runner>/work/_temp/git-credentials-e70e77fb-34fa-471e-9087-c2c9aefefb65.config
+2026-11-14T04:02:06.9937250Z [command]/opt/homebrew/bin/git config --local --unset includeif.gitdir:/Users/<runner>/work/perch/perch/.git.path /Users/<runner>/work/_temp/git-credentials-e70e77fb-34fa-471e-9087-c2c9aefefb65.config
+2026-11-14T04:02:07.0259950Z [command]/opt/homebrew/bin/git config --local --get-all includeif.gitdir:/Users/<runner>/work/perch/perch/.git/worktrees/*.path
+2026-11-14T04:02:07.0363860Z /Users/<runner>/work/_temp/git-credentials-e70e77fb-34fa-471e-9087-c2c9aefefb65.config
+2026-11-14T04:02:07.0817710Z [command]/opt/homebrew/bin/git config --local --unset includeif.gitdir:/Users/<runner>/work/perch/perch/.git/worktrees/*.path /Users/<runner>/work/_temp/git-credentials-e70e77fb-34fa-471e-9087-c2c9aefefb65.config
+2026-11-14T04:02:07.1176880Z [command]/opt/homebrew/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-11-14T04:02:07.1282830Z /github/runner_temp/git-credentials-e70e77fb-34fa-471e-9087-c2c9aefefb65.config
+2026-11-14T04:02:07.1725650Z [command]/opt/homebrew/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-e70e77fb-34fa-471e-9087-c2c9aefefb65.config
+2026-11-14T04:02:07.2032870Z [command]/opt/homebrew/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-14T04:02:07.2138540Z /github/runner_temp/git-credentials-e70e77fb-34fa-471e-9087-c2c9aefefb65.config
+2026-11-14T04:02:07.2447910Z [command]/opt/homebrew/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-e70e77fb-34fa-471e-9087-c2c9aefefb65.config
+2026-11-14T04:02:07.2779700Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-14T04:02:07.3089170Z Removing credentials config '/Users/<runner>/work/_temp/git-credentials-e70e77fb-34fa-471e-9087-c2c9aefefb65.config'
+2026-11-14T04:02:07.3298410Z ##[endgroup]
+2026-11-14T04:02:07.3789090Z ##[group]Run actions/download-artifact@v4
+2026-11-14T04:02:07.3789810Z with:
+2026-11-14T04:02:07.3790570Z   name: native-host-fixture-95c2f90f60f3184c7fa3538b7b19cc745a263efa
+2026-11-14T04:02:07.3791440Z   path: .local/host-fixture-archive
+2026-11-14T04:02:07.3792050Z   merge-multiple: false
+2026-11-14T04:02:07.3792580Z   repository: chenweigao/perch
+2026-11-14T04:02:07.3793080Z   run-id: 43553888831
+2026-11-14T04:02:07.3793500Z ##[endgroup]
+2026-11-14T04:02:07.6721190Z Downloading single artifact
+2026-11-14T04:02:07.6828670Z (node:12278) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-14T04:02:07.6932120Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-14T04:02:07.8873220Z Preparing to download the following artifacts:
+2026-11-14T04:02:07.8975040Z - native-host-fixture-95c2f90f60f3184c7fa3538b7b19cc745a263efa (ID: 14097557836, Size: 18441901, Expected Digest: sha256:92db805c82750f3a0e3997fb069e945e15284c73ba8e68fc408dd335ea6bd461)
+2026-11-14T04:02:08.0741720Z Redirecting to blob download url: https://productionresultssa16.blob.core.windows.net/actions-results/1b75e780-bf5b-8679-82a4-e83bb409ca73/workflow-job-run-e76f00b7-49d9-599a-a6db-f1462bf86038/artifacts/3eeed2553237e32ecc4a71100ee2519eb7e75356421d3f2879abdf08d7e25c74.zip
+2026-11-14T04:02:08.0843730Z Starting download of artifact to: /Users/<runner>/work/perch/perch/.local/host-fixture-archive
+2026-11-14T04:02:08.2159960Z (node:12278) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+2026-11-14T04:02:10.1350750Z SHA256 digest of downloaded artifact is 92db805c82750f3a0e3997fb069e945e15284c73ba8e68fc408dd335ea6bd461
+2026-11-14T04:02:10.1449180Z Artifact download completed successfully.
+2026-11-14T04:02:10.1550400Z Total of 1 artifact(s) downloaded
+2026-11-14T04:02:10.1652390Z Download artifact has finished successfully
+2026-11-14T04:02:10.1848550Z ##[group]Run mkdir -p .local/host-fixture
+2026-11-14T04:02:10.1849420Z [36;1mmkdir -p .local/host-fixture[0m
+2026-11-14T04:02:10.1850670Z [36;1mditto -x -k .local/host-fixture-archive/HostLifecycleChecks.zip .local/host-fixture[0m
+2026-11-14T04:02:10.2064170Z shell: /bin/bash -e {0}
+2026-11-14T04:02:10.2064930Z ##[endgroup]
+2026-11-14T04:02:10.4471480Z ##[group]Run python3 scripts/check-functional.py macos --group host-state --output .local/functional-host-state
+2026-11-14T04:02:10.4473460Z [36;1mpython3 scripts/check-functional.py macos --group host-state --output .local/functional-host-state[0m
+2026-11-14T04:02:10.4540930Z shell: /bin/bash -e {0}
+2026-11-14T04:02:10.4541290Z ##[endgroup]
+2026-11-14T04:02:10.9210960Z Running host-lifecycle
+2026-11-14T04:03:50.2948930Z Failed host-lifecycle: exited with code 1
+2026-11-14T04:03:50.2989330Z ssetFramework.framework/Versions/A/UnifiedAssetFramework
+2026-11-14T04:03:50.2994980Z        0x2a4141000 -        0x2a4142e95  com.apple.UpdateCycle (1 - 1) <EA84C9B9-D270-3FBC-A530-8B1CAA54C793> /System/Library/PrivateFrameworks/UpdateCycle.framework/Versions/A/UpdateCycle
+2026-11-14T04:03:50.2997920Z        0x2a4384000 -        0x2a4384f2f  libobjcMsgSend29.dylib (973.1) <36D5BA3F-2139-30B0-8558-556764BE9813> /usr/lib/objc/libobjcMsgSend29.dylib
+2026-11-14T04:03:50.3000770Z        0x2a4c82000 -        0x2a4d908b7  com.apple.VDAF (1.0 - 35.5) <DB84BDA0-B9FC-383D-941A-5C873ECD91FB> /System/Library/PrivateFrameworks/VDAF.framework/Versions/A/VDAF
+2026-11-14T04:03:50.3002050Z        0x2a4d91000 -        0x2a4e2c02b  com.apple.vectordb.VectorSearch (1.0 - 53) <595BD1BF-70EB-3A18-9153-AE885A788D99> /System/Library/PrivateFrameworks/VectorSearch.framework/Versions/A/VectorSearch
+2026-11-14T04:03:50.3003860Z        0x2a6e0d000 -        0x2a6e0e0ff  com.apple.VideoToolboxParavirtualizationSupport (71.0.14 - 71.0.14) <310A3A22-A78C-3557-8CCE-A975490C1D02> /System/Library/PrivateFrameworks/VideoToolboxParavirtualizationSupport.framework/Versions/A/VideoToolboxParavirtualizationSupport
+2026-11-14T04:03:50.3005580Z        0x2a6e0f000 -        0x2a6e62da7  com.apple.VisionCore (10.0.44 - 10.0.44) <5917C1B8-322C-3350-AD38-CCE4A57A55CB> /System/Library/PrivateFrameworks/VisionCore.framework/Versions/A/VisionCore
+2026-11-14T04:03:50.3006850Z        0x2a9019000 -        0x2a9025cc7  com.apple.wallpaper.services (1.0 - 313.0.4.401) <B80A351E-71D4-3CAF-A77C-C6B7184955C3> /System/Library/PrivateFrameworks/WallpaperServices.framework/Versions/A/WallpaperServices
+2026-11-14T04:03:50.3008720Z        0x2a9b13000 -        0x2a9dabc4f  com.apple.WebGPU (22625 - 22625.1.29.11.28) <9ED9CEC8-5CF0-3464-8B7A-46D741C71742> /System/Library/PrivateFrameworks/WebGPU.framework/Versions/A/WebGPU
+2026-11-14T04:03:50.3012400Z        0x2aa161000 -        0x2aa17ab63  com.apple.WindowManagement (1.0 - 462.0.8.402) <CAD7E669-DFF8-3CA2-BCA4-8EB1BFC0BEBA> /System/Library/PrivateFrameworks/WindowManagement.framework/Versions/A/WindowManagement
+2026-11-14T04:03:50.3014570Z        0x2ab56c000 -        0x2ab5750af  com.apple.WritingTools (1.0 - 1) <B5F889EA-17A5-3178-9A6D-36A49D375670> /System/Library/PrivateFrameworks/WritingTools.framework/Versions/A/WritingTools
+2026-11-14T04:03:50.3017110Z        0x2ababa000 -        0x2abb32eb7  com.apple.internal.XPCDistributed (1.0 - 1) <6BEDC6C6-585F-3A96-9A9A-9360998CEAE7> /System/Library/PrivateFrameworks/XPCDistributed.framework/Versions/A/XPCDistributed
+2026-11-14T04:03:50.3018750Z        0x2ac384000 -        0x2ac384f2f  libobjcMsgSend30.dylib (973.1) <9F05564A-9D12-372C-98FC-E9F0E6BE4F04> /usr/lib/objc/libobjcMsgSend30.dylib
+2026-11-14T04:03:50.3020200Z        0x2ae0e7000 -        0x2ae106807  com.apple.ggml.CoreAICommon (1.0 - 3600.83.2.14.1) <357D6BFA-CB9C-3A0E-81A4-D0DA7A41D651> /System/Library/SubFrameworks/CoreAICommon.framework/Versions/A/CoreAICommon
+2026-11-14T04:03:50.3021600Z        0x2ae107000 -        0x2ae1287ff  com.apple.ggml.CoreAICompiler (1.0 - 3600.83.2.14.1) <B3BCD479-1864-3FBB-B1BF-85CA975762D0> /System/Library/SubFrameworks/CoreAICompiler.framework/Versions/A/CoreAICompiler
+2026-11-14T04:03:50.3022910Z        0x2aee9e000 -        0x2af436c9f  com.apple.CoreAIRuntime (1.0 - 3600.83.2.14.1) <E2B84906-28D2-39A3-AEF3-9E1AAE1363D7> /System/Library/SubFrameworks/CoreAIRuntime.framework/Versions/A/CoreAIRuntime
+2026-11-14T04:03:50.3025070Z        0x2af437000 -        0x2af476e13  com.apple.UIKit.FocusEngine (9127.0.84.1.406) <27F5B0B6-70D5-37C2-8E80-DCD1AE7521A3> /System/Library/SubFrameworks/FocusEngine.framework/Versions/A/FocusEngine
+2026-11-14T04:03:50.3026280Z        0x2af7ed000 -        0x2af7efa93  com.apple.UIUtilities (9127.0.84.1.406) <02039315-C8E7-30A8-88F0-7CFC8061EF1C> /System/Library/SubFrameworks/UIUtilities.framework/Versions/A/UIUtilities
+2026-11-14T04:03:50.3027400Z        0x2af8aa000 -        0x2af8acbd3  libAccessibilityBaseImplementations.dylib (587) <FADA270F-D23A-39FE-B101-16FB54C038CB> /usr/lib/libAccessibilityBaseImplementations.dylib
+2026-11-14T04:03:50.3028750Z        0x2af8e5000 -        0x2af97f033  libAppleArchive.dylib (469) <D62616FF-0C2C-343D-AD67-0FDEEFCF52B9> /usr/lib/libAppleArchive.dylib
+2026-11-14T04:03:50.3029580Z        0x2b0023000 -        0x2b00253df  libAXSafeCategoryBundle.dylib (3240.0.1.2) <A81F7552-FA1C-3482-8855-99541AE06FB4> /usr/lib/libAXSafeCategoryBundle.dylib
+2026-11-14T04:03:50.3030510Z        0x2b0027000 -        0x2b00286fb  libBASupport.dylib (279.0.5) <48846BF0-86E5-3838-952D-1BE30ED73466> /usr/lib/libBASupport.dylib
+2026-11-14T04:03:50.3031410Z        0x2b003e000 -        0x2b006ae87  libcmark-gfm.dylib (1.29.0.19) <34803C9F-07DD-3ADD-A787-D665611A6646> /usr/lib/libcmark-gfm.dylib
+2026-11-14T04:03:50.3032380Z        0x2b006f000 -        0x2b007900b  libCoreEntitlements.dylib (94) <8F204F37-23D4-3AAB-AD38-57B3D8CB73EC> /usr/lib/libCoreEntitlements.dylib
+2026-11-14T04:03:50.3033270Z        0x2b01d2000 -        0x2b02e426f  libcrypto.46.dylib (111.0.5) <E2D5A8B9-C4E6-38A5-91F5-450D4A4152FD> /usr/lib/libcrypto.46.dylib
+2026-11-14T04:03:50.3034100Z        0x2b0541000 -        0x2b054dd63  libEndpointSecuritySystem.dylib (657.1.1) <023AB4F8-B9E8-34E3-8933-540798804FAA> /usr/lib/libEndpointSecuritySystem.dylib
+2026-11-14T04:03:50.3034940Z        0x2b057e000 -        0x2b0598aff  libhvf.dylib (14) <EB152559-8134-3C36-AB2F-446A5A909BD1> /usr/lib/libhvf.dylib
+2026-11-14T04:03:50.3035760Z        0x2b0ab4000 -        0x2b0ab567f  libInterpreterSecurity.dylib (823.1.1) <8207F024-D17C-3E20-9800-376C73D57F22> /usr/lib/libInterpreterSecurity.dylib
+2026-11-14T04:03:50.3036540Z        0x2b0b1b000 -        0x2b0b22d9b  libmrc.dylib (3111.0.5.0.1) <EDB84E0D-EDBA-32CB-B0EF-87A7AD13E3CD> /usr/lib/libmrc.dylib
+2026-11-14T04:03:50.3037410Z        0x2b1097000 -        0x2b109d2bb  libReverseProxyDevice.dylib (114) <9227B01D-28CA-380B-B95A-8C1B10AEAC73> /usr/lib/libReverseProxyDevice.dylib
+2026-11-14T04:03:50.3038250Z        0x2b109e000 -        0x2b10a4fe5  libRosetta.dylib (385) <E359944B-D230-33F9-A04E-0C3B17C3326E> /usr/lib/libRosetta.dylib
+2026-11-14T04:03:50.3038950Z        0x2b112c000 -        0x2b112c35f  libSpatial.dylib (113) <45A9B39D-7744-358C-9C56-6197615D7C9C> /usr/lib/libSpatial.dylib
+2026-11-14T04:03:50.3039720Z        0x2b1189000 -        0x2b11c000f  libssl.48.dylib (111.0.5) <563A2AF9-97E5-3D1E-80B8-954B9DC97E59> /usr/lib/libssl.48.dylib
+2026-11-14T04:03:50.3040620Z        0x2b11fa000 -        0x2b1232007  libswiftPrespecialized.dylib (0) <6B5CC7BC-073A-3B54-B913-1C7857DD14EE> /usr/lib/libswiftPrespecialized.dylib
+2026-11-14T04:03:50.3041490Z        0x2b127f000 -        0x2b1287ad3  libTLE.dylib (94) <6968082F-CBF6-356D-9B29-82B9FEC2FC2D> /usr/lib/libTLE.dylib
+2026-11-14T04:03:50.3042510Z        0x2b1500000 -        0x2b1500669  libswift_Builtin_float.dylib (6.4.0.31.5) <9CB6F7D2-F14F-3C51-9E30-EDCB674B970E> /usr/lib/swift/libswift_Builtin_float.dylib
+2026-11-14T04:03:50.3043560Z        0x2b1501000 -        0x2b158d9c7  libswift_Concurrency.dylib (6.4.0 - 6.4.0.31.5) <F2F652DD-14B0-35E2-BC9D-47FE153D579E> /usr/lib/swift/libswift_Concurrency.dylib
+2026-11-14T04:03:50.3044570Z        0x2b158e000 -        0x2b1590ab3  libswift_DarwinFoundation1.dylib (428.0.10) <8C802776-95AE-3ED7-BF1C-D9EB9A7DB358> /usr/lib/swift/libswift_DarwinFoundation1.dylib
+2026-11-14T04:03:50.3045820Z        0x2b1591000 -        0x2b1591d2b  libswift_DarwinFoundation2.dylib (428.0.10) <A659D9FC-0554-33A6-9F7A-479B268F8993> /usr/lib/swift/libswift_DarwinFoundation2.dylib
+2026-11-14T04:03:50.3047270Z        0x2b1592000 -        0x2b159279f  libswift_DarwinFoundation3.dylib (428.0.10) <48A04494-256B-3CE1-88A6-79E4B8E9E7B8> /usr/lib/swift/libswift_DarwinFoundation3.dylib
+2026-11-14T04:03:50.3048280Z        0x2b1595000 -        0x2b162d8b7  libswift_RegexParser.dylib (6.4.0 - 6.4.0.31.5) <1E7009E2-B2B6-3A40-99BC-4C2D9DF18C76> /usr/lib/swift/libswift_RegexParser.dylib
+2026-11-14T04:03:50.3049300Z        0x2b1630000 -        0x2b16be4ef  libswift_StringProcessing.dylib (6.4.0 - 6.4.0.31.5) <DA701840-2499-3238-AF4F-4AD3C96C6C55> /usr/lib/swift/libswift_StringProcessing.dylib
+2026-11-14T04:03:50.3050670Z        0x2b171c000 -        0x2b171f737  libswiftCoreMediaIO.dylib (5634) <E569D37A-87E2-3EEB-B382-5DCC243E9D08> /usr/lib/swift/libswiftCoreMediaIO.dylib
+2026-11-14T04:03:50.3051580Z        0x2b1721000 -        0x2b1732837  libswiftDistributed.dylib (6.4.0 - 6.4.0.31.5) <E5CE2297-9720-3FC8-BD0E-647F8C4F6AF0> /usr/lib/swift/libswiftDistributed.dylib
+2026-11-14T04:03:50.3052510Z        0x2b173c000 -        0x2b1742587  libswiftMLCompute.dylib (87) <2F47869A-A6A0-3EF5-B5C5-90B6277840D2> /usr/lib/swift/libswiftMLCompute.dylib
+2026-11-14T04:03:50.3053570Z        0x2b1747000 -        0x2b176012f  libswiftObservation.dylib (6.4.0 - 6.4.0.31.5) <01EDB949-A7D9-361F-812D-4C21E3F6537E> /usr/lib/swift/libswiftObservation.dylib
+2026-11-14T04:03:50.3054490Z        0x2b176c000 -        0x2b1776427  libswiftRegexBuilder.dylib (6.4.0 - 6.4.0.31.5) <C15CF9E4-1D44-3567-A47E-07340F9F95A7> /usr/lib/swift/libswiftRegexBuilder.dylib
+2026-11-14T04:03:50.3055440Z        0x2b1874000 -        0x2b18ec3cf  libswiftSpatial.dylib (113) <FC98D4C5-82DF-358D-AB9B-4F2E817E18A6> /usr/lib/swift/libswiftSpatial.dylib
+2026-11-14T04:03:50.3056510Z        0x2b18f0000 -        0x2b1902f0f  libswiftSynchronization.dylib (6.4.0 - 6.4.0.31.5) <523DD911-05CA-39CE-A98A-27EAB3BA63A4> /usr/lib/swift/libswiftSynchronization.dylib
+2026-11-14T04:03:50.3057420Z        0x2b1903000 -        0x2b19033d3  libswiftsys_time.dylib (428.0.10) <2DB1546A-7CBD-3728-9681-9E475889350E> /usr/lib/swift/libswiftsys_time.dylib
+2026-11-14T04:03:50.3058290Z        0x2b1904000 -        0x2b1921ea7  libswiftSystem.dylib (5027.0.67) <8131BBA8-DF06-3EA3-97AE-E7A0646F18BB> /usr/lib/swift/libswiftSystem.dylib
+2026-11-14T04:03:50.3059240Z        0x2b1a8d000 -        0x2b1a9075b  libsystem_darwindirectory.dylib (129.0.1) <61264923-2AA5-3658-B8C4-550C71E9D4B3> /usr/lib/system/libsystem_darwindirectory.dylib
+2026-11-14T04:03:50.3060210Z        0x2b1a91000 -        0x2b1a9bd9b  libsystem_eligibility.dylib (446.1.3) <EDDE8E9C-A2CF-3931-BBB3-321CB852EB30> /usr/lib/system/libsystem_eligibility.dylib
+2026-11-14T04:03:50.3061350Z        0x2b1a9c000 -        0x2b1aa542b  libsystem_sanitizers.dylib (32) <7138ED99-7AA0-34EA-B35B-20EF6ADB1EED> /usr/lib/system/libsystem_sanitizers.dylib
+2026-11-14T04:03:50.3062260Z        0x2b1aa6000 -        0x2b1aa6a13  libsystem_trial.dylib (511) <6AE48824-EC44-3A8C-B501-BE57DBE892E7> /usr/lib/system/libsystem_trial.dylib
+2026-11-14T04:03:50.3063120Z        0x2b4384000 -        0x2b4384f2f  libobjcMsgSend31.dylib (973.1) <0985E20F-78C3-3466-A2B2-DBB95F7104A3> /usr/lib/objc/libobjcMsgSend31.dylib
+2026-11-14T04:03:50.3064100Z        0x2bc384000 -        0x2bc384f2f  libobjcMsgSend32.dylib (973.1) <0D309D58-D576-3E5D-AD4B-6D55AB491702> /usr/lib/objc/libobjcMsgSend32.dylib
+2026-11-14T04:03:50.3065030Z        0x2c4384000 -        0x2c4384f2f  libobjcMsgSend33.dylib (973.1) <346E0484-48FA-369B-8A64-93B5F5341CFE> /usr/lib/objc/libobjcMsgSend33.dylib
+2026-11-14T04:03:50.3065940Z        0x2cc384000 -        0x2cc384f2f  libobjcMsgSend34.dylib (973.1) <6A31F809-BCBE-3E01-A367-E91FDACCE324> /usr/lib/objc/libobjcMsgSend34.dylib
+2026-11-14T04:03:50.3066590Z 
+2026-11-14T04:03:50.3066730Z Cleaning up host lifecycle preferences
+2026-11-14T04:03:50.3067140Z Host lifecycle cleanup complete
+2026-11-14T04:03:50.3067470Z Traceback (most recent call last):
+2026-11-14T04:03:50.3068020Z   File "/Users/<runner>/work/perch/perch/scripts/check-host-lifecycle.py", line 129, in <module>
+2026-11-14T04:03:50.3069180Z     process.wait(timeout=limit)
+2026-11-14T04:03:50.3069560Z     ~~~~~~~~~~~~^^^^^^^^^^^^^^^
+2026-11-14T04:03:50.3070180Z   File "/opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/lib/python3.15/subprocess.py", line 1445, in wait
+2026-11-14T04:03:50.3070840Z     return self._wait(timeout=timeout)
+2026-11-14T04:03:50.3071200Z            ~~~~~~~~~~^^^^^^^^^^^^^^^^^
+2026-11-14T04:03:50.3073690Z   File "/opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/lib/python3.15/subprocess.py", line 2310, in _wait
+2026-11-14T04:03:50.3074940Z     if self._wait_pidfd(timeout) or self._wait_kqueue(timeout):
+2026-11-14T04:03:50.3075520Z                                     ~~~~~~~~~~~~~~~~~^^^^^^^^^
+2026-11-14T04:03:50.3076210Z   File "/opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/lib/python3.15/subprocess.py", line 2286, in _wait_kqueue
+2026-11-14T04:03:50.3077010Z     raise TimeoutExpired(self.args, timeout)
+2026-11-14T04:03:50.3077950Z subprocess.TimeoutExpired: Command '['/Users/<runner>/work/perch/perch/.local/host-fixture/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks', 'reading-design']' timed out after 60 seconds
+2026-11-14T04:03:50.3078700Z 
+2026-11-14T04:03:50.3078850Z During handling of the above exception, another exception occurred:
+2026-11-14T04:03:50.3079140Z 
+2026-11-14T04:03:50.3079330Z Traceback (most recent call last):
+2026-11-14T04:03:50.3080030Z   File "/Users/<runner>/work/perch/perch/scripts/check-host-lifecycle.py", line 136, in <module>
+2026-11-14T04:03:50.3080820Z     process.wait(timeout=5)
+2026-11-14T04:03:50.3081820Z     ~~~~~~~~~~~~^^^^^^^^^^^
+2026-11-14T04:03:50.3082470Z   File "/opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/lib/python3.15/subprocess.py", line 1445, in wait
+2026-11-14T04:03:50.3083220Z     return self._wait(timeout=timeout)
+2026-11-14T04:03:50.3083910Z            ~~~~~~~~~~^^^^^^^^^^^^^^^^^
+2026-11-14T04:03:50.3084870Z   File "/opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/lib/python3.15/subprocess.py", line 2310, in _wait
+2026-11-14T04:03:50.3086470Z     if self._wait_pidfd(timeout) or self._wait_kqueue(timeout):
+2026-11-14T04:03:50.3086840Z                                     ~~~~~~~~~~~~~~~~~^^^^^^^^^
+2026-11-14T04:03:50.3087390Z   File "/opt/homebrew/Cellar/python@3.15/3.15.2/Frameworks/Python.framework/Versions/3.15/lib/python3.15/subprocess.py", line 2286, in _wait_kqueue
+2026-11-14T04:03:50.3088410Z     raise TimeoutExpired(self.args, timeout)
+2026-11-14T04:03:50.3090180Z subprocess.TimeoutExpired: Command '['/Users/<runner>/work/perch/perch/.local/host-fixture/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks', 'reading-design']' timed out after 5 seconds
+2026-11-14T04:03:50.3090840Z 
+2026-11-14T04:03:50.3190490Z ##[error]Process completed with exit code 1.
+2026-11-14T04:03:50.7131930Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-11-14T04:03:50.7132510Z with:
+2026-11-14T04:03:50.7132800Z   name: macos-results-native-host-state
+2026-11-14T04:03:50.7133270Z   path: .local/functional-host-state/
+2026-11-14T04:03:50.7133640Z   include-hidden-files: true
+2026-11-14T04:03:50.7134020Z   retention-days: 7
+2026-11-14T04:03:50.7134260Z   overwrite: true
+2026-11-14T04:03:50.7134440Z   if-no-files-found: error
+2026-11-14T04:03:50.7134710Z   compression-level: 6
+2026-11-14T04:03:50.7134920Z ##[endgroup]
+2026-11-14T04:03:50.9122780Z (node:15865) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-14T04:03:50.9123630Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-14T04:03:50.9171960Z With the provided path, there will be 2 files uploaded
+2026-11-14T04:03:51.1503450Z Artifact name is valid!
+2026-11-14T04:03:51.1504110Z Root directory input is valid!
+2026-11-14T04:03:51.3213010Z Beginning upload of artifact content to blob storage
+2026-11-14T04:03:51.3420000Z (node:15865) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-14T04:03:51.5822060Z Uploaded bytes 50989
+2026-11-14T04:03:51.6474890Z Finished uploading artifact content to blob storage!
+2026-11-14T04:03:51.6476490Z SHA256 digest of uploaded artifact zip is 8668734a73b44eda4f32fefecde8fe26509c19b7ebe0960989f122179b6aed19
+2026-11-14T04:03:51.6477660Z Finalizing artifact upload
+2026-11-14T04:03:52.0144090Z Artifact macos-results-native-host-state.zip successfully finalized. Artifact ID 14097756350
+2026-11-14T04:03:52.0146120Z Artifact macos-results-native-host-state has been successfully uploaded! Final size is 50989 bytes. Artifact ID is 14097756350
+2026-11-14T04:03:52.0164260Z Artifact download URL: https://github.com/chenweigao/perch/actions/runs/43553888831/artifacts/14097756350
+2026-11-14T04:03:52.0426750Z Post job cleanup.
+2026-11-14T04:03:52.1420400Z [command]/opt/homebrew/bin/git version
+2026-11-14T04:03:52.1533320Z git version 2.56.0
+2026-11-14T04:03:52.1557740Z Copying '/Users/<runner>/.gitconfig' to '/Users/<runner>/work/_temp/182693c7-9190-456d-a1af-b24d39638634/.gitconfig'
+2026-11-14T04:03:52.1566920Z Temporarily overriding HOME='/Users/<runner>/work/_temp/182693c7-9190-456d-a1af-b24d39638634' before making global git config changes
+2026-11-14T04:03:52.1569160Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-14T04:03:52.1571330Z [command]/opt/homebrew/bin/git config --global --add safe.directory /Users/<runner>/work/perch/perch
+2026-11-14T04:03:52.1664490Z Removing SSH command configuration
+2026-11-14T04:03:52.1670000Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-14T04:03:52.1755370Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-14T04:03:52.2861530Z Removing HTTP extra header
+2026-11-14T04:03:52.2866890Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-14T04:03:52.2979550Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-14T04:03:52.3738670Z Removing includeIf entries pointing to credentials config files
+2026-11-14T04:03:52.3743860Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-14T04:03:52.3804970Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-14T04:03:52.4829100Z Cleaning up orphan processes
+2026-11-14T04:03:52.8804630Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/download-artifact@v4, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

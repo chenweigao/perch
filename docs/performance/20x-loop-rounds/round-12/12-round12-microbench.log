@@ -1,0 +1,15 @@
++ cd /tmp
++ rm -f r12-mb
++ swiftc -O r12-microbench.swift -o r12-mb
++ grep -v warning
++ head -3
+131 |         }
+132 |         return nil
+133 |     }) { return r ?? v0(text) }
++ echo compile_exit=0
+compile_exit=0
++ ./r12-mb
+/Users/<mini>/Library/PerfRunner/jobs/12-round12-microbench.job: line 7: 28071 Killed: 9               ./r12-mb
++ echo run_exit=137
+run_exit=137
+exit=0

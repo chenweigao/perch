@@ -1,0 +1,10 @@
+/Users/<mini>/Library/PerfRunner/jobs/12-round12-diag.job: line 4: 28341 Killed: 9               /tmp/hello-tmp
+tmp_exit=137
+/Users/<mini>/Library/PerfRunner/jobs/12-round12-diag.job: line 5: 28357 Killed: 9               "$HOME/hello-home"
+home_exit=137
+Executable=/private/tmp/hello-tmp
+Identifier=hello-tmp
+Format=Mach-O thin (arm64)
+/dev/disk3s1 on /System/Volumes/Data (apfs, local, journaled, nobrowse, protect, root data)
+map auto_home on /System/Volumes/Data/home (autofs, automounted, nobrowse)
+exit=0
