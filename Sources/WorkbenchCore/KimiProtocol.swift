@@ -305,6 +305,140 @@ extension KimiMessage {
         }
         return true
     }
+
+    /// The identity a find-bar cache reuses rendered search results under.
+    /// Value equality alone is weaker than search equivalence: JSON rendering
+    /// keeps a number's zero sign (`display` renders -0.0 as "-0" and 0.0 as
+    /// "0", while `==` calls them equal) and strings keep their UTF-8 encoding
+    /// (NFC and NFD compare equal but are different literal and regex bytes).
+    /// The bitwise tier of `sameWindow` proves rendered identity directly; a
+    /// value-equal pair additionally has to prove every field that reaches the
+    /// rendered sources is byte-identical.
+    static func sameSearchableWindow(_ lhs: ArraySlice<KimiMessage>, _ rhs: ArraySlice<KimiMessage>) -> Bool {
+        sameWindowBits(lhs, rhs) || (sameWindow(lhs, rhs) && sameRenderedMessages(lhs, rhs))
+    }
+
+    /// The bitwise tier of `sameWindow` alone: true only when both slices lend
+    /// contiguous storage whose value bytes are identical.
+    static func sameWindowBits(_ lhs: ArraySlice<KimiMessage>, _ rhs: ArraySlice<KimiMessage>) -> Bool {
+        guard lhs.count == rhs.count, !lhs.isEmpty else { return false }
+        let bitwise = lhs.withContiguousStorageIfAvailable { left in
+            rhs.withContiguousStorageIfAvailable { right -> Bool? in
+                guard left.count == right.count,
+                      let first = left.baseAddress, let second = right.baseAddress else { return nil }
+                let size = MemoryLayout<KimiMessage>.size, stride = MemoryLayout<KimiMessage>.stride
+                let lhsBytes = UnsafeRawPointer(first), rhsBytes = UnsafeRawPointer(second)
+                // Without trailing padding one comparison covers the window.
+                if size == stride { return memcmp(lhsBytes, rhsBytes, left.count * stride) == 0 }
+                for index in 0..<left.count
+                where !sameBytes(lhsBytes + index * stride, rhsBytes + index * stride, count: size) { return false }
+                return true
+            } ?? nil
+        } ?? nil
+        return bitwise ?? false
+    }
+
+    /// Byte identity of every field that reaches the find bar's rendered entry
+    /// text (`ConversationSearch.sources`: type, text via visibleText, toolName,
+    /// name, input, output). Fields that only feed value-based decisions
+    /// (thinking, source, metadata, isError, fileId, id, role, createdAt) are
+    /// pinned by `sameWindow`'s value tier, and canonical-equality differences
+    /// in them cannot change rendered bytes. Extend this comparison together
+    /// with `sources(of:)` when it renders a new field.
+    static func sameRenderedMessages(_ lhs: ArraySlice<KimiMessage>, _ rhs: ArraySlice<KimiMessage>) -> Bool {
+        guard lhs.count == rhs.count else { return false }
+        let bitwise = lhs.withContiguousStorageIfAvailable { left in
+            rhs.withContiguousStorageIfAvailable { right -> Bool? in
+                guard left.count == right.count,
+                      let first = left.baseAddress, let second = right.baseAddress else { return nil }
+                for index in 0..<left.count where !sameRenderedMessage(first[index], second[index]) { return false }
+                return true
+            } ?? nil
+        } ?? nil
+        if let bitwise { return bitwise }
+        var left = lhs.startIndex, right = rhs.startIndex
+        while left != lhs.endIndex {
+            if !sameRenderedMessage(lhs[left], rhs[right]) { return false }
+            left = lhs.index(after: left)
+            right = rhs.index(after: right)
+        }
+        return true
+    }
+
+    private static func sameRenderedMessage(_ lhs: KimiMessage, _ rhs: KimiMessage) -> Bool {
+        guard lhs.content.count == rhs.content.count else { return false }
+        for (left, right) in zip(lhs.content, rhs.content) where !sameRenderedPart(left, right) { return false }
+        return true
+    }
+
+    private static func sameRenderedPart(_ lhs: KimiPart, _ rhs: KimiPart) -> Bool {
+        sameRenderedUTF8(lhs.type, rhs.type)
+            && sameRenderedOptionalUTF8(lhs.text, rhs.text)
+            && sameRenderedOptionalUTF8(lhs.toolName, rhs.toolName)
+            && sameRenderedOptionalUTF8(lhs.name, rhs.name)
+            && sameRenderedPayload(lhs.input, rhs.input)
+            && sameRenderedPayload(lhs.output, rhs.output)
+    }
+}
+
+/// Byte identity of strings that reach a rendered search source: copy-on-write
+/// storage shared between the two copies compares at pointer speed, distinct
+/// storage compares by content, and foreign storage falls back to a code-unit
+/// walk. Canonical equality is deliberately not enough here.
+func sameRenderedUTF8(_ lhs: String, _ rhs: String) -> Bool {
+    guard lhs.utf8.count == rhs.utf8.count else { return false }
+    let bitwise = lhs.utf8.withContiguousStorageIfAvailable { left in
+        rhs.utf8.withContiguousStorageIfAvailable { right -> Bool? in
+            guard let a = left.baseAddress, let b = right.baseAddress else { return nil }
+            return a == b || memcmp(a, b, left.count) == 0
+        } ?? nil
+    } ?? nil
+    return bitwise ?? lhs.utf8.elementsEqual(rhs.utf8)
+}
+
+func sameRenderedOptionalUTF8(_ lhs: String?, _ rhs: String?) -> Bool {
+    switch (lhs, rhs) {
+    case (nil, nil): return true
+    case (let a?, let b?): return sameRenderedUTF8(a, b)
+    default: return false
+    }
+}
+
+func sameRenderedPayload(_ lhs: JSONValue?, _ rhs: JSONValue?) -> Bool {
+    switch (lhs, rhs) {
+    case (nil, nil): return true
+    case (let a?, let b?): return a.rendersIdentically(to: b)
+    default: return false
+    }
+}
+
+extension JSONValue {
+    /// Byte identity of `display`'s output instead of value equality: JSON
+    /// rendering keeps a number's zero sign and a string's UTF-8 encoding,
+    /// both of which `==` folds away. `display` sorts object keys, so dict
+    /// insertion order cannot change the rendering — but the keys' own
+    /// encodings can, and are compared byte-wise.
+    fileprivate func rendersIdentically(to other: JSONValue) -> Bool {
+        switch (self, other) {
+        case (.null, .null): return true
+        case (.bool(let a), .bool(let b)): return a == b
+        case (.number(let a), .number(let b)): return a.bitPattern == b.bitPattern
+        case (.string(let a), .string(let b)): return sameRenderedUTF8(a, b)
+        case (.array(let a), .array(let b)):
+            guard a.count == b.count else { return false }
+            for (left, right) in zip(a, b) where !left.rendersIdentically(to: right) { return false }
+            return true
+        case (.object(let a), .object(let b)):
+            guard a.count == b.count else { return false }
+            for (key, value) in a {
+                guard let match = b.first(where: { $0.key == key }),
+                      sameRenderedUTF8(key, match.key),
+                      value.rendersIdentically(to: match.value) else { return false }
+            }
+            return true
+        default: return false
+        }
+    }
 }
 
 public struct KimiLiveTool: Decodable, Identifiable, Equatable, Sendable {

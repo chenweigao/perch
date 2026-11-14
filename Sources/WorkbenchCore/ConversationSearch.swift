@@ -55,11 +55,13 @@ public final class ConversationSearch {
         let role: ConversationFindOptions.Role
         /// The entry's hits with every input they were made from. An entry's hits
         /// are a pure function of (messages, isRunning, query, options), so when
-        /// the window-identity comparison — bitwise equal storage, else the
-        /// non-copying indexed walk — says the messages are unchanged, the cached
-        /// hits are exactly what re-searching would produce, and the update skips
-        /// source rendering, locale matching and excerpt building. `messages` is
-        /// adopted on reuse so the next comparison reads the freshest payload copy.
+        /// the query keys are encoding-exactly equal and the searchable window
+        /// identity — bitwise equal storage, else value equality plus
+        /// byte-identical rendered fields — says the messages are unchanged, the
+        /// cached hits are exactly what re-searching would produce, and the
+        /// update skips source rendering, locale matching and excerpt building.
+        /// `messages` is adopted on reuse so the next comparison reads the
+        /// freshest payload copy.
         var messages: [KimiMessage]
         let isRunning: Bool
         let query: String
@@ -99,7 +101,7 @@ public final class ConversationSearch {
         let prefix = messages[..<split]
         var hits: [ConversationSearchHit]
         if let earlier, Self.sameQueryKey(earlier.query, query), earlier.options == options,
-           earlier.source.count == prefix.count, KimiMessage.sameWindow(prefix, earlier.source) {
+           earlier.source.count == prefix.count, KimiMessage.sameSearchableWindow(prefix, earlier.source) {
             hits = earlier.hits
             self.earlier?.source = prefix
         } else {
@@ -126,9 +128,13 @@ public final class ConversationSearch {
             // no re-derivation here: equal messages under an equal build flag give
             // an equal role, and an entry the filter skipped earlier is absent
             // from the cache, so it takes the regular path and is skipped again.
+            // The window comparison is the searchable identity: bitwise equal
+            // storage, or value equality plus byte-identical rendered fields —
+            // canonical value equality alone is weaker than search equivalence
+            // (a zero sign or a string encoding can render differently).
             if let previous = lookup(entry.id), previous.isRunning == isRunning,
                Self.sameQueryKey(previous.query, query), previous.options == options,
-               KimiMessage.sameWindow(entry.messages[...], previous.messages[...]) {
+               KimiMessage.sameSearchableWindow(entry.messages[...], previous.messages[...]) {
                 var adopted = previous
                 adopted.messages = entry.messages
                 next[entry.id] = adopted
