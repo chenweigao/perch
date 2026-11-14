@@ -1,0 +1,104 @@
+PASS: step reading preserves order, edit identities, historical patches and outcome-aware churn
+PASS: phase reading groups Bash and thoughts, preserves edit receipts, separates historical failures from pending work and uses grounded command labels
+PASS: live public summaries, completed process folding, manual expansion, uniform folding of edits and failures
+PASS: PI steady streaming cadence, Unicode boundaries, replacement and immediate completion
+PASS: parsed-block release retains Unicode, styling, links and complete rich Markdown
+PASS: incremental reply parse matches full parses at every streaming prefix
+PASS: live progress, missing summaries, thinking-only output, tool-only notice and provider model groups
+PASS: process fold groups completed turns, preserves order, keeps the running turn live
+PASS: presentation parity, same-ID edits, pagination, epoch/language/live handoff, scoped LRU, oversized active state and metrics
+PASS: presentation history reuse matches complete recomputation across tokens, paging, crossings, language, epoch and overlays
+PASS: paging and new prompts reuse unchanged earlier turns and match complete recomputation (19/20 pages)
+PASS: window identity reuse ends at any earlier in-place edit, survives a rebuilt window and matches complete recomputation
+PASS: find-bar entry reuse equals a complete search across growth, isolated payload edits, reroutes, rebuilds, pages, running flips and query/option switches
+PROBE PASS: prefix zero-sign flip under an unchanged query
+PROBE PASS: NFD regex query after the canonically equal NFC query, and back
+PROBE PASS: payload NFC to NFD swap under an unchanged regex query
+PROBE PASS: object-key NFC to NFD swap under an unchanged regex query
+PROBE PASS: case-sensitive literal NFD query after the canonically equal NFC query, and back
+PASS: find-bar cache-hole probes (prefix zero sign, regex and literal query encoding round trips, payload encoding, key encoding) equal complete searches
+PASS: collapsedWhitespace whitespace-adjacent walk (2662 strict-path, 1109274 fast-path, 7 characterized gaps)
+PASS: collapsedWhitespace prepend set matches stdlib fusion (27 fusing scalars)
+PASS: collapsedWhitespace equals Character-accurate split/join on adversarial whitespace
+PASS: single-part excerpt fast path equals original Character budgets across Unicode boundaries and mixed parts
+PASS: compaction summary display strips harness scaffolding
+PASS: unified activity narratives, source priority, bounded external refinement and Codex metadata
+PASS: bounded task Recap input, privacy boundary, request/response contract, stable cache, and session overview
+PASS: file references preserve Unicode line selection; diff feedback distinguishes old/new lines and exact snapshot
+PASS: workspace progress migration, independent checkpoints, safe outcome links, stable action order
+PASS: grouping rejects unknown/duplicate memberships, preserves manual changes, undo conflicts and bounded metadata
+PASS: session naming config migration, placeholder detection, excerpt bounds, request shape, sanitization
+PASS: cron-fire envelope parsing, turn anchoring, naming excerpt
+PASS: tool visibility handoff, deduplication, late/orphan results, failure, approval, disconnection and native turn scope
+PASS: status-line tools equal the full projection walk across scenarios and 2000 seeded differential cases
+PASS: TodoList writes, queries, failure, turn boundaries and floating-list lifecycle
+Conversation activity: live/history dedup, result precedence, disconnect, approval, stop and turn isolation passed
+PASS: turn status headlines, requests, ended results, turn-scoped edits, stall thresholds, the minute clock and turn edit paths
+PASS: session turn facts for Kimi and native rows and snapshots, shared precedence, sections and notification edges
+PASS: task panel document links, host-relative paths, deduplication and write evidence
+PASS: task detail routes, row detail lines, output and stop capabilities, output tail truncation
+PASS: request/observed timing, session switching, wait accounting, completion freeze and turn isolation
+PASS: frame hitch recorder — steady frames, long gap, nested/partial attribution, scroll flag, histogram, worst-60 cap, ring overwrite, chain breaks, JSON report
+PASS: auto-compact decisions — gates, threshold edge, anti-spin, resume guards
+PASS: safe link allowlist — http/https/mailto/perch-file, scheme and case rejection
+PASS: session edit stats — diff middle, write lines, patch headers, accumulation, URL/unknown rejection, Character line boundaries
+PASS: edit-stat line counting matches the Character-split oracle across 27885 cases (22302 with VT/FF adjacency)
+PASS: edit/write/patch line scans equal the Character oracle on CRLF, canonical Unicode, boundary and seeded mixed corpora
+PASS: line fast paths preserve prefix/suffix overlap, final empty lines, CRLF and canonical Unicode boundaries
+PASS: edit tool classification preserves known/unknown aliases, Unicode folding, path precedence, URL rejection and normalized changes
+PASS: project slash commands — script, parse, frontmatter, dedup, expansion
+PASS: app version check — tag picking, suffix stripping, numeric compare
+PASS: 1000 text edits coalesce; queue saves are immediate; flush cancels stale writes
+PASS: durable drafts and attachments, safe outbox recovery, file references, search, navigation and task events
+PASS: attention routing by event, level and reader context; Dock badge counts
+Document reading contracts passed
+PASS: transcript geometry boundaries, reading anchors and bounded retention across 10,000 rows in both directions
+PASS: reply paragraphs, nested lists, tables, safe links, bare URLs and partial streaming Markdown
+PASS: reply math — dollar/backslash delimiters, display blocks, currency guard, code isolation, Unicode and unmatched boundaries
+SKIP: math rendering smoke check requires AppKit
+PASS: reply alerts — typed block, marker consumed, case-insensitive, unknown stays quote
+PASS: reply plain text, cross-view selection spans
+PASS: reply table column widths, narrow-column floors, capped surplus, deterministic rounding
+PASS: table serialization keeps Chinese, quotes, commas, line breaks and empty cells
+PASS: Claude user-role tool results, skill context, four navigation turns and 104 linked results
+PASS: chronological tool summaries, native identity, permission catalogs, wire decoding and default migration
+PASS: subagent entries decode every protocol 7 key, tolerate missing, mistyped and unknown values, and label interactions
+PASS: snapshot roster decodes; deltas and full windows replace it only when they carry it; pages and other sessions keep their own
+PASS: subagent transcript decoding, full reset, index deltas, stale revisions, epoch reset, resync and older pages
+PASS: native subagents project onto roster rows with Kimi's status, phase, clock, output and stop vocabulary
+PASS: Agent, Task and agent/spawnAgent read as subagent calls with the subagent action label
+PASS: shared subagent transcript rows for native messages and Kimi turns, matching the Kimi sheet's flattening
+PASS: transcript delta append/edit/truncate, prepend race, history epoch reset, gap and stale-base rejection
+PASS: cached directory search matches prior Unicode/token semantics, catalog changes and locale invalidation
+PASS: Kimi UTF-16 streaming, overlap, gaps, epochs, business errors, interactions
+PASS: subagent roster decoding, lifecycle events, background task list, deduplication and snapshot boundaries
+PASS: subagent transcript page, operation folding, reset watermarks, older pages and tool frame mapping
+PASS: Kimi API closes with a pending request and rejects late polling
+PASS: WebSocket heartbeat duplicate, concurrent and late callbacks; first result preserved
+PASS: Kimi pending queue recovery, identity reconciliation, no duplicate bubble
+PASS: legacy workspace migration, mixed provider identity, ordered scene restoration, group resume, Kimi queue semantics and review version
+PASS: favorites, local archive persistence, deletion reference cleanup, ordered background saves, bounded recent conversation cache
+PASS: completion semantics, batch planning, cross-host identity, revalidation, bounded concurrency, retry and undo sets
+PASS: verified-capability delivery modes, stop state machine with turn binding and unknown results, queue ownership, idempotent retry, stop-paused drafts and actionable queue recovery
+PASS: local/SSH environment identity, GUI-safe discovery paths, version gating, explicit approval launch and probe-derived capabilities
+PASS: version parsing, installed/serving comparison, stale and managed notices, start timestamps and meta decoding
+PASS: remote setup migration, managed Kimi Web settings and command, Kimi runtime discovery, bridge version probe, aliases, path quoting, timeout and cancellation
+PASS: dashboard priority sections, offline and archived scoping, explained archive count, metadata-only progress, first-run and filtered empty states, single inbox narrowing, restore context, active scope and queue row times
+PASS: task group membership, recency, priority, search, resume, missing-session visibility, row group badges and combined group/machine scoping
+PASS: unified workbench multi-host goals, non-duplicated actions, offline evidence, stable shortcuts, manual completion and legacy migration
+PASS: batched navigation matches original ordering, counts, host scope, missing and duplicate references
+PASS: full project catalog, host/path identity, stable headers, pins, manual membership, persistence and project search
+PASS: project evidence uses real tool paths and literal navigation, rejects prose/quoted commands/heredocs/dynamic paths, and favors sustained repository work
+PASS: stable sidebar pins, bounded recents, independent filters and actionable attention count
+PASS: OMP, Qoder and Kimi model catalogs, provider/id separation, regional runtime filtering, effort validation and fallback, context budget with unknown and over-limit states
+PASS: runtime command parsing, palette open rules, subcommand completion, alias resolution and slash invocation
+PASS: bounded file previews/search, workflow persistence, follow-up gates and revision-bound acceptance
+PASS: remote path resolution, conversation filename lookup and ambiguity, multi-root ordering, argument isolation, directory listing, truncation, binary/denied/missing states
+PASS: Git worktrees and task claims share their owning project; non-Git and missing directories retain identity without exposing claim credentials
+PASS: remote git worktree discovery and selection, status states, directory hints, staged/unstaged diffs, quoting, external-diff refusal, binary and truncation
+PASS: committed branch review uses merge-base and pinned commits; preserves worktree, renames, deletions, binary, literal paths and bounded diffs
+PASS: remote git write — quoting, stage/unstage/commit/switch, branches, log, show
+PASS: project file references preserve Unicode drafts; catalog searches the whole repository, prioritizes filenames, caps output and propagates Git errors
+PASS: preview replacement, pinning, existing tabs, explicit new tabs, close, overview
+PASS: task groups, cross-host identity, pinned scene persistence, corrupt-file preservation
+PASS: protocol decoding, shell argument isolation, SSH destination validation
