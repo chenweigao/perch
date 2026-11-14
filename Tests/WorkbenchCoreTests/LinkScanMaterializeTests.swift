@@ -112,18 +112,21 @@ func checkLinkScanContiguousUTF16() {
         precondition(ser(ReplyDocument.parse(text)) == first, "parse must be deterministic")
         digest = (digest ^ fnv1a(first)) &* 0x100_0000_01b3
     }
+    // Goldens captured on the UNMODIFIED product (15f612f + these tests):
+    // macOS 27.0.1 arm64 (Apple Swift, NSDataDetector) and Alibaba Cloud
+    // Linux 3 x86-64 (Swift 6.3.3, regex fallback) — the two backends
+    // legitimately differ on edge shapes (trailing CJK in URLs, unknown
+    // schemes like a glued "xhttps"), so each platform pins its own digest.
+    // The materialization re-runs reproduced both digests exactly on their
+    // platform (Mac base == cand == 97e345c9136b50c8, 98 PASS both sides).
     let expected: String
     #if canImport(Darwin)
-    expected = "DARWIN_GOLDEN_PENDING"
+    expected = "97e345c9136b50c8"
     #else
-    expected = "LINUX_GOLDEN_PENDING"
+    expected = "5dd61f867727616a"
     #endif
     let got = String(format: "%016llx", digest)
-    if expected.hasSuffix("PENDING") {
-        print("GOLDEN_CAPTURE link-scan digest: \(got)")
-    } else {
-        precondition(got == expected, "link-scan corpus digest changed: \(got) != \(expected)")
-    }
+    precondition(got == expected, "link-scan corpus digest changed: \(got) != \(expected)")
     precondition(corpus.count == 3000)
     print("PASS: link detection over contiguous UTF-16 matches the pinned corpus (3000 fuzz texts + structural cases, digest \(got))")
 }
