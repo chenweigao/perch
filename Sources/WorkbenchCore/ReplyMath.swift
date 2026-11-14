@@ -57,7 +57,11 @@ public enum ReplyMath {
     /// Resolve boundaries in bounded passes, including unmatched streaming input.
     /// The original source remains unchanged outside paired math delimiters.
     static func normalizeDelimiters(_ source: String) -> String {
-        guard source.utf8.contains(92), source.contains(#"\("#) || source.contains(#"\["#) else { return source }
+        // The byte-level contains(92) stays as the first gate: it rejects the
+        // common no-backslash source through the standard library's fast
+        // search, keeping the per-byte pair scan (below) off paths like the
+        // warm streaming update whose sources rarely carry backslashes.
+        guard source.utf8.contains(92), hasDelimiterStart(source) else { return source }
         let bytes = Array(source.utf8)
         let boundaries = Boundaries(bytes)
         var result: [UInt8] = []
@@ -128,6 +132,66 @@ public enum ReplyMath {
         guard copyFrom > 0 else { return source }
         result.append(contentsOf: bytes[copyFrom...])
         return String(decoding: result, as: UTF8.self)
+    }
+
+    /// Replaces the two grapheme-aware `contains("\(")` / `contains("\[")`
+    /// searches of the previous guard (run after the byte-level contains(92)
+    /// fast reject, which stays in front of this scan) — they dominated this
+    /// function on the cold find-bar path (round-17 attribution: ~79% of its
+    /// samples were String-search machinery on tool-output sources full of
+    /// escaped backslashes). Byte adjacency of the ASCII pair is a necessary
+    /// condition for a Character-sequence match (UTF-8 self-synchronization:
+    /// ASCII bytes never occur inside multi-byte sequences), so sources
+    /// without the byte pair are rejected by the scan alone.
+    ///
+    /// A found pair fast-accepts — grapheme-exact, search over — only when
+    /// BOTH boundaries are proven at the byte level:
+    /// - trailing: the byte after the paren is ASCII or absent, since every
+    ///   scalar that could extend the paren's grapheme (Extend, SpacingMark,
+    ///   ZWJ) is non-ASCII;
+    /// - leading: the byte before the backslash is ASCII or the backslash
+    ///   starts the string. A backslash forms its own Character unless a
+    ///   GCB=Prepend scalar precedes it — GB9b joins Prepend × Any, so e.g.
+    ///   U+0600 fuses FORWARD with the backslash into one Character and the
+    ///   original contains("\(") finds no match (the hazard is long recorded
+    ///   in ConversationProjection). Every Prepend scalar is non-ASCII, and
+    ///   the only ASCII-to-ASCII grapheme fusion is CR×LF, which cannot
+    ///   swallow a following backslash — so an ASCII (or absent) predecessor
+    ///   proves the boundary.
+    ///
+    /// A pair with a non-ASCII byte on either side is inconclusive at the
+    /// byte level (Prepend before the backslash, or a combining mark
+    /// extending the paren), so the grapheme-aware searches decide exactly
+    /// as before — reached only for sources that actually contain a
+    /// delimiter-byte pair, never for the common no-pair source. Re-review
+    /// finding 1: the initial fast path lacked the leading check and wrongly
+    /// admitted "\u{0600}\(x\)", which must stay literal; the Prepend corner
+    /// is baseline-pinned in checkNormalizeDelimitersByteGuard.
+    private static func hasDelimiterStart(_ source: String) -> Bool {
+        var previous: UInt8 = 0
+        var beforePrevious: UInt8 = 0
+        var position = 0
+        var sawPair = false
+        var pendingPair = false
+        for byte in source.utf8 {
+            if pendingPair {
+                if byte < 0x80 { return true }
+                pendingPair = false
+            }
+            if previous == 92, byte == 40 || byte == 91 {
+                sawPair = true
+                // The backslash sits at position-1: its leading boundary is
+                // proven when it starts the string (position == 1) or the
+                // byte before it is ASCII.
+                if position == 1 || beforePrevious < 0x80 { pendingPair = true }
+            }
+            beforePrevious = previous
+            previous = byte
+            position += 1
+        }
+        if pendingPair { return true }
+        guard sawPair else { return false }
+        return source.contains(#"\("#) || source.contains(#"\["#)
     }
 
     private static func isEscaped(_ bytes: [UInt8], at index: Int) -> Bool {

@@ -79,6 +79,7 @@ struct ProtocolTests {
         checkConversationRowGeometry()
         checkReplyDocument()
         checkLinkScanContiguousUTF16()
+        checkNormalizeDelimitersByteGuard()
         checkReplyMath()
 #if canImport(AppKit)
         checkMathRendering()

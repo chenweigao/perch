@@ -1,0 +1,30 @@
+total_samples=21222
+
+== total ownership (nearest named product frame wins) ==
+  12467  58.7456%  linkMatches
+   3830  18.0473%  ReplyDocument.parse
+   1632   7.6901%  ReplyDocument.blocks
+   1603   7.5535%  ConversationSearch.search
+    571   2.6906%  sources(of:)
+    390   1.8377%  other/unattributed
+    329   1.5503%  ReplyDocument.inlines
+    148   0.6974%  linkBareURLs
+    111   0.5230%  ConversationTimelineEntry.make
+     66   0.3110%  renderedText
+     38   0.1791%  role(of:)
+     37   0.1743%  ConversationSearch.hits
+
+== selected leaves: ownership + explicit bridging frames ==
+_nativeGetIndex: total=41 (0.1932% of all)  [ConversationSearch.search=39, other/unattributed=2]  character(at:)=0 getCharacters=41
+langid_consume_string: total=1897 (8.9388% of all)  [linkMatches=1897]  character(at:)=0 getCharacters=0
+_DDScannerHandleState: total=838 (3.9487% of all)  [linkMatches=838]  character(at:)=0 getCharacters=0
+DDLexerDeterministicScan: total=675 (3.1807% of all)  [linkMatches=675]  character(at:)=0 getCharacters=0
+computeLexemsAtPosition: total=393 (1.8519% of all)  [linkMatches=393]  character(at:)=0 getCharacters=0
+__CF_IS_OBJC: total=477 (2.2477% of all)  [linkMatches=469, ConversationSearch.search=7, other/unattributed=1]  character(at:)=0 getCharacters=0
+objc_msgSend: total=166 (0.7822% of all)  [linkMatches=157, ConversationSearch.search=4, other/unattributed=3]  character(at:)=0 getCharacters=0
+_nativeCopy(into:alignedRange: total=77 (0.3628% of all)  [ConversationSearch.search=65, other/unattributed=12]  character(at:)=0 getCharacters=77
+CFStringFindWithOptionsAndLocale: total=705 (3.3220% of all)  [ConversationSearch.search=442, linkMatches=263]  character(at:)=0 getCharacters=0
+__CFStringFoldCharacterClusterAtIndex: total=907 (4.2739% of all)  [ConversationSearch.search=682, linkMatches=225]  character(at:)=0 getCharacters=0
+
+selected-7-leaf subtotal: 4487 (21.1432% of all)  [the figure previously mislabeled as total linkMatches ownership]
+CF query-match machinery under ConversationSearch.search (CFStringFindWithOptionsAndLocale + __CFStringFoldCharacterClusterAtIndex only): 1124 (5.2964% of all)

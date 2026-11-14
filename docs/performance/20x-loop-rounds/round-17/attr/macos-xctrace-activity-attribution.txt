@@ -1,0 +1,160 @@
+profile=activity total_samples=20124 setup=14362 (71.4%) non_setup=5762 (28.6%)
+
+== region classification (innermost matching frame wins) ==
+  count    %all  %nonsetup  region
+  13270  65.94%      0.00%  setup-json
+   2968  14.75%     51.51%  edit-stats
+   1092   5.43%      0.00%  setup-wire-decode
+    959   4.77%     16.64%  running-ids
+    941   4.68%     16.33%  teardown
+    607   3.02%     10.53%  activity-init
+    273   1.36%      4.74%  todo
+     10   0.05%      0.17%  bench-harness
+      4   0.02%      0.07%  outside
+
+== top leaves in [edit-stats] ==
+   1020   5.07%-of-all  closure #1 in static SessionEditStats.lineCount(_:)
+    225   1.12%-of-all  Substring.subscript.getter
+    200   0.99%-of-all  Substring.index(_:offsetBy:)
+    152   0.76%-of-all  specialized static String._uncheckedFromUTF8(_:isASCII:precalculatedUTF16Count:)
+    113   0.56%-of-all  _allASCII(_:)
+     92   0.46%-of-all  _stringCompareWithSmolCheck(_:_:expecting:)
+     69   0.34%-of-all  specialized static SessionEditStats.firstLine(_:from:)
+     64   0.32%-of-all  specialized BidirectionalCollection._range<A>(of:anchored:backwards:)
+     60   0.30%-of-all  swift_bridgeObjectRelease
+     57   0.28%-of-all  Hasher.combine(bytes:)
+     55   0.27%-of-all  specialized static SessionEditStats.lastLine(_:before:)
+     49   0.24%-of-all  swift_release
+     48   0.24%-of-all  String.lowercased()
+     44   0.22%-of-all  swift_retain
+
+== top leaves in [running-ids] ==
+     84   0.42%-of-all  Hasher.combine(bytes:)
+     62   0.31%-of-all  specialized __RawDictionaryStorage.find<A>(_:hashValue:)
+     59   0.29%-of-all  swift_bridgeObjectRelease
+     56   0.28%-of-all  swift_release
+     53   0.26%-of-all  Hasher._finalize()
+     52   0.26%-of-all  swift_retain
+     50   0.25%-of-all  DYLD-STUB$$swift_bridgeObjectRelease
+     49   0.24%-of-all  DYLD-STUB$$swift_bridgeObjectRetain
+     48   0.24%-of-all  _stringCompare(_:_:expecting:)
+     45   0.22%-of-all  swift_bridgeObjectRetain
+     32   0.16%-of-all  specialized _NativeDictionary._copyOrMoveAndResize(capacity:moveElements:)
+     31   0.15%-of-all  _stringCompareWithSmolCheck(_:_:expecting:)
+     26   0.13%-of-all  String.hash(into:)
+     23   0.11%-of-all  initializeWithCopy for KimiPart
+
+== top leaves in [teardown] ==
+     86   0.43%-of-all  swift_arrayDestroy
+     77   0.38%-of-all  swift_unknownObjectRelease
+     71   0.35%-of-all  _DictionaryStorage.deinit
+     70   0.35%-of-all  swift_release
+     69   0.34%-of-all  _xzm_free_tc
+     67   0.33%-of-all  _ContiguousArrayStorage.__deallocating_deinit
+     65   0.32%-of-all  swift_bridgeObjectRelease
+     54   0.27%-of-all  __xzm_xzone_free_to_freelist_chunk
+     47   0.23%-of-all  swift::TargetMetadata<swift::InProcess>::getTypeContextDescriptor() const
+     40   0.20%-of-all  bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInline
+     31   0.15%-of-all  _free
+     28   0.14%-of-all  void tuple_destroy<false, false>(swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*)
+     26   0.13%-of-all  swift::metadataimpl::ValueWitnesses<swift::metadataimpl::OpaqueExistentialBox<1u>>::destroy(swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*)
+     25   0.12%-of-all  __BridgingHashBuffer.deinit
+
+== top leaves in [activity-init] ==
+     41   0.20%-of-all  Hasher.combine(bytes:)
+     31   0.15%-of-all  specialized __RawDictionaryStorage.find<A>(_:hashValue:)
+     24   0.12%-of-all  Hasher._finalize()
+     24   0.12%-of-all  _xzm_malloc_tc
+     19   0.09%-of-all  swift_bridgeObjectRetain
+     15   0.07%-of-all  String.hash(into:)
+     15   0.07%-of-all  _xzm_xzone_malloc_tiny
+     15   0.07%-of-all  swift_release
+     14   0.07%-of-all  DYLD-STUB$$swift_bridgeObjectRetain
+     13   0.06%-of-all  specialized Hasher.init(_seed:)
+     13   0.06%-of-all  swift_bridgeObjectRelease
+     12   0.06%-of-all  Hasher._combine(_:)
+     12   0.06%-of-all  _xzm_free_tc
+     11   0.05%-of-all  swift_retain
+
+== top leaves in [todo] ==
+     30   0.15%-of-all  specialized __RawDictionaryStorage.find<A>(_:hashValue:)
+     25   0.12%-of-all  DYLD-STUB$$swift_bridgeObjectRetain
+     20   0.10%-of-all  _stringCompareWithSmolCheck(_:_:expecting:)
+     19   0.09%-of-all  swift_retain
+     17   0.08%-of-all  swift_bridgeObjectRetain
+     16   0.08%-of-all  specialized UnsafeMutablePointer.move()
+     14   0.07%-of-all  Hasher.combine(bytes:)
+     14   0.07%-of-all  specialized Hasher.init(_seed:)
+     12   0.06%-of-all  specialized UnsafeMutablePointer<>.initialize(to:)
+     11   0.05%-of-all  swift_release
+     10   0.05%-of-all  swift_bridgeObjectRelease
+     10   0.05%-of-all  Hasher._finalize()
+      9   0.04%-of-all  DYLD-STUB$$swift_bridgeObjectRelease
+      8   0.04%-of-all  DYLD-STUB$$Hasher.init(_seed:)
+
+== top leaves in [bench-harness] ==
+      2   0.01%-of-all  _StringGuts.append(_:)
+      2   0.01%-of-all  _free
+      1   0.00%-of-all  DYLD-STUB$$swift_setDeallocating
+      1   0.00%-of-all  specialized Dictionary.init(dictionaryLiteral:)
+      1   0.00%-of-all  specialized _ArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)
+      1   0.00%-of-all  _xzm_free_tc
+      1   0.00%-of-all  __swift_instantiateConcreteTypeFromMangledNameV2
+      1   0.00%-of-all  DYLD-STUB$$swift_deallocClassInstance
+
+== top leaves in [outside] ==
+      1   0.00%-of-all  close
+      1   0.00%-of-all  mach_o::GenericTrie::find(CString, bool) const
+      1   0.00%-of-all  <deduplicated_symbol>
+      1   0.00%-of-all  __getattrlist
+
+== mechanism inclusive (samples with >=1 matching frame, all regions) ==
+   1724   8.57%  swift_release
+    877   4.36%  Array.append
+    731   3.63%  destroy
+    638   3.17%  malloc
+    636   3.16%  free
+    579   2.88%  swift_allocObject
+    470   2.34%  memmove
+    335   1.66%  validateUTF8
+    295   1.47%  swift_retain
+    191   0.95%  objc_
+    115   0.57%  initializeWithCopy
+     52   0.26%  Array._getElement
+     26   0.13%  String.index
+     26   0.13%  memcpy
+     20   0.10%  _reserveCapacityAssumingUniqueBuffer
+     17   0.08%  utf16
+      8   0.04%  hasBreakWhenPaired
+
+== top-30 self leaves overall ==
+   1730   8.60%  _convertJSONString
+   1020   5.07%  closure #1 in static SessionEditStats.lineCount(_:)
+    547   2.72%  swift_release
+    467   2.32%  _platform_memmove
+    462   2.30%  specialized static JSONScanner._slowpath_stringValue(from:appendingTo:fullSource:)
+    432   2.15%  String.UTF16View._nativeCopy(into:alignedRange:)
+    381   1.89%  swift_bridgeObjectRelease
+    373   1.85%  _StringGuts.append(_:)
+    369   1.83%  _xzm_free_tc
+    364   1.81%  _allASCII(_:)
+    358   1.78%  specialized static String._uncheckedFromUTF8(_:isASCII:precalculatedUTF16Count:)
+    335   1.66%  validateUTF8(_:)
+    331   1.64%  JSONScanner.DocumentReader.skipUTF8StringTillNextUnescapedQuote(isSimple:)
+    330   1.64%  specialized __RawDictionaryStorage.find<A>(_:hashValue:)
+    328   1.63%  Substring.subscript.getter
+    293   1.46%  swift_retain
+    292   1.45%  Hasher.combine(bytes:)
+    283   1.41%  _xzm_malloc_tc
+    239   1.19%  bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInline
+    227   1.13%  _stringCompareWithSmolCheck(_:_:expecting:)
+    200   0.99%  JSONScanner.DocumentReader.skipUTF8StringTillQuoteOrBackslashOrInvalidCharacter()
+    200   0.99%  Substring.index(_:offsetBy:)
+    171   0.85%  _free
+    162   0.81%  Hasher._finalize()
+    159   0.79%  swift_bridgeObjectRetain
+    148   0.74%  swift_deallocClassInstance
+    141   0.70%  swift::TargetContextDescriptor<swift::InProcess>::getGenericContext() const
+    139   0.69%  __CFToUTF8
+    135   0.67%  DefaultStringInterpolation.appendLiteral(_:)
+    127   0.63%  getCache(swift::TargetTypeContextDescriptor<swift::InProcess> const&)
