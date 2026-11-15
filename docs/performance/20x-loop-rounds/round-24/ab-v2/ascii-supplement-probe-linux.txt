@@ -1,0 +1,3 @@
+ascii-scalars-checked: 127 (0x01..0x7F; 0x00 excluded as non-text)
+ascii-fusions-with-preceding-space: 0
+RESULT: PASS — no ASCII scalar fuses with a preceding space; the seven-gap conclusion is complete over the full scalar range

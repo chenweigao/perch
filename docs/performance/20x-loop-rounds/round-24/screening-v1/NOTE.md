@@ -2,9 +2,15 @@
 
 v1 ran the baseline from the PRISTINE base tree (no tests patch) because the
 new contract-assertion pin cannot pass on the unfixed product. That was right
-for checks but wrong for bench isolation: the tests bytes (+107 lines) move
-the WorkbenchChecks binary layout, and the v1 token2000_total signal
-(Linux +1.03% 3/3, Mac +1.8~4.1% 3/3 separated) was confounded by it.
+for checks but wrong for bench isolation: the v1 timing trees differed by
+tests AND product bytes (tests change: +80/-15 lines; 107 was the product
+commit's total added lines across both files), so the v1 token2000_total
+signal (Linux +1.026759% 3/3, Mac per-pair +1.813333..+4.024497% 3/3
+separated) carries a tests/layout confound RISK. The signal did not
+reproduce under the tests-aligned v2 screening or the formal runs; the
+causal split between layout confound and run noise remains HYPOTHESIS (no
+disassembly-level forensics; review F4 discipline: unchanged source does
+not prove unchanged generated instructions).
 v2 re-ran both sides tests-aligned (formal A/B template design); the
 token2000_total signal vanished on both platforms.
 
