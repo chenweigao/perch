@@ -157,8 +157,14 @@ func checkCollapsedWhitespace() {
         let expected = text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
         precondition(text.collapsedWhitespace == expected,
                      "fast-path fuzz mismatch for \(text.debugDescription)")
-        // Count how many texts actually kept the byte path (no binder/whitespace
-        // trigger): a corpus that only exercises strict proves nothing.
+        // Corpus classification (NOT execution routing): needsStrict flags any
+        // text CONTAINING a potential strict-trigger scalar anywhere, while the
+        // product only triggers on whitespace-adjacent positions — texts with a
+        // trigger in non-adjacent position stay on the byte path (review F1:
+        // independent source-level routing replay counted 304 byte-path / 196
+        // strict for this corpus). The even-indexed fast-pieces-only half still
+        // GUARANTEES byte-path coverage because those texts contain no trigger
+        // scalar at all.
         let needsStrict = text.unicodeScalars.contains { s in
             let v = s.value
             return v == 0x200D || v == 0x0E33 || v == 0x0EB3 || (0x1F3FB...0x1F3FF).contains(v)
@@ -172,6 +178,6 @@ func checkCollapsedWhitespace() {
     }
     precondition(fastPathFuzzed >= 200 && strictRouted > 0,
                  "fast-path fuzz degenerate: fast \(fastPathFuzzed), strict \(strictRouted)")
-    print("PASS: collapsedWhitespace fast-path fuzz (500 texts; \(fastPathFuzzed) stayed on the byte path, \(strictRouted) strict-routed)")
+    print("PASS: collapsedWhitespace fast-path fuzz (500 texts; \(fastPathFuzzed) contain no potential strict-trigger scalar, \(strictRouted) contain at least one; corpus classification, not execution counts)")
     print("PASS: collapsedWhitespace equals Character-accurate split/join on adversarial whitespace")
 }

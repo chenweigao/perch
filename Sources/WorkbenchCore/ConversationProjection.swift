@@ -121,9 +121,11 @@ extension String {
     /// drops the whole cluster — while every property lookup this file uses
     /// (Grapheme_Extend, Mn/Mc/Me, ZWJ) reports nothing: Thai/Lao Sara-Am
     /// (U+0E33/U+0EB3) and the five emoji skin-tone modifiers
-    /// (U+1F3FB…U+1F3FF). An exhaustive walk over all 1,112,064 scalars on
-    /// both supported toolchains (2026-11-15; Linux Swift 6.3.3 and Apple
-    /// Swift 6.4) found exactly these seven and no others; before this set
+    /// (U+1F3FB…U+1F3FF). An exhaustive walk over the 1,111,936 non-ASCII
+    /// Unicode scalars on both supported toolchains (2026-11-15; Linux Swift
+    /// 6.3.3 and Apple Swift 6.4) found exactly these seven and no others
+    /// (the 128 ASCII scalars are outside the walk; review-verified separately:
+    /// none fuses with a preceding space); before this set
     /// existed they were the byte path's only contract gap (the fast path
     /// kept a scalar the strict form drops with the space it fused into,
     /// e.g. `" \u{0E33} "` → strict `""` vs fast `"\u{0E33}"`).
