@@ -1,0 +1,9 @@
+retest done after ~20s
+HEAD=e6af380f625ef78057e215093e1fb0b61d7d9065
+porcelain_before=0
+math_exit=2
+porcelain_after=0
+DONE Sun Nov 15 17:16:00 CST 2026
+WAIT_DONE Sun Nov 15 17:16:31 CST 2026
+
+[exited with code 0]

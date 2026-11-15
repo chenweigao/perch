@@ -1,0 +1,11 @@
+candidate_rebuild_exit=0
+candidate_rebuild_head=e14c25de6bc70174f9bcd592109aa91508d03b63
+candidate_rebuild_porcelain=13
+1232cca7afcd9559b59e3dc7006e37c353204fe478dba78e751cb5e91c50f2fd  .build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+baseline_rebuild_head=ed533410158a053ab89f5f8ee74d022ab9657485
+baseline_rebuild_porcelain=4
+A  Tests/WorkbenchCoreTests/NarrativePhaseScanTests.swift
+M  Tests/WorkbenchCoreTests/ProtocolTests.swift
+?? build.log
+?? rebuild.log
+edec1df7b43ecb0ae3fa1aebd379a35a605f499aafef81421f2fc8967371141d  /tmp/r22v2-base/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks

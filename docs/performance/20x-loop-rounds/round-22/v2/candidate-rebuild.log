@@ -1,0 +1,417 @@
+Building for production...
+[0/414] Compiling CAtomic CAtomic.c
+[1/414] Compiling fips_shared_support.cc
+[2/414] Compiling x25519-asm-arm.S
+[3/414] Compiling poly1305_arm_asm.S
+[4/414] Compiling poly_rq_mul.S
+[5/414] Compiling cmark-gfm-extensions tasklist.c
+[6/414] Compiling cmark-gfm iterator.c
+[7/414] Write swift-version--2C0D084D88D86C41.txt
+[8/414] Compiling cmark-gfm-extensions tagfilter.c
+[9/414] Compiling cpu_aarch64_openbsd.cc
+[10/414] Compiling rsa_extra.cc
+[11/414] Compiling sqrt.cc
+[11/414] Compiling aes.cc
+[13/414] Compiling derive_key.cc
+[14/414] Compiling printf.cc
+[15/414] Compiling cmark-gfm-extensions core-extensions.c
+[16/414] Compiling a_dup.cc
+[17/414] Compiling a_octet.cc
+[18/414] Compiling cpu_aarch64_fuchsia.cc
+[19/414] Compiling cpu_aarch64_apple.cc
+[19/414] Compiling asn1_par.cc
+[19/414] Compiling cpu_arm_freebsd.cc
+[22/414] Compiling cpu_aarch64_sysreg.cc
+[23/414] Compiling cmark-gfm-extensions strikethrough.c
+[24/414] Compiling cpu_aarch64_win.cc
+[24/414] Compiling f_int.cc
+[24/414] Compiling mlkem.cc
+[24/414] Compiling f_string.cc
+[28/414] Compiling a_i2d_fp.cc
+[28/414] Compiling cpu_aarch64_linux.cc
+[30/414] Compiling cpu_arm_linux.cc
+[31/414] Compiling asn_pack.cc
+[32/414] Compiling fuzzer_mode.cc
+[33/414] Compiling e_null.cc
+[33/414] Compiling errno.cc
+[35/414] Compiling e_rc4.cc
+[35/414] Write sources
+[41/414] Compiling bn_asn1.cc
+[42/414] Compiling deterministic.cc
+[42/414] Compiling div.cc
+[42/414] Compiling getentropy.cc
+[44/414] Compiling ios.cc
+[45/414] Compiling crypto.cc
+[47/414] Compiling tasn_fre.cc
+[47/414] Compiling trusty.cc
+[49/414] Compiling get_cipher.cc
+[50/414] Compiling buf.cc
+[51/414] Compiling e_des.cc
+[51/414] Compiling cpu_intel.cc
+[53/414] Compiling cmark-gfm plugin.c
+[54/414] Compiling posix_time.cc
+[55/414] Compiling ecdsa_p1363.cc
+[56/414] Compiling ecdh.cc
+[57/414] Compiling poly1305.cc
+[58/414] Compiling cmark-gfm-extensions ext_scanners.c
+[59/414] Compiling cmark-gfm cmark_ctype.c
+[60/414] Compiling sha256.cc
+[61/414] Compiling cmark-gfm xml.c
+[62/414] Compiling sha512.cc
+[63/414] Compiling hexdump.cc
+[64/414] Compiling CXKCPShims shims.c
+[65/414] Compiling chacha.cc
+[65/414] Compiling cmark-gfm references.c
+[67/414] Compiling rand.cc
+[68/414] Compiling cmark-gfm linked_list.c
+[69/414] Compiling cmark-gfm registry.c
+[70/414] Compiling fd.cc
+[71/414] Compiling sha1.cc
+[72/414] Compiling rc4.cc
+[73/414] Compiling cmark-gfm houdini_href_e.c
+[74/414] Compiling e_aesctrhmac.cc
+[75/414] Compiling poly1305_arm.cc
+[76/414] Compiling engine.cc
+[77/414] Compiling file.cc
+[78/414] Compiling ex_data.cc
+[79/414] Compiling a_bool.cc
+[79/414] Compiling cmark-gfm man.c
+[81/414] Compiling cmark-gfm syntax_extension.c
+[82/414] Compiling thread_win.cc
+[83/414] Compiling md5.cc
+[84/414] Compiling cmark-gfm footnotes.c
+[84/414] Compiling cmark-gfm houdini_html_e.c
+[86/414] Compiling cmark-gfm cmark.c
+[87/414] Compiling tasn_typ.cc
+[88/414] Compiling windows.cc
+[89/414] Compiling bio_mem.cc
+[90/414] Compiling pbkdf.cc
+[91/414] Compiling cmark-gfm map.c
+[92/414] Compiling cmark-gfm plaintext.c
+[93/414] Compiling SimpleFIPS202.c
+[94/414] Compiling refcount.cc
+[95/414] Compiling KeccakHash.c
+[96/414] Compiling a_gentm.cc
+[97/414] Compiling thread_none.cc
+[98/414] Compiling passive.cc
+[98/414] Compiling a_d2i_fp.cc
+[100/414] Compiling pair.cc
+[101/414] Compiling thread.cc
+[102/414] Compiling cmark-gfm render.c
+[103/414] Compiling mldsa.cc
+[104/414] Compiling e_aeseax.cc
+[105/414] Compiling a_utctm.cc
+[105/414] Compiling forkunsafe.cc
+[107/414] Compiling lhash.cc
+[107/414] Compiling cmark-gfm arena.c
+[109/414] Compiling rsa_print.cc
+[110/414] Compiling e_chacha20poly1305.cc
+[110/414] Compiling cmark-gfm latex.c
+[112/414] Compiling fork_detect.cc
+[113/414] Compiling KeccakSponge.c
+[113/414] Compiling unicode.cc
+[115/414] Compiling exponentiation.cc
+[116/414] Compiling fiat_p256_adx_sqr.S
+[117/414] Compiling md5-586-apple.S
+[118/414] Compiling md5-x86_64-apple.S
+[119/414] Compiling a_mbstr.cc
+[120/414] Compiling thread_pthread.cc
+[121/414] Compiling fiat_curve25519_adx_square.S
+[122/414] Compiling asn1_compat.cc
+[123/414] Compiling slhdsa.cc
+[124/414] Compiling e_tls.cc
+[125/414] Compiling siphash.cc
+[126/414] Compiling ber.cc
+[127/414] Compiling a_time.cc
+[128/414] Compiling fiat_curve25519_adx_mul.S
+[129/414] Compiling base64.cc
+[130/414] Compiling p_ed25519.cc
+[131/414] Compiling urandom.cc
+[132/414] Compiling p_ed25519_asn1.cc
+[133/414] Compiling md5-586-linux.S
+[134/414] Compiling cmark-gfm-extensions autolink.c
+[135/414] Compiling tasn_new.cc
+[135/414] Compiling p_x25519.cc
+[135/414] Compiling cmark-gfm buffer.c
+[135/414] Compiling fiat_p256_adx_mul.S
+[135/414] Compiling p_hkdf.cc
+[135/414] Compiling scrypt.cc
+[135/414] Compiling ec_derive.cc
+[135/414] Compiling e_rc2.cc
+[143/414] Compiling obj_xref.cc
+[144/414] Compiling tasn_enc.cc
+[145/414] Compiling p_dh_asn1.cc
+[145/414] Compiling p_x25519_asn1.cc
+[147/414] Compiling cmark-gfm commonmark.c
+[148/414] Compiling md4.cc
+[149/414] Compiling chacha20_poly1305_x86_64-apple.S
+[150/414] Compiling cmark-gfm houdini_html_u.c
+[151/414] Compiling md5-x86_64-linux.S
+[152/414] Compiling x86_64-mont5-apple.S
+[153/414] Compiling chacha-x86-linux.S
+[154/414] Compiling chacha-armv8-win.S
+[155/414] Compiling tasn_utl.cc
+[156/414] Compiling chacha-armv4-linux.S
+[157/414] Compiling chacha-x86_64-apple.S
+[158/414] Compiling print.cc
+[159/414] Compiling chacha-x86_64-linux.S
+[159/414] Compiling chacha-x86-apple.S
+[159/414] Compiling vpaes-x86_64-linux.S
+[162/414] Compiling x86_64-mont-apple.S
+[162/414] Compiling chacha-armv8-apple.S
+[162/414] Compiling chacha20_poly1305_armv8-win.S
+[165/414] Compiling x86_64-mont5-linux.S
+[166/414] Compiling sign.cc
+[167/414] Compiling chacha20_poly1305_x86_64-linux.S
+[167/414] Compiling x86-mont-linux.S
+[169/414] Compiling p_dh.cc
+[169/414] Compiling params.cc
+[171/414] Compiling a_bitstr.cc
+[172/414] Compiling a_type.cc
+[173/414] Compiling aes128gcmsiv-x86_64-apple.S
+[174/414] Compiling vpaes-x86-linux.S
+[175/414] Compiling vpaes-armv8-linux.S
+[176/414] Compiling vpaes-x86_64-apple.S
+[177/414] Compiling vpaes-armv8-win.S
+[178/414] Compiling chacha20_poly1305_armv8-linux.S
+[179/414] Compiling dh_asn1.cc
+[180/414] Compiling aes128gcmsiv-x86_64-linux.S
+[181/414] Compiling sha512-armv4-linux.S
+[181/414] Compiling sha512-586-apple.S
+[183/414] Compiling vpaes-armv7-linux.S
+[183/414] Compiling vpaes-x86-apple.S
+[183/414] Compiling x86_64-mont-linux.S
+[186/414] Compiling sha256-armv8-apple.S
+[187/414] Compiling sha512-x86_64-apple.S
+[188/414] Compiling vpaes-armv8-apple.S
+[188/414] Compiling chacha20_poly1305_armv8-apple.S
+[188/414] Compiling sha256-586-apple.S
+[189/414] Compiling sha512-586-linux.S
+[189/414] Compiling chacha-armv8-linux.S
+[189/414] Compiling sha256-armv8-linux.S
+[194/414] Compiling x86-mont-apple.S
+[195/414] Compiling sha256-armv4-linux.S
+[195/414] Compiling sha512-armv8-win.S
+[197/414] Compiling sha256-586-linux.S
+[198/414] Compiling cmark-gfm html.c
+[198/414] Compiling sha1-armv8-linux.S
+[200/414] Compiling sha512-armv8-linux.S
+[201/414] Compiling p_ec.cc
+[202/414] Compiling sha256-armv8-win.S
+[203/414] Compiling conf.cc
+[204/414] Compiling tls_cbc.cc
+[205/414] Compiling cmark-gfm-extensions table.c
+[205/414] Compiling sha256-x86_64-linux.S
+[207/414] Compiling sha256-x86_64-apple.S
+[208/414] Compiling pkcs7.cc
+[209/414] Compiling sha1-x86_64-apple.S
+[209/414] Compiling a_strex.cc
+[211/414] Compiling asn1_lib.cc
+[212/414] Compiling evp.cc
+[213/414] Compiling pool.cc
+[214/414] Compiling sha1-armv8-win.S
+[215/414] Compiling sha1-armv8-apple.S
+[216/414] Compiling stack.cc
+[217/414] Compiling bio.cc
+[218/414] Compiling digest_extra.cc
+[219/414] Compiling mem.cc
+[220/414] Compiling p_rsa_asn1.cc
+[221/414] Compiling blake2.cc
+[222/414] Compiling err.cc
+[223/414] Compiling sha1-x86_64-linux.S
+[224/414] Compiling sha512-armv8-apple.S
+[225/414] Compiling sha1-586-linux.S
+[226/414] Compiling sha1-armv4-large-linux.S
+[227/414] Compiling e_aesgcmsiv.cc
+[228/414] Compiling p256_beeu-armv8-asm-win.S
+[229/414] Compiling p256-armv8-asm-win.S
+[230/414] Compiling p256_beeu-x86_64-asm-apple.S
+[231/414] Compiling a_object.cc
+[232/414] Compiling sha1-586-apple.S
+[233/414] Compiling p256-armv8-asm-apple.S
+[234/414] Compiling p256-armv8-asm-linux.S
+[235/414] Compiling rdrand-x86_64-linux.S
+[236/414] Compiling p_ec_asn1.cc
+[237/414] Compiling rdrand-x86_64-apple.S
+[238/414] Compiling ghashv8-armv8-linux.S
+[239/414] Compiling p256_beeu-armv8-asm-linux.S
+[240/414] Compiling ghashv8-armv8-apple.S
+[240/414] Compiling p256-x86_64-asm-apple.S
+[242/414] Compiling p256_beeu-x86_64-asm-linux.S
+[243/414] Compiling ghash-x86-linux.S
+[244/414] Compiling rsaz-avx2-apple.S
+[245/414] Compiling hash_to_curve.cc
+[246/414] Compiling ghash-x86_64-linux.S
+[247/414] Compiling sha512-x86_64-linux.S
+[248/414] Compiling ghashv8-armv7-linux.S
+[249/414] Compiling ghash-x86-apple.S
+[250/414] Compiling ghashv8-armv8-win.S
+[251/414] Compiling ghash-ssse3-x86_64-linux.S
+[252/414] Compiling rsaz-avx2-linux.S
+[253/414] Compiling p_dsa_asn1.cc
+[254/414] Compiling ghash-neon-armv8-win.S
+[255/414] Compiling convert.cc
+[256/414] Compiling cmark-gfm node.c
+[257/414] Compiling ghash-ssse3-x86-linux.S
+[258/414] Compiling ghash-ssse3-x86-apple.S
+[259/414] Compiling evp_ctx.cc
+[260/414] Compiling p256-x86_64-asm-linux.S
+[261/414] Compiling ghash-neon-armv8-linux.S
+[262/414] Compiling poly1305_vec.cc
+[262/414] Compiling p256_beeu-armv8-asm-apple.S
+[264/414] Compiling ghash-ssse3-x86_64-apple.S
+[265/414] Compiling spake25519.cc
+[266/414] Compiling co-586-apple.S
+[267/414] Compiling tasn_dec.cc
+[268/414] Compiling cbb.cc
+[269/414] Compiling co-586-linux.S
+[270/414] Compiling a_strnid.cc
+[271/414] Compiling rsa_crypt.cc
+[272/414] Compiling ecdsa_asn1.cc
+[273/414] Compiling ghash-neon-armv8-apple.S
+[274/414] Compiling ghash-armv4-linux.S
+[275/414] Compiling ghash-x86_64-apple.S
+[276/414] Compiling bn-armv8-apple.S
+[276/414] Compiling armv8-mont-win.S
+[278/414] Compiling bn-586-apple.S
+[279/414] Compiling aesv8-gcm-armv8-apple.S
+[280/414] Compiling armv8-mont-apple.S
+[281/414] Compiling aesv8-armv8-win.S
+[282/414] Compiling dsa_asn1.cc
+[283/414] Compiling aesv8-gcm-armv8-win.S
+[284/414] Compiling bsaes-armv7-linux.S
+[285/414] Compiling aesv8-armv8-linux.S
+[285/414] Compiling armv4-mont-linux.S
+[286/414] Compiling bn-armv8-linux.S
+[288/414] Compiling aesv8-armv7-linux.S
+[289/414] Compiling bn-586-linux.S
+[289/414] Compiling aesv8-gcm-armv8-linux.S
+[291/414] Compiling bn-armv8-win.S
+[292/414] Compiling aesv8-armv8-apple.S
+[293/414] Compiling dsa.cc
+[294/414] Compiling err_data.cc
+[295/414] Compiling aesni-x86_64-apple.S
+[296/414] Compiling armv8-mont-linux.S
+[297/414] Compiling aes-gcm-avx512-x86_64-apple.S
+[298/414] Compiling aes-gcm-avx512-x86_64-linux.S
+[299/414] Compiling aesni-x86-apple.S
+[300/414] Compiling aesni-gcm-x86_64-linux.S
+[301/414] Compiling aes-gcm-avx2-x86_64-linux.S
+[302/414] Compiling aesni-gcm-x86_64-apple.S
+[303/414] Compiling aesni-x86_64-linux.S
+[304/414] Compiling a_int.cc
+[305/414] Compiling aesni-x86-linux.S
+[306/414] Compiling aes-gcm-avx2-x86_64-apple.S
+[307/414] Compiling pem_oth.cc
+[308/414] Compiling cms.cc
+[309/414] Compiling a_digest.cc
+[310/414] Compiling pem_x509.cc
+[311/414] Compiling spake2plus.cc
+[312/414] Compiling pem_xaux.cc
+[313/414] Compiling pem_pkey.cc
+[314/414] Compiling p_rsa.cc
+[315/414] Compiling hpke.cc
+[316/414] Compiling pem_info.cc
+[317/414] Compiling des.cc
+[318/414] Compiling algorithm.cc
+[319/414] Compiling v3_bcons.cc
+[320/414] Compiling pem_pk8.cc
+[321/414] Compiling v3_bitst.cc
+[322/414] Compiling cbs.cc
+[323/414] Compiling v3_pcons.cc
+[324/414] Compiling p5_pbev2.cc
+[325/414] Compiling a_verify.cc
+[326/414] Compiling t_req.cc
+[327/414] Compiling by_file.cc
+[328/414] Compiling ec_asn1.cc
+[329/414] Compiling a_sign.cc
+[330/414] Compiling evp_asn1.cc
+[331/414] Compiling asn1_gen.cc
+[332/414] Compiling by_dir.cc
+[333/414] Compiling trust_token.cc
+[334/414] Compiling pem_all.cc
+[335/414] Compiling voprf.cc
+[336/414] Compiling pkcs8.cc
+[337/414] Compiling pkcs7_x509.cc
+[338/414] Compiling v3_cpols.cc
+[339/414] Compiling obj.cc
+[340/414] Compiling v3_alt.cc
+[341/414] Compiling v3_crld.cc
+[342/414] Compiling kyber.cc
+[343/414] Compiling rsa_asn1.cc
+[344/414] Compiling pem_lib.cc
+[345/414] Compiling v3_conf.cc
+[346/414] Compiling xwing.cc
+[347/414] Compiling pmbtoken.cc
+[348/414] Compiling i2d_pr.cc
+[349/414] Compiling pkcs8_x509.cc
+[350/414] Compiling curve25519_64_adx.cc
+[351/414] Compiling cmark-gfm blocks.c
+[352/414] Compiling x_sig.cc
+[353/414] Compiling x509_d2.cc
+[354/414] Compiling x509_txt.cc
+[355/414] Compiling x509_def.cc
+[356/414] Compiling x509.cc
+[357/414] Compiling x509spki.cc
+[358/414] Compiling x_exten.cc
+[359/414] Compiling x_attrib.cc
+[360/414] Compiling x_spki.cc
+[361/414] Compiling t_crl.cc
+[362/414] Compiling v3_ocsp.cc
+[363/414] Compiling v3_ia5.cc
+[364/414] Compiling x509rset.cc
+[365/414] Compiling v3_skey.cc
+[366/414] Compiling v3_prn.cc
+[367/414] Compiling v3_akeya.cc
+[368/414] Compiling x_req.cc
+[369/414] Compiling v3_int.cc
+[370/414] Compiling t_x509a.cc
+[371/414] Compiling x509_trs.cc
+[372/414] Compiling v3_pmaps.cc
+[373/414] Compiling v3_enum.cc
+[374/414] Compiling x509_set.cc
+[375/414] Compiling x509_att.cc
+[376/414] Compiling v3_extku.cc
+[377/414] Compiling v3_genn.cc
+[378/414] Compiling x509_ext.cc
+[379/414] Compiling x509cset.cc
+[380/414] Compiling v3_akey.cc
+[381/414] Compiling name_print.cc
+[382/414] Compiling x509_obj.cc
+[383/414] Compiling x_x509a.cc
+[384/414] Compiling t_x509.cc
+[385/414] Compiling x509_v3.cc
+[386/414] Compiling v3_lib.cc
+[387/414] Compiling x509_cmp.cc
+[388/414] Compiling x_crl.cc
+[389/414] Compiling x509_vpm.cc
+[390/414] Compiling x509_req.cc
+[391/414] Compiling x509name.cc
+[392/414] Compiling x_name.cc
+[393/414] Compiling v3_ncons.cc
+[394/414] Compiling rsa_pss.cc
+[395/414] Compiling v3_purp.cc
+[396/414] Compiling cmark-gfm inlines.c
+[397/414] Compiling v3_info.cc
+[398/414] Compiling x509_lu.cc
+[399/414] Compiling x_pubkey.cc
+[400/414] Compiling x_algor.cc
+[401/414] Compiling x_x509.cc
+[402/414] Compiling curve25519.cc
+[403/414] Compiling x_all.cc
+[404/414] Compiling policy.cc
+[405/414] Compiling hrss.cc
+[406/414] Compiling x509_vfy.cc
+[407/414] Compiling v3_utl.cc
+[408/414] Compiling cmark-gfm scanners.c
+[409/414] Compiling cmark-gfm utf8.c
+[410/415] Compiling KeccakP-1600-opt64.c
+[412/415] Compiling Markdown ChildIndexPath.swift
+[412/415] Compiling bcm.cc
+[414/416] Compiling CryptoBoringWrapper BoringSSLAEAD.swift
+[415/417] Compiling Crypto AES-GCM.swift
+[416/418] Compiling WorkbenchCore ActivityNarrative.swift
+[417/419] Compiling WorkbenchChecks ActivityBench.swift
+[417/419] Write Objects.LinkFileList
+[418/419] Linking WorkbenchChecks
+Build of product 'WorkbenchChecks' complete! (156.48s)

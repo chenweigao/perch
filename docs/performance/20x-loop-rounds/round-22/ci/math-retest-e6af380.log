@@ -1,0 +1,13 @@
+=== prepare Sun Nov 15 17:19:42 CST 2026 ===
+HEAD is now at e6af380 docs(performance): reference round-22 PR #344
+HEAD=e6af380f625ef78057e215093e1fb0b61d7d9065
+porcelain_before=0
+=== math gate Sun Nov 15 17:19:45 CST 2026 ===
+math_exit=0
+  },
+  "scope": "same-runner sequential synthetic A/B; window timings are not hardware input latency or FPS"
+}
+status: passed
+porcelain_after=0
+DONE Sun Nov 15 17:22:34 CST 2026
+exit=0
