@@ -1,0 +1,16 @@
+correctness: 20000 random strings, mismatches = 0
+cjk-2000-parts   stdlib utf16.count: best 0.688 ms per pass-set, ~362.38 ms/GB, sink=1
+cjk-2000-parts   swar byte count  : best 1.469 ms per pass-set, ~774.06 ms/GB, sink=1
+
+ascii-2000-parts stdlib utf16.count: best 0.075 ms per pass-set, ~36.13 ms/GB, sink=1
+ascii-2000-parts swar byte count  : best 1.542 ms per pass-set, ~743.08 ms/GB, sink=1
+
+long-cjk-4KB     stdlib utf16.count: best 0.000 ms per pass-set, ~1.40 ms/GB, sink=3
+long-cjk-4KB     swar byte count  : best 0.031 ms per pass-set, ~363.78 ms/GB, sink=3
+
+emoji-500-parts  stdlib utf16.count: best 0.175 ms per pass-set, ~372.59 ms/GB, sink=4
+emoji-500-parts  swar byte count  : best 0.357 ms per pass-set, ~760.40 ms/GB, sink=4
+
+single short cjk string overhead (per-call):
+  stdlib: best 2.042 ms per pass-set, ~510.60 ms/GB, sink=1
+  swar  : best 2.212 ms per pass-set, ~552.95 ms/GB, sink=1
