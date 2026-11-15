@@ -1,0 +1,18 @@
+=== prepare Sun Nov 15 08:18:48 CST 2026 ===
+From github.com:chenweigao/perch
+ * [new branch]      perf/20x-loop-19-20261115 -> origin/perf/20x-loop-19-20261115
+Previous HEAD position was 89e5976 Merge pull request #340 from chenweigao/perf/20x-loop-18-20261115
+HEAD is now at 2f65eeb docs(performance): reference round-19 PR #341
+HEAD=2f65eeb133c6441c5874a2731ad7af11022baba8
+porcelain_before=0
+=== build.sh Sun Nov 15 08:18:51 CST 2026 ===
+build_exit=0
+/Users/<mini>/_worktrees/20x-loop-20261112/perch/build/Perch.app: replacing existing signature
+/Users/<mini>/_worktrees/20x-loop-20261112/perch/build/Perch.app
+=== cold launches Sun Nov 15 08:19:52 CST 2026 ===
+Passed cold launch 5/5
+{"scope": "five isolated production WindowGroup cold launches; no remote acceptance", "completed_launches": 5, "revision": "v0.8.1-106-g2f65eeb", "passed": true}
+launch_exit=0
+porcelain_after=0
+DONE Sun Nov 15 08:20:44 CST 2026
+exit=0
