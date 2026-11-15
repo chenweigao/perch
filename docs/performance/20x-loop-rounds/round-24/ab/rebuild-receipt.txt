@@ -1,0 +1,12 @@
+candidate_rebuild_exit=0
+candidate_rebuild_head=172fd875dd30bb3910563e05f0e6e2ee571e75fd
+candidate_rebuild_porcelain=2
+?? docs/performance/20x-loop-rounds/2026-11-15-round-24.md
+?? docs/performance/20x-loop-rounds/round-24/
+dc6b16db0786cc46bc7961cc73123a5925ca5bc7ee9a28d4b4689bb6b54182ab  .build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+baseline_rebuild_head=1bcbc00f0b46fc35100b385c2e0dccc114e7c25a
+baseline_rebuild_porcelain=3
+M  Tests/WorkbenchCoreTests/CollapsedWhitespaceTests.swift
+?? build.log
+?? rebuild.log
+ae42e3c15a34612417b4d92c00bbd1e41773af73da31c5fa6750a354fee85e35  /tmp/r24-base/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks

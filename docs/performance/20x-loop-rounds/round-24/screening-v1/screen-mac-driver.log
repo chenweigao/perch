@@ -1,0 +1,54 @@
+=== prepare Sun Nov 15 23:29:05 CST 2026 ===
+HEAD is now at 1bcbc00 Merge pull request #345 from chenweigao/perf/20x-loop-23-20261115
+M	Sources/WorkbenchCore/ConversationProjection.swift
+M	Tests/WorkbenchCoreTests/CollapsedWhitespaceTests.swift
+HEAD=1bcbc00f0b46fc35100b385c2e0dccc114e7c25a
+porcelain_before=0
+=== base build (PRISTINE 1bcbc00 tree — old pin characterizes the 7 gaps) Sun Nov 15 23:29:09 CST 2026 ===
+base_build_exit=0
+=== apply tests + product patches + candidate build Sun Nov 15 23:30:22 CST 2026 ===
+tests_patch=ok
+product_patch=ok
+cand_build_exit=0
+57b21e1199fa719e87f7e1b90b1745c120054ed98944e3188039b1d67fbb61cc  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round24-base/out/Products/Release/WorkbenchChecks
+fc058ab0f7e782398de23b9bd97f3ae016f21906dc435b32e19e38e6e5236f24  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round24-cand/out/Products/Release/WorkbenchChecks
+=== checks both sides Sun Nov 15 23:31:35 CST 2026 ===
+base_checks_exit=0 pass=104
+cand_checks_exit=0 pass=105
+PASS: collapsedWhitespace whitespace-adjacent walk (2701 strict-path, 1109235 fast-path, 7 characterized gaps)
+PASS: collapsedWhitespace whitespace-adjacent walk (2708 strict-path, 1109228 fast-path, 0 fusion gaps — pinned set U+0E33/U+0EB3/U+1F3FB-U+1F3FF complete on this toolchain)
+PASS: collapsedWhitespace fast-path fuzz (500 texts; 259 stayed on the byte path, 241 strict-routed)
+base_old_walk_line_count=1
+=== in-context screening: 3 alternating, presentation-token + streaming + mode 1 (in place) Sun Nov 15 23:32:22 CST 2026 ===
+it=1 side=base p_exit=0
+it=1 side=base s_exit=0
+it=1 side=base c_exit=0
+token200_narrative_ms=0.0410  token200_total_ms=0.0538  token2000_narrative_ms=0.0350  token2000_total_ms=0.0712  longtail200_narrative_ms=0.1468  longtail200_total_ms=0.1605  [it=1 side=base]
+it=1 side=base stream_narrative=0.16 cold@2000=6.68 find_bar=
+it=1 side=cand p_exit=0
+it=1 side=cand s_exit=0
+it=1 side=cand c_exit=0
+token200_narrative_ms=0.0341  token200_total_ms=0.0454  token2000_narrative_ms=0.0338  token2000_total_ms=0.0725  longtail200_narrative_ms=0.1484  longtail200_total_ms=0.1628  [it=1 side=cand]
+it=1 side=cand stream_narrative=0.16 cold@2000=6.83 find_bar=
+it=2 side=base p_exit=0
+it=2 side=base s_exit=0
+it=2 side=base c_exit=0
+token200_narrative_ms=0.0344  token200_total_ms=0.0456  token2000_narrative_ms=0.0347  token2000_total_ms=0.0714  longtail200_narrative_ms=0.1431  longtail200_total_ms=0.1567  [it=2 side=base]
+it=2 side=base stream_narrative=0.16 cold@2000=6.91 find_bar=
+it=2 side=cand p_exit=0
+it=2 side=cand s_exit=0
+it=2 side=cand c_exit=0
+token200_narrative_ms=0.0380  token200_total_ms=0.0504  token2000_narrative_ms=0.0352  token2000_total_ms=0.0743  longtail200_narrative_ms=0.1485  longtail200_total_ms=0.1618  [it=2 side=cand]
+it=2 side=cand stream_narrative=0.17 cold@2000=6.63 find_bar=
+it=3 side=base p_exit=0
+it=3 side=base s_exit=0
+it=3 side=base c_exit=0
+token200_narrative_ms=0.0355  token200_total_ms=0.0467  token2000_narrative_ms=0.0347  token2000_total_ms=0.0713  longtail200_narrative_ms=0.1503  longtail200_total_ms=0.1641  [it=3 side=base]
+it=3 side=base stream_narrative=0.16 cold@2000=6.67 find_bar=
+it=3 side=cand p_exit=0
+it=3 side=cand s_exit=0
+it=3 side=cand c_exit=0
+token200_narrative_ms=0.0349  token200_total_ms=0.0463  token2000_narrative_ms=0.0346  token2000_total_ms=0.0735  longtail200_narrative_ms=0.1486  longtail200_total_ms=0.1628  [it=3 side=cand]
+it=3 side=cand stream_narrative=0.17 cold@2000=6.91 find_bar=
+porcelain_after=0
+DONE Sun Nov 15 23:33:13 CST 2026

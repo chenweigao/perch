@@ -1,0 +1,38 @@
+HEAD_main=172fd875dd30bb3910563e05f0e6e2ee571e75fd
+porcelain_main=0
+cand_build_exit=0
+base_build_exit=0
+5bbfd58ed1c2352b3d1f2c4402b6b235f2b4b2c15409f346d2bbe45882d21183  /tmp/r24-screen-base/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+dc6b16db0786cc46bc7961cc73123a5925ca5bc7ee9a28d4b4689bb6b54182ab  <worktree>/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+=== screening: 3 alternating, presentation-token + streaming + mode 1 Sun Nov 15 23:29:15 CST 2026 ===
+it=1 side=base p_exit=0
+it=1 side=base s_exit=0
+it=1 side=base c_exit=0
+token200_narrative_ms=0.0498  token200_total_ms=0.0832  token2000_narrative_ms=0.0554  token2000_total_ms=0.1461  longtail200_narrative_ms=0.2921  longtail200_total_ms=0.4294  [it=1 side=base]
+it=1 side=base stream_narrative=0.23 cold@2000=48.44 find_bar=
+it=1 side=cand p_exit=0
+it=1 side=cand s_exit=0
+it=1 side=cand c_exit=0
+token200_narrative_ms=0.0488  token200_total_ms=0.0836  token2000_narrative_ms=0.0559  token2000_total_ms=0.1476  longtail200_narrative_ms=0.2896  longtail200_total_ms=0.4262  [it=1 side=cand]
+it=1 side=cand stream_narrative=0.23 cold@2000=48.38 find_bar=
+it=2 side=base p_exit=0
+it=2 side=base s_exit=0
+it=2 side=base c_exit=0
+token200_narrative_ms=0.0488  token200_total_ms=0.0815  token2000_narrative_ms=0.0564  token2000_total_ms=0.1461  longtail200_narrative_ms=0.2927  longtail200_total_ms=0.4263  [it=2 side=base]
+it=2 side=base stream_narrative=0.24 cold@2000=48.34 find_bar=
+it=2 side=cand p_exit=0
+it=2 side=cand s_exit=0
+it=2 side=cand c_exit=0
+token200_narrative_ms=0.0481  token200_total_ms=0.0821  token2000_narrative_ms=0.0555  token2000_total_ms=0.1470  longtail200_narrative_ms=0.2930  longtail200_total_ms=0.4268  [it=2 side=cand]
+it=2 side=cand stream_narrative=0.23 cold@2000=48.55 find_bar=
+it=3 side=base p_exit=0
+it=3 side=base s_exit=0
+it=3 side=base c_exit=0
+token200_narrative_ms=0.0480  token200_total_ms=0.0822  token2000_narrative_ms=0.0557  token2000_total_ms=0.1463  longtail200_narrative_ms=0.2877  longtail200_total_ms=0.4248  [it=3 side=base]
+it=3 side=base stream_narrative=0.24 cold@2000=48.83 find_bar=
+it=3 side=cand p_exit=0
+it=3 side=cand s_exit=0
+it=3 side=cand c_exit=0
+token200_narrative_ms=0.0490  token200_total_ms=0.0816  token2000_narrative_ms=0.0570  token2000_total_ms=0.1479  longtail200_narrative_ms=0.2905  longtail200_total_ms=0.4268  [it=3 side=cand]
+it=3 side=cand stream_narrative=0.24 cold@2000=48.36 find_bar=
+DONE Sun Nov 15 23:30:02 CST 2026
