@@ -1,0 +1,13 @@
+HEAD is now at c085fd9 Merge pull request #341 from chenweigao/perf/20x-loop-19-20261115
+HEAD=c085fd92f958f7d1f0208aa0f656886a3e4fd401
+tests_patch=ok
+build_exit=0
+c208ab96c6cdea47da54abd40a39637e172da42b6cf5d8ac7ec1587f46967550  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round20-verify/out/Products/Release/WorkbenchChecks
+checks_exit=0 pass=102
+PASS: narrative byte-keyed tables preserve snapshots across canonical pairs and 1500 fuzz texts (digest 4e46d66eff016205, 1382 staged, 883 keyword-phased)
+PASS: localization resolution chain — per-platform resolution semantics, locale derivation, global-read agreement (Darwin)
+PASS: link detection over contiguous UTF-16 equals lazy bridging on the host detector (3016 differential texts; parse digest 97e345c9136b50c8 informational on Darwin)
+PASS: splitInline byte guard preserves parse output across structural rules and 3000 fuzz texts (digest 5d1506ed4a822a53, 999 extracting)
+PASS: reply math — dollar/backslash delimiters, display blocks, currency guard, code isolation, Unicode and unmatched boundaries
+porcelain_after=0
+DONE Sun Nov 15 12:33:08 CST 2026

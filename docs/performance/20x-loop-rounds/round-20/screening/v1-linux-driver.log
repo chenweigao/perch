@@ -1,0 +1,22 @@
+HEAD_main=1ac4f5201e165a41d18e18a0286a514c2c5731cd
+porcelain_main=0
+cand_build_exit=0
+base_build_exit=0
+27da64b6ac2600caac29357a9d84800f734b84a4b35adb8bf43d03225693ee57  /tmp/r20-screen-base/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+c591d6864a4e9fc99c1efc5cd972ecec1d32b5d5682ade88443dd83d5407b819  <worktree>/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+=== screening: 3 alternating, presentation-token + streaming + mode 1 Sun Nov 15 11:41:58 CST 2026 ===
+token200_narrative_ms=0.1117  token200_total_ms=0.1472  token2000_narrative_ms=0.1230  token2000_total_ms=0.2106  [it=1 side=base]
+it=1 side=base stage_narrative= cold@2000=48.19
+token200_narrative_ms=0.1113  token200_total_ms=0.1443  token2000_narrative_ms=0.1200  token2000_total_ms=0.2078  [it=1 side=cand]
+it=1 side=cand stage_narrative= cold@2000=49.05
+token200_narrative_ms=0.1125  token200_total_ms=0.1457  token2000_narrative_ms=0.1247  token2000_total_ms=0.2144  [it=2 side=base]
+it=2 side=base stage_narrative= cold@2000=48.75
+token200_narrative_ms=0.1149  token200_total_ms=0.1508  token2000_narrative_ms=0.1205  token2000_total_ms=0.2111  [it=2 side=cand]
+it=2 side=cand stage_narrative= cold@2000=48.08
+token200_narrative_ms=0.1173  token200_total_ms=0.1512  token2000_narrative_ms=0.1235  token2000_total_ms=0.2124  [it=3 side=base]
+it=3 side=base stage_narrative= cold@2000=48.10
+token200_narrative_ms=0.1151  token200_total_ms=0.1482  token2000_narrative_ms=0.1194  token2000_total_ms=0.2086  [it=3 side=cand]
+it=3 side=cand stage_narrative= cold@2000=48.33
+DONE Sun Nov 15 11:42:44 CST 2026
+
+[exited with code 0]

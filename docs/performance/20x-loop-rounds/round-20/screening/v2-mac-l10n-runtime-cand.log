@@ -1,0 +1,1 @@
+scripts/check-localization-runtime.sh: line 18: 33115 Killed: 9               "$app/Contents/MacOS/LocalizationChecks"

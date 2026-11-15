@@ -1,0 +1,28 @@
+mac screening done after ~240s
+HEAD=c085fd92f958f7d1f0208aa0f656886a3e4fd401
+tests_patch=ok
+base_build_exit=0
+product_patch=ok
+cand_build_exit=0
+02ef597ccfaaeefc614ac9b18a6439cafadc3011473d208a00b2131594a5b9ec  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round20-base/out/Products/Release/WorkbenchChecks
+ac0099a1fd31ea5c1afb2b0109e68f5366d9af6301dc87ac56907f6e11e4bd15  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round20-cand/out/Products/Release/WorkbenchChecks
+base_checks_exit=0 pass=101
+PASS: narrative byte-keyed tables preserve snapshots across canonical pairs and 1500 fuzz texts (digest 4e46d66eff016205, 1382 staged, 883 keyword-phased)
+cand_checks_exit=0 pass=101
+PASS: narrative byte-keyed tables preserve snapshots across canonical pairs and 1500 fuzz texts (digest 4e46d66eff016205, 1382 staged, 883 keyword-phased)
+token200_narrative_ms=0.1376  token200_total_ms=0.1501  token2000_narrative_ms=0.1133  token2000_total_ms=0.1490  [it=1 side=base]
+it=1 side=base stage_narrative= cold@2000=7.03
+token200_narrative_ms=0.1125  token200_total_ms=0.1237  token2000_narrative_ms=0.1046  token2000_total_ms=0.1411  [it=1 side=cand]
+it=1 side=cand stage_narrative= cold@2000=6.71
+token200_narrative_ms=0.1049  token200_total_ms=0.1159  token2000_narrative_ms=0.1097  token2000_total_ms=0.1463  [it=2 side=base]
+it=2 side=base stage_narrative= cold@2000=6.83
+token200_narrative_ms=0.1124  token200_total_ms=0.1240  token2000_narrative_ms=0.1032  token2000_total_ms=0.1400  [it=2 side=cand]
+it=2 side=cand stage_narrative= cold@2000=6.92
+token200_narrative_ms=0.1094  token200_total_ms=0.1205  token2000_narrative_ms=0.1161  token2000_total_ms=0.1517  [it=3 side=base]
+it=3 side=base stage_narrative= cold@2000=6.81
+token200_narrative_ms=0.1130  token200_total_ms=0.1243  token2000_narrative_ms=0.1150  token2000_total_ms=0.1515  [it=3 side=cand]
+it=3 side=cand stage_narrative= cold@2000=6.71
+porcelain_after=0
+WAIT_DONE Sun Nov 15 11:43:18 CST 2026
+
+[exited with code 0]

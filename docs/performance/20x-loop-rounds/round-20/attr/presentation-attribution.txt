@@ -1,0 +1,69 @@
+total=20053  narrative-make inclusive=14987 (74.74%)
+== top leaves inside make() ==
+    2834 14.13%-of-all 18.91%-of-narr  Hasher._combine(_:)
+    1392  6.94%-of-all  9.29%-of-narr  specialized _StringGutsSlice.withFastUTF8<A, B>(_:)
+    1332  6.64%-of-all  8.89%-of-narr  _StringGutsSlice._fastNFCCheck(_:_:)
+    1249  6.23%-of-all  8.33%-of-narr  _stringCompareFastUTF8Abnormal(_:_:expecting:)
+     795  3.96%-of-all  5.30%-of-narr  partial apply for closure #2 in _StringGutsSlice._normalizedHash(into:)
+     657  3.28%-of-all  4.38%-of-narr  _swift_stdlib_getScalarBitArrayIdx
+     610  3.04%-of-all  4.07%-of-narr  _swift_stdlib_getNormData
+     308  1.54%-of-all  2.06%-of-narr  Substring.subscript.getter
+     277  1.38%-of-all  1.85%-of-narr  _GraphemeBreakingState.shouldBreak(between:and:)
+     246  1.23%-of-all  1.64%-of-narr  specialized static String._uncheckedFromUTF8(_:isASCII:precalculatedUTF16Count:)
+     232  1.16%-of-all  1.55%-of-narr  Substring.index(_:offsetBy:)
+     216  1.08%-of-all  1.44%-of-narr  _StringGuts._opaqueComplexCharacterStride(startingAt:)
+     162  0.81%-of-all  1.08%-of-narr  objc_msgSend
+     139  0.69%-of-all  0.93%-of-narr  _platform_strcmp$VARIANT$Base
+     130  0.65%-of-all  0.87%-of-narr  hasBreakWhenPaired #1 (_:) in _quickHasGraphemeBreakBetween(_:_:)
+     116  0.58%-of-all  0.77%-of-narr  _allASCII(_:)
+     112  0.56%-of-all  0.75%-of-narr  Hasher.combine(bytes:)
+     100  0.50%-of-all  0.67%-of-narr  _stringCompareInternal(_:_:expecting:)
+     100  0.50%-of-all  0.67%-of-narr  swift_bridgeObjectRelease
+      91  0.45%-of-all  0.61%-of-narr  swift_release
+      83  0.41%-of-all  0.55%-of-narr  tryCast(swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*, swift::Opaq
+      79  0.39%-of-all  0.53%-of-narr  0x19337850d
+      68  0.34%-of-all  0.45%-of-narr  specialized BidirectionalCollection._range<A>(of:anchored:backwards:)
+      64  0.32%-of-all  0.43%-of-narr  __CF_IS_OBJC
+      62  0.31%-of-all  0.41%-of-narr  _CFStringGetCStringPtrInternal
+H1-phase-contains: 3452 (23.03% of narr)
+H2-clean-charset: 25 (0.17% of narr)
+H5-count-grapheme: 630 (4.20% of narr)
+H3-deep-equal: 187 (1.25% of narr)
+H4-lock-dict-hash: 9905 (66.09% of narr)
+
+== Hasher._combine: 2834 (18.91% of narr) ==
+      2825  protocol witness for Hashable._rawHashValue(seed:) in conformance String
+         9  specialized __RawDictionaryStorage.find<A>(_:)
+
+== _fastNFCCheck: 1939 (12.94% of narr) ==
+      1939  protocol witness for Hashable._rawHashValue(seed:) in conformance String
+
+== withFastUTF8: 4219 (28.15% of narr) ==
+      4219  protocol witness for Hashable._rawHashValue(seed:) in conformance String
+
+== _stringCompareFastUTF8Abnormal: 1301 (8.68% of narr) ==
+       840  specialized __RawDictionaryStorage.find<A>(_:hashValue:)
+       269  closure #1 in phase #1 (from:) in static ActivityNarrativeProjection.make(entries:tools:isRunning:ex
+       180  specialized NarrativeTextCache.steps(for:derive:)
+        12  specialized closure #1 in static ActivityNarrativeSnapshot.narrativeText(_:)
+
+== _normalizedHash: 7495 (50.01% of narr) ==
+      7495  protocol witness for Hashable._rawHashValue(seed:) in conformance String
+
+== sample backtrace containing _fastNFCCheck (leaf-ward first 16) ==
+    _swift_stdlib_getScalarBitArrayIdx
+    _StringGutsSlice._fastNFCCheck(_:_:)
+    specialized _StringGutsSlice._withNFCCodeUnits<A>(_:)
+    _StringGutsSlice._normalizedHash(into:)
+    protocol witness for Hashable._rawHashValue(seed:) in conformance String
+    specialized __RawDictionaryStorage.find<A>(_:)
+    specialized Dictionary.subscript.getter
+    specialized static NarrativeTextCache.value<A>(_:_:_:)
+    specialized static NarrativeTextCache.clean(_:limit:_:)
+    specialized static NarrativeTextCache.clean(_:limit:_:)
+    static ActivityNarrativeSnapshot.clean(_:limit:)
+    closure #1 in closure #4 in static ActivityNarrativeProjection.make(entries:tools:isRunning:external:cache:)
+    specialized Collection.map<A, B>(_:)
+    specialized closure #4 in static ActivityNarrativeProjection.make(entries:tools:isRunning:external:cache:)
+    closure #4 in static ActivityNarrativeProjection.make(entries:tools:isRunning:external:cache:)
+    specialized NarrativeTextCache.steps(for:derive:)

@@ -1,0 +1,29 @@
+=== prepare Sun Nov 15 10:56:43 CST 2026 ===
+From github.com:chenweigao/perch
+   89e5976..c085fd9  main       -> origin/main
+Previous HEAD position was 7518f45 docs(performance): record round-19 v2 rerun — adoption data at 1f9b5d4
+HEAD is now at c085fd9 Merge pull request #341 from chenweigao/perf/20x-loop-19-20261115
+HEAD=c085fd92f958f7d1f0208aa0f656886a3e4fd401
+porcelain_before=0
+=== apply temporary profile loop mode ===
+porcelain_applied=2
+=== build Sun Nov 15 10:56:47 CST 2026 ===
+build_exit=0
+3e9c559210004c8b73aa2e310555b28c33d543efc98825a8b3af1140734e9b45  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round20-profile/out/Products/Release/WorkbenchChecks
+=== record presentation Sun Nov 15 10:57:57 CST 2026 ===
+record_exit=0
+Recording completed. Saving output file...
+Output file saved as: presentation.trace
+export_exit=0
+total 14368
+drwxr-xr-x   7 <mini>  staff      224 Nov 15 10:58 .
+drwxr-xr-x  80 <mini>  staff     2560 Nov 15 10:56 ..
+-rw-r--r--   1 <mini>  staff     3033 Nov 15 10:57 build.log
+-rw-r--r--   1 <mini>  staff      123 Nov 15 10:58 export.log
+-rw-r--r--   1 <mini>  staff  6793915 Nov 15 10:58 presentation-time-profile.xml
+drwxr-xr-x  10 <mini>  staff      320 Nov 15 10:58 presentation.trace
+-rw-r--r--   1 <mini>  staff      259 Nov 15 10:58 record.log
+=== revert Sun Nov 15 10:58:25 CST 2026 ===
+porcelain_after=0
+DONE Sun Nov 15 10:58:26 CST 2026
+exit=0
