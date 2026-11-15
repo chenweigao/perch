@@ -16,7 +16,7 @@ git checkout --detach a559cea
 git checkout -- . 2>/dev/null; git clean -fdq Tests/
 git apply "$LOGS/r21-tests.patch" && echo tests_patch=ok
 git apply "$LOGS/r21v2-product.patch" && echo product_patch=ok
-echo "HEAD=$(git rev-parse HEAD) tests_state=68b0ce4 product_state=a7332c8-equivalent"
+echo "HEAD=$(git rev-parse HEAD) tests_state=68b0ce4 product_state=2aa8d97-equivalent (ERRATA E2: original run echoed a7332c8-equivalent)"
 echo "porcelain_before=$(git status --porcelain | wc -l | tr -d ' ')"
 
 echo "=== apply temporary profile loop mode ==="

@@ -3,7 +3,10 @@
 # with withUTF8 equality/hashing (v1 per-byte fallbacks gave the saving back).
 # base = a559cea + long-tail bench extension (r21-tests.patch = 68b0ce4
 # tree); candidate = + byte-key product patch (a7332c8). In-context bench
-# modes, 3 alternating iterations, binaries run IN PLACE (round-18 lesson).
+# mode: SIX alternating iterations, presentation-token only (ERRATA E3:
+# this header line originally said '3 alternating iterations' inherited from
+# the v2 first-pass script; the executable body below correctly runs six).
+# Binaries run IN PLACE (round-18 lesson).
 # Checks double as golden re-verification at this head pair.
 set -u
 cd "$HOME/_worktrees/20x-loop-20261112/perch"

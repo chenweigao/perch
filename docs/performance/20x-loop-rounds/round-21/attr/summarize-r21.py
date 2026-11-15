@@ -30,7 +30,7 @@ Metric extraction rules:
              token{turns}_{field} = statistics.median over the per-update samples
 - drop metrics whose samples are all zero on both sides (print-grid zeros)
 
-Usage: summarize_r16.py <pair-log-dir> <out-summary.json>
+Usage: summarize-r21.py <pair-log-dir> <out-summary.json>  (ERRATA E4: usage line inherited the r16 template name)
 """
 import json
 import pathlib
