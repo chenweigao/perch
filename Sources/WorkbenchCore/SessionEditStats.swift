@@ -259,6 +259,44 @@ public enum SessionEditStats {
         return text[start..<end]
     }
 
+    /// Line bounds of a contiguous buffer: one `Range<Int>` per line, with the
+    /// exact separator predicate of the contiguous path in `lines(_:)` (an LF
+    /// whose previous byte is not a CR). The two must stay in sync; the edit
+    /// pins check the resulting tallies against the frozen Character oracle.
+    private static func lineRanges(in bytes: UnsafeBufferPointer<UInt8>) -> [Range<Int>] {
+        var result: [Range<Int>] = []
+        var start = 0
+        var offset = 0
+        while offset < bytes.count {
+            if bytes[offset] == 0x0A && (offset == 0 || bytes[offset - 1] != 0x0D) {
+                result.append(start..<offset)
+                start = offset + 1
+            }
+            offset += 1
+        }
+        result.append(start..<bytes.count)
+        return result
+    }
+
+    /// Byte-identical lines are canonically equal — canonical equivalence is
+    /// reflexive, so identical UTF-8 bytes over identical bounds decide the
+    /// pair without materializing Substrings or running a grapheme comparison.
+    /// Only a byte-differing (or length-differing) pair is inconclusive; it
+    /// pays the original canonical comparison on Substrings materialized
+    /// exactly as `lines(_:)` would produce them.
+    @inline(__always)
+    private static func lineRangesEqual(_ old: String, _ new: String,
+                                        _ a: UnsafeBufferPointer<UInt8>, _ b: UnsafeBufferPointer<UInt8>,
+                                        _ ra: Range<Int>, _ rb: Range<Int>) -> Bool {
+        let length = ra.upperBound - ra.lowerBound
+        if length == rb.upperBound - rb.lowerBound {
+            var offset = 0
+            while offset < length, a[ra.lowerBound + offset] == b[rb.lowerBound + offset] { offset += 1 }
+            if offset == length { return true }
+        }
+        return substring(old, bytes: ra) == substring(new, bytes: rb)
+    }
+
     /// Old/new diff counting only the changed middle: common prefix and suffix
     /// lines are context, not edits. Borrowed buffers never leave these closures;
     /// only line offsets and the final counts escape, not pointer-backed storage.
@@ -301,7 +339,33 @@ public enum SessionEditStats {
 
     /// Original nonempty-string algorithm, used for common context and foreign
     /// storage. All comparisons remain canonical, including NFC/NFD no-ops.
+    ///
+    /// Contiguous storage compares lines as integer byte ranges: the common
+    /// context lines of an edit are byte-identical, so the prefix/suffix scans
+    /// run as direct memory comparisons and never materialize the two
+    /// [Substring] arrays; only byte-differing pairs pay a canonical
+    /// comparison. Byte equality confirms canonical equality (reflexivity) and
+    /// byte inequality falls back to the original predicate, so the scans stop
+    /// at exactly the same lines as the array walk on every input.
     private static func fullLineDiff(_ old: String, _ new: String) -> SessionEditStat {
+        let bounded = old.utf8.withContiguousStorageIfAvailable { a in
+            new.utf8.withContiguousStorageIfAvailable { b -> SessionEditStat in
+                let oldRanges = lineRanges(in: a), newRanges = lineRanges(in: b)
+                var start = 0
+                while start < oldRanges.count && start < newRanges.count,
+                      lineRangesEqual(old, new, a, b, oldRanges[start], newRanges[start]) { start += 1 }
+                var oldEnd = oldRanges.count
+                var newEnd = newRanges.count
+                while oldEnd > start && newEnd > start,
+                      lineRangesEqual(old, new, a, b, oldRanges[oldEnd - 1], newRanges[newEnd - 1]) {
+                    oldEnd -= 1
+                    newEnd -= 1
+                }
+                return SessionEditStat(additions: newEnd - start, deletions: oldEnd - start)
+            }
+        }
+        if let result = bounded ?? nil { return result }
+        // Foreign/non-contiguous storage retains the original array walk.
         let oldLines = lines(old), newLines = lines(new)
         var start = 0
         while start < oldLines.count && start < newLines.count && oldLines[start] == newLines[start] { start += 1 }
