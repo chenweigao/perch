@@ -9,10 +9,14 @@ import WorkbenchCore
 /// 1. Exhaustive scalar sweeps: the no-false-negative argument rests on
 ///    (a) "the only non-ASCII scalar whose lowercased form is pure ASCII is
 ///    U+212A (KELVIN SIGN → 'k'), and no keyword contains 'k'" and
-///    (b) "every scalar whose CANONICAL DECOMPOSITION reaches a CJK keyword
-///    character lies in the compatibility blocks the scanner detects, and no
-///    non-ASCII scalar canonically decomposes to pure ASCII" (review F1:
-///    U+FA55→突, U+FA8E→搜, U+F96A→索 fold under canonical substring search).
+///    (b) "every scalar CANONICALLY EQUAL to a CJK keyword character lies in
+///    the compatibility blocks the scanner detects" (review F1: U+FA55→突,
+///    U+FA8E→搜, U+F96A→索 fold under canonical substring search), tested
+///    operationally via String's canonical == — the same equality the legacy
+///    search uses. Note (re-review F7'): non-ASCII scalars CANONICALLY
+///    EQUAL TO ASCII do exist (U+037E→';', U+1FEF→'`', U+212A→'K'), but no
+///    keyword contains ';', '`' or 'k'/'K', so no keyword can arise from
+///    them — the keyword-specific argument replaces any blanket claim.
 ///    Both sweeps run over all 1,112,064 valid scalars, plus the static
 ///    keyword checks.
 /// 2. In-run differential fuzz (round-16 v2 pattern — version-robust, no
@@ -26,8 +30,11 @@ import WorkbenchCore
 ///    (no whitespace/markers/edge colons) so the phase under test is
 ///    computed from exactly the injected text.
 /// 3. The pre-existing narrative golden (4e46d66eff016205) covers the messy
-///    end-to-end corpus (markers, whitespace, NBSP, emoji, ZWJ, Prepend
-///    pieces) and must pass unchanged.
+///    end-to-end corpus (markers, whitespace, NBSP, emoji, keyword pieces)
+///    and must pass unchanged; the Prepend/combining-mark/ZWJ and
+///    compatibility-ideograph corners belong to the differential fuzz below,
+///    NOT to that golden (re-review F3' — coverage boundaries stated as
+///    they actually are).
 func checkNarrativePhaseSinglePass() throws {
     // --- 1. exhaustive scalar bridge sweep ---
     var bridges: [UInt32] = []
@@ -60,19 +67,21 @@ func checkNarrativePhaseSinglePass() throws {
                  "a keyword contains 'k' — the Kelvin bridge argument breaks")
 
     // --- 1b. exhaustive canonical-equivalence sweep (review F1) ---
-    // Probe finding (archived): Foundation's decomposedStringWithCanonicalMapping
-    // does NOT expose the compatibility-ideograph singleton mappings on EITHER
-    // platform (U+FA55 → SELF), yet the canonical substring search folds them
-    // on BOTH ("冲\u{FA55}".contains("冲突") == true). The sweep therefore
-    // tests canonical equivalence OPERATIONALLY via String's canonical ==
-    // (Set<String> membership): every non-ASCII scalar canonically equal to a
-    // CJK keyword character — other than the character itself — must lie
-    // inside the compatibility byte ranges the scanner detects
-    // (U+2F00–2FFF / U+F900–FAFF / U+2F800–2FFFF). Multi-scalar sequences
-    // cannot produce an ideograph under canonical composition (CJK
-    // ideographs have no primary composites; Hangul composes syllables), so
-    // the scalar sweep is complete; the differential fuzz below covers the
-    // combinations empirically.
+    // Corrected probe finding (re-review F1', byte-level comparison, archived):
+    // decomposedStringWithCanonicalMapping DOES change the bytes of
+    // compatibility ideographs on BOTH platforms (460 byte-changing scalars in
+    // U+F900–FAFF; U+FA55→U+7A81, U+FA8E→U+641C, U+F96A→U+7D22), and the
+    // canonical substring search folds them on BOTH ("冲\u{FA55}".contains("冲突")
+    // == true). The sweep still tests canonical equivalence OPERATIONALLY via
+    // String's canonical == (Set<String> membership) — the same equality the
+    // legacy search relies on, independent of decomposition-API behavior:
+    // every non-ASCII scalar canonically equal to a CJK keyword character —
+    // other than the character itself — must lie inside the compatibility byte
+    // ranges the scanner detects (U+2F00–2FFF / U+F900–FAFF / U+2F800–2FFFF).
+    // Multi-scalar sequences cannot produce an ideograph under canonical
+    // composition (CJK ideographs have no primary composites; Hangul composes
+    // syllables), so the scalar sweep is complete; the differential fuzz below
+    // covers the combinations empirically.
     let keywordScalars = Set("测试构建验证检查修改实现修复编写提交合并整合冲突读取搜索查看分析".unicodeScalars)
     let keywordCharStrings: Set<String> = Set(keywordScalars.map { String($0) })
     var canonicalBridges = 0
@@ -149,7 +158,7 @@ func checkNarrativePhaseSinglePass() throws {
     // itself platform-divergent under GB9b — the differential, not a fixed
     // expectation, is the contract).
     let compatibilityCases = ["QZ0 冲\u{FA55}.", "QZ1 \u{FA8E}索.", "QZ2 搜\u{F96A}.",
-                              "QZ4 冲\u{FA55} read.", "冲\u{FA55}", "\u{FA8E}\u{F96A}验证",
+                              "QZ4 冲\u{FA55} read.", "QZ5 冲\u{FA55}.", "\u{FA8E}\u{F96A}验证",
                               "test\u{2F00}", "\u{F900}verify", "分析\u{2F800}", "z\u{2FA1F}提交"]
     for (caseIndex, text) in compatibilityCases.enumerated() {
         let expected = referencePhase(text)

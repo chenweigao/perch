@@ -254,12 +254,16 @@ public struct ActivityNarrativeSnapshot: Equatable, Sendable {
 ///   three blocks carrying canonical decompositions to ideographs —
 ///   U+2F00–2FFF (E2 BC..BF, Kangxi, conservative), U+F900–FAFF (EF A4..AB),
 ///   U+2F800–2FFFF (F0 AF, conservative) — and defers the WHOLE text to the
-///   legacy chain. Note the folding is search-internal: probe evidence shows
-///   decomposedStringWithCanonicalMapping does NOT expose these singleton
-///   mappings on either platform while contains() folds them on BOTH. An
-///   exhaustive scalar sweep (operational canonical == against the keyword
-///   characters) pins that no scalar outside these ranges is canonically
-///   equal to a keyword character, so the detection is complete.
+///   legacy chain. Corrected probe evidence (re-review F1', byte-level
+///   comparison on both platforms): canonical decomposition DOES change the
+///   bytes of these scalars (460 byte-changing scalars in U+F900–FAFF;
+///   U+FA55→U+7A81, U+FA8E→U+641C, U+F96A→U+7D22) and contains() folds
+///   them on both platforms. The completeness pin is nonetheless the
+///   OPERATIONAL canonical-equality sweep (String's canonical == via Set
+///   membership over all 1,112,064 scalars — the same equality the legacy
+///   search relies on, independent of decomposition-API behavior): exactly
+///   three scalars are canonically equal to a keyword character
+///   (U+FA55/U+FA8E/U+F96A), all inside the detected ranges.
 private enum NarrativePhaseScan {
     /// Priority order matches the replaced if-chain: validating, editing,
     /// integrating, exploring.
