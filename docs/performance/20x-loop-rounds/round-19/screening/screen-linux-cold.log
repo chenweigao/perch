@@ -1,0 +1,7 @@
+# Linux in-context screening (3 alternating iterations, streaming + mode 1) — round 19 splitInline byte guard
+it=1 side=base find_bar_cold=615.25 cold@2000=48.26
+it=1 side=cand find_bar_cold=554.00 cold@2000=48.67
+it=2 side=base find_bar_cold=611.98 cold@2000=48.54
+it=2 side=cand find_bar_cold=554.63 cold@2000=48.39
+it=3 side=base find_bar_cold=616.08 cold@2000=48.37
+it=3 side=cand find_bar_cold=552.58 cold@2000=48.03
