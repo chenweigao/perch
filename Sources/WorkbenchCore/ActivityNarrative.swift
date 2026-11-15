@@ -219,6 +219,189 @@ public struct ActivityNarrativeSnapshot: Equatable, Sendable {
 }
 
 
+/// Round 22: single-pass byte-level multi-pattern scan replacing the phase
+/// closure's `lowercased()` full-text copy plus up to 32 grapheme-aware
+/// `contains` substring searches. Attribution (miss-heavy KB-scale long-tail
+/// profile at 68b0ce4 state, round-21 archive): the phase derivation closure
+/// was 54.61% of the narrative stage on the base product (73.36% after the
+/// table machinery shrank), and the bench's keyword-free tails execute ALL
+/// 32 predicates per derive — 32 full-text canonical searches per delta of a
+/// growing reply.
+///
+/// Equivalence (pinned by checkNarrativePhaseSinglePass: exhaustive scalar
+/// bridge sweep + differential fuzz against the reference predicate chain +
+/// the unchanged narrative golden):
+/// - A byte match with BOTH boundaries proven (preceding byte ASCII or start;
+///   following byte ASCII or end — every Prepend/Extend/SpacingMark/ZWJ
+///   scalar is non-ASCII, round-17 two-sided boundary technique) implies the
+///   keyword's characters are their own graphemes in a contiguous run, so the
+///   old `lowercased().contains(keyword)` necessarily matched: no false
+///   positives.
+/// - A boundary-inconclusive match defers to the ORIGINAL canonical predicate
+///   (lowercased + substring contains), computed lazily only for the affected
+///   keywords — GB9b fusion (e.g. U+0600 before, combining mark after) can
+///   make the old search miss, so the old behavior decides exactly as before.
+/// - No false negatives from casing: an old match requires the keyword's
+///   characters contiguous in the lowercased text; ASCII keywords can only
+///   gain bytes from lowercasing via non-ASCII scalars lowercasing to ASCII —
+///   the exhaustive sweep pins U+212A ('k') as the ONLY such bridge and no
+///   keyword contains 'k'.
+/// - No false negatives from normalization (review F1 counterexamples):
+///   canonical substring search folds CJK COMPATIBILITY ideographs to their
+///   canonical equivalents (U+FA55→突, U+FA8E→搜, U+F96A→索), so texts like
+///   "冲\u{FA55}" match 冲突 under the old predicate while no literal keyword
+///   bytes exist. The scan therefore detects the UTF-8 lead patterns of the
+///   three blocks carrying canonical decompositions to ideographs —
+///   U+2F00–2FFF (E2 BC..BF, Kangxi, conservative), U+F900–FAFF (EF A4..AB),
+///   U+2F800–2FFFF (F0 AF, conservative) — and defers the WHOLE text to the
+///   legacy chain. Corrected probe evidence (re-review F1', byte-level
+///   comparison on both platforms): canonical decomposition DOES change the
+///   bytes of these scalars (460 byte-changing scalars in U+F900–FAFF;
+///   U+FA55→U+7A81, U+FA8E→U+641C, U+F96A→U+7D22) and contains() folds
+///   them on both platforms. The completeness pin is nonetheless the
+///   OPERATIONAL canonical-equality sweep (String's canonical == via Set
+///   membership over all 1,112,064 scalars — the same equality the legacy
+///   search relies on, independent of decomposition-API behavior): exactly
+///   three scalars are canonically equal to a keyword character
+///   (U+FA55/U+FA8E/U+F96A), all inside the detected ranges.
+private enum NarrativePhaseScan {
+    /// Priority order matches the replaced if-chain: validating, editing,
+    /// integrating, exploring.
+    static let keywords: [(text: String, phase: ActivityNarrativePhase)] = [
+        ("test", .validating), ("build", .validating), ("lint", .validating), ("verify", .validating),
+        ("测试", .validating), ("构建", .validating), ("验证", .validating), ("检查", .validating), // l10n-ignore
+        ("edit", .editing), ("implement", .editing), ("write", .editing), ("fix", .editing),
+        ("修改", .editing), ("实现", .editing), ("修复", .editing), ("编写", .editing), // l10n-ignore
+        ("git", .integrating), ("commit", .integrating), ("merge", .integrating), ("integrat", .integrating),
+        ("提交", .integrating), ("合并", .integrating), ("整合", .integrating), ("冲突", .integrating), // l10n-ignore
+        ("read", .exploring), ("search", .exploring), ("inspect", .exploring), ("explor", .exploring),
+        ("读取", .exploring), ("搜索", .exploring), ("查看", .exploring), ("分析", .exploring), // l10n-ignore
+    ]
+    static let keywordBytes: [[UInt8]] = keywords.map { Array($0.text.utf8) }
+    /// Case-folded first-byte dispatch. ASCII letters fold; bytes >= 0x80
+    /// (CJK leads) index their own bucket unfolded.
+    static let buckets: [[Int]] = {
+        var table = [[Int]](repeating: [], count: 256)
+        for (index, bytes) in keywordBytes.enumerated() {
+            table[Int(fold(bytes[0]))].append(index)
+        }
+        return table
+    }()
+    static func fold(_ byte: UInt8) -> UInt8 {
+        (byte >= 0x41 && byte <= 0x5A) ? byte + 0x20 : byte
+    }
+
+    /// The replaced predicate chain, verbatim — the authoritative decision
+    /// for texts containing CJK compatibility ideographs (review F1), and
+    /// the source of the per-keyword fallback predicate below.
+    static func legacyPhase(_ text: String) -> ActivityNarrativePhase {
+        let value = text.lowercased()
+        if value.contains("test") || value.contains("build") || value.contains("lint") || value.contains("verify")
+            || value.contains("测试") || value.contains("构建") || value.contains("验证") || value.contains("检查") { return .validating } // l10n-ignore
+        if value.contains("edit") || value.contains("implement") || value.contains("write") || value.contains("fix")
+            || value.contains("修改") || value.contains("实现") || value.contains("修复") || value.contains("编写") { return .editing } // l10n-ignore
+        if value.contains("git") || value.contains("commit") || value.contains("merge") || value.contains("integrat")
+            || value.contains("提交") || value.contains("合并") || value.contains("整合") || value.contains("冲突") { return .integrating } // l10n-ignore
+        if value.contains("read") || value.contains("search") || value.contains("inspect") || value.contains("explor")
+            || value.contains("读取") || value.contains("搜索") || value.contains("查看") || value.contains("分析") { return .exploring } // l10n-ignore
+        return .mixed
+    }
+
+    static func phase(in text: String) -> ActivityNarrativePhase {
+        var confirmedValidating = false
+        var confirmedEditing = false
+        var confirmedIntegrating = false
+        var confirmedExploring = false
+        var inconclusive = [Bool](repeating: false, count: keywords.count)
+        var compatibilityDetected = false
+        var body = text
+        body.withUTF8 { buffer in
+            let count = buffer.count
+            var offset = 0
+            while offset < count {
+                let lead = buffer[offset]
+                // CJK compatibility ideographs canonically decompose to
+                // ordinary ideographs (U+FA55→突 etc.), which the canonical
+                // substring search folds but a byte scan cannot see. Detect
+                // their UTF-8 lead patterns (conservatively) and defer the
+                // whole text to the legacy chain.
+                if lead == 0xE2 || lead == 0xEF || lead == 0xF0, offset + 1 < count {
+                    let next = buffer[offset + 1]
+                    if (lead == 0xE2 && next >= 0xBC)
+                        || (lead == 0xEF && next >= 0xA4 && next <= 0xAB)
+                        || (lead == 0xF0 && next == 0xAF) {
+                        compatibilityDetected = true
+                        break
+                    }
+                }
+                let bucket = buckets[Int(fold(lead))]
+                if !bucket.isEmpty {
+                    for index in bucket {
+                        let keyword = keywordBytes[index]
+                        guard offset + keyword.count <= count else { continue }
+                        var matched = true
+                        for position in 1..<keyword.count {
+                            let expected = keyword[position]
+                            let actual = buffer[offset + position]
+                            if expected < 0x80 {
+                                if fold(actual) != expected { matched = false; break }
+                            } else if actual != expected {
+                                matched = false
+                                break
+                            }
+                        }
+                        guard matched else { continue }
+                        let leadingProven = offset == 0 || buffer[offset - 1] < 0x80
+                        let trailingProven = offset + keyword.count == count || buffer[offset + keyword.count] < 0x80
+                        if leadingProven && trailingProven {
+                            switch keywords[index].phase {
+                            case .validating: confirmedValidating = true
+                            case .editing: confirmedEditing = true
+                            case .integrating: confirmedIntegrating = true
+                            case .exploring: confirmedExploring = true
+                            case .blocked, .mixed: break
+                            }
+                        } else {
+                            inconclusive[index] = true
+                        }
+                    }
+                }
+                offset += 1
+            }
+        }
+        if compatibilityDetected { return legacyPhase(text) }
+        // Priority order: a lower-priority confirmed result still requires the
+        // higher-priority inconclusive keywords to be resolved first, so each
+        // phase checks confirmed-then-fallback in strict priority. One lazy
+        // lowercased value is shared across all category resolutions (review
+        // F2: the previous per-category lowers ran up to four times).
+        var lowered: String?
+        func resolves(_ phase: ActivityNarrativePhase) -> Bool {
+            var needed = false
+            for index in keywords.indices where keywords[index].phase == phase && inconclusive[index] {
+                needed = true
+                break
+            }
+            guard needed else { return false }
+            let value = lowered ?? text.lowercased()
+            lowered = value
+            for index in keywords.indices where keywords[index].phase == phase && inconclusive[index] {
+                if value.contains(keywords[index].text) { return true }
+            }
+            return false
+        }
+        if confirmedValidating { return .validating }
+        if resolves(.validating) { return .validating }
+        if confirmedEditing { return .editing }
+        if resolves(.editing) { return .editing }
+        if confirmedIntegrating { return .integrating }
+        if resolves(.integrating) { return .integrating }
+        if confirmedExploring { return .exploring }
+        if resolves(.exploring) { return .exploring }
+        return .mixed
+    }
+}
+
 public enum ActivityNarrativeProjection {
     private struct Builder {
         var narrative: ActivityNarrative
@@ -248,18 +431,12 @@ public enum ActivityNarrativeProjection {
         // Keywords matched against agent text in either language, not UI labels.
         // Only unresolved tool states (missingResult / disconnected) mark a stage
         // `.blocked`; ordinary commentary mentioning "error" or "失败" is prose.
+        // Round 22: the 32-predicate lowercased+contains chain lives on in
+        // NarrativePhaseScan — one byte pass with proven-boundary fast accepts
+        // and the original canonical predicate as the inconclusive fallback.
         func phase(from text: String) -> ActivityNarrativePhase {
             NarrativeTextCache.phase(for: text) {
-                let value = text.lowercased()
-                if value.contains("test") || value.contains("build") || value.contains("lint") || value.contains("verify")
-                    || value.contains("测试") || value.contains("构建") || value.contains("验证") || value.contains("检查") { return .validating } // l10n-ignore
-                if value.contains("edit") || value.contains("implement") || value.contains("write") || value.contains("fix")
-                    || value.contains("修改") || value.contains("实现") || value.contains("修复") || value.contains("编写") { return .editing } // l10n-ignore
-                if value.contains("git") || value.contains("commit") || value.contains("merge") || value.contains("integrat")
-                    || value.contains("提交") || value.contains("合并") || value.contains("整合") || value.contains("冲突") { return .integrating } // l10n-ignore
-                if value.contains("read") || value.contains("search") || value.contains("inspect") || value.contains("explor")
-                    || value.contains("读取") || value.contains("搜索") || value.contains("查看") || value.contains("分析") { return .exploring } // l10n-ignore
-                return .mixed
+                NarrativePhaseScan.phase(in: text)
             }
         }
 

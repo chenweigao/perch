@@ -1,0 +1,83 @@
+=== prepare Sun Nov 15 19:09:34 CST 2026 ===
+Previous HEAD position was 1af7453 docs(performance): record round-22 v2 adoption data and dispose review findings
+HEAD is now at ed53341 Merge pull request #343 from chenweigao/perf/20x-loop-21-20261115
+HEAD=ed533410158a053ab89f5f8ee74d022ab9657485
+porcelain_before=0
+=== apply tests patch + baseline build Sun Nov 15 19:09:38 CST 2026 ===
+tests_patch=ok
+baseline_build_exit=0
+=== apply product patch + candidate build Sun Nov 15 19:10:51 CST 2026 ===
+product_patch=ok
+candidate_build_exit=0
+93ecded3c4060de3de1277b4a525bb156558d44be2707291db954b90fb5fd868  .build/round22v3-baseline/out/Products/Release/WorkbenchChecks
+9c4d704ed2af57a8af119f8fbd265ebda5f09471dbcec82395c2c36f9a33ff11  .build/round22v3-candidate/out/Products/Release/WorkbenchChecks
+=== check suites Sun Nov 15 19:12:02 CST 2026 ===
+baseline_checks_exit=0 pass=103
+candidate_checks_exit=0 pass=103
+/Users/<mini>/Library/Logs/perf-loop-20261115/ab22v3/checks-baseline.log:PASS: link detection over contiguous UTF-16 equals lazy bridging on the host detector (3016 differential texts; parse digest 97e345c9136b50c8 informational on Darwin)
+/Users/<mini>/Library/Logs/perf-loop-20261115/ab22v3/checks-candidate.log:PASS: link detection over contiguous UTF-16 equals lazy bridging on the host detector (3016 differential texts; parse digest 97e345c9136b50c8 informational on Darwin)
+=== pairs Sun Nov 15 19:12:49 CST 2026 ===
+pair=1 variant=baseline mode=1 exit=0
+pair=1 variant=baseline mode=streaming exit=0
+pair=1 variant=baseline mode=activity exit=0
+pair=1 variant=baseline mode=edit-lines exit=0
+pair=1 variant=baseline mode=presentation-token exit=0
+pair=1 variant=candidate mode=1 exit=0
+pair=1 variant=candidate mode=streaming exit=0
+pair=1 variant=candidate mode=activity exit=0
+pair=1 variant=candidate mode=edit-lines exit=0
+pair=1 variant=candidate mode=presentation-token exit=0
+pair=2 variant=baseline mode=1 exit=0
+pair=2 variant=baseline mode=streaming exit=0
+pair=2 variant=baseline mode=activity exit=0
+pair=2 variant=baseline mode=edit-lines exit=0
+pair=2 variant=baseline mode=presentation-token exit=0
+pair=2 variant=candidate mode=1 exit=0
+pair=2 variant=candidate mode=streaming exit=0
+pair=2 variant=candidate mode=activity exit=0
+pair=2 variant=candidate mode=edit-lines exit=0
+pair=2 variant=candidate mode=presentation-token exit=0
+pair=3 variant=baseline mode=1 exit=0
+pair=3 variant=baseline mode=streaming exit=0
+pair=3 variant=baseline mode=activity exit=0
+pair=3 variant=baseline mode=edit-lines exit=0
+pair=3 variant=baseline mode=presentation-token exit=0
+pair=3 variant=candidate mode=1 exit=0
+pair=3 variant=candidate mode=streaming exit=0
+pair=3 variant=candidate mode=activity exit=0
+pair=3 variant=candidate mode=edit-lines exit=0
+pair=3 variant=candidate mode=presentation-token exit=0
+pair=4 variant=baseline mode=1 exit=0
+pair=4 variant=baseline mode=streaming exit=0
+pair=4 variant=baseline mode=activity exit=0
+pair=4 variant=baseline mode=edit-lines exit=0
+pair=4 variant=baseline mode=presentation-token exit=0
+pair=4 variant=candidate mode=1 exit=0
+pair=4 variant=candidate mode=streaming exit=0
+pair=4 variant=candidate mode=activity exit=0
+pair=4 variant=candidate mode=edit-lines exit=0
+pair=4 variant=candidate mode=presentation-token exit=0
+pair=5 variant=baseline mode=1 exit=0
+pair=5 variant=baseline mode=streaming exit=0
+pair=5 variant=baseline mode=activity exit=0
+pair=5 variant=baseline mode=edit-lines exit=0
+pair=5 variant=baseline mode=presentation-token exit=0
+pair=5 variant=candidate mode=1 exit=0
+pair=5 variant=candidate mode=streaming exit=0
+pair=5 variant=candidate mode=activity exit=0
+pair=5 variant=candidate mode=edit-lines exit=0
+pair=5 variant=candidate mode=presentation-token exit=0
+pair=6 variant=baseline mode=1 exit=0
+pair=6 variant=baseline mode=streaming exit=0
+pair=6 variant=baseline mode=activity exit=0
+pair=6 variant=baseline mode=edit-lines exit=0
+pair=6 variant=baseline mode=presentation-token exit=0
+pair=6 variant=candidate mode=1 exit=0
+pair=6 variant=candidate mode=streaming exit=0
+pair=6 variant=candidate mode=activity exit=0
+pair=6 variant=candidate mode=edit-lines exit=0
+pair=6 variant=candidate mode=presentation-token exit=0
+93ecded3c4060de3de1277b4a525bb156558d44be2707291db954b90fb5fd868  .build/round22v3-baseline/out/Products/Release/WorkbenchChecks
+9c4d704ed2af57a8af119f8fbd265ebda5f09471dbcec82395c2c36f9a33ff11  .build/round22v3-candidate/out/Products/Release/WorkbenchChecks
+porcelain_after=0
+DONE Sun Nov 15 19:14:35 CST 2026

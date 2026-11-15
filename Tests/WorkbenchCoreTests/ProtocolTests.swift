@@ -49,6 +49,7 @@ struct ProtocolTests {
         checkCompactionSummaryDisplay()
         try checkActivitySummaries()
         try checkNarrativeByteKeyedTables()
+        try checkNarrativePhaseSinglePass()
         checkLocalizationResolutionChain()
         try checkTaskRecaps()
         checkReviewContext()
