@@ -2,8 +2,11 @@ import Foundation
 import WorkbenchCore
 
 /// Pins the contiguous byte-range path of `fullLineDiff` (round-23 candidate):
-/// same-platform differential against a verbatim copy of the pre-change array
-/// algorithm, driven through the public `SessionEditStats.derive` API with
+/// same-platform differential against a reference that mirrors the pre-change
+/// line splitting, bounds construction and array scan verbatim — its lineDiff
+/// copy adds routing tags and its lineCount uses the scalar fallback whose
+/// SWAR equivalence is pinned separately, so it is not a whole-chain verbatim
+/// copy. Driven through the public `SessionEditStats.derive` API with
 /// JSON-decoded messages so the compared strings never share a base pointer.
 ///
 /// Equivalence argument: byte-identical line bounds decide a pair as equal
@@ -12,9 +15,16 @@ import WorkbenchCore
 /// canonical `Substring` comparison on exactly the Substrings `lines(_:)`
 /// would materialize. The prefix/suffix scans therefore stop at the same
 /// positions on every input, and the tally is unchanged. The differential
-/// below hammers that claim; the coverage counters prove both the byte-confirm
-/// branch and the canonical-fallback branch (equal and unequal outcomes) ran,
-/// and that all three `lineDiff` routing paths were exercised.
+/// below hammers that claim. The coverage counters classify aligned
+/// reference-side line pairs across the corpus; they are not executions of
+/// `lineRangesEqual` (the baseline, which lacks the new path, prints the same
+/// numbers). Execution coverage of the new branches is established externally:
+/// by instrumented algorithm replay and by mutation testing — a mutant that
+/// judges equal-length byte-differing pairs unequal without the canonical
+/// fallback passes every other corpus case (all other canonical-equal pairs
+/// differ in byte length and fail the length check anyway) but is killed by
+/// the two same-length canonical pairs below. All four routing outcomes,
+/// including early counts, are guarded by the path counters.
 ///
 /// The frozen Character-oracle contract itself stays pinned by
 /// `checkEditLineScans`; this file pins candidate-vs-previous behavior.
@@ -151,6 +161,8 @@ func checkEditLineByteRangeDiff() throws {
     }
 
     // MARK: - Coverage counters (computed from the reference side).
+    // These counters classify aligned reference-side line pairs across the
+    // corpus; they are not executions of lineRangesEqual.
 
     var byteIdenticalPairs = 0        // byte-confirm branch decided "equal"
     var byteDiffCanonEqualPairs = 0   // fallback branch decided "equal" (NFC/NFD no-ops)
@@ -249,6 +261,13 @@ func checkEditLineByteRangeDiff() throws {
     try addPair(nil, large); try addPair(large, nil)                 // early count paths
     try addPair("", large); try addPair(large, "")
     try addPair("", "")
+    // Mutation killers (review F4): same-length, byte-differing, canonically
+    // equal line pairs (U+0340 has a singleton canonical decomposition to
+    // U+0300; the two "é + e\u{301}" / "e\u{301} + é" lines share one NFD
+    // form). The correct product tallies 0/0 on both; a byte-loop-only mutant
+    // answers 1/1 and fails the differential.
+    try addPair("head\n\u{0340}\ntail", "head\n\u{0300}\ntail")
+    try addPair("head\né + e\u{301}\ntail", "head\ne\u{301} + é\ntail")
 
     // Seeded differential fuzz: independent pairs and mutation pairs.
     for _ in 0..<700 {
