@@ -1,0 +1,4 @@
+total=21222
+closure: 1199 (5.649797%)
+any splitInline frame: 1290 (6.078598%)
+contains leaf-ward of splitInline: 1163 (5.480162%)

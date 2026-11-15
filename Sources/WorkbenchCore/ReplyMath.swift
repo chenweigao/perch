@@ -258,17 +258,27 @@ public enum ReplyMath {
     /// and no digit right after the closer (Pandoc's rule).
     public static func splitInline(_ runs: [ReplyInline]) -> [ReplyInline] {
         runs.flatMap { run -> [ReplyInline] in
-            // Byte-level presence guard: 0x24 is self-synchronizing in UTF-8,
-            // and a Character equal to "$" requires the scalar, so runs
-            // without the byte are skipped without a per-Character walk —
-            // that walk dominated $-free runs on the cold full-window search
-            // (round-19 attribution: the splitInline closure ~3.7% of samples
-            // although the bench corpus contains no literal math). The byte
-            // test is an exact superset: the extra admitted runs are those
-            // whose every "$" scalar is fused into a larger Character (GB9b
-            // after a Prepend scalar), where split() finds no bare "$"
-            // Character and returns one value-equal run — parse output is
-            // unchanged (pinned by checkSplitInlineByteGuard).
+            // Byte-level presence guard replacing the old `contains("$")`,
+            // which bound to the grapheme-aware Foundation substring search
+            // (StringProtocol.contains<A> → range<A> in the Mac trace and
+            // the Linux baseline disassembly), not an element-wise Character
+            // test; its admission of Prepend-fused dollars even diverges per
+            // platform (round-19 probe: macOS rejects "\u{0600}$x\u{0600}$",
+            // corelibs search lacks GB9b and admits it). Equivalence rests on
+            // one invariant instead: 0x24 is self-synchronizing in UTF-8 and
+            // every search flavor needs the byte, so byte absence rejects
+            // exactly what any old guard rejected (the new guard admits a
+            // superset); and any admitted run whose Characters contain no
+            // bare "$" makes split() a value-preserving no-op — the walk
+            // never matches, the terminal flush returns one run with
+            // identical text and flags — so parse output is unchanged on
+            // every platform, with no fallback (pinned by
+            // checkSplitInlineByteGuard). Motivation: the round-17 cold
+            // find-bar trace (21,222 samples) attributes 1,199 samples
+            // (5.65%) inclusively to the splitInline closure and 1,163
+            // (5.48%) to StringProtocol.contains beneath it, although the
+            // bench corpus holds no literal math — the guard searched every
+            // run of every entry to find nothing.
             guard run.link == nil, !run.code, run.math == nil, run.text.utf8.contains(36) else { return [run] }
             return split(run)
         }

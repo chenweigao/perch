@@ -1,23 +1,29 @@
 import Foundation
 import WorkbenchCore
 
-/// Round 19: `ReplyMath.splitInline`'s per-run guard moved from the
-/// Character-level `run.text.contains("$")` to the byte-level
-/// `run.text.utf8.contains(36)`. Equivalence argument: 0x24 is
-/// self-synchronizing in UTF-8, so a Character equal to "$" implies the byte
-/// (superset direction); for the extra admitted runs — every "$" scalar fused
-/// into a larger Character, e.g. GB9b after a Prepend scalar — `split` walks
-/// Characters, finds no bare "$", and its terminal flush returns a single run
-/// with the identical text and flags, so the parse output is value-identical.
+/// Round 19: `ReplyMath.splitInline`'s per-run guard moved from
+/// `run.text.contains("$")` — which binds to the grapheme-aware Foundation
+/// substring search (`StringProtocol.contains<A>` → `range<A>` in the Mac
+/// trace and the Linux baseline disassembly), whose admission of
+/// Prepend-fused dollars diverges per platform (round-19 probe: macOS
+/// rejects "\u{0600}$x\u{0600}$", corelibs search lacks GB9b and admits it)
+/// — to the byte-level `run.text.utf8.contains(36)`. Equivalence invariant:
+/// 0x24 is self-synchronizing in UTF-8 and every old search flavor needs the
+/// byte, so the new guard admits a superset; and any run whose Characters
+/// contain no bare "$" makes `split` a value-preserving no-op — the walk
+/// never matches, the terminal flush returns one run with identical text and
+/// flags — so parse output is unchanged on every platform regardless of
+/// admission, with no fallback.
 ///
 /// The pin freezes a seeded fuzz corpus of $-rich texts (currency, math,
 /// Prepend fusion, combining marks, ZWJ, CJK content, digit-after-closer and
 /// whitespace-adjacency rules) as a serialized parse-output digest, plus
-/// structural cases for every documented splitInline rule. The corpus avoids
-/// URL shapes so neither link backend feeds the digest (round-16/17 lesson);
-/// splitInline itself is pure stdlib Character logic, so ONE golden is
-/// expected to hold across platforms — captured on the unmodified product and
-/// verified on both before embedding.
+/// structural cases for every documented splitInline rule and direct-call
+/// cases for the all-fused extra-admission path. The corpus avoids URL shapes
+/// so neither link backend feeds the digest (round-16/17 lesson); splitInline
+/// itself is pure stdlib Character logic, so ONE golden is expected to hold
+/// across platforms — captured on the unmodified product and verified on both
+/// before embedding.
 func checkSplitInlineByteGuard() {
     func serRuns(_ runs: [ReplyInline]) -> String {
         runs.map { run in
@@ -81,13 +87,34 @@ func checkSplitInlineByteGuard() {
     precondition(!hasMath(ReplyDocument.parse("a $ b$c")), "whitespace after the opener is not math")
     precondition(!hasMath(ReplyDocument.parse("no dollars at all 完全没有")), "$-free runs skip")
     precondition(hasMath(ReplyDocument.parse("$甲$")), "CJK math content extracts")
-    // Prepend-fused dollar: the Character carries U+0600, so no bare "$"
-    // exists; the byte guard admits the run and split() no-ops value-equal.
+    // Fused OPENER with a bare unmatched closer (review F2): Characters are
+    // ["\u{0600}$", "x", "$"] — the trailing "$" IS bare, so every old-guard
+    // flavor admits and split() walks into the unmatched closer, which fails
+    // the opener checks and flushes one run. This pins the unmatched-closer
+    // no-op, NOT the extra-admission path (the all-fused cases below do).
     let prependDollar = "\u{0600}$x$"
     precondition(!hasMath(ReplyDocument.parse(prependDollar)),
-                 "Prepend-fused dollars never extract")
-    // Combining mark on the opener: Character "$◌̈" is not "$".
+                 "Prepend-fused opener with bare closer never extracts")
+    // Combining mark on the opener, bare closer: ["$\u{0308}", "x", "$"].
     precondition(!hasMath(ReplyDocument.parse("$\u{0308}x$")), "mark-fused opener does not extract")
+    // All-fused dollars (review F2): no bare "$" Character exists, so the
+    // byte guard admits where the macOS old guard rejected; the Linux
+    // corelibs search admits the Prepend form too (probe record archived in
+    // round-19/checks). Either way split() must be a value-preserving no-op:
+    // one run, byte-identical text, every flag preserved, no math/link/code.
+    for fusedText in ["\u{0600}$x\u{0600}$", "$\u{0308}x$\u{0301}"] {
+        let fused = ReplyInline(text: fusedText, strong: true, emphasis: true, strikethrough: true)
+        let kept = ReplyMath.splitInline([fused])
+        precondition(kept.count == 1, "all-fused run returns exactly one run")
+        precondition(Array(kept[0].text.utf8) == Array(fusedText.utf8),
+                     "all-fused text is byte-identical after the no-op split")
+        precondition(kept[0].strong && kept[0].emphasis && kept[0].strikethrough,
+                     "all-fused run keeps every flag")
+        precondition(kept[0].math == nil && kept[0].link == nil && !kept[0].code,
+                     "all-fused run gains no math/link/code")
+        precondition(!hasMath(ReplyDocument.parse(fusedText)),
+                     "all-fused dollars never extract end-to-end")
+    }
     // Emphasis around math: flags ride through the split.
     let emphasized = ReplyDocument.parse("**能量 $E$ 守恒**")
     precondition(hasMath(emphasized), "math inside strong extracts")
