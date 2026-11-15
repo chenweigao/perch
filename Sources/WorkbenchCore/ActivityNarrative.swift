@@ -38,17 +38,21 @@ public enum ActivityNarrativeLifecycle: String, Codable, Sendable {
 /// changes results. Entry steps are addressed by entry id, so they live in a
 /// per-conversation instance; the content-addressed text tables are shared.
 ///
-/// Round 20: the shared tables key on raw UTF-8 bytes instead of `String`'s
-/// canonical Hashable conformance. Attribution (Time Profiler over the
-/// presentation-token update loop at c085fd9, 20,053 samples): inside
-/// `ActivityNarrativeProjection.make` (74.7% of all samples), the String-key
-/// NFC-normalizing hash walk — `Hashable._rawHashValue` → `_normalizedHash`
-/// with `Hasher._combine`, `_fastNFCCheck`, `getNormData` beneath — was 50.0%
-/// of the stage, plus ~6% canonical `==` in dictionary probes, all paid per
-/// delta because the growing tail text misses every table lookup and every
-/// miss hashes and probes the full multi-KB CJK-mixed key. Byte hashing and
-/// byte equality are exact for byte-identical text, so hits and misses on the
-/// streaming hot path stop walking normalization tables.
+/// Round 21: the shared tables key on raw UTF-8 bytes instead of `String`'s
+/// canonical Hashable conformance. Attribution (Time Profiler over a
+/// miss-heavy KB-scale long-tail update loop — unique tail text per update,
+/// the distribution real streaming and the longtail bench scenario produce):
+/// inside `ActivityNarrativeProjection.make` (86.9% of all samples), the
+/// String-key NFC-normalizing hash walk — `_normalizedHash` with
+/// `Hasher._combine`, `_fastNFCCheck`, `getNormData` beneath — was 29.6% of
+/// the stage (find 3,088 + insert 2,050 samples), paid per delta because the
+/// growing tail text misses every table lookup and every miss hashes the
+/// full multi-KB CJK-mixed key. Byte hashing and byte equality are exact for
+/// byte-identical text, so hits and misses on the streaming hot path stop
+/// walking normalization tables. (A hit-heavy cyclic profile had shown an
+/// even larger 50% share; round-20's screening rejected the first version of
+/// this change because its per-byte fallback paths gave the saving back —
+/// see ByteText.)
 ///
 /// Semantics: `String` hashing/equality is canonical, so canonically equal
 /// (NFC/NFD) texts previously shared one entry; byte keys give each byte
@@ -64,23 +68,36 @@ public final class NarrativeTextCache: @unchecked Sendable {
     /// Raw-UTF-8 dictionary key. Equality and hashing never consult Unicode
     /// normalization: equal bytes hash equal (the Hashable contract), and
     /// canonically-equal-but-different bytes are distinct keys by design.
+    ///
+    /// Round-21 v2: both operations go through `withUTF8`, which exposes a
+    /// contiguous buffer for ANY storage (native, substring-shared or
+    /// bridged, copying only when needed). The v1 forms were hot-path traps
+    /// on Apple platforms: `utf8.elementsEqual` walks through
+    /// `IndexingIterator`'s per-byte `Collection.subscript` witness, and
+    /// `withContiguousStorageIfAvailable` returns nil for the substring-
+    /// backed Strings that clean()/narrativeText() produce, dropping every
+    /// hash into the same per-byte iteration (candidate-side attribution:
+    /// the two fallbacks cost 20.7% of the narrative stage, nearly exactly
+    /// the NFC-hash share they replaced — which is why v1 screened flat).
     struct ByteText: Hashable {
         let text: String
         init(_ text: String) { self.text = text }
         static func == (lhs: ByteText, rhs: ByteText) -> Bool {
-            lhs.text.utf8.elementsEqual(rhs.text.utf8)
+            // withUTF8 is mutating; the local copies are COW retains, and
+            // withUTF8 materializes a contiguous buffer only when the
+            // backing storage is not already contiguous.
+            var l = lhs.text
+            var r = rhs.text
+            return l.withUTF8 { a in
+                r.withUTF8 { b in
+                    a.count == b.count && a.elementsEqual(b)
+                }
+            }
         }
         func hash(into hasher: inout Hasher) {
-            // One SipHash pass over the contiguous bytes; foreign storage is
-            // copied so equal bytes always hash equal regardless of backing.
-            let combined = text.utf8.withContiguousStorageIfAvailable { buffer in
+            var t = text
+            t.withUTF8 { buffer in
                 hasher.combine(bytes: UnsafeRawBufferPointer(start: buffer.baseAddress, count: buffer.count))
-            }
-            if combined == nil {
-                let bytes = Array(text.utf8)
-                bytes.withUnsafeBufferPointer { buffer in
-                    hasher.combine(bytes: UnsafeRawBufferPointer(start: buffer.baseAddress, count: buffer.count))
-                }
             }
         }
     }
