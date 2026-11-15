@@ -4,23 +4,28 @@ import WorkbenchCore
 /// Round 20: pins for the L()/AppLanguage resolution chain, created during the
 /// rejected lean-chain exploration (v2 — reverted: Mac in-context screening
 /// showed no separation). They pin the invariants any future optimization of
-/// this chain must preserve, in CI on both platforms (the .app-based
-/// scripts/check-localization-runtime.sh cannot run on the measurement mini —
-/// bare-swiftc and relocated binaries are SIGKILLed there, documented in
-/// WORKSPACE-DESIGN.md — so WorkbenchChecks is the enforceable carrier).
+/// this chain must preserve. Enforcement: CI runs WorkbenchChecks in the
+/// macOS core-regression group (Darwin branch); the Linux CI portable suite
+/// is Python-only, so the Linux branch is verified locally (101 PASS + 1
+/// SKIP runs archived in round-20/checks/), not by CI. The .app-based
+/// scripts/check-localization-runtime.sh cannot run on the measurement mini
+/// (bare-swiftc and relocated binaries are SIGKILLed there, documented in
+/// WORKSPACE-DESIGN.md) and is not wired into CI, so WorkbenchChecks is the
+/// enforceable carrier.
 ///
 /// `Bundle.preferredLocalizations` legitimately diverges per platform, so the
 /// resolution semantics are pinned per platform (round-17 precedent for
 /// platform-conditional legacy behavior):
-/// - Darwin (where the product's L() actually resolves locales): canonical
+/// - Darwin (where L()'s body selects the resource bundle): canonical
 ///   identifiers resolve to themselves — the exact-match premise any
 ///   "skip the second ICU resolve" shortcut relies on — and region-mapped
 ///   preferences fall back to the supported pair.
 /// - Linux corelibs (measured): preferences are IGNORED and the first
-///   supported localization is always returned. The product never depends on
-///   this — the non-Darwin L() path returns `value.resolved` without ever
-///   touching the locale chain — so the pin only freezes the legacy behavior
-///   against silent drift.
+///   supported localization is always returned. The Linux L() body returns
+///   `value.resolved` and selects no resource bundle, but omitted-locale
+///   calls STILL evaluate the default-argument resolution chain
+///   (`AppLanguage.current.resolvedLocale`) on Linux — the pin freezes that
+///   chain's measured corelibs behavior against silent drift.
 func checkLocalizationResolutionChain() {
 #if canImport(Darwin)
     precondition(AppLanguage.resolveSystemLanguage(["zh-Hans"]) == "zh-Hans",
