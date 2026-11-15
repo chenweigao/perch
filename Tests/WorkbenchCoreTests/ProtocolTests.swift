@@ -48,6 +48,7 @@ struct ProtocolTests {
         try checkTurnExcerpt()
         checkCompactionSummaryDisplay()
         try checkActivitySummaries()
+        try checkNarrativeByteKeyedTables()
         try checkTaskRecaps()
         checkReviewContext()
         try checkWorkspaceProgress()
