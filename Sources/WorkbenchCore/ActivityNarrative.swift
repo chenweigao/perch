@@ -241,14 +241,25 @@ public struct ActivityNarrativeSnapshot: Equatable, Sendable {
 ///   (lowercased + substring contains), computed lazily only for the affected
 ///   keywords — GB9b fusion (e.g. U+0600 before, combining mark after) can
 ///   make the old search miss, so the old behavior decides exactly as before.
-/// - No false negatives: an old match requires the keyword's characters
-///   contiguous in the lowercased text; ASCII keywords can only gain bytes
-///   from lowercasing via non-ASCII scalars lowercasing to ASCII — the
-///   exhaustive sweep pins U+212A ('k') as the ONLY such bridge and no
-///   keyword contains 'k'; CJK keywords are case- and normalization-invariant
-///   (ideographs are their own normal forms and cannot arise from combining
-///   sequences). So every old match is found by the scan (confirmed or
-///   inconclusive→fallback).
+/// - No false negatives from casing: an old match requires the keyword's
+///   characters contiguous in the lowercased text; ASCII keywords can only
+///   gain bytes from lowercasing via non-ASCII scalars lowercasing to ASCII —
+///   the exhaustive sweep pins U+212A ('k') as the ONLY such bridge and no
+///   keyword contains 'k'.
+/// - No false negatives from normalization (review F1 counterexamples):
+///   canonical substring search folds CJK COMPATIBILITY ideographs to their
+///   canonical equivalents (U+FA55→突, U+FA8E→搜, U+F96A→索), so texts like
+///   "冲\u{FA55}" match 冲突 under the old predicate while no literal keyword
+///   bytes exist. The scan therefore detects the UTF-8 lead patterns of the
+///   three blocks carrying canonical decompositions to ideographs —
+///   U+2F00–2FFF (E2 BC..BF, Kangxi, conservative), U+F900–FAFF (EF A4..AB),
+///   U+2F800–2FFFF (F0 AF, conservative) — and defers the WHOLE text to the
+///   legacy chain. Note the folding is search-internal: probe evidence shows
+///   decomposedStringWithCanonicalMapping does NOT expose these singleton
+///   mappings on either platform while contains() folds them on BOTH. An
+///   exhaustive scalar sweep (operational canonical == against the keyword
+///   characters) pins that no scalar outside these ranges is canonically
+///   equal to a keyword character, so the detection is complete.
 private enum NarrativePhaseScan {
     /// Priority order matches the replaced if-chain: validating, editing,
     /// integrating, exploring.
@@ -276,18 +287,50 @@ private enum NarrativePhaseScan {
         (byte >= 0x41 && byte <= 0x5A) ? byte + 0x20 : byte
     }
 
+    /// The replaced predicate chain, verbatim — the authoritative decision
+    /// for texts containing CJK compatibility ideographs (review F1), and
+    /// the source of the per-keyword fallback predicate below.
+    static func legacyPhase(_ text: String) -> ActivityNarrativePhase {
+        let value = text.lowercased()
+        if value.contains("test") || value.contains("build") || value.contains("lint") || value.contains("verify")
+            || value.contains("测试") || value.contains("构建") || value.contains("验证") || value.contains("检查") { return .validating } // l10n-ignore
+        if value.contains("edit") || value.contains("implement") || value.contains("write") || value.contains("fix")
+            || value.contains("修改") || value.contains("实现") || value.contains("修复") || value.contains("编写") { return .editing } // l10n-ignore
+        if value.contains("git") || value.contains("commit") || value.contains("merge") || value.contains("integrat")
+            || value.contains("提交") || value.contains("合并") || value.contains("整合") || value.contains("冲突") { return .integrating } // l10n-ignore
+        if value.contains("read") || value.contains("search") || value.contains("inspect") || value.contains("explor")
+            || value.contains("读取") || value.contains("搜索") || value.contains("查看") || value.contains("分析") { return .exploring } // l10n-ignore
+        return .mixed
+    }
+
     static func phase(in text: String) -> ActivityNarrativePhase {
         var confirmedValidating = false
         var confirmedEditing = false
         var confirmedIntegrating = false
         var confirmedExploring = false
         var inconclusive = [Bool](repeating: false, count: keywords.count)
+        var compatibilityDetected = false
         var body = text
         body.withUTF8 { buffer in
             let count = buffer.count
             var offset = 0
             while offset < count {
-                let bucket = buckets[Int(fold(buffer[offset]))]
+                let lead = buffer[offset]
+                // CJK compatibility ideographs canonically decompose to
+                // ordinary ideographs (U+FA55→突 etc.), which the canonical
+                // substring search folds but a byte scan cannot see. Detect
+                // their UTF-8 lead patterns (conservatively) and defer the
+                // whole text to the legacy chain.
+                if lead == 0xE2 || lead == 0xEF || lead == 0xF0, offset + 1 < count {
+                    let next = buffer[offset + 1]
+                    if (lead == 0xE2 && next >= 0xBC)
+                        || (lead == 0xEF && next >= 0xA4 && next <= 0xAB)
+                        || (lead == 0xF0 && next == 0xAF) {
+                        compatibilityDetected = true
+                        break
+                    }
+                }
+                let bucket = buckets[Int(fold(lead))]
                 if !bucket.isEmpty {
                     for index in bucket {
                         let keyword = keywordBytes[index]
@@ -322,34 +365,36 @@ private enum NarrativePhaseScan {
                 offset += 1
             }
         }
+        if compatibilityDetected { return legacyPhase(text) }
         // Priority order: a lower-priority confirmed result still requires the
         // higher-priority inconclusive keywords to be resolved first, so each
-        // phase checks confirmed-then-fallback in strict priority.
+        // phase checks confirmed-then-fallback in strict priority. One lazy
+        // lowercased value is shared across all category resolutions (review
+        // F2: the previous per-category lowers ran up to four times).
+        var lowered: String?
+        func resolves(_ phase: ActivityNarrativePhase) -> Bool {
+            var needed = false
+            for index in keywords.indices where keywords[index].phase == phase && inconclusive[index] {
+                needed = true
+                break
+            }
+            guard needed else { return false }
+            let value = lowered ?? text.lowercased()
+            lowered = value
+            for index in keywords.indices where keywords[index].phase == phase && inconclusive[index] {
+                if value.contains(keywords[index].text) { return true }
+            }
+            return false
+        }
         if confirmedValidating { return .validating }
-        if resolves(.validating, inconclusive, text) { return .validating }
+        if resolves(.validating) { return .validating }
         if confirmedEditing { return .editing }
-        if resolves(.editing, inconclusive, text) { return .editing }
+        if resolves(.editing) { return .editing }
         if confirmedIntegrating { return .integrating }
-        if resolves(.integrating, inconclusive, text) { return .integrating }
+        if resolves(.integrating) { return .integrating }
         if confirmedExploring { return .exploring }
-        if resolves(.exploring, inconclusive, text) { return .exploring }
+        if resolves(.exploring) { return .exploring }
         return .mixed
-    }
-
-    /// Lazily lowercases once and applies the ORIGINAL canonical predicate to
-    /// the boundary-inconclusive keywords of one phase.
-    private static func resolves(_ phase: ActivityNarrativePhase, _ inconclusive: [Bool], _ text: String) -> Bool {
-        var needed = false
-        for index in keywords.indices where keywords[index].phase == phase && inconclusive[index] {
-            needed = true
-            break
-        }
-        guard needed else { return false }
-        let lowered = text.lowercased()
-        for index in keywords.indices where keywords[index].phase == phase && inconclusive[index] {
-            if lowered.contains(keywords[index].text) { return true }
-        }
-        return false
     }
 }
 

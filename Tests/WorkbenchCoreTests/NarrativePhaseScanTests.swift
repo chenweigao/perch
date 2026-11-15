@@ -6,11 +6,15 @@ import WorkbenchCore
 /// proven-boundary fast accepts and a canonical fallback for
 /// boundary-inconclusive matches (NarrativePhaseScan). Three-layer pin:
 ///
-/// 1. Exhaustive scalar bridge sweep: the no-false-negative argument rests on
-///    "the only non-ASCII scalar whose lowercased form is pure ASCII is
-///    U+212A (KELVIN SIGN → 'k'), and no keyword contains 'k'". Both halves
-///    are asserted here — the sweep over all 1,112,064 valid scalars, and a
-///    static check of the keyword list.
+/// 1. Exhaustive scalar sweeps: the no-false-negative argument rests on
+///    (a) "the only non-ASCII scalar whose lowercased form is pure ASCII is
+///    U+212A (KELVIN SIGN → 'k'), and no keyword contains 'k'" and
+///    (b) "every scalar whose CANONICAL DECOMPOSITION reaches a CJK keyword
+///    character lies in the compatibility blocks the scanner detects, and no
+///    non-ASCII scalar canonically decomposes to pure ASCII" (review F1:
+///    U+FA55→突, U+FA8E→搜, U+F96A→索 fold under canonical substring search).
+///    Both sweeps run over all 1,112,064 valid scalars, plus the static
+///    keyword checks.
 /// 2. In-run differential fuzz (round-16 v2 pattern — version-robust, no
 ///    golden needed): the reference predicate chain (verbatim copy of the
 ///    replaced code) versus the shipped projection over adversarial texts —
@@ -54,6 +58,39 @@ func checkNarrativePhaseSinglePass() throws {
     precondition(keywordList.count == 32)
     precondition(!keywordList.contains { $0.utf8.contains(0x6B) || $0.utf8.contains(0x4B) },
                  "a keyword contains 'k' — the Kelvin bridge argument breaks")
+
+    // --- 1b. exhaustive canonical-equivalence sweep (review F1) ---
+    // Probe finding (archived): Foundation's decomposedStringWithCanonicalMapping
+    // does NOT expose the compatibility-ideograph singleton mappings on EITHER
+    // platform (U+FA55 → SELF), yet the canonical substring search folds them
+    // on BOTH ("冲\u{FA55}".contains("冲突") == true). The sweep therefore
+    // tests canonical equivalence OPERATIONALLY via String's canonical ==
+    // (Set<String> membership): every non-ASCII scalar canonically equal to a
+    // CJK keyword character — other than the character itself — must lie
+    // inside the compatibility byte ranges the scanner detects
+    // (U+2F00–2FFF / U+F900–FAFF / U+2F800–2FFFF). Multi-scalar sequences
+    // cannot produce an ideograph under canonical composition (CJK
+    // ideographs have no primary composites; Hangul composes syllables), so
+    // the scalar sweep is complete; the differential fuzz below covers the
+    // combinations empirically.
+    let keywordScalars = Set("测试构建验证检查修改实现修复编写提交合并整合冲突读取搜索查看分析".unicodeScalars)
+    let keywordCharStrings: Set<String> = Set(keywordScalars.map { String($0) })
+    var canonicalBridges = 0
+    var scan: UInt32 = 0x80
+    while scan <= 0x10FFFF {
+        if !(scan >= 0xD800 && scan <= 0xDFFF), let scalar = Unicode.Scalar(scan) {
+            if !keywordScalars.contains(scalar), keywordCharStrings.contains(String(scalar)) {
+                canonicalBridges += 1
+                let detected = (0x2F00...0x2FFF).contains(scan)
+                    || (0xF900...0xFAFF).contains(scan)
+                    || (0x2F800...0x2FFFF).contains(scan)
+                precondition(detected,
+                             "U+\(String(scan, radix: 16, uppercase: true)) is canonically equal to a keyword character outside the detected compatibility ranges")
+            }
+        }
+        scan += 1
+    }
+    precondition(canonicalBridges > 0, "sweep must encounter compatibility bridges (probe: U+FA55/U+FA8E/U+F96A fold under canonical search)")
 
     // --- reference implementation: verbatim copy of the replaced chain ---
     func referencePhase(_ text: String) -> ActivityNarrativePhase {
@@ -103,6 +140,24 @@ func checkNarrativePhaseSinglePass() throws {
         precondition(referencePhase(text) == expected, "reference disagreement on structural case \(text)")
     }
 
+    // Review F1 counterexamples: CJK COMPATIBILITY ideographs canonically
+    // fold to keyword characters (U+FA55→突, U+FA8E→搜, U+F96A→索), which
+    // the legacy canonical substring search matches but literal keyword
+    // bytes do not exist. The scanner must detect the compatibility blocks
+    // and defer the whole text to the legacy chain. Each case is asserted
+    // against the reference on the same platform (the legacy predicate is
+    // itself platform-divergent under GB9b — the differential, not a fixed
+    // expectation, is the contract).
+    let compatibilityCases = ["QZ0 冲\u{FA55}.", "QZ1 \u{FA8E}索.", "QZ2 搜\u{F96A}.",
+                              "QZ4 冲\u{FA55} read.", "冲\u{FA55}", "\u{FA8E}\u{F96A}验证",
+                              "test\u{2F00}", "\u{F900}verify", "分析\u{2F800}", "z\u{2FA1F}提交"]
+    for (caseIndex, text) in compatibilityCases.enumerated() {
+        let expected = referencePhase(text)
+        let got = try projectedPhase(text)
+        precondition(got == expected,
+                     "compatibility-ideograph differential mismatch #\(caseIndex) on \(text.debugDescription): scan=\(String(describing: got)) reference=\(expected)")
+    }
+
     // --- 2. differential fuzz ---
     let pieces = ["test", "TEST", "build", "verify", "git", "COMMIT", "merge", "edit", "write",
                   "read", "search", "explor", "integrat", "lint", "fix", "implement", "inspect",
@@ -114,6 +169,9 @@ func checkNarrativePhaseSinglePass() throws {
                   "te\u{0301}st", "ver\u{0308}ify", "edi\u{0301}t",
                   "\u{0130}test", "ED\u{0130}T", "\u{212A}test", "\u{212A}ommit", "\u{212A}git",
                   "🎉test🎉", "test🎉", "🎉git",
+                  // CJK compatibility ideographs (review F1): canonical folds
+                  // into keyword characters without literal keyword bytes.
+                  "冲\u{FA55}", "\u{FA8E}索", "搜\u{F96A}", "\u{FA55}", "\u{2F00}", "\u{2F800}", "冲",
                   "推进", "说明", "abc", "xyz", "正文", "English"]
     precondition(!pieces.contains { $0.contains("://") || $0.contains("www") || $0.contains("@") },
                  "corpus must stay clear of URL shapes")
@@ -127,6 +185,10 @@ func checkNarrativePhaseSinglePass() throws {
     for index in 0..<2000 {
         var text = ""
         for _ in 0..<(1 + Int(next() % 4)) { text += pieces[Int(next() % UInt64(pieces.count))] }
+        // Unique keyword-free prefix: the static text tables survive across
+        // calls (a fresh NarrativeTextCache does not clear them — review F2
+        // note), so every differential text must be table-cold.
+        text = "z\(index)z" + text
         // clean()-stability guard: reject generated texts that clean() would alter
         if text != text.trimmingCharacters(in: .whitespacesAndNewlines) { continue }
         if text.hasPrefix("#") || text.hasPrefix("**") { continue }
@@ -136,7 +198,8 @@ func checkNarrativePhaseSinglePass() throws {
                      "differential mismatch #\(index) on \(text.debugDescription): scan=\(String(describing: got)) reference=\(expected)")
         counts[expected, default: 0] += 1
         if text.unicodeScalars.contains(where: { $0.value == 0x0600 || $0.value == 0x06DD || $0.value == 0x08E2
-                || $0.value == 0x0308 || $0.value == 0x0301 || $0.value == 0x200D || $0.value == 0x0130 || $0.value == 0x212A }) {
+                || $0.value == 0x0308 || $0.value == 0x0301 || $0.value == 0x200D || $0.value == 0x0130 || $0.value == 0x212A
+                || $0.value == 0xFA55 || $0.value == 0xFA8E || $0.value == 0xF96A || $0.value == 0x2F00 || $0.value == 0x2F800 }) {
             adversarial += 1
         }
     }
@@ -144,5 +207,5 @@ func checkNarrativePhaseSinglePass() throws {
     for required in [ActivityNarrativePhase.validating, .editing, .integrating, .exploring, .mixed] {
         precondition((counts[required] ?? 0) > 20, "phase \(required) underrepresented: \(counts[required] ?? 0)")
     }
-    print("PASS: phase single-pass scan — scalar bridge sweep (only U+212A), 32 keywords verified k-free, differential fuzz zero mismatches (\(adversarial) adversarial texts, categories \(counts.map { "\($0.key.rawValue):\($0.value)" }.sorted().joined(separator: " ")))")
+    print("PASS: phase single-pass scan — scalar bridge sweep (only U+212A) + canonical-equivalence sweep (\(canonicalBridges) compatibility bridges, all in detected ranges), 32 keywords verified k-free, differential fuzz zero mismatches (\(adversarial) adversarial texts, categories \(counts.map { "\($0.key.rawValue):\($0.value)" }.sorted().joined(separator: " ")))")
 }
