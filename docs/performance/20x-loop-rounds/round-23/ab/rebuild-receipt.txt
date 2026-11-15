@@ -1,0 +1,11 @@
+candidate_rebuild_exit=0
+candidate_rebuild_head=3ba1f1ae1242b7dd2c0a42ea5fc82457af4fafde
+candidate_rebuild_porcelain=2
+4f8aaea26f0a88d56183c918246a63630a6f67b9a8435cd455e030217cb1ad8b  .build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+baseline_rebuild_head=b11a7d5eab72d4b8c85862ca8d6c2f31637b0d32
+baseline_rebuild_porcelain=4
+A  Tests/WorkbenchCoreTests/EditLineByteRangeTests.swift
+M  Tests/WorkbenchCoreTests/ProtocolTests.swift
+?? build.log
+?? rebuild.log
+40a1b8691f415f91d0664d173a4648811728c1f05011e28ce85d54e16c740c1b  /tmp/r23-base/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
