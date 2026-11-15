@@ -1,0 +1,122 @@
+diff --git a/Sources/WorkbenchCore/ActivityNarrative.swift b/Sources/WorkbenchCore/ActivityNarrative.swift
+index 030601f..3c9451d 100644
+--- a/Sources/WorkbenchCore/ActivityNarrative.swift
++++ b/Sources/WorkbenchCore/ActivityNarrative.swift
+@@ -37,18 +37,96 @@ public enum ActivityNarrativeLifecycle: String, Codable, Sendable {
+ /// produces new strings. Eviction clears all, which costs one recompute and never
+ /// changes results. Entry steps are addressed by entry id, so they live in a
+ /// per-conversation instance; the content-addressed text tables are shared.
++///
++/// Round 21: the shared tables key on raw UTF-8 bytes instead of `String`'s
++/// canonical Hashable conformance. Attribution (Time Profiler over a
++/// miss-heavy KB-scale long-tail update loop — unique tail text per update,
++/// the distribution real streaming and the longtail bench scenario produce):
++/// inside `ActivityNarrativeProjection.make` (86.9% of all samples), the
++/// String-key NFC-normalizing hash walk — `_normalizedHash` with
++/// `Hasher._combine`, `_fastNFCCheck`, `getNormData` beneath — was 29.6% of
++/// the stage (find 3,088 + insert 2,050 samples), paid per delta because the
++/// growing tail text misses every table lookup and every miss hashes the
++/// full multi-KB CJK-mixed key. Byte hashing and byte equality are exact for
++/// byte-identical text, so hits and misses on the streaming hot path stop
++/// walking normalization tables. (A hit-heavy cyclic profile had shown an
++/// even larger 50% share; round-20's screening rejected the first version of
++/// this change because its per-byte fallback paths gave the saving back —
++/// see ByteText.)
++///
++/// Semantics: `String` hashing/equality is canonical, so canonically equal
++/// (NFC/NFD) texts previously shared one entry; byte keys give each byte
++/// variant its own entry and one recompute. Every derivation behind the tables
++/// (clean/phase/narrativeText) is canonically coherent — trimming, whitespace
++/// collapse, canonical substring searches and grapheme prefixing map
++/// canonically equal inputs to canonically equal outputs — and every consumer
++/// observes the values through canonical `==` or rendering, so the recompute
++/// is unobservable except in entry count, which the same 8192 bound evicts.
++/// Pinned by checkNarrativeByteKeyedTables (golden digest + NFC/NFD pair
++/// equality + repeat-hit + limit-separation structural cases).
+ public final class NarrativeTextCache: @unchecked Sendable {
++    /// Raw-UTF-8 dictionary key. Equality and hashing never consult Unicode
++    /// normalization: equal bytes hash equal (the Hashable contract), and
++    /// canonically-equal-but-different bytes are distinct keys by design.
++    ///
++    /// Round-21 v2: both operations go through `withUTF8`, which exposes a
++    /// contiguous buffer for ANY storage (native, substring-shared or
++    /// bridged, copying only when needed). The v1 forms were hot-path traps
++    /// on Apple platforms: `utf8.elementsEqual` walks through
++    /// `IndexingIterator`'s per-byte `Collection.subscript` witness, and
++    /// `withContiguousStorageIfAvailable` returns nil for the substring-
++    /// backed Strings that clean()/narrativeText() produce, dropping every
++    /// hash into the same per-byte iteration (candidate-side attribution:
++    /// the two fallbacks cost 20.7% of the narrative stage, nearly exactly
++    /// the NFC-hash share they replaced — which is why v1 screened flat).
++    struct ByteText: Hashable {
++        let text: String
++        init(_ text: String) { self.text = text }
++        static func == (lhs: ByteText, rhs: ByteText) -> Bool {
++            // withUTF8 is mutating; the local copies are COW retains, and
++            // withUTF8 materializes a contiguous buffer only when the
++            // backing storage is not already contiguous.
++            var l = lhs.text
++            var r = rhs.text
++            return l.withUTF8 { a in
++                r.withUTF8 { b in
++                    a.count == b.count && a.elementsEqual(b)
++                }
++            }
++        }
++        func hash(into hasher: inout Hasher) {
++            var t = text
++            t.withUTF8 { buffer in
++                hasher.combine(bytes: UnsafeRawBufferPointer(start: buffer.baseAddress, count: buffer.count))
++            }
++        }
++    }
++
++    /// Replaces the old "\(limit)\u{1}\(text)" interpolated key: the limit is
++    /// a field, so lookups no longer allocate a copy of the whole text.
++    private struct CleanKey: Hashable {
++        let limit: Int?
++        let text: ByteText
++        static func == (lhs: CleanKey, rhs: CleanKey) -> Bool {
++            lhs.limit == rhs.limit && lhs.text == rhs.text
++        }
++        func hash(into hasher: inout Hasher) {
++            hasher.combine(limit)
++            hasher.combine(text)
++        }
++    }
++
+     /// Shared content-addressed text tables.
+     private static let textLock = NSLock()
+-    private static var phases: [String: ActivityNarrativePhase] = [:]
+-    private static var cleaned: [String: String] = [:]
+-    private static var narratives: [String: (headline: String, detail: String?)] = [:]
++    private static var phases: [ByteText: ActivityNarrativePhase] = [:]
++    private static var cleaned: [CleanKey: String] = [:]
++    private static var narratives: [ByteText: (headline: String, detail: String?)] = [:]
+ 
+     public init() {}
+     private let lock = NSLock()
+     private var steps: [String: ([KimiMessage], ConversationTimelineEntry.Presentation, [NarrativeStep])] = [:]
+ 
+-    private static func value<V>(_ table: inout [String: V], _ key: String, _ make: () -> V) -> V {
++    private static func value<Key: Hashable, V>(_ table: inout [Key: V], _ key: Key, _ make: () -> V) -> V {
+         textLock.lock()
+         if let hit = table[key] { textLock.unlock(); return hit }
+         textLock.unlock()
+@@ -61,13 +139,13 @@ public final class NarrativeTextCache: @unchecked Sendable {
+     }
+ 
+     static func phase(for text: String, _ make: () -> ActivityNarrativePhase) -> ActivityNarrativePhase {
+-        value(&phases, text, make)
++        value(&phases, ByteText(text), make)
+     }
+     static func clean(_ text: String, limit: Int?, _ make: () -> String) -> String {
+-        value(&cleaned, "\(limit ?? -1)\u{1}\(text)", make)
++        value(&cleaned, CleanKey(limit: limit, text: ByteText(text)), make)
+     }
+     static func narrativeText(_ text: String, _ make: () -> (headline: String, detail: String?)) -> (headline: String, detail: String?) {
+-        value(&narratives, text, make)
++        value(&narratives, ByteText(text), make)
+     }
+ 
+     /// An entry's ordered fold steps, reusable while the entry's messages and

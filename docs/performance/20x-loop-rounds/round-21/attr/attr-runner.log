@@ -1,0 +1,27 @@
+=== prepare Sun Nov 15 14:24:45 CST 2026 ===
+HEAD is now at a559cea Merge pull request #342 from chenweigao/perf/20x-loop-20-20261115
+tests_patch=ok
+HEAD=a559cea065eaa06359ad50be26e3691d6e070d92 tests_state=68b0ce4-equivalent
+porcelain_before=1
+=== apply temporary profile loop mode ===
+porcelain_applied=2
+=== build Sun Nov 15 14:24:48 CST 2026 ===
+build_exit=0
+17866e847822952b7b3d03689996c82355fb90b06f8a214b1ae81411d30200c3  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round21-profile/out/Products/Release/WorkbenchChecks
+=== record longtail Sun Nov 15 14:25:58 CST 2026 ===
+record_exit=0
+Recording completed. Saving output file...
+Output file saved as: longtail.trace
+export_exit=0
+total 12320
+drwxr-xr-x   7 <mini>  staff      224 Nov 15 14:26 .
+drwxr-xr-x  98 <mini>  staff     3136 Nov 15 14:22 ..
+-rw-r--r--   1 <mini>  staff     3027 Nov 15 14:25 build.log
+-rw-r--r--   1 <mini>  staff      119 Nov 15 14:26 export.log
+-rw-r--r--   1 <mini>  staff  6222004 Nov 15 14:26 longtail-time-profile.xml
+drwxr-xr-x  10 <mini>  staff      320 Nov 15 14:26 longtail.trace
+-rw-r--r--   1 <mini>  staff      255 Nov 15 14:26 record.log
+=== revert Sun Nov 15 14:26:26 CST 2026 ===
+porcelain_after=0
+DONE Sun Nov 15 14:26:27 CST 2026
+exit=0

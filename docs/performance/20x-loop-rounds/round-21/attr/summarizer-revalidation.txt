@@ -1,0 +1,10 @@
+Extended summarizer (.local/round21/summarize-r21.py, archived in this dir)
+self-check before use, per the round-16 discipline:
+
+  python3 summarize-r21.py .local/round19/macos-ab-v2 /tmp/revalidate-mac.json
+    -> 80 metrics; positives NONE            == round-19 macos summary: IDENTICAL
+  python3 summarize-r21.py .local/round19/ab19v2 /tmp/revalidate-lin.json
+    -> 85 metrics; positives [edit64_crlf]   == round-19 linux summary: IDENTICAL
+
+The scenario-aware prefix only adds longtail{ft}_* keys for the new
+long-tail-stream scenario; the historical token{ft}_* keys are byte-identical.
