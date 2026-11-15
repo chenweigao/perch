@@ -1,12 +1,19 @@
 # Round-19 screening (Mac mini + Linux, 2026-11-15) — splitInline byte-level dollar guard PASSED on both platforms
 
 Candidate: `ReplyMath.splitInline`'s per-run guard `run.text.contains("$")`
-(a Character-by-Character walk over every paragraph run) →
-`run.text.utf8.contains(36)` (byte-level; 0x24 is self-synchronizing in
-UTF-8). Equivalence: byte presence is necessary for a "$" Character; the
-extra admitted runs (every "$" fused into a larger Character, e.g. GB9b
-after a Prepend scalar) make `split()` return one value-equal run — parse
-output identical for all inputs.
+— which binds to a grapheme-aware Foundation substring search
+(`StringProtocol.contains<A> → range<A>`; per the Mac trace and the
+reviewer's Linux-baseline disassembly — review F3 correction; this
+screening doc originally mis-described it as a Character-by-Character
+walk) → `run.text.utf8.contains(36)` (byte-level; 0x24 is
+self-synchronizing in UTF-8). Equivalence (invariant framing, no identical-
+admission assumption across platforms): every old search flavor needs the
+0x24 byte, so byte absence rejects exactly what any old guard rejected; and
+any run whose Characters contain no bare "$" (e.g. every "$" fused into a
+larger Character — GB9b after a Prepend scalar, or combining marks) makes
+`split()` a value-preserving no-op returning one value-equal run — parse
+output identical for all inputs on every platform regardless of admission
+divergence (probe record: checks/guard-admission-probe-record.md).
 
 Motivation: round-17's pure cold find-bar attribution (21,222 samples) puts
 1,199 samples (5.65%) inclusively on backtraces carrying the splitInline

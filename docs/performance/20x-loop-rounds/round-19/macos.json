@@ -1944,8 +1944,9 @@
  "checks": {
   "baseline": "exit 0, 100 PASS (old guard passes every new assertion including the v2 all-fused cases \u2014 the equivalence proof on the adoption platform)",
   "candidate": "exit 0, 100 PASS (split-inline golden 5d1506ed4a822a53 asserted live; four-way identical: Mac/Linux x baseline/candidate at v2)",
-  "candidate_stdout": "round-19/checks/ (v1) + .local/round19/macos-ab-v2/checks-candidate.log (v2, archived with v2 evidence)",
-  "fixture_hashes": "round-19/macos-fixture-hashes.txt (scope per review F6: six entries = 4 bench sources + BenchClock + round-16 link pin)"
+  "candidate_stdout": "round-19/v2/checks-candidate-macos.log (v2); round-19/checks/checks-candidate-macos.log (v1)",
+  "fixture_hashes": "round-19/v2/macos-fixture-hashes.txt (v2; scope per review F6: six entries = 4 bench sources + BenchClock + round-16 link pin; v1 manifest at round-19/checks/macos-fixture-hashes.txt)",
+  "baseline_stdout": "round-19/v2/checks-baseline-macos.log (v2); round-19/checks/checks-baseline-macos.log (v1)"
  },
  "find_bar_cold_query_per_pair_delta_ms": [
   -58.37,
@@ -1986,5 +1987,9 @@
   "warm_note": "find_bar_query_update 0.00% median (worst +3.57% < spread 7.41); v1's +1.75% half-grid shift did not recur.",
   "band_notes": "stage_narrative +3.13% (0.1600->0.1650 = half a print step; worst == spread == 6.25, inside band). cold@2000 +1.48% and presentation_update +1.92% inside band (spreads 4.20/3.85).",
   "zero_grid_convention": "Documented summarizer convention applies (round-16 finding 7)."
+ },
+ "review_rounds": {
+  "initial_2f65eeb": "1 BLOCKING (F1 attribution counts + exceeds claim) + 6 non-blocking (F2 structural-case description, F3 old-guard characterization, F4 Mac per-pair range, F5 caller list, F6 archive metadata, F7 rebuild receipts) \u2014 all disposed in 1f9b5d4/f356f7f/256c097/7518f45",
+  "re_review_7518f45": "1 BLOCKING + 3 non-blocking, ALL docs-only verbatim corrections applied with self-recomputed verification (no new review round per mechanism): F1' INDEX round-19 postscript still asserted the withdrawn per-byte-cost claim and the round-17 postscript carried the retired unqualified 3.7% (both replaced with v2 results + inclusive counts + HYPOTHESIS labeling); F2' screening doc retained the 'Character-by-Character walk' characterization (replaced with StringProtocol.contains<A>->range<A> + invariant framing); F3' pinned CI record omitted the math failure and the aggregator, fixture not precisely identified, attribution strength (forensics file rewritten: both primaries + aggregator, dashboard/capture-none/135.08s fixture identification, comment-only delta demoted to supportive context, empirical confirmation = identical product tree green at 7518f45); F4' macos.json fixture path pointed at the v1 location (corrected to round-19/v2/). Reviewer's independent recomputation: 120 v2 + 120 v1 pair logs, 165 v2 + 166 v1 metrics, 3,360 inner medians, zero mismatches; all headline claims, goldens, hashes, receipts, probe matrix, red lines confirmed."
  }
 }
