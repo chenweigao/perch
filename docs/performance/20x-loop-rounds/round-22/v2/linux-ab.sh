@@ -3,7 +3,7 @@
 # ed53341 + pins (round-19 v2 harness template with retained receipts). Harness rules: the checks binary
 # embeds #filePath, so build trees stay alive while checks run, and the
 # rebuild verification happens at the SAME path. Candidate builds in the main
-# worktree (HEAD=e14c25d, porcelain 0 = committed tree); baseline in a
+# worktree (HEAD=e14c25d; Sources/Tests committed — run recorded porcelain_main=3, all untracked/modified round-22 docs-archive files, never Sources/Tests; re-review F6' annotation); baseline in a
 # scratch worktree kept alive through its check run. Per review F7, this run
 # RETAINS full rebuild receipts (digests, exits, source-state, rebuild logs)
 # for both sides before the scratch tree is removed.

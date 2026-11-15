@@ -1,0 +1,95 @@
+HEAD_main=4b9ac959d87b380ddc8b9861ecacedf8be61a7d4
+porcelain_main=10
+=== build candidate in main worktree (4b9ac95) Sun Nov 15 19:09:29 CST 2026 ===
+candidate_build_exit=0
+=== build baseline (ed53341 + 4b9ac95 tests; tree kept alive) Sun Nov 15 19:09:30 CST 2026 ===
+baseline_build_exit=0
+=== checks both sides (trees alive) Sun Nov 15 19:12:11 CST 2026 ===
+candidate_checks_exit=0 pass=102 skip=1
+baseline_checks_exit=0 pass=102 skip=1
+.local/round22/ab22v3/checks-base.log:PASS: link detection corpus digest matches the unmodified-product golden (5dd61f867727616a, 3000 fuzz texts + structural cases)
+.local/round22/ab22v3/checks-base.log:PASS: splitInline byte guard preserves parse output across structural rules and 3000 fuzz texts (digest 5d1506ed4a822a53, 999 extracting)
+.local/round22/ab22v3/checks-base.log:PASS: reply math — dollar/backslash delimiters, display blocks, currency guard, code isolation, Unicode and unmatched boundaries
+.local/round22/ab22v3/checks-cand.log:PASS: link detection corpus digest matches the unmodified-product golden (5dd61f867727616a, 3000 fuzz texts + structural cases)
+.local/round22/ab22v3/checks-cand.log:PASS: splitInline byte guard preserves parse output across structural rules and 3000 fuzz texts (digest 5d1506ed4a822a53, 999 extracting)
+.local/round22/ab22v3/checks-cand.log:PASS: reply math — dollar/backslash delimiters, display blocks, currency guard, code isolation, Unicode and unmatched boundaries
+56e803fe94d6e3cb0d93256f1ff5ac09ccd78cccbfb40a1b9ae48ac7cbdf40ca  .local/round22/base-checks22v3
+4dd0667b532f8dd1261da51d3201e16eaee90dc30ae901889acdcac0b6712f42  .local/round22/cand-checks22v3
+=== pairs Sun Nov 15 19:12:26 CST 2026 ===
+pair=1 variant=baseline mode=1 exit=0
+pair=1 variant=baseline mode=streaming exit=0
+pair=1 variant=baseline mode=activity exit=0
+pair=1 variant=baseline mode=edit-lines exit=0
+pair=1 variant=baseline mode=presentation-token exit=0
+pair=1 variant=candidate mode=1 exit=0
+pair=1 variant=candidate mode=streaming exit=0
+pair=1 variant=candidate mode=activity exit=0
+pair=1 variant=candidate mode=edit-lines exit=0
+pair=1 variant=candidate mode=presentation-token exit=0
+pair=2 variant=baseline mode=1 exit=0
+pair=2 variant=baseline mode=streaming exit=0
+pair=2 variant=baseline mode=activity exit=0
+pair=2 variant=baseline mode=edit-lines exit=0
+pair=2 variant=baseline mode=presentation-token exit=0
+pair=2 variant=candidate mode=1 exit=0
+pair=2 variant=candidate mode=streaming exit=0
+pair=2 variant=candidate mode=activity exit=0
+pair=2 variant=candidate mode=edit-lines exit=0
+pair=2 variant=candidate mode=presentation-token exit=0
+pair=3 variant=baseline mode=1 exit=0
+pair=3 variant=baseline mode=streaming exit=0
+pair=3 variant=baseline mode=activity exit=0
+pair=3 variant=baseline mode=edit-lines exit=0
+pair=3 variant=baseline mode=presentation-token exit=0
+pair=3 variant=candidate mode=1 exit=0
+pair=3 variant=candidate mode=streaming exit=0
+pair=3 variant=candidate mode=activity exit=0
+pair=3 variant=candidate mode=edit-lines exit=0
+pair=3 variant=candidate mode=presentation-token exit=0
+pair=4 variant=baseline mode=1 exit=0
+pair=4 variant=baseline mode=streaming exit=0
+pair=4 variant=baseline mode=activity exit=0
+pair=4 variant=baseline mode=edit-lines exit=0
+pair=4 variant=baseline mode=presentation-token exit=0
+pair=4 variant=candidate mode=1 exit=0
+pair=4 variant=candidate mode=streaming exit=0
+pair=4 variant=candidate mode=activity exit=0
+pair=4 variant=candidate mode=edit-lines exit=0
+pair=4 variant=candidate mode=presentation-token exit=0
+pair=5 variant=baseline mode=1 exit=0
+pair=5 variant=baseline mode=streaming exit=0
+pair=5 variant=baseline mode=activity exit=0
+pair=5 variant=baseline mode=edit-lines exit=0
+pair=5 variant=baseline mode=presentation-token exit=0
+pair=5 variant=candidate mode=1 exit=0
+pair=5 variant=candidate mode=streaming exit=0
+pair=5 variant=candidate mode=activity exit=0
+pair=5 variant=candidate mode=edit-lines exit=0
+pair=5 variant=candidate mode=presentation-token exit=0
+pair=6 variant=baseline mode=1 exit=0
+pair=6 variant=baseline mode=streaming exit=0
+pair=6 variant=baseline mode=activity exit=0
+pair=6 variant=baseline mode=edit-lines exit=0
+pair=6 variant=baseline mode=presentation-token exit=0
+pair=6 variant=candidate mode=1 exit=0
+pair=6 variant=candidate mode=streaming exit=0
+pair=6 variant=candidate mode=activity exit=0
+pair=6 variant=candidate mode=edit-lines exit=0
+pair=6 variant=candidate mode=presentation-token exit=0
+56e803fe94d6e3cb0d93256f1ff5ac09ccd78cccbfb40a1b9ae48ac7cbdf40ca  .local/round22/base-checks22v3
+4dd0667b532f8dd1261da51d3201e16eaee90dc30ae901889acdcac0b6712f42  .local/round22/cand-checks22v3
+=== rebuild verification (same paths, fresh .build) with retained receipts Sun Nov 15 19:14:18 CST 2026 ===
+candidate_rebuild_exit=0
+baseline_rebuild_exit=0
+candidate_rebuild_exit=0
+candidate_rebuild_head=4b9ac959d87b380ddc8b9861ecacedf8be61a7d4
+candidate_rebuild_porcelain=10
+4dd0667b532f8dd1261da51d3201e16eaee90dc30ae901889acdcac0b6712f42  .build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+baseline_rebuild_head=ed533410158a053ab89f5f8ee74d022ab9657485
+baseline_rebuild_porcelain=4
+A  Tests/WorkbenchCoreTests/NarrativePhaseScanTests.swift
+M  Tests/WorkbenchCoreTests/ProtocolTests.swift
+?? build.log
+?? rebuild.log
+da3fec150bec2ab97bce2767064ab5729e24cc8c10b8ef29853f3ac0354080fd  /tmp/r22v3-base/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+DONE Sun Nov 15 19:19:35 CST 2026

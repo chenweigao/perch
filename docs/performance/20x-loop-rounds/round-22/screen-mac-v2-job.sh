@@ -1,7 +1,7 @@
 #!/bin/bash
 # Round-22 v2 Mac screening (compat-fix e14c25d, decides adoption): phase single-pass scan + CJK-compat legacy routing.
 # base = ed53341 + pin (r22v2-tests.patch); candidate = + product patch
-# (e2ff3c0). In-context bench modes, 3 alternating iterations, binaries run
+# (v1 label stale — this archived copy was used for the v2=e14c25d screening run; re-review F6' annotation). In-context bench modes, 3 alternating iterations, binaries run
 # IN PLACE (round-18 lesson). Checks double as golden re-verification and
 # the Mac-side first run of the exhaustive scalar sweep + differential.
 set -u

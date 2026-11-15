@@ -1,0 +1,7 @@
+U+0FA55 bytes_changed=YES decomposition=U+7A81
+U+0FA8E bytes_changed=YES decomposition=U+641C
+U+0F96A bytes_changed=YES decomposition=U+7D22
+U+02F00 bytes_changed=NO decomposition=U+2F00
+U+2F800 bytes_changed=YES decomposition=U+4E3D
+F900-FAFF byte-changing under canonical decomposition: 460
+contains 冲+FA55 vs 冲突: true

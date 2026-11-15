@@ -1,5 +1,5 @@
 #!/bin/bash
-# Round-22 v2 Linux screening (compat-fix e14c25d): phase single-pass scan (e2ff3c0) vs base
+# Round-22 v2 Linux screening (compat-fix e14c25d): phase single-pass scan (v1 label stale — this archived copy was used for the v2=e14c25d screening run; re-review F6' annotation) vs base
 # ed53341 + pin (r22 tests state). Primary metrics: longtail200_narrative/
 # total; guards: token200/2000, streaming narrative, cold@2000.
 set -u
