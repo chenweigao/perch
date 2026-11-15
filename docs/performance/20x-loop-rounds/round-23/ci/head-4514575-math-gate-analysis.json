@@ -1,0 +1,177 @@
+{
+ "run": "https://github.com/chenweigao/perch/actions/runs/43724372194 (head 4514575, first attempt)",
+ "gate_error": "Unclosed delimiter performance regressed (parse_unclosed_4096 ratio 1.7074 > limit 1.25; scripts/run-math-performance.py:57-61)",
+ "recomputed_parse30_scenario_table": [
+  {
+   "scenario": "ordinary_backslashes",
+   "baseline_rounds_ms": [
+    5.4356,
+    9.7517,
+    5.1856
+   ],
+   "candidate_rounds_ms": [
+    6.4993,
+    4.2716,
+    3.126
+   ],
+   "baseline_median_ms": 5.4356,
+   "candidate_median_ms": 4.2716,
+   "ratio": 0.7859,
+   "baseline_swing_x": 1.88,
+   "candidate_swing_x": 2.08,
+   "candidate_best_vs_baseline_median": 0.5751
+  },
+  {
+   "scenario": "plain",
+   "baseline_rounds_ms": [
+    3.9703,
+    8.6922,
+    6.1645
+   ],
+   "candidate_rounds_ms": [
+    7.9463,
+    6.8446,
+    4.1296
+   ],
+   "baseline_median_ms": 6.1645,
+   "candidate_median_ms": 6.8446,
+   "ratio": 1.1103,
+   "baseline_swing_x": 2.19,
+   "candidate_swing_x": 1.92,
+   "candidate_best_vs_baseline_median": 0.6699
+  },
+  {
+   "scenario": "reply",
+   "baseline_rounds_ms": [
+    2.2215,
+    3.0518,
+    3.0694
+   ],
+   "candidate_rounds_ms": [
+    6.1393,
+    5.0746,
+    2.2227
+   ],
+   "baseline_median_ms": 3.0518,
+   "candidate_median_ms": 5.0746,
+   "ratio": 1.6628,
+   "baseline_swing_x": 1.38,
+   "candidate_swing_x": 2.76,
+   "candidate_best_vs_baseline_median": 0.7283
+  },
+  {
+   "scenario": "stream_16",
+   "baseline_rounds_ms": [
+    1.6423,
+    2.1253,
+    1.1856
+   ],
+   "candidate_rounds_ms": [
+    3.0094,
+    2.2959,
+    1.1357
+   ],
+   "baseline_median_ms": 1.6423,
+   "candidate_median_ms": 2.2959,
+   "ratio": 1.398,
+   "baseline_swing_x": 1.79,
+   "candidate_swing_x": 2.65,
+   "candidate_best_vs_baseline_median": 0.6915
+  },
+  {
+   "scenario": "stream_64",
+   "baseline_rounds_ms": [
+    1.4035,
+    1.984,
+    1.2146
+   ],
+   "candidate_rounds_ms": [
+    2.3031,
+    2.5907,
+    1.0168
+   ],
+   "baseline_median_ms": 1.4035,
+   "candidate_median_ms": 2.3031,
+   "ratio": 1.641,
+   "baseline_swing_x": 1.63,
+   "candidate_swing_x": 2.55,
+   "candidate_best_vs_baseline_median": 0.7245
+  },
+  {
+   "scenario": "unclosed_256",
+   "baseline_rounds_ms": [
+    0.422,
+    0.9888,
+    0.6996
+   ],
+   "candidate_rounds_ms": [
+    0.5032,
+    0.4566,
+    0.3628
+   ],
+   "baseline_median_ms": 0.6996,
+   "candidate_median_ms": 0.4566,
+   "ratio": 0.6526,
+   "baseline_swing_x": 2.34,
+   "candidate_swing_x": 1.39,
+   "candidate_best_vs_baseline_median": 0.5186
+  },
+  {
+   "scenario": "unclosed_1024",
+   "baseline_rounds_ms": [
+    1.6725,
+    1.3623,
+    1.0555
+   ],
+   "candidate_rounds_ms": [
+    1.7525,
+    2.3513,
+    1.0665
+   ],
+   "baseline_median_ms": 1.3623,
+   "candidate_median_ms": 1.7525,
+   "ratio": 1.2864,
+   "baseline_swing_x": 1.58,
+   "candidate_swing_x": 2.2,
+   "candidate_best_vs_baseline_median": 0.7829
+  },
+  {
+   "scenario": "unclosed_4096",
+   "baseline_rounds_ms": [
+    4.4475,
+    7.9965,
+    4.5395
+   ],
+   "candidate_rounds_ms": [
+    8.6951,
+    7.751,
+    4.936
+   ],
+   "baseline_median_ms": 4.5395,
+   "candidate_median_ms": 7.751,
+   "ratio": 1.7074,
+   "baseline_swing_x": 1.8,
+   "candidate_swing_x": 1.76,
+   "candidate_best_vs_baseline_median": 1.0873
+  }
+ ],
+ "noise_evidence": [
+  "SAME-SOURCES PASS: git diff bc2d93d..4514575 -- Sources/ is empty (0 lines); the identical product bytes passed this gate 15/15 green at bc2d93d (run 43715877893/43715877871) ~1h earlier in this same PR.",
+  "Within-variant swings x1.39..x2.76 across the 3 rounds per variant (round-22 noise family signature: 1.72x/2.36x there).",
+  "Candidate round-6 (last in order) unclosed_4096 = 4.936ms ~= baseline median 4.5395 (ratio 1.09); candidate bests beat or match baseline bests on reply (2.2227 vs 2.2215), stream_64 (1.0168 vs 1.2146), ordinary_backslashes (3.126 vs 5.1856), unclosed_256 (0.3628 vs 0.422).",
+  "Candidate rounds 2-3 ran back-to-back early in the job (order: base, cand, cand, base, base, cand) and carry the inflated values across ALL scenarios including ungated ones (reply 1.66, stream_16 1.40, stream_64 1.64) — systematic timing bias on those runs, not a code-path effect.",
+  "Zero call-path relation: the gate measures MathPerformanceContracts (SwiftMath typeset/parse); this round's product change is SessionEditStats.fullLineDiff (edit line tallies). No shared code.",
+  "Shared runner: cpu_count 3."
+ ],
+ "disposition": "Same-head rerun per rounds 12/14/16/22 precedent (gh run rerun --failed). Gates never modified. Quiet-machine retest held in reserve if the rerun fails again (not expected: same-sources green at bc2d93d is stronger evidence than round-22 had).",
+ "binary_sha256": {
+  "baseline": "7768c90e47ad798dfc37b22d7bbb12552387b79d9cafbbbc342d3334a4ba596e",
+  "candidate": "5675ed38ef2d956761e0a7ecaa5f649c84a2ddba249025327da86ff1bf0f8c61"
+ },
+ "source_input_sha256": {
+  "baseline": "9a69531e9a95b98647ce71083ab6e818aaa91221ec9f9f7b53ef27f0193142c9",
+  "candidate": "287b6dbde0f16f6c2eac61fa6bc5305a5bc5defba7b307efeb4a308e1ce95dbb",
+  "changed_inputs": true
+ },
+ "interaction_job_note": "Native build and interaction regression (job 132847368607) failed solely as the aggregator of {\"math\": \"failure\"} — no independent interaction failure."
+}
