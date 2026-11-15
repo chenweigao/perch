@@ -136,6 +136,80 @@ func benchPresentationTokenUpdates() throws {
             "scope": "release WorkbenchCore fixture; excludes provider transport, SwiftUI/AppKit layout, FPS and physical input"
         ])
     }
+    // Round-21 appended scenario (round-16 pattern: placed after all existing
+    // measurements so it cannot perturb them; fixture-source hashes recorded):
+    // product-representative KB-scale streaming tails. The scenarios above
+    // cycle <=280-byte tails; real streaming replies grow through the KB
+    // range, where text-proportional derivation costs (String-key
+    // normalization hashing, per-delta clean/phase re-derivation over the
+    // full tail) become material — round-20 attribution showed the mechanism
+    // ranking depends on this scale. Each measured update uses a distinct
+    // first-seen tail text (miss-heavy static tables, like real streaming).
+    // Synthetic fixture only; no session data.
+    do {
+        let turns = 200
+        var longMessages = try fixture(turns: turns)
+        let chunk = "\n\n追加的流式正文，包含 **强调**、`identifier` 与 English mixed text，用于覆盖 KB 级尾部。"
+        var grown = "第 \(turns - 1) 轮回答"
+        let measuredUpdates = 20
+        var tails: [KimiMessage] = []
+        var tailBytes: [Int] = []
+        for i in 0..<(warmupUpdates + measuredUpdates) {
+            grown += "\(chunk) #\(i)"
+            let tail = try KimiWire.decoder().decode(KimiMessage.self, from: JSONSerialization.data(withJSONObject: [
+                "id": "reply-\(String(format: "%05d", turns - 1))", "role": "assistant",
+                "created_at": String(format: "%05d", turns - 1),
+                "content": [["type": "text", "text": grown]]] as [String: Any]))
+            tails.append(tail)
+            tailBytes.append(grown.utf8.count)
+        }
+        var longRecorded: ConversationPresentationUpdateMetrics?
+        let longModel = ConversationPresentationModel(key: "token-longtail-\(turns)", metricsHandler: { longRecorded = $0 })
+        var longSnapshot = longModel.update(.init(messages: longMessages, isRunning: true, language: "zh"))
+        var longSamples: [[String: Any]] = []
+        for update in tails.indices {
+            let replacementStarted = benchNow()
+            var next = longMessages
+            next[next.index(before: next.endIndex)] = tails[update]
+            let replacementMilliseconds = (benchNow() - replacementStarted) * 1_000
+            longRecorded = nil
+            longSnapshot = longModel.update(.init(messages: next, isRunning: true, language: "zh"))
+            guard let metrics = longRecorded else { preconditionFailure("Missing long-tail presentation metrics") }
+            longMessages = next
+            if update >= warmupUpdates {
+                longSamples.append([
+                    "fixture_tail_replace_ms": replacementMilliseconds,
+                    "input_comparison_ms": milliseconds(metrics.inputComparisonNanoseconds),
+                    "state_reset_ms": milliseconds(metrics.stateResetNanoseconds),
+                    "tool_projection_ms": milliseconds(metrics.toolProjectionNanoseconds),
+                    "turn_projection_ms": milliseconds(metrics.turnProjectionNanoseconds),
+                    "narrative_ms": milliseconds(metrics.narrativeNanoseconds),
+                    "row_projection_ms": milliseconds(metrics.rowProjectionNanoseconds),
+                    "summary_ms": milliseconds(metrics.summaryNanoseconds),
+                    "retained_cost_ms": milliseconds(metrics.retainedCostNanoseconds),
+                    "total_ms": milliseconds(metrics.totalNanoseconds),
+                    "tail_utf8_bytes": Double(tailBytes[update]),
+                    "cache_hit": metrics.cacheHit,
+                    "turns_reused": metrics.reusedTurnCount,
+                    "turns_rebuilt": metrics.rebuiltTurnCount
+                ])
+            }
+        }
+        results.append([
+            "scenario": "long-tail-stream",
+            "fixture_turns": turns,
+            "actual_messages": longMessages.count,
+            "actual_parts": longMessages.reduce(0) { $0 + $1.content.count },
+            "actual_rows": longSnapshot.rows.count,
+            "actual_navigation": longSnapshot.navigation.count,
+            "warmup_updates": warmupUpdates,
+            "measured_updates": longSamples.count,
+            "tail_utf8_bytes_first_measured": tailBytes[warmupUpdates],
+            "tail_utf8_bytes_last_measured": tailBytes[tailBytes.count - 1],
+            "samples": longSamples,
+            "scope": "release WorkbenchCore fixture; excludes provider transport, SwiftUI/AppKit layout, FPS and physical input"
+        ])
+    }
     let data = try JSONSerialization.data(withJSONObject: [
         "schema": 1,
         "benchmark": "presentation-token",
