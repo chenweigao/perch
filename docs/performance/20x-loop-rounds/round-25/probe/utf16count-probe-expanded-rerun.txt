@@ -1,0 +1,21 @@
+correctness: 20000 random strings, mismatches = 0
+cjk-2000-parts   stdlib utf16.count: best 0.700 ms per pass-set, ~368.85 ms/GB, sink=1
+cjk-2000-parts   swar byte count  : best 1.505 ms per pass-set, ~793.28 ms/GB, sink=1
+
+ascii-2000-parts stdlib utf16.count: best 0.077 ms per pass-set, ~37.22 ms/GB, sink=1
+ascii-2000-parts swar byte count  : best 1.589 ms per pass-set, ~765.48 ms/GB, sink=1
+
+long-cjk-4KB     stdlib utf16.count: best 0.000 ms per pass-set, ~1.40 ms/GB, sink=3
+long-cjk-4KB     swar byte count  : best 0.030 ms per pass-set, ~351.19 ms/GB, sink=3
+
+emoji-500-parts  stdlib utf16.count: best 0.175 ms per pass-set, ~371.83 ms/GB, sink=4
+emoji-500-parts  swar byte count  : best 0.364 ms per pass-set, ~775.11 ms/GB, sink=4
+
+single short cjk string overhead (per-call):
+  stdlib: best 2.040 ms per pass-set, ~510.01 ms/GB, sink=1
+  swar  : best 2.206 ms per pass-set, ~551.46 ms/GB, sink=1
+storage-control fresh UTF8 buffer 4KB: texts=2048 bytes=8735658 first stdlib=11.183513ms first SWAR=3.103791ms second stdlib=0.033482ms SWAR speedup=3.6032x checksum=4557738
+storage-control fresh JSONDecoder 4KB: texts=2048 bytes=8735658 first stdlib=11.180014ms first SWAR=3.103342ms second stdlib=0.033541ms SWAR speedup=3.6026x checksum=4557738
+storage-control new COW appended streaming tails: texts=512 bytes=4887683 first stdlib=5.880312ms first SWAR=1.717045ms second stdlib=0.008580ms SWAR speedup=3.4247x checksum=2529923
+exact single-turn 1000 text parts stdlib: best 0.202 ms per pass-set, ~507.64 ms/GB, sink=4
+exact single-turn 1000 text parts SWAR: best 0.499 ms per pass-set, ~1253.23 ms/GB, sink=4
