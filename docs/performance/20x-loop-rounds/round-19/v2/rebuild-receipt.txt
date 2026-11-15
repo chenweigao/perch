@@ -1,0 +1,11 @@
+candidate_rebuild_exit=0
+candidate_rebuild_head=256c097570c3884ac288c99cb52a8e0c46c9f242
+candidate_rebuild_porcelain=0
+d68c1203f45f870d8d3b1c4d68364c326351bc420c26a1bce5074a6425f20387  .build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+baseline_rebuild_head=89e59761bcc947f656ee56ae6a29d45c7ac72ba8
+baseline_rebuild_porcelain=4
+M  Tests/WorkbenchCoreTests/ProtocolTests.swift
+A  Tests/WorkbenchCoreTests/SplitInlineGuardTests.swift
+?? build.log
+?? rebuild.log
+091ec4e546ab2fb35413c77200f53ea9a08ec9bc9e98295cda15fa70fa9715a3  /tmp/r19v2-base/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks

@@ -1,0 +1,2 @@
+5ff9465d91f8eaf4e8131b2aade3401602035a805359b3f8dd77f569c57942a5  .local/round19/base-checks19
+4d87a6adeac03acdd6d797bbff386321e690460a4f5854e933dd1cf9ddeee9e0  .local/round19/cand-checks19

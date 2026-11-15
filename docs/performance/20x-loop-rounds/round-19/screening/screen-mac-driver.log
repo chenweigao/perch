@@ -1,0 +1,25 @@
+From github.com:chenweigao/perch
+   a13aee2..89e5976  main       -> origin/main
+Previous HEAD position was a13aee2 Merge pull request #339 from chenweigao/perf/20x-loop-17-20261115
+HEAD is now at 89e5976 Merge pull request #340 from chenweigao/perf/20x-loop-18-20261115
+HEAD=89e59761bcc947f656ee56ae6a29d45c7ac72ba8
+tests_patch=ok
+base_build_exit=0
+product_patch=ok
+cand_build_exit=0
+5540fcf7a6a0bf097febd3e1674c47ea69b59835b9ffd34596645bbc309bd1da  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round19-base/out/Products/Release/WorkbenchChecks
+083ce033ef2c7e7c5e1108f2006f1515b006405f3f0e44b08e0c85ec93573ea3  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round19-cand/out/Products/Release/WorkbenchChecks
+=== checks + golden capture ===
+base_checks_exit=0 pass=100
+GOLDEN_CAPTURE split-inline-guard digest: 5d1506ed4a822a53 (math texts 999/3000)
+cand_checks_exit=0 pass=100
+GOLDEN_CAPTURE split-inline-guard digest: 5d1506ed4a822a53 (math texts 999/3000)
+=== in-context screening: 3 alternating, streaming + mode 1 (in place) Sun Nov 15 07:41:24 CST 2026 ===
+it=1 side=base find_bar_cold=1178.14 cold@2000=6.67
+it=1 side=cand find_bar_cold=1114.28 cold@2000=6.69
+it=2 side=base find_bar_cold=1192.20 cold@2000=6.67
+it=2 side=cand find_bar_cold=1115.44 cold@2000=6.67
+it=3 side=base find_bar_cold=1183.54 cold@2000=6.63
+it=3 side=cand find_bar_cold=1116.10 cold@2000=6.81
+porcelain_after=0
+DONE Sun Nov 15 07:42:15 CST 2026
