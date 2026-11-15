@@ -1,0 +1,50 @@
+HEAD_main=3ba1f1ae1242b7dd2c0a42ea5fc82457af4fafde
+porcelain_main=0
+cand_build_exit=0
+base_build_exit=0
+cf62bcfbd65196ece981b564305c06e09d6cbdb41bc6aac4a5564816d1685a94  /tmp/r23-screen-base/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+4f8aaea26f0a88d56183c918246a63630a6f67b9a8435cd455e030217cb1ad8b  <worktree>/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+=== screening: 3 alternating, edit-lines + activity + streaming + mode 1 Sun Nov 15 20:24:45 CST 2026 ===
+it=1 side=base edit_lines_exit=0
+it=1 side=base activity_exit=0
+it=1 side=base streaming_exit=0
+it=1 side=base mode1_exit=0
+edit512_unchanged=0.9729  edit512_middle=0.9752  edit512_insert=0.9800  edit512_first=0.9773  edit512_last=0.9743  edit512_unicode=1.1987  edit512_canonical=4.7104  edit512_bulk=0.3802  edit64_middle=0.1477  [it=1 side=base]
+turns=50 messages=320 edit_stats_median_ms=0.165 turns=200 messages=1280 edit_stats_median_ms=0.661 turns=1000 messages=6400 edit_stats_median_ms=3.311 [activity it=1 side=base]
+it=1 side=base stream_narrative=0.22 cold@2000=48.79
+it=1 side=cand edit_lines_exit=0
+it=1 side=cand activity_exit=0
+it=1 side=cand streaming_exit=0
+it=1 side=cand mode1_exit=0
+edit512_unchanged=0.5941  edit512_middle=0.6000  edit512_insert=0.6019  edit512_first=0.5997  edit512_last=0.6374  edit512_unicode=0.8432  edit512_canonical=5.0786  edit512_bulk=0.3804  edit64_middle=0.0996  [it=1 side=cand]
+turns=50 messages=320 edit_stats_median_ms=0.164 turns=200 messages=1280 edit_stats_median_ms=0.653 turns=1000 messages=6400 edit_stats_median_ms=3.295 [activity it=1 side=cand]
+it=1 side=cand stream_narrative=0.21 cold@2000=48.02
+it=2 side=base edit_lines_exit=0
+it=2 side=base activity_exit=0
+it=2 side=base streaming_exit=0
+it=2 side=base mode1_exit=0
+edit512_unchanged=0.9862  edit512_middle=0.9840  edit512_insert=0.9923  edit512_first=0.9886  edit512_last=0.9870  edit512_unicode=1.2041  edit512_canonical=4.7366  edit512_bulk=0.3806  edit64_middle=0.1476  [it=2 side=base]
+turns=50 messages=320 edit_stats_median_ms=0.164 turns=200 messages=1280 edit_stats_median_ms=0.656 turns=1000 messages=6400 edit_stats_median_ms=3.311 [activity it=2 side=base]
+it=2 side=base stream_narrative=0.23 cold@2000=48.14
+it=2 side=cand edit_lines_exit=0
+it=2 side=cand activity_exit=0
+it=2 side=cand streaming_exit=0
+it=2 side=cand mode1_exit=0
+edit512_unchanged=0.5930  edit512_middle=0.6010  edit512_insert=0.5991  edit512_first=0.6622  edit512_last=0.5978  edit512_unicode=0.8429  edit512_canonical=5.0836  edit512_bulk=0.3843  edit64_middle=0.0994  [it=2 side=cand]
+turns=50 messages=320 edit_stats_median_ms=0.165 turns=200 messages=1280 edit_stats_median_ms=0.656 turns=1000 messages=6400 edit_stats_median_ms=3.316 [activity it=2 side=cand]
+it=2 side=cand stream_narrative=0.22 cold@2000=48.55
+it=3 side=base edit_lines_exit=0
+it=3 side=base activity_exit=0
+it=3 side=base streaming_exit=0
+it=3 side=base mode1_exit=0
+edit512_unchanged=0.9801  edit512_middle=0.9859  edit512_insert=0.9884  edit512_first=0.9881  edit512_last=0.9821  edit512_unicode=1.2010  edit512_canonical=4.6088  edit512_bulk=0.3858  edit64_middle=0.1481  [it=3 side=base]
+turns=50 messages=320 edit_stats_median_ms=0.163 turns=200 messages=1280 edit_stats_median_ms=0.655 turns=1000 messages=6400 edit_stats_median_ms=3.285 [activity it=3 side=base]
+it=3 side=base stream_narrative=0.22 cold@2000=48.66
+it=3 side=cand edit_lines_exit=0
+it=3 side=cand activity_exit=0
+it=3 side=cand streaming_exit=0
+it=3 side=cand mode1_exit=0
+edit512_unchanged=0.6052  edit512_middle=0.6019  edit512_insert=0.6166  edit512_first=0.6063  edit512_last=0.6606  edit512_unicode=0.8448  edit512_canonical=5.0267  edit512_bulk=0.3828  edit64_middle=0.1013  [it=3 side=cand]
+turns=50 messages=320 edit_stats_median_ms=0.165 turns=200 messages=1280 edit_stats_median_ms=0.658 turns=1000 messages=6400 edit_stats_median_ms=3.333 [activity it=3 side=cand]
+it=3 side=cand stream_narrative=0.22 cold@2000=49.03
+DONE Sun Nov 15 20:25:39 CST 2026

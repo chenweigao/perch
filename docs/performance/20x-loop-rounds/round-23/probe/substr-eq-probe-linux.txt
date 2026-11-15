@@ -1,0 +1,5 @@
+ascii same-base identical     : best 0.059 ms / 200k comparisons
+cjk   same-base identical     : best 0.054 ms / 200k comparisons
+cjk   cross-base identical    : best 2.965 ms / 200k comparisons
+cjk   canonical-equal diffbyte: best 61.757 ms / 200k comparisons
+cjk   different lines         : best 0.071 ms / 200k comparisons

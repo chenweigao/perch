@@ -1,0 +1,82 @@
+=== prepare Sun Nov 15 20:30:55 CST 2026 ===
+HEAD is now at b11a7d5 Merge pull request #344 from chenweigao/perf/20x-loop-22-20261115
+HEAD=b11a7d5eab72d4b8c85862ca8d6c2f31637b0d32
+porcelain_before=0
+=== apply tests patch + baseline build Sun Nov 15 20:30:58 CST 2026 ===
+tests_patch=ok
+baseline_build_exit=0
+=== apply product patch + candidate build Sun Nov 15 20:32:11 CST 2026 ===
+product_patch=ok
+candidate_build_exit=0
+d0b9d75568a06e94128f39dce1ea193ea6e64690669ed813174373de224eb6f9  .build/round23-baseline/out/Products/Release/WorkbenchChecks
+df7e7f19919a8d9f790ded839a8170225ff44421573ac8edba1345af042e0b03  .build/round23-candidate/out/Products/Release/WorkbenchChecks
+=== check suites Sun Nov 15 20:33:24 CST 2026 ===
+baseline_checks_exit=0 pass=104
+candidate_checks_exit=0 pass=104
+/Users/<mini>/Library/Logs/perf-loop-20261115/ab23/checks-baseline.log:PASS: edit-line byte-range diff — 771 pairs zero mismatches vs the previous array algorithm (byte-identical confirmations 14503, canonical fallbacks equal 308 / unequal 12880; paths small 263, probeFull 218, probeCount 281, early 9)
+/Users/<mini>/Library/Logs/perf-loop-20261115/ab23/checks-candidate.log:PASS: edit-line byte-range diff — 771 pairs zero mismatches vs the previous array algorithm (byte-identical confirmations 14503, canonical fallbacks equal 308 / unequal 12880; paths small 263, probeFull 218, probeCount 281, early 9)
+=== pairs Sun Nov 15 20:34:11 CST 2026 ===
+pair=1 variant=baseline mode=1 exit=0
+pair=1 variant=baseline mode=streaming exit=0
+pair=1 variant=baseline mode=activity exit=0
+pair=1 variant=baseline mode=edit-lines exit=0
+pair=1 variant=baseline mode=presentation-token exit=0
+pair=1 variant=candidate mode=1 exit=0
+pair=1 variant=candidate mode=streaming exit=0
+pair=1 variant=candidate mode=activity exit=0
+pair=1 variant=candidate mode=edit-lines exit=0
+pair=1 variant=candidate mode=presentation-token exit=0
+pair=2 variant=baseline mode=1 exit=0
+pair=2 variant=baseline mode=streaming exit=0
+pair=2 variant=baseline mode=activity exit=0
+pair=2 variant=baseline mode=edit-lines exit=0
+pair=2 variant=baseline mode=presentation-token exit=0
+pair=2 variant=candidate mode=1 exit=0
+pair=2 variant=candidate mode=streaming exit=0
+pair=2 variant=candidate mode=activity exit=0
+pair=2 variant=candidate mode=edit-lines exit=0
+pair=2 variant=candidate mode=presentation-token exit=0
+pair=3 variant=baseline mode=1 exit=0
+pair=3 variant=baseline mode=streaming exit=0
+pair=3 variant=baseline mode=activity exit=0
+pair=3 variant=baseline mode=edit-lines exit=0
+pair=3 variant=baseline mode=presentation-token exit=0
+pair=3 variant=candidate mode=1 exit=0
+pair=3 variant=candidate mode=streaming exit=0
+pair=3 variant=candidate mode=activity exit=0
+pair=3 variant=candidate mode=edit-lines exit=0
+pair=3 variant=candidate mode=presentation-token exit=0
+pair=4 variant=baseline mode=1 exit=0
+pair=4 variant=baseline mode=streaming exit=0
+pair=4 variant=baseline mode=activity exit=0
+pair=4 variant=baseline mode=edit-lines exit=0
+pair=4 variant=baseline mode=presentation-token exit=0
+pair=4 variant=candidate mode=1 exit=0
+pair=4 variant=candidate mode=streaming exit=0
+pair=4 variant=candidate mode=activity exit=0
+pair=4 variant=candidate mode=edit-lines exit=0
+pair=4 variant=candidate mode=presentation-token exit=0
+pair=5 variant=baseline mode=1 exit=0
+pair=5 variant=baseline mode=streaming exit=0
+pair=5 variant=baseline mode=activity exit=0
+pair=5 variant=baseline mode=edit-lines exit=0
+pair=5 variant=baseline mode=presentation-token exit=0
+pair=5 variant=candidate mode=1 exit=0
+pair=5 variant=candidate mode=streaming exit=0
+pair=5 variant=candidate mode=activity exit=0
+pair=5 variant=candidate mode=edit-lines exit=0
+pair=5 variant=candidate mode=presentation-token exit=0
+pair=6 variant=baseline mode=1 exit=0
+pair=6 variant=baseline mode=streaming exit=0
+pair=6 variant=baseline mode=activity exit=0
+pair=6 variant=baseline mode=edit-lines exit=0
+pair=6 variant=baseline mode=presentation-token exit=0
+pair=6 variant=candidate mode=1 exit=0
+pair=6 variant=candidate mode=streaming exit=0
+pair=6 variant=candidate mode=activity exit=0
+pair=6 variant=candidate mode=edit-lines exit=0
+pair=6 variant=candidate mode=presentation-token exit=0
+d0b9d75568a06e94128f39dce1ea193ea6e64690669ed813174373de224eb6f9  .build/round23-baseline/out/Products/Release/WorkbenchChecks
+df7e7f19919a8d9f790ded839a8170225ff44421573ac8edba1345af042e0b03  .build/round23-candidate/out/Products/Release/WorkbenchChecks
+porcelain_after=0
+DONE Sun Nov 15 20:35:57 CST 2026

@@ -73,6 +73,7 @@ struct ProtocolTests {
         try checkEditStatsLineCountScan()
         try checkEditLineScans()
         try checkEditLineDiffBoundaries()
+        try checkEditLineByteRangeDiff()
         try checkEditToolClassification()
         try checkProjectCommands()
         checkAppVersionCheck()

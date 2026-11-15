@@ -1,0 +1,65 @@
+=== prepare Sun Nov 15 20:22:38 CST 2026 ===
+From github.com:chenweigao/perch
+   ed53341..b11a7d5  main       -> origin/main
+Previous HEAD position was 8f20783 docs(performance): finalize round-22 v3 adoption data and evidence archive
+HEAD is now at b11a7d5 Merge pull request #344 from chenweigao/perf/20x-loop-22-20261115
+HEAD=b11a7d5eab72d4b8c85862ca8d6c2f31637b0d32
+porcelain_before=0
+=== apply tests patch + base build Sun Nov 15 20:22:42 CST 2026 ===
+tests_patch=ok
+base_build_exit=0
+=== apply product patch + candidate build Sun Nov 15 20:23:56 CST 2026 ===
+product_patch=ok
+cand_build_exit=0
+d48e4ad277836d4f97f724668dacd41b993a3a77cdd61b1ebb824811bdb746ad  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round23-base/out/Products/Release/WorkbenchChecks
+aec43d2bd54c7c08447ecce929fe90760f2e85144417753e53ed098354657f08  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round23-cand/out/Products/Release/WorkbenchChecks
+=== checks both sides Sun Nov 15 20:25:08 CST 2026 ===
+base_checks_exit=0 pass=104
+cand_checks_exit=0 pass=104
+PASS: edit-line byte-range diff — 771 pairs zero mismatches vs the previous array algorithm (byte-identical confirmations 14503, canonical fallbacks equal 308 / unequal 12880; paths small 263, probeFull 218, probeCount 281, early 9)
+PASS: edit-line byte-range diff — 771 pairs zero mismatches vs the previous array algorithm (byte-identical confirmations 14503, canonical fallbacks equal 308 / unequal 12880; paths small 263, probeFull 218, probeCount 281, early 9)
+=== in-context screening: 3 alternating, edit-lines + activity + streaming + mode 1 (in place) Sun Nov 15 20:25:55 CST 2026 ===
+it=1 side=base edit_lines_exit=0
+it=1 side=base activity_exit=0
+it=1 side=base streaming_exit=0
+it=1 side=base mode1_exit=0
+edit512_unchanged=0.7159  edit512_middle=0.7096  edit512_insert=0.7154  edit512_first=0.7063  edit512_last=0.7152  edit512_unicode=0.8924  edit512_canonical=2.7735  edit512_bulk=0.1002  edit64_middle=0.1316  [it=1 side=base]
+turns=50 messages=320 edit_stats_median_ms=0.073 turns=200 messages=1280 edit_stats_median_ms=0.303 turns=1000 messages=6400 edit_stats_median_ms=1.519 [activity it=1 side=base]
+it=1 side=base stream_narrative=0.16 cold@2000=6.66
+it=1 side=cand edit_lines_exit=0
+it=1 side=cand activity_exit=0
+it=1 side=cand streaming_exit=0
+it=1 side=cand mode1_exit=0
+edit512_unchanged=0.5596  edit512_middle=0.5803  edit512_insert=0.5634  edit512_first=0.5652  edit512_last=0.5787  edit512_unicode=0.8010  edit512_canonical=2.8978  edit512_bulk=0.1076  edit64_middle=0.0888  [it=1 side=cand]
+turns=50 messages=320 edit_stats_median_ms=0.075 turns=200 messages=1280 edit_stats_median_ms=0.308 turns=1000 messages=6400 edit_stats_median_ms=1.560 [activity it=1 side=cand]
+it=1 side=cand stream_narrative=0.16 cold@2000=6.75
+it=2 side=base edit_lines_exit=0
+it=2 side=base activity_exit=0
+it=2 side=base streaming_exit=0
+it=2 side=base mode1_exit=0
+edit512_unchanged=0.7141  edit512_middle=0.7082  edit512_insert=0.7062  edit512_first=0.7074  edit512_last=0.7155  edit512_unicode=0.8984  edit512_canonical=2.8790  edit512_bulk=0.1036  edit64_middle=0.1105  [it=2 side=base]
+turns=50 messages=320 edit_stats_median_ms=0.073 turns=200 messages=1280 edit_stats_median_ms=0.302 turns=1000 messages=6400 edit_stats_median_ms=1.530 [activity it=2 side=base]
+it=2 side=base stream_narrative=0.17 cold@2000=6.88
+it=2 side=cand edit_lines_exit=0
+it=2 side=cand activity_exit=0
+it=2 side=cand streaming_exit=0
+it=2 side=cand mode1_exit=0
+edit512_unchanged=0.5763  edit512_middle=0.5773  edit512_insert=0.5772  edit512_first=0.5780  edit512_last=0.5775  edit512_unicode=0.8145  edit512_canonical=2.9304  edit512_bulk=0.1072  edit64_middle=0.0900  [it=2 side=cand]
+turns=50 messages=320 edit_stats_median_ms=0.074 turns=200 messages=1280 edit_stats_median_ms=0.298 turns=1000 messages=6400 edit_stats_median_ms=1.483 [activity it=2 side=cand]
+it=2 side=cand stream_narrative=0.16 cold@2000=6.83
+it=3 side=base edit_lines_exit=0
+it=3 side=base activity_exit=0
+it=3 side=base streaming_exit=0
+it=3 side=base mode1_exit=0
+edit512_unchanged=0.7051  edit512_middle=0.7079  edit512_insert=0.7096  edit512_first=0.7061  edit512_last=0.7019  edit512_unicode=0.8844  edit512_canonical=2.7079  edit512_bulk=0.1075  edit64_middle=0.1061  [it=3 side=base]
+turns=50 messages=320 edit_stats_median_ms=0.073 turns=200 messages=1280 edit_stats_median_ms=0.307 turns=1000 messages=6400 edit_stats_median_ms=1.538 [activity it=3 side=base]
+it=3 side=base stream_narrative=0.16 cold@2000=6.69
+it=3 side=cand edit_lines_exit=0
+it=3 side=cand activity_exit=0
+it=3 side=cand streaming_exit=0
+it=3 side=cand mode1_exit=0
+edit512_unchanged=0.5692  edit512_middle=0.5558  edit512_insert=0.5605  edit512_first=0.5618  edit512_last=0.5610  edit512_unicode=0.8307  edit512_canonical=2.8115  edit512_bulk=0.1067  edit64_middle=0.0892  [it=3 side=cand]
+turns=50 messages=320 edit_stats_median_ms=0.078 turns=200 messages=1280 edit_stats_median_ms=0.306 turns=1000 messages=6400 edit_stats_median_ms=1.523 [activity it=3 side=cand]
+it=3 side=cand stream_narrative=0.17 cold@2000=6.75
+porcelain_after=0
+DONE Sun Nov 15 20:26:48 CST 2026
