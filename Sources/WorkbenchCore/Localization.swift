@@ -22,13 +22,39 @@ public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
         guard self == .system else { return rawValue }
         // Read system language preferences, not an AppleLanguages override left
         // by a previous in-app choice. Region settings are not UI languages.
+#if canImport(Darwin)
+        // Single-key read of the same global-domain value; every call still
+        // reads it live, but without materializing the entire global
+        // preferences dictionary and bridging it to [String: Any] first —
+        // that per-call materialization dominated L()'s default-argument
+        // chain (round-20 attribution: the chain was ~29% of the narrative
+        // projection stage at bench scale, tryCast alone 16.45%).
+        if let value = CFPreferencesCopyValue("AppleLanguages" as CFString,
+                                              kCFPreferencesAnyApplication,
+                                              kCFPreferencesCurrentUser,
+                                              kCFPreferencesAnyHost) as? [String] {
+            return Self.resolveSystemLanguage(value)
+        }
+        return Self.resolveSystemLanguage(Locale.preferredLanguages)
+#else
         let preferences = UserDefaults.standard.persistentDomain(forName: UserDefaults.globalDomain)?["AppleLanguages"] as? [String] ?? Locale.preferredLanguages
         return Self.resolveSystemLanguage(preferences)
+#endif
     }
     public static func resolveSystemLanguage(_ preferences: [String]) -> String {
         Bundle.preferredLocalizations(from: ["zh-Hans", "en"], forPreferences: preferences).first ?? "zh-Hans"
     }
-    public var resolvedLocale: Locale { Locale(identifier: localization) }
+    /// The two supported UI languages have fixed locales; deriving one per
+    /// call re-parses the identifier for the same immutable value. Pure
+    /// table of deterministic derivations — no state, no invalidation.
+    private static let resolvedLocales: [String: Locale] = [
+        "zh-Hans": Locale(identifier: "zh-Hans"),
+        "en": Locale(identifier: "en"),
+    ]
+    public var resolvedLocale: Locale {
+        let language = localization
+        return Self.resolvedLocales[language] ?? Locale(identifier: language)
+    }
     public static func applyToSystem(_ language: AppLanguage) {
         UserDefaults.standard.set(language.rawValue, forKey: defaultsKey)
         if language == .system { UserDefaults.standard.removeObject(forKey: "AppleLanguages") }
@@ -40,7 +66,15 @@ public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
 /// locale for formatting, but does not select the language of the resource table.
 public func L(_ value: String.LocalizationValue, locale: Locale = AppLanguage.current.resolvedLocale) -> String {
 #if canImport(Darwin)
-    let language = AppLanguage.resolveSystemLanguage([locale.identifier])
+    // A canonical identifier is an exact preference match against itself in
+    // preferredLocalizations(from: ["zh-Hans", "en"]), so it resolves to
+    // itself — skip the second ICU parse for it (pinned by the identity
+    // preconditions in LocalizationChecks). Anything else resolves as before.
+    let language: String
+    switch locale.identifier {
+    case "zh-Hans", "en": language = locale.identifier
+    default: language = AppLanguage.resolveSystemLanguage([locale.identifier])
+    }
     let bundle = LocalizationBundles.values[language] ?? .main
     return String(localized: value, bundle: bundle, locale: locale)
 #else

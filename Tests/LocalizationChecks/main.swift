@@ -26,6 +26,23 @@ for language in [AppLanguage.en, .zhHans, .en] {
 }
 precondition(AppLanguage.resolveSystemLanguage(["en-GB", "zh-Hans"]) == "en")
 precondition(AppLanguage.resolveSystemLanguage(["zh-Hans-CN", "en"]) == "zh-Hans")
+// Round-20 pins for the lean L() resolution chain: the canonical identifiers
+// resolve to themselves (the exact-match premise of the L() shortcut), the
+// locale table equals the derived locales, and the single-key global-domain
+// read agrees with the whole-domain read it replaced.
+precondition(AppLanguage.resolveSystemLanguage(["zh-Hans"]) == "zh-Hans")
+precondition(AppLanguage.resolveSystemLanguage(["en"]) == "en")
+precondition(AppLanguage.zhHans.resolvedLocale == Locale(identifier: "zh-Hans"),
+             "locale table value must equal the derived locale")
+precondition(AppLanguage.en.resolvedLocale == Locale(identifier: "en"),
+             "locale table value must equal the derived locale")
+#if canImport(Darwin)
+let viaDomain = defaults.persistentDomain(forName: UserDefaults.globalDomain)?["AppleLanguages"] as? [String]
+let viaKey = CFPreferencesCopyValue("AppleLanguages" as CFString, kCFPreferencesAnyApplication,
+                                    kCFPreferencesCurrentUser, kCFPreferencesAnyHost) as? [String]
+precondition(viaDomain == viaKey, "global AppleLanguages reads must agree")
+#endif
 AppLanguage.applyToSystem(.system)
 precondition(defaults.persistentDomain(forName: Bundle.main.bundleIdentifier!)?["AppleLanguages"] == nil)
 print("PASS: system language selection and removal of the per-app override")
+print("PASS: round-20 lean resolution chain — identity, locale table and global-read agreement")

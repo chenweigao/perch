@@ -1,12 +1,18 @@
 import Foundation
 import WorkbenchCore
 
-/// Round 20: `NarrativeTextCache`'s shared text tables moved from `String`
-/// keys (canonical NFC-normalizing hash + canonical equality, ~50% of the
-/// narrative stage per the c085fd9 attribution) to raw-UTF-8 byte keys.
-/// Observable-behavior invariant: canonically equal inputs still produce
-/// canonically equal snapshots — byte variants simply stop sharing one cache
-/// entry, and every derivation behind the tables is canonically coherent.
+/// Round 20: this pin was designed for a byte-keyed `NarrativeTextCache`
+/// candidate (raw-UTF-8 table keys replacing `String`'s canonical
+/// NFC-normalizing hash, ~50% of the narrative stage when the tail text is
+/// multi-KB). In-context screening rejected that candidate: the bench's
+/// tails are ≤280 bytes, where the NFC-hash share collapses to ~8% and the
+/// stage is dominated by per-call L() locale resolution instead — the
+/// candidate was reverted and the round continued on that mechanism.
+/// The pin is KEPT (round-10 precedent: pins of existing behavior survive
+/// the candidate they were built for): it densely covers the SHIPPED
+/// String-keyed tables — snapshot golden over 1,500 fuzz texts captured on
+/// the unmodified product, canonical-pair equality, repeat-hit stability,
+/// marker stripping, limit separation and the whitespace-only no-stage rule.
 ///
 /// The golden corpus drives commentary (progress) entries only, so every
 /// serialized headline/subject/detail comes from the cleaned corpus text —
@@ -14,7 +20,12 @@ import WorkbenchCore
 /// locale-independent and CI-enforceable. The corpus avoids URL shapes so no
 /// link backend can feed the digest (round-16/17 lesson); clean()'s
 /// Foundation trims are exercised on ASCII whitespace plus U+00A0, whose
-/// cross-platform agreement the four-way capture verifies before embedding.
+/// cross-platform agreement the four-way capture verified before embedding
+/// (4e46d66eff016205 on Mac/Linux × base/candidate). It also excludes
+/// canonical-variant pairs: with String keys they share one entry and return
+/// the first-computed byte form, so a byte-keyed variant would legitimately
+/// diverge in bytes while staying canonically equal — pinned structurally by
+/// the NFC/NFD case below instead (round-17 precedent).
 func checkNarrativeByteKeyedTables() throws {
     func messages(_ value: [[String: Any]]) throws -> [KimiMessage] {
         try KimiWire.decoder().decode([KimiMessage].self, from: JSONSerialization.data(withJSONObject: value))
