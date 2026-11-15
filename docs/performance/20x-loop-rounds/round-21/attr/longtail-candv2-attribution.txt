@@ -1,0 +1,26 @@
+== round21d candidate v2 (byte keys via withUTF8, 2aa8d97-state) ==  total=20012  narrative-make inclusive=16561 (82.76%)
+  phase-closure: 12433 (75.07% of narr)
+  clean-closure: 2186 (13.20% of narr)
+  narrativeText-closure: 1610 (9.72% of narr)
+  collapsedWhitespace: 944 (5.70% of narr)
+  ByteText machinery: 1575 (9.51% of narr)
+  withUTF8 frames: 2407 (14.53% of narr)
+  ensureUnique (dict COW): 546 (3.30% of narr)
+  _unsafeInsertNew: 530 (3.20% of narr)
+  L default-arg chain: 946 (5.71% of narr)
+  contains/range substring search: 11154 (67.35% of narr)
+  top self leaves:
+    1384  8.36%-narr  Substring.subscript.getter
+    1305  7.88%-narr  Hasher.combine(bytes:)
+    1295  7.82%-narr  Substring.index(_:offsetBy:)
+    1175  7.09%-narr  specialized static String._uncheckedFromUTF8(_:isASCII:precalculatedUTF16Count:)
+    1153  6.96%-narr  _stringCompareFastUTF8Abnormal(_:_:expecting:)
+     922  5.57%-narr  _StringGuts._opaqueComplexCharacterStride(startingAt:)
+     921  5.56%-narr  hasBreakWhenPaired #1 (_:) in _quickHasGraphemeBreakBetween(_:_:)
+     873  5.27%-narr  _GraphemeBreakingState.shouldBreak(between:and:)
+     672  4.06%-narr  _allASCII(_:)
+     482  2.91%-narr  _swift_stdlib_getScalarBitArrayIdx
+     409  2.47%-narr  _stringCompareInternal(_:_:expecting:)
+     354  2.14%-narr  _swift_stdlib_getNormData
+     342  2.07%-narr  specialized BidirectionalCollection._range<A>(of:anchored:backwards:)
+     314  1.90%-narr  0x19337850d

@@ -1,0 +1,20 @@
+HEAD_main=2aa8d972c54ad42f914789975b5f7e5269344737
+porcelain_main=0
+cand_build_exit=0
+base_build_exit=0
+a10aea5803e025b773cc3527d0410ec7ae82f92b13f413d54124e88f998539fb  /tmp/r21-screen-base/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+630cd1baa9eaea7a0abc1adc530536de9b5d5366c42d92eb3da8cd4632a92f1c  <worktree>/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+=== screening: 3 alternating, presentation-token + streaming + mode 1 Sun Nov 15 14:47:28 CST 2026 ===
+token200_narrative_ms=0.1183  token200_total_ms=0.1521  token2000_narrative_ms=0.1257  token2000_total_ms=0.2147  longtail200_narrative_ms=1.0876  longtail200_total_ms=1.2373  [it=1 side=base]
+it=1 side=base stream_narrative=0.22 cold@2000=48.14
+token200_narrative_ms=0.1074  token200_total_ms=0.1399  token2000_narrative_ms=0.1177  token2000_total_ms=0.2087  longtail200_narrative_ms=1.0169  longtail200_total_ms=1.1654  [it=1 side=cand]
+it=1 side=cand stream_narrative=0.22 cold@2000=48.48
+token200_narrative_ms=0.1126  token200_total_ms=0.1454  token2000_narrative_ms=0.1269  token2000_total_ms=0.2156  longtail200_narrative_ms=1.0714  longtail200_total_ms=1.2174  [it=2 side=base]
+it=2 side=base stream_narrative=0.22 cold@2000=48.17
+token200_narrative_ms=0.1139  token200_total_ms=0.1474  token2000_narrative_ms=0.1192  token2000_total_ms=0.2079  longtail200_narrative_ms=1.0510  longtail200_total_ms=1.2003  [it=2 side=cand]
+it=2 side=cand stream_narrative=0.21 cold@2000=48.35
+token200_narrative_ms=0.1132  token200_total_ms=0.1486  token2000_narrative_ms=0.1215  token2000_total_ms=0.2152  longtail200_narrative_ms=1.0821  longtail200_total_ms=1.2311  [it=3 side=base]
+it=3 side=base stream_narrative=0.22 cold@2000=48.00
+token200_narrative_ms=0.1096  token200_total_ms=0.1457  token2000_narrative_ms=0.1186  token2000_total_ms=0.2064  longtail200_narrative_ms=1.0223  longtail200_total_ms=1.1682  [it=3 side=cand]
+it=3 side=cand stream_narrative=0.22 cold@2000=48.37
+DONE Sun Nov 15 14:48:15 CST 2026

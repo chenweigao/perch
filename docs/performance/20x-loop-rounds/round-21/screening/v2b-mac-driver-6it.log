@@ -1,0 +1,28 @@
+HEAD is now at a559cea Merge pull request #342 from chenweigao/perf/20x-loop-20-20261115
+HEAD=a559cea065eaa06359ad50be26e3691d6e070d92
+tests_patch=ok
+base_build_exit=0
+product_patch=ok
+cand_build_exit=0
+d9b58a640d3e3a04b08188acf638409c8636878dd52a16e0ee20344d58a53c71  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round21-base/out/Products/Release/WorkbenchChecks
+e0bb70f981e9e89ea0af294642b592dcb2d92aa720c6adc6c7d7eb4485b25bc6  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round21-cand/out/Products/Release/WorkbenchChecks
+=== checks + golden verification ===
+base_checks_exit=0 pass=102
+PASS: narrative byte-keyed tables preserve snapshots across canonical pairs and 1500 fuzz texts (digest 4e46d66eff016205, 1382 staged, 883 keyword-phased)
+cand_checks_exit=0 pass=102
+PASS: narrative byte-keyed tables preserve snapshots across canonical pairs and 1500 fuzz texts (digest 4e46d66eff016205, 1382 staged, 883 keyword-phased)
+=== extended screening: 6 alternating, presentation-token only (guards verified twice) Sun Nov 15 14:54:24 CST 2026 ===
+token200_narrative_ms=0.1233  token200_total_ms=0.1347  token2000_narrative_ms=0.1184  token2000_total_ms=0.1557  longtail200_narrative_ms=1.2018  longtail200_total_ms=1.2160  [it=1 side=base]
+token200_narrative_ms=0.1074  token200_total_ms=0.1187  token2000_narrative_ms=0.1108  token2000_total_ms=0.1465  longtail200_narrative_ms=1.1528  longtail200_total_ms=1.1677  [it=1 side=cand]
+token200_narrative_ms=0.1012  token200_total_ms=0.1130  token2000_narrative_ms=0.1062  token2000_total_ms=0.1439  longtail200_narrative_ms=1.1667  longtail200_total_ms=1.1811  [it=2 side=base]
+token200_narrative_ms=0.1104  token200_total_ms=0.1228  token2000_narrative_ms=0.1114  token2000_total_ms=0.1475  longtail200_narrative_ms=1.1143  longtail200_total_ms=1.1276  [it=2 side=cand]
+token200_narrative_ms=0.1135  token200_total_ms=0.1248  token2000_narrative_ms=0.1113  token2000_total_ms=0.1480  longtail200_narrative_ms=1.1894  longtail200_total_ms=1.2033  [it=3 side=base]
+token200_narrative_ms=0.1038  token200_total_ms=0.1150  token2000_narrative_ms=0.1051  token2000_total_ms=0.1420  longtail200_narrative_ms=1.0632  longtail200_total_ms=1.0783  [it=3 side=cand]
+token200_narrative_ms=0.1034  token200_total_ms=0.1143  token2000_narrative_ms=0.1110  token2000_total_ms=0.1490  longtail200_narrative_ms=1.1570  longtail200_total_ms=1.1713  [it=4 side=base]
+token200_narrative_ms=0.1043  token200_total_ms=0.1159  token2000_narrative_ms=0.1054  token2000_total_ms=0.1407  longtail200_narrative_ms=1.0988  longtail200_total_ms=1.1120  [it=4 side=cand]
+token200_narrative_ms=0.1027  token200_total_ms=0.1136  token2000_narrative_ms=0.1093  token2000_total_ms=0.1460  longtail200_narrative_ms=1.1136  longtail200_total_ms=1.1273  [it=5 side=base]
+token200_narrative_ms=0.1119  token200_total_ms=0.1233  token2000_narrative_ms=0.1176  token2000_total_ms=0.1561  longtail200_narrative_ms=1.1409  longtail200_total_ms=1.1556  [it=5 side=cand]
+token200_narrative_ms=0.1169  token200_total_ms=0.1279  token2000_narrative_ms=0.1221  token2000_total_ms=0.1576  longtail200_narrative_ms=1.1164  longtail200_total_ms=1.1296  [it=6 side=base]
+token200_narrative_ms=0.1032  token200_total_ms=0.1143  token2000_narrative_ms=0.1059  token2000_total_ms=0.1417  longtail200_narrative_ms=1.1292  longtail200_total_ms=1.1424  [it=6 side=cand]
+porcelain_after=0
+DONE Sun Nov 15 14:54:28 CST 2026

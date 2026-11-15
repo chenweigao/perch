@@ -1,0 +1,26 @@
+== round21 base (String keys, miss-heavy KB long-tail loop @68b0ce4-state) ==  total=20014  narrative-make inclusive=17383 (86.85%)
+  phase-closure: 10573 (60.82% of narr)
+  clean-closure: 4328 (24.90% of narr)
+  narrativeText-closure: 3739 (21.51% of narr)
+  collapsedWhitespace: 716 (4.12% of narr)
+  String-key _normalizedHash: 5139 (29.56% of narr)
+  withUTF8 frames: 815 (4.69% of narr)
+  ensureUnique (dict COW): 2061 (11.86% of narr)
+  _unsafeInsertNew: 2051 (11.80% of narr)
+  L default-arg chain: 833 (4.79% of narr)
+  contains/range substring search: 9103 (52.37% of narr)
+  top self leaves:
+    1765 10.15%-narr  Hasher._combine(_:)
+    1230  7.08%-narr  _stringCompareFastUTF8Abnormal(_:_:expecting:)
+    1102  6.34%-narr  Substring.subscript.getter
+     978  5.63%-narr  Substring.index(_:offsetBy:)
+     968  5.57%-narr  specialized _StringGutsSlice.withFastUTF8<A, B>(_:)
+     962  5.53%-narr  _StringGutsSlice._fastNFCCheck(_:_:)
+     935  5.38%-narr  specialized static String._uncheckedFromUTF8(_:isASCII:precalculatedUTF16Count:)
+     848  4.88%-narr  _swift_stdlib_getScalarBitArrayIdx
+     830  4.77%-narr  _GraphemeBreakingState.shouldBreak(between:and:)
+     727  4.18%-narr  hasBreakWhenPaired #1 (_:) in _quickHasGraphemeBreakBetween(_:_:)
+     693  3.99%-narr  _swift_stdlib_getNormData
+     680  3.91%-narr  _StringGuts._opaqueComplexCharacterStride(startingAt:)
+     553  3.18%-narr  _allASCII(_:)
+     497  2.86%-narr  partial apply for closure #2 in _StringGutsSlice._normalizedHash(into:)

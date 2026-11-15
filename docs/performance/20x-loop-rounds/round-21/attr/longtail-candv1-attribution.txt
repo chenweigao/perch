@@ -1,0 +1,27 @@
+== round21c candidate v1 (byte keys, per-byte fallbacks, a7332c8-state) ==  total=20017  narrative-make inclusive=17022 (85.04%)
+  phase-closure: 11462 (67.34% of narr)
+  clean-closure: 2987 (17.55% of narr)
+  narrativeText-closure: 2826 (16.60% of narr)
+  collapsedWhitespace: 812 (4.77% of narr)
+  ByteText machinery: 4136 (24.30% of narr)
+  withUTF8 frames: 934 (5.49% of narr)
+  UTF8View per-byte subscript: 1892 (11.12% of narr)
+  ensureUnique (dict COW): 468 (2.75% of narr)
+  _unsafeInsertNew: 464 (2.73% of narr)
+  L default-arg chain: 837 (4.92% of narr)
+  contains/range substring search: 9611 (56.46% of narr)
+  top self leaves:
+    1886 11.08%-narr  protocol witness for Collection.subscript.read in conformance String.UTF8View
+    1177  6.91%-narr  Substring.subscript.getter
+    1152  6.77%-narr  Hasher.combine(bytes:)
+    1112  6.53%-narr  Substring.index(_:offsetBy:)
+    1088  6.39%-narr  specialized static String._uncheckedFromUTF8(_:isASCII:precalculatedUTF16Count:)
+    1031  6.06%-narr  _stringCompareFastUTF8Abnormal(_:_:expecting:)
+     814  4.78%-narr  _StringGuts._opaqueComplexCharacterStride(startingAt:)
+     788  4.63%-narr  _GraphemeBreakingState.shouldBreak(between:and:)
+     760  4.46%-narr  hasBreakWhenPaired #1 (_:) in _quickHasGraphemeBreakBetween(_:_:)
+     563  3.31%-narr  _allASCII(_:)
+     469  2.76%-narr  protocol witness for Collection.formIndex(after:) in conformance String.UTF8View
+     424  2.49%-narr  specialized Sequence.elementsEqual<A>(_:by:)
+     354  2.08%-narr  _swift_stdlib_getScalarBitArrayIdx
+     302  1.77%-narr  specialized BidirectionalCollection._range<A>(of:anchored:backwards:)
