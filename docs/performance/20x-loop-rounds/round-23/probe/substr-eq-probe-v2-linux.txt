@@ -1,0 +1,8 @@
+ascii same-base identical      : best 0.040 ms / 200k comparisons
+cjk   same-base identical      : best 0.040 ms / 200k comparisons
+cjk   cross-base identical     : best 3.190 ms / 200k comparisons
+cjk   canonical-equal diffbyte : best 61.817 ms / 200k comparisons
+cjk   different lines          : best 2.697 ms / 200k comparisons
+raw byte loop cross-base ident : best 5.461 ms / 200k comparisons
+Swift version 6.3.3 (swift-6.3.3-RELEASE)
+Target: x86_64-unknown-linux-gnu
