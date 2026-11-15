@@ -219,6 +219,140 @@ public struct ActivityNarrativeSnapshot: Equatable, Sendable {
 }
 
 
+/// Round 22: single-pass byte-level multi-pattern scan replacing the phase
+/// closure's `lowercased()` full-text copy plus up to 32 grapheme-aware
+/// `contains` substring searches. Attribution (miss-heavy KB-scale long-tail
+/// profile at 68b0ce4 state, round-21 archive): the phase derivation closure
+/// was 54.61% of the narrative stage on the base product (73.36% after the
+/// table machinery shrank), and the bench's keyword-free tails execute ALL
+/// 32 predicates per derive — 32 full-text canonical searches per delta of a
+/// growing reply.
+///
+/// Equivalence (pinned by checkNarrativePhaseSinglePass: exhaustive scalar
+/// bridge sweep + differential fuzz against the reference predicate chain +
+/// the unchanged narrative golden):
+/// - A byte match with BOTH boundaries proven (preceding byte ASCII or start;
+///   following byte ASCII or end — every Prepend/Extend/SpacingMark/ZWJ
+///   scalar is non-ASCII, round-17 two-sided boundary technique) implies the
+///   keyword's characters are their own graphemes in a contiguous run, so the
+///   old `lowercased().contains(keyword)` necessarily matched: no false
+///   positives.
+/// - A boundary-inconclusive match defers to the ORIGINAL canonical predicate
+///   (lowercased + substring contains), computed lazily only for the affected
+///   keywords — GB9b fusion (e.g. U+0600 before, combining mark after) can
+///   make the old search miss, so the old behavior decides exactly as before.
+/// - No false negatives: an old match requires the keyword's characters
+///   contiguous in the lowercased text; ASCII keywords can only gain bytes
+///   from lowercasing via non-ASCII scalars lowercasing to ASCII — the
+///   exhaustive sweep pins U+212A ('k') as the ONLY such bridge and no
+///   keyword contains 'k'; CJK keywords are case- and normalization-invariant
+///   (ideographs are their own normal forms and cannot arise from combining
+///   sequences). So every old match is found by the scan (confirmed or
+///   inconclusive→fallback).
+private enum NarrativePhaseScan {
+    /// Priority order matches the replaced if-chain: validating, editing,
+    /// integrating, exploring.
+    static let keywords: [(text: String, phase: ActivityNarrativePhase)] = [
+        ("test", .validating), ("build", .validating), ("lint", .validating), ("verify", .validating),
+        ("测试", .validating), ("构建", .validating), ("验证", .validating), ("检查", .validating), // l10n-ignore
+        ("edit", .editing), ("implement", .editing), ("write", .editing), ("fix", .editing),
+        ("修改", .editing), ("实现", .editing), ("修复", .editing), ("编写", .editing), // l10n-ignore
+        ("git", .integrating), ("commit", .integrating), ("merge", .integrating), ("integrat", .integrating),
+        ("提交", .integrating), ("合并", .integrating), ("整合", .integrating), ("冲突", .integrating), // l10n-ignore
+        ("read", .exploring), ("search", .exploring), ("inspect", .exploring), ("explor", .exploring),
+        ("读取", .exploring), ("搜索", .exploring), ("查看", .exploring), ("分析", .exploring), // l10n-ignore
+    ]
+    static let keywordBytes: [[UInt8]] = keywords.map { Array($0.text.utf8) }
+    /// Case-folded first-byte dispatch. ASCII letters fold; bytes >= 0x80
+    /// (CJK leads) index their own bucket unfolded.
+    static let buckets: [[Int]] = {
+        var table = [[Int]](repeating: [], count: 256)
+        for (index, bytes) in keywordBytes.enumerated() {
+            table[Int(fold(bytes[0]))].append(index)
+        }
+        return table
+    }()
+    static func fold(_ byte: UInt8) -> UInt8 {
+        (byte >= 0x41 && byte <= 0x5A) ? byte + 0x20 : byte
+    }
+
+    static func phase(in text: String) -> ActivityNarrativePhase {
+        var confirmedValidating = false
+        var confirmedEditing = false
+        var confirmedIntegrating = false
+        var confirmedExploring = false
+        var inconclusive = [Bool](repeating: false, count: keywords.count)
+        var body = text
+        body.withUTF8 { buffer in
+            let count = buffer.count
+            var offset = 0
+            while offset < count {
+                let bucket = buckets[Int(fold(buffer[offset]))]
+                if !bucket.isEmpty {
+                    for index in bucket {
+                        let keyword = keywordBytes[index]
+                        guard offset + keyword.count <= count else { continue }
+                        var matched = true
+                        for position in 1..<keyword.count {
+                            let expected = keyword[position]
+                            let actual = buffer[offset + position]
+                            if expected < 0x80 {
+                                if fold(actual) != expected { matched = false; break }
+                            } else if actual != expected {
+                                matched = false
+                                break
+                            }
+                        }
+                        guard matched else { continue }
+                        let leadingProven = offset == 0 || buffer[offset - 1] < 0x80
+                        let trailingProven = offset + keyword.count == count || buffer[offset + keyword.count] < 0x80
+                        if leadingProven && trailingProven {
+                            switch keywords[index].phase {
+                            case .validating: confirmedValidating = true
+                            case .editing: confirmedEditing = true
+                            case .integrating: confirmedIntegrating = true
+                            case .exploring: confirmedExploring = true
+                            case .blocked, .mixed: break
+                            }
+                        } else {
+                            inconclusive[index] = true
+                        }
+                    }
+                }
+                offset += 1
+            }
+        }
+        // Priority order: a lower-priority confirmed result still requires the
+        // higher-priority inconclusive keywords to be resolved first, so each
+        // phase checks confirmed-then-fallback in strict priority.
+        if confirmedValidating { return .validating }
+        if resolves(.validating, inconclusive, text) { return .validating }
+        if confirmedEditing { return .editing }
+        if resolves(.editing, inconclusive, text) { return .editing }
+        if confirmedIntegrating { return .integrating }
+        if resolves(.integrating, inconclusive, text) { return .integrating }
+        if confirmedExploring { return .exploring }
+        if resolves(.exploring, inconclusive, text) { return .exploring }
+        return .mixed
+    }
+
+    /// Lazily lowercases once and applies the ORIGINAL canonical predicate to
+    /// the boundary-inconclusive keywords of one phase.
+    private static func resolves(_ phase: ActivityNarrativePhase, _ inconclusive: [Bool], _ text: String) -> Bool {
+        var needed = false
+        for index in keywords.indices where keywords[index].phase == phase && inconclusive[index] {
+            needed = true
+            break
+        }
+        guard needed else { return false }
+        let lowered = text.lowercased()
+        for index in keywords.indices where keywords[index].phase == phase && inconclusive[index] {
+            if lowered.contains(keywords[index].text) { return true }
+        }
+        return false
+    }
+}
+
 public enum ActivityNarrativeProjection {
     private struct Builder {
         var narrative: ActivityNarrative
@@ -248,18 +382,12 @@ public enum ActivityNarrativeProjection {
         // Keywords matched against agent text in either language, not UI labels.
         // Only unresolved tool states (missingResult / disconnected) mark a stage
         // `.blocked`; ordinary commentary mentioning "error" or "失败" is prose.
+        // Round 22: the 32-predicate lowercased+contains chain lives on in
+        // NarrativePhaseScan — one byte pass with proven-boundary fast accepts
+        // and the original canonical predicate as the inconclusive fallback.
         func phase(from text: String) -> ActivityNarrativePhase {
             NarrativeTextCache.phase(for: text) {
-                let value = text.lowercased()
-                if value.contains("test") || value.contains("build") || value.contains("lint") || value.contains("verify")
-                    || value.contains("测试") || value.contains("构建") || value.contains("验证") || value.contains("检查") { return .validating } // l10n-ignore
-                if value.contains("edit") || value.contains("implement") || value.contains("write") || value.contains("fix")
-                    || value.contains("修改") || value.contains("实现") || value.contains("修复") || value.contains("编写") { return .editing } // l10n-ignore
-                if value.contains("git") || value.contains("commit") || value.contains("merge") || value.contains("integrat")
-                    || value.contains("提交") || value.contains("合并") || value.contains("整合") || value.contains("冲突") { return .integrating } // l10n-ignore
-                if value.contains("read") || value.contains("search") || value.contains("inspect") || value.contains("explor")
-                    || value.contains("读取") || value.contains("搜索") || value.contains("查看") || value.contains("分析") { return .exploring } // l10n-ignore
-                return .mixed
+                NarrativePhaseScan.phase(in: text)
             }
         }
 
