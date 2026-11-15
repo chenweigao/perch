@@ -108,9 +108,35 @@ extension String {
         // lookups; CJK-heavy excerpts otherwise pay two table walks per
         // whitespace run they follow.
         if isNeverBindingScalar(value) { return false }
-        if value == 0x200D || scalar.properties.isGraphemeExtend { return true }
+        if value == 0x200D || isPinnedFusingScalar(value) || scalar.properties.isGraphemeExtend { return true }
         switch scalar.properties.generalCategory {
         case .nonspacingMark, .spacingMark, .enclosingMark: return true
+        default: return false
+        }
+    }
+
+    /// Pinned whitespace-adjacent fusion set: scalars the toolchains' own
+    /// grapheme breaking fuses with a preceding space into ONE Character —
+    /// whose `isWhitespace` is then true, so the Character-accurate split/join
+    /// drops the whole cluster — while every property lookup this file uses
+    /// (Grapheme_Extend, Mn/Mc/Me, ZWJ) reports nothing: Thai/Lao Sara-Am
+    /// (U+0E33/U+0EB3) and the five emoji skin-tone modifiers
+    /// (U+1F3FB…U+1F3FF). An exhaustive walk over all 1,112,064 scalars on
+    /// both supported toolchains (2026-11-15; Linux Swift 6.3.3 and Apple
+    /// Swift 6.4) found exactly these seven and no others; before this set
+    /// existed they were the byte path's only contract gap (the fast path
+    /// kept a scalar the strict form drops with the space it fused into,
+    /// e.g. `" \u{0E33} "` → strict `""` vs fast `"\u{0E33}"`).
+    /// `checkCollapsedWhitespace` re-runs
+    /// that walk against the toolchain's own breaking on every check run and
+    /// fails if any real fuser is missing here, so a Unicode data update
+    /// surfaces as a test failure, not a silent divergence. Over-inclusion is
+    /// the safe direction (a needless strict fallback, never a wrong answer),
+    /// so the set may lead the data but must never lag it — same contract as
+    /// `isPrependScalar` and `isNeverBindingScalar`.
+    private static func isPinnedFusingScalar(_ value: UInt32) -> Bool {
+        switch value {
+        case 0x0E33, 0x0EB3, 0x1F3FB...0x1F3FF: return true
         default: return false
         }
     }
