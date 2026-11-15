@@ -8,10 +8,15 @@ extra admitted runs (every "$" fused into a larger Character, e.g. GB9b
 after a Prepend scalar) make `split()` return one value-equal run — parse
 output identical for all inputs.
 
-Motivation: round-17's pure cold find-bar attribution (21,222 samples) put
-the splitInline closure at 795 samples (~3.7% of all) although the bench
-corpus contains NO literal math — the cost is the guard walking every run
-of every entry to find nothing.
+Motivation: round-17's pure cold find-bar attribution (21,222 samples) puts
+1,199 samples (5.65%) inclusively on backtraces carrying the splitInline
+closure and 1,163 (5.48%) on `StringProtocol.contains` leaf-ward of it,
+although the bench corpus contains NO literal math — the cost is the guard
+searching every run of every entry to find nothing. (The round-17 report's
+"795 samples (~3.7%)" was an accounting-bucket figure whose generating
+invocation was not archived and is not reproducible from the trace — review
+F1; corrected to the inclusive counts defined and re-computed in
+round-19/attr/inclusive-recount-r19.py.)
 
 Per the round-15 lesson, screening ran IN CONTEXT (bench modes) on both
 platforms BEFORE the formal round, and the equivalence pin was captured on
@@ -48,8 +53,10 @@ Linux (`screen-linux-cold.log`):
 
 PASSED on both platforms — opened the formal round (six-pair A/B at the
 golden-embedded head fe17ef1; primary metric find_bar_cold_query on Mac).
-The Mac gain (-5.75%) EXCEEDS the attribution-based estimate (~3.7%):
-Character-level `contains` costs more per byte than the sample attribution
-suggested (its work lands partly in stdlib frames shared with other call
-sites). No harness artifacts this round: binaries ran in place (round-18
-lesson), all equivalence outputs non-empty.
+The Mac gain (-5.75%) is CONSISTENT with the inclusive attribution share
+(5.65% closure / 5.48% contains beneath). The screening-time claim that the
+gain "exceeds" a ~3.7% estimate is WITHDRAWN (review F1: the estimate was
+not reproducible, and comparing sample shares with elapsed-time improvement
+cannot establish a per-byte cost claim — any such mechanism reading stays
+HYPOTHESIS). No harness artifacts this round: binaries ran in place
+(round-18 lesson), all equivalence outputs non-empty.

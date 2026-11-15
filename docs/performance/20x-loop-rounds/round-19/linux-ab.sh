@@ -1,8 +1,11 @@
 #!/bin/bash
-# Round 16 Linux A/B (rerun with fixed harness): the checks binary embeds
+# Round 19 Linux screening A/B (v1 at fe17ef1; generated from the round-16
+# fixed-harness template — review F6: the stale round-16 header is corrected
+# here, the operative candidate of this archived run is fe17ef1): the checks
+# binary embeds
 # #filePath, so build trees must stay alive while checks run, and the rebuild
 # verification must happen at the SAME path. Candidate builds in the main
-# worktree (HEAD=9e7bc19, porcelain 0 = committed tree); baseline in a scratch
+# worktree (HEAD=fe17ef1, porcelain 0 = committed tree); baseline in a scratch
 # worktree kept alive through its check run.
 set -u
 export PATH=$HOME/.local/swift/6.3.3/usr/bin:$PATH
