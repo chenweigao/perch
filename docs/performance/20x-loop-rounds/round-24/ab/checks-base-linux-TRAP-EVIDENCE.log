@@ -1,0 +1,69 @@
+PASS: step reading preserves order, edit identities, historical patches and outcome-aware churn
+PASS: phase reading groups Bash and thoughts, preserves edit receipts, separates historical failures from pending work and uses grounded command labels
+PASS: live public summaries, completed process folding, manual expansion, uniform folding of edits and failures
+PASS: PI steady streaming cadence, Unicode boundaries, replacement and immediate completion
+PASS: parsed-block release retains Unicode, styling, links and complete rich Markdown
+PASS: incremental reply parse matches full parses at every streaming prefix
+PASS: live progress, missing summaries, thinking-only output, tool-only notice and provider model groups
+PASS: process fold groups completed turns, preserves order, keeps the running turn live
+PASS: presentation parity, same-ID edits, pagination, epoch/language/live handoff, scoped LRU, oversized active state and metrics
+PASS: presentation history reuse matches complete recomputation across tokens, paging, crossings, language, epoch and overlays
+PASS: paging and new prompts reuse unchanged earlier turns and match complete recomputation (19/20 pages)
+PASS: window identity reuse ends at any earlier in-place edit, survives a rebuilt window and matches complete recomputation
+PASS: find-bar entry reuse equals a complete search across growth, isolated payload edits, reroutes, rebuilds, pages, running flips and query/option switches
+PROBE PASS: prefix zero-sign flip under an unchanged query
+PROBE PASS: NFD regex query after the canonically equal NFC query, and back
+PROBE PASS: payload NFC to NFD swap under an unchanged regex query
+PROBE PASS: object-key NFC to NFD swap under an unchanged regex query
+PROBE PASS: case-sensitive literal NFD query after the canonically equal NFC query, and back
+PASS: find-bar cache-hole probes (prefix zero sign, regex and literal query encoding round trips, payload encoding, key encoding) equal complete searches
+MISMATCH input=" ำx" expected="x" got="\u{0E33}x"
+
+*** Signal 4: Backtracing from 0x5571e58b4880... done ***
+
+*** Swift runtime failure: precondition failure ***
+
+Platform: x86_64 Linux (Alibaba Cloud Linux 3 (Soaring Falcon))
+
+Thread 0 "base-checks24" crashed:
+
+  0 [inlined] [system] 0x00005571e58b4880 Swift runtime failure: precondition failure in base-checks24 at //<compiler-generated>
+  1                    0x00005571e58b4880 checkCollapsedWhitespace() + 2464 in base-checks24 at /tmp/r24-base/Tests/WorkbenchCoreTests/CollapsedWhitespaceTests.swift:46:9
+  2 [ra]               0x00005571e596847f specialized static ProtocolTests.main() + 446 in base-checks24 at /tmp/r24-base/Tests/WorkbenchCoreTests/ProtocolTests.swift:47:9
+  3 [async] [system]   0x00005571e5961760 specialized thunk for @escaping @convention(thin) @async () -> () in base-checks24 at //<compiler-generated>
+  4 [async]            0x00007f3590669190 completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*) in libswift_Concurrency.so
+...
+
+
+Registers:
+
+rax 0x0000000000000000  0
+rdx 0xa400000000000000  11817445422220181504
+rcx 0x0000000000000000  0
+rbx 0x0000000000000078  120
+rsi 0x8000000000000000  9223372036854775808
+rdi 0x00007fff62571218  78 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  x···············
+rbp 0x00007fff62571430  90 14 57 62 ff 7f 00 00 7f 84 96 e5 71 55 00 00  ··Wbÿ······åqU··
+rsp 0x00007fff62571280  00 00 00 00 00 00 00 00 72 65 61 64 2d 30 00 00  ········read-0··
+ r8 0x0000000000000078  120
+ r9 0x0f0f0f0f0f0f0f0f  1085102592571150095
+r10 0x3333333333333333  3689348814741910323
+r11 0x000000000000000c  12
+r12 0xe100000000000000  16212958658533785600
+r13 0x00005571e6b20540  70 5c ae b1 74 55 00 00 10 d0 ac e6 71 55 00 00  p\®±tU···Ð¬æqU··
+r14 0x0000000000000000  0
+r15 0x0000000000000078  120
+rip 0x00005571e58b4880  0f 0b 48 8b 5d b0 48 89 df e8 92 6b dd ff 48 8b  ··H·]°H·ßè·kÝÿH·
+
+rflags 0x0000000000010246  ZF PF
+
+cs 0x0033  fs 0x0000  gs 0x0000
+
+
+Images (48 omitted):
+
+0x00005571e5600000–0x00005571e5dd8eb0 374861fb0cc09afbdc3e5fc03001e7abd365199f base-checks24           <worktree>/.local/round24/base-checks24
+0x00007f35905dd000–0x00007f3590670660 ab7a387eca696d31db096d9ebebea096c2cf1bc3 libswift_Concurrency.so /home/<dev>/.local/swift/6.3.3/usr/lib/swift/linux/libswift_Concurrency.so
+
+Backtrace took 1.27s
+

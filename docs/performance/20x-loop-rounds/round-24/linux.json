@@ -1,0 +1,2271 @@
+{
+ "benchmark": "round-24 linux formal A/B v2 at c3d38a2 (screening side; no-regression gate)",
+ "platform": "Linux x86_64 Alibaba Cloud Linux 3, Swift 6.3.3",
+ "round_type": "correctness round; A/B is a no-regression gate. Stop counter: merged correctness round counts 1/3 (reviewer-confirmed).",
+ "base_ref": "1bcbc00f0b46fc35100b385c2e0dccc114e7c25a",
+ "candidate_ref": "c3d38a2c7b0b1f70a4a8ed314c43c21bb83868c4",
+ "pairs": 6,
+ "headline": {
+  "token200_narrative_ms": {
+   "baseline_median": 0.0469,
+   "candidate_median": 0.0474,
+   "change_percent": 1.0177,
+   "worst_pair_percent": 3.5779,
+   "max_spread_percent": 4.8894
+  },
+  "token200_total_ms": {
+   "baseline_median": 0.0806,
+   "candidate_median": 0.0814,
+   "change_percent": 0.937,
+   "worst_pair_percent": 3.4479,
+   "max_spread_percent": 5.5962
+  },
+  "token2000_narrative_ms": {
+   "baseline_median": 0.0546,
+   "candidate_median": 0.0533,
+   "change_percent": -2.4854,
+   "worst_pair_percent": 1.496,
+   "max_spread_percent": 7.0793
+  },
+  "token2000_total_ms": {
+   "baseline_median": 0.1455,
+   "candidate_median": 0.143,
+   "change_percent": -1.7146,
+   "worst_pair_percent": 1.3798,
+   "max_spread_percent": 5.9646
+  },
+  "longtail200_narrative_ms": {
+   "baseline_median": 0.2922,
+   "candidate_median": 0.2913,
+   "change_percent": -0.3216,
+   "worst_pair_percent": 0.412,
+   "max_spread_percent": 2.9065
+  },
+  "longtail200_total_ms": {
+   "baseline_median": 0.4274,
+   "candidate_median": 0.4249,
+   "change_percent": -0.5972,
+   "worst_pair_percent": 0.3814,
+   "max_spread_percent": 1.6503
+  },
+  "stage_narrative": {
+   "baseline_median": 0.22,
+   "candidate_median": 0.22,
+   "change_percent": 0.0,
+   "worst_pair_percent": 9.5238,
+   "max_spread_percent": 9.5238
+  },
+  "conversation_activity": {
+   "baseline_median": 0.05,
+   "candidate_median": 0.05,
+   "change_percent": 0.0,
+   "worst_pair_percent": 0.0,
+   "max_spread_percent": 0.0
+  },
+  "find_bar_cold_query": {
+   "baseline_median": 554.985,
+   "candidate_median": 556.735,
+   "change_percent": 0.3153,
+   "worst_pair_percent": 0.6725,
+   "max_spread_percent": 3.2011
+  },
+  "cold@2000": {
+   "baseline_median": 48.425,
+   "candidate_median": 48.34,
+   "change_percent": -0.1755,
+   "worst_pair_percent": 0.7266,
+   "max_spread_percent": 2.7195
+  },
+  "append@2000": {
+   "baseline_median": 0.17,
+   "candidate_median": 0.165,
+   "change_percent": -2.9412,
+   "worst_pair_percent": 0.0,
+   "max_spread_percent": 6.25
+  },
+  "edit_stats@6400": {
+   "baseline_median": 3.3035,
+   "candidate_median": 3.2735,
+   "change_percent": -0.9081,
+   "worst_pair_percent": -0.2129,
+   "max_spread_percent": 0.8907
+  },
+  "single_turn_activity@2000": {
+   "baseline_median": 1.322,
+   "candidate_median": 1.3175,
+   "change_percent": -0.3404,
+   "worst_pair_percent": 1.7964,
+   "max_spread_percent": 3.7376
+  },
+  "edit512_unchanged": {
+   "baseline_median": 0.5964,
+   "candidate_median": 0.6035,
+   "change_percent": 1.1948,
+   "worst_pair_percent": 4.0255,
+   "max_spread_percent": 6.0917
+  },
+  "edit512_middle": {
+   "baseline_median": 0.6055,
+   "candidate_median": 0.6023,
+   "change_percent": -0.5228,
+   "worst_pair_percent": 2.0665,
+   "max_spread_percent": 5.1102
+  },
+  "edit512_canonical": {
+   "baseline_median": 5.1157,
+   "candidate_median": 5.0952,
+   "change_percent": -0.3994,
+   "worst_pair_percent": 3.0213,
+   "max_spread_percent": 6.9006
+  },
+  "edit64_crlf": {
+   "baseline_median": 0.0631,
+   "candidate_median": 0.0647,
+   "change_percent": 2.4615,
+   "worst_pair_percent": 2.8637,
+   "max_spread_percent": 1.0672
+  },
+  "edit512_crlf": {
+   "baseline_median": 0.3905,
+   "candidate_median": 0.4027,
+   "change_percent": 3.1138,
+   "worst_pair_percent": 6.379,
+   "max_spread_percent": 6.4039
+  }
+ },
+ "precision_note": "Samples retain full original Double precision (round-23 review F3 policy).",
+ "all_metrics": {
+  "activity_init@1280": {
+   "change_percent": 0.0,
+   "worst_pair_percent": 16.6667,
+   "max_spread_percent": 16.6667,
+   "baseline_samples": [
+    0.007,
+    0.007,
+    0.006,
+    0.007,
+    0.007,
+    0.007
+   ],
+   "candidate_samples": [
+    0.007,
+    0.007,
+    0.007,
+    0.007,
+    0.007,
+    0.007
+   ]
+  },
+  "activity_init@320": {
+   "change_percent": 0.0,
+   "worst_pair_percent": 0.0,
+   "max_spread_percent": 0.0,
+   "baseline_samples": [
+    0.006,
+    0.006,
+    0.006,
+    0.006,
+    0.006,
+    0.006
+   ],
+   "candidate_samples": [
+    0.006,
+    0.006,
+    0.006,
+    0.006,
+    0.006,
+    0.006
+   ]
+  },
+  "activity_init@6400": {
+   "change_percent": -6.6667,
+   "worst_pair_percent": 0.0,
+   "max_spread_percent": 14.2857,
+   "baseline_samples": [
+    0.007,
+    0.008,
+    0.007,
+    0.008,
+    0.007,
+    0.008
+   ],
+   "candidate_samples": [
+    0.007,
+    0.007,
+    0.007,
+    0.008,
+    0.007,
+    0.007
+   ]
+  },
+  "append@100": {
+   "change_percent": 0.0,
+   "worst_pair_percent": 12.5,
+   "max_spread_percent": 12.5,
+   "baseline_samples": [
+    0.08,
+    0.08,
+    0.08,
+    0.08,
+    0.08,
+    0.08
+   ],
+   "candidate_samples": [
+    0.08,
+    0.08,
+    0.08,
+    0.08,
+    0.09,
+    0.08
+   ]
+  },
+  "append@1000": {
+   "change_percent": 0.0,
+   "worst_pair_percent": 8.3333,
+   "max_spread_percent": 8.3333,
+   "baseline_samples": [
+    0.12,
+    0.13,
+    0.12,
+    0.12,
+    0.12,
+    0.12
+   ],
+   "candidate_samples": [
+    0.12,
+    0.12,
+    0.12,
+    0.12,
+    0.12,
+    0.13
+   ]
+  },
+  "append@2000": {
+   "change_percent": -2.9412,
+   "worst_pair_percent": 0.0,
+   "max_spread_percent": 6.25,
+   "baseline_samples": [
+    0.17,
+    0.17,
+    0.17,
+    0.17,
+    0.16,
+    0.17
+   ],
+   "candidate_samples": [
+    0.16,
+    0.16,
+    0.17,
+    0.17,
+    0.16,
+    0.17
+   ]
+  },
+  "append@500": {
+   "change_percent": 0.0,
+   "worst_pair_percent": 0.0,
+   "max_spread_percent": 0.0,
+   "baseline_samples": [
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1
+   ],
+   "candidate_samples": [
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1
+   ]
+  },
+  "chain_total": {
+   "change_percent": 0.7519,
+   "worst_pair_percent": 2.2556,
+   "max_spread_percent": 3.0303,
+   "baseline_samples": [
+    1.33,
+    1.34,
+    1.31,
+    1.33,
+    1.33,
+    1.33
+   ],
+   "candidate_samples": [
+    1.32,
+    1.32,
+    1.33,
+    1.35,
+    1.36,
+    1.35
+   ]
+  },
+  "cold@100": {
+   "change_percent": 0.4098,
+   "worst_pair_percent": 1.6461,
+   "max_spread_percent": 3.7037,
+   "baseline_samples": [
+    2.52,
+    2.44,
+    2.43,
+    2.45,
+    2.44,
+    2.44
+   ],
+   "candidate_samples": [
+    2.45,
+    2.46,
+    2.47,
+    2.43,
+    2.45,
+    2.44
+   ]
+  },
+  "cold@1000": {
+   "change_percent": 0.0622,
+   "worst_pair_percent": 0.7927,
+   "max_spread_percent": 3.2541,
+   "baseline_samples": [
+    24.75,
+    24.07,
+    24.13,
+    24.18,
+    23.99,
+    23.97
+   ],
+   "candidate_samples": [
+    24.3,
+    24.0,
+    24.26,
+    23.81,
+    24.07,
+    24.16
+   ]
+  },
+  "cold@2000": {
+   "change_percent": -0.1755,
+   "worst_pair_percent": 0.7266,
+   "max_spread_percent": 2.7195,
+   "baseline_samples": [
+    49.48,
+    48.34,
+    48.51,
+    48.51,
+    48.21,
+    48.17
+   ],
+   "candidate_samples": [
+    48.63,
+    48.11,
+    48.39,
+    48.29,
+    48.03,
+    48.52
+   ]
+  },
+  "cold@500": {
+   "change_percent": -0.0414,
+   "worst_pair_percent": 0.9114,
+   "max_spread_percent": 4.5,
+   "baseline_samples": [
+    12.54,
+    12.06,
+    12.07,
+    12.1,
+    12.0,
+    12.06
+   ],
+   "candidate_samples": [
+    12.15,
+    12.01,
+    12.18,
+    11.93,
+    11.99,
+    12.11
+   ]
+  },
+  "conversation_activity": {
+   "change_percent": 0.0,
+   "worst_pair_percent": 0.0,
+   "max_spread_percent": 0.0,
+   "baseline_samples": [
+    0.05,
+    0.05,
+    0.05,
+    0.05,
+    0.05,
+    0.05
+   ],
+   "candidate_samples": [
+    0.05,
+    0.05,
+    0.05,
+    0.05,
+    0.05,
+    0.05
+   ]
+  },
+  "display_messages_timeline": {
+   "change_percent": 3.4483,
+   "worst_pair_percent": 3.4483,
+   "max_spread_percent": 3.4483,
+   "baseline_samples": [
+    0.3,
+    0.29,
+    0.29,
+    0.29,
+    0.3,
+    0.29
+   ],
+   "candidate_samples": [
+    0.3,
+    0.29,
+    0.29,
+    0.3,
+    0.3,
+    0.3
+   ]
+  },
+  "display_messages_workspace": {
+   "change_percent": 0.0,
+   "worst_pair_percent": 0.0,
+   "max_spread_percent": 3.4483,
+   "baseline_samples": [
+    0.3,
+    0.3,
+    0.29,
+    0.3,
+    0.3,
+    0.3
+   ],
+   "candidate_samples": [
+    0.3,
+    0.29,
+    0.29,
+    0.3,
+    0.3,
+    0.3
+   ]
+  },
+  "edit512_bulk": {
+   "change_percent": -0.0002,
+   "worst_pair_percent": 0.6624,
+   "max_spread_percent": 0.6839,
+   "baseline_samples": [
+    0.38531236350536346,
+    0.38495101034641266,
+    0.3849118947982788,
+    0.3849342465400696,
+    0.3848206251859665,
+    0.38381293416023254
+   ],
+   "candidate_samples": [
+    0.3849118947982788,
+    0.3837309777736664,
+    0.38493238389492035,
+    0.3849416971206665,
+    0.3844127058982849,
+    0.3863554447889328
+   ]
+  },
+  "edit512_canonical": {
+   "change_percent": -0.3994,
+   "worst_pair_percent": 3.0213,
+   "max_spread_percent": 6.9006,
+   "baseline_samples": [
+    5.069483071565628,
+    5.123669281601906,
+    5.286321043968201,
+    4.945080727338791,
+    5.251983180642128,
+    5.107667297124863
+   ],
+   "candidate_samples": [
+    5.174228921532631,
+    5.278471857309341,
+    4.979992285370827,
+    5.068464204668999,
+    5.122005939483643,
+    4.968760535120964
+   ]
+  },
+  "edit512_crlf": {
+   "change_percent": 3.1138,
+   "worst_pair_percent": 6.379,
+   "max_spread_percent": 6.4039,
+   "baseline_samples": [
+    0.3918725997209549,
+    0.3909710794687271,
+    0.3900919109582901,
+    0.3900453448295593,
+    0.39124302566051483,
+    0.38955360651016235
+   ],
+   "candidate_samples": [
+    0.39147399365901947,
+    0.38946233689785004,
+    0.4054717719554901,
+    0.4046112298965454,
+    0.4007723182439804,
+    0.41440315544605255
+   ]
+  },
+  "edit512_first": {
+   "change_percent": 0.1635,
+   "worst_pair_percent": 1.9313,
+   "max_spread_percent": 3.2008,
+   "baseline_samples": [
+    0.6059072911739349,
+    0.6101112812757492,
+    0.600568950176239,
+    0.6059892475605011,
+    0.5911886692047119,
+    0.5954187363386154
+   ],
+   "candidate_samples": [
+    0.5996190011501312,
+    0.6035603582859039,
+    0.6121676415205002,
+    0.6048884242773056,
+    0.5985591560602188,
+    0.6060898303985596
+   ]
+  },
+  "edit512_insert": {
+   "change_percent": -0.2605,
+   "worst_pair_percent": 4.6527,
+   "max_spread_percent": 6.8953,
+   "baseline_samples": [
+    0.6061606109142303,
+    0.6096325814723969,
+    0.6084702908992767,
+    0.6337389349937439,
+    0.5928594619035721,
+    0.5979500710964203
+   ],
+   "candidate_samples": [
+    0.6013903766870499,
+    0.6201025098562241,
+    0.636780634522438,
+    0.6059873849153519,
+    0.5994103848934174,
+    0.6054788827896118
+   ]
+  },
+  "edit512_last": {
+   "change_percent": -0.2243,
+   "worst_pair_percent": 4.6326,
+   "max_spread_percent": 13.1693,
+   "baseline_samples": [
+    0.6028898060321808,
+    0.605270266532898,
+    0.6537102162837982,
+    0.6180796772241592,
+    0.5873497575521469,
+    0.5925390869379044
+   ],
+   "candidate_samples": [
+    0.5980879068374634,
+    0.6019007414579391,
+    0.6768517196178436,
+    0.6025191396474838,
+    0.6145592778921127,
+    0.6029307842254639
+   ]
+  },
+  "edit512_middle": {
+   "change_percent": -0.5228,
+   "worst_pair_percent": 2.0665,
+   "max_spread_percent": 5.1102,
+   "baseline_samples": [
+    0.6037075072526932,
+    0.6071925163269043,
+    0.5972273647785187,
+    0.6171409040689468,
+    0.6242915987968445,
+    0.593939796090126
+   ],
+   "candidate_samples": [
+    0.598980113863945,
+    0.6023496389389038,
+    0.609569251537323,
+    0.6037410348653793,
+    0.5959272384643555,
+    0.6022192537784576
+   ]
+  },
+  "edit512_trailing_empty": {
+   "change_percent": 0.5938,
+   "worst_pair_percent": 8.1699,
+   "max_spread_percent": 12.253,
+   "baseline_samples": [
+    0.6114598363637924,
+    0.609859824180603,
+    0.6370227783918381,
+    0.5674883723258972,
+    0.5951002240180969,
+    0.6075799465179443
+   ],
+   "candidate_samples": [
+    0.6116889417171478,
+    0.6043277680873871,
+    0.6162989884614944,
+    0.613851472735405,
+    0.5690678954124451,
+    0.6129797548055649
+   ]
+  },
+  "edit512_unchanged": {
+   "change_percent": 1.1948,
+   "worst_pair_percent": 4.0255,
+   "max_spread_percent": 6.0917,
+   "baseline_samples": [
+    0.6002206355333328,
+    0.5993004888296127,
+    0.5934890359640121,
+    0.6217695772647858,
+    0.586068257689476,
+    0.5906373262405396
+   ],
+   "candidate_samples": [
+    0.6003789603710175,
+    0.5914904177188873,
+    0.603359192609787,
+    0.605778768658638,
+    0.6096605211496353,
+    0.6036814302206039
+   ]
+  },
+  "edit512_unicode": {
+   "change_percent": -0.2532,
+   "worst_pair_percent": 1.4078,
+   "max_spread_percent": 3.6398,
+   "baseline_samples": [
+    0.8496474474668503,
+    0.8563771843910217,
+    0.8459687232971191,
+    0.853927806019783,
+    0.8715000003576279,
+    0.8767601102590561
+   ],
+   "candidate_samples": [
+    0.8520260453224182,
+    0.8460469543933868,
+    0.8578784763813019,
+    0.8556973189115524,
+    0.843588262796402,
+    0.8539482951164246
+   ]
+  },
+  "edit64_bulk": {
+   "change_percent": 0.3048,
+   "worst_pair_percent": 0.9797,
+   "max_spread_percent": 2.857,
+   "baseline_samples": [
+    0.06395205855369568,
+    0.06518140435218811,
+    0.06378442049026489,
+    0.06337091326713562,
+    0.06350316107273102,
+    0.06427057087421417
+   ],
+   "candidate_samples": [
+    0.06425194442272186,
+    0.06400048732757568,
+    0.06428174674510956,
+    0.06379187107086182,
+    0.06412528455257416,
+    0.06366148591041565
+   ]
+  },
+  "edit64_canonical": {
+   "change_percent": -3.5378,
+   "worst_pair_percent": 1.8256,
+   "max_spread_percent": 7.4406,
+   "baseline_samples": [
+    0.6564110517501831,
+    0.6885025650262833,
+    0.7003452628850937,
+    0.6575006991624832,
+    0.6770621985197067,
+    0.6954800337553024
+   ],
+   "candidate_samples": [
+    0.6637126207351685,
+    0.7010716944932938,
+    0.6579719483852386,
+    0.659281387925148,
+    0.6525199860334396,
+    0.657321885228157
+   ]
+  },
+  "edit64_crlf": {
+   "change_percent": 2.4615,
+   "worst_pair_percent": 2.8637,
+   "max_spread_percent": 1.0672,
+   "baseline_samples": [
+    0.06306171417236328,
+    0.06350316107273102,
+    0.06346404552459717,
+    0.06283260881900787,
+    0.0632312148809433,
+    0.06293877959251404
+   ],
+   "candidate_samples": [
+    0.06478093564510345,
+    0.06466172635555267,
+    0.06518326699733734,
+    0.06463192403316498,
+    0.06473995745182037,
+    0.06452202796936035
+   ]
+  },
+  "edit64_first": {
+   "change_percent": 0.329,
+   "worst_pair_percent": 4.1167,
+   "max_spread_percent": 5.5601,
+   "baseline_samples": [
+    0.10272301733493805,
+    0.10554306209087372,
+    0.10230205953121185,
+    0.10201521217823029,
+    0.10206177830696106,
+    0.1020524650812149
+   ],
+   "candidate_samples": [
+    0.10202452540397644,
+    0.10301172733306885,
+    0.10651350021362305,
+    0.10392256081104279,
+    0.10162219405174255,
+    0.1009032130241394
+   ]
+  },
+  "edit64_insert": {
+   "change_percent": 1.0829,
+   "worst_pair_percent": 5.7397,
+   "max_spread_percent": 6.0308,
+   "baseline_samples": [
+    0.10156258940696716,
+    0.1058429479598999,
+    0.09982287883758545,
+    0.10007433593273163,
+    0.10071508586406708,
+    0.10036490857601166
+   ],
+   "candidate_samples": [
+    0.10575354099273682,
+    0.10151229798793793,
+    0.10555237531661987,
+    0.1017451286315918,
+    0.09995326399803162,
+    0.10149367153644562
+   ]
+  },
+  "edit64_last": {
+   "change_percent": 0.6963,
+   "worst_pair_percent": 4.4008,
+   "max_spread_percent": 4.5371,
+   "baseline_samples": [
+    0.10168179869651794,
+    0.10340288281440735,
+    0.09997189044952393,
+    0.0998321920633316,
+    0.09985454380512238,
+    0.09985454380512238
+   ],
+   "candidate_samples": [
+    0.10053440928459167,
+    0.10050460696220398,
+    0.10437145829200745,
+    0.10113045573234558,
+    0.09984150528907776,
+    0.10068342089653015
+   ]
+  },
+  "edit64_middle": {
+   "change_percent": 1.3574,
+   "worst_pair_percent": 5.3617,
+   "max_spread_percent": 5.1837,
+   "baseline_samples": [
+    0.10161474347114563,
+    0.10398402810096741,
+    0.10015442967414856,
+    0.09996257722377777,
+    0.10018423199653625,
+    0.09996257722377777
+   ],
+   "candidate_samples": [
+    0.10185129940509796,
+    0.10180287063121796,
+    0.10552443563938141,
+    0.10125525295734406,
+    0.10032393038272858,
+    0.10081753134727478
+   ]
+  },
+  "edit64_trailing_empty": {
+   "change_percent": 3.3226,
+   "worst_pair_percent": 5.2822,
+   "max_spread_percent": 4.721,
+   "baseline_samples": [
+    0.10474398732185364,
+    0.10808557271957397,
+    0.10321289300918579,
+    0.10335445404052734,
+    0.10341405868530273,
+    0.10361336171627045
+   ],
+   "candidate_samples": [
+    0.1042727380990982,
+    0.104464590549469,
+    0.1086648553609848,
+    0.10720454156398773,
+    0.10691210627555847,
+    0.10699406266212463
+   ]
+  },
+  "edit64_unchanged": {
+   "change_percent": 0.8464,
+   "worst_pair_percent": 4.7859,
+   "max_spread_percent": 5.5204,
+   "baseline_samples": [
+    0.09783543646335602,
+    0.10147131979465485,
+    0.09632483124732971,
+    0.09636394679546356,
+    0.09728409349918365,
+    0.09616278111934662
+   ],
+   "candidate_samples": [
+    0.09757466614246368,
+    0.10168366134166718,
+    0.10093487799167633,
+    0.09771250188350677,
+    0.09657256305217743,
+    0.09733438491821289
+   ]
+  },
+  "edit64_unicode": {
+   "change_percent": -12.1484,
+   "worst_pair_percent": -9.365,
+   "max_spread_percent": 5.2999,
+   "baseline_samples": [
+    0.15642493963241577,
+    0.16172416508197784,
+    0.1553557813167572,
+    0.15598349273204803,
+    0.15358440577983856,
+    0.15486404299736023
+   ],
+   "candidate_samples": [
+    0.13648346066474915,
+    0.13604387640953064,
+    0.1408066600561142,
+    0.13703294098377228,
+    0.13613514602184296,
+    0.13710372149944305
+   ]
+  },
+  "edit_stats@1280": {
+   "change_percent": -0.6135,
+   "worst_pair_percent": -0.4608,
+   "max_spread_percent": 0.7752,
+   "baseline_samples": [
+    0.654,
+    0.651,
+    0.651,
+    0.654,
+    0.652,
+    0.652
+   ],
+   "candidate_samples": [
+    0.645,
+    0.648,
+    0.648,
+    0.65,
+    0.646,
+    0.648
+   ]
+  },
+  "edit_stats@320": {
+   "change_percent": -0.6098,
+   "worst_pair_percent": 0.0,
+   "max_spread_percent": 1.2346,
+   "baseline_samples": [
+    0.164,
+    0.164,
+    0.164,
+    0.164,
+    0.163,
+    0.163
+   ],
+   "candidate_samples": [
+    0.163,
+    0.163,
+    0.162,
+    0.164,
+    0.163,
+    0.163
+   ]
+  },
+  "edit_stats@6400": {
+   "change_percent": -0.9081,
+   "worst_pair_percent": -0.2129,
+   "max_spread_percent": 0.8907,
+   "baseline_samples": [
+    3.311,
+    3.307,
+    3.293,
+    3.313,
+    3.288,
+    3.3
+   ],
+   "candidate_samples": [
+    3.256,
+    3.262,
+    3.273,
+    3.285,
+    3.281,
+    3.274
+   ]
+  },
+  "find_bar_cold_query": {
+   "change_percent": 0.3153,
+   "worst_pair_percent": 0.6725,
+   "max_spread_percent": 3.2011,
+   "baseline_samples": [
+    552.42,
+    569.34,
+    551.68,
+    560.17,
+    556.04,
+    553.93
+   ],
+   "candidate_samples": [
+    555.81,
+    557.75,
+    555.39,
+    557.66,
+    559.63,
+    555.04
+   ]
+  },
+  "find_bar_query_update": {
+   "change_percent": 0.0,
+   "worst_pair_percent": 3.9216,
+   "max_spread_percent": 5.8824,
+   "baseline_samples": [
+    0.54,
+    0.53,
+    0.51,
+    0.53,
+    0.53,
+    0.53
+   ],
+   "candidate_samples": [
+    0.53,
+    0.52,
+    0.53,
+    0.53,
+    0.54,
+    0.53
+   ]
+  },
+  "longtail200_fixture_tail_replace_ms": {
+   "change_percent": -0.0659,
+   "worst_pair_percent": 0.2967,
+   "max_spread_percent": 0.5397,
+   "baseline_samples": [
+    0.008478760719299316,
+    0.00847596675157547,
+    0.008499249815940857,
+    0.00847596675157547,
+    0.008488073945045471,
+    0.008502043783664703
+   ],
+   "candidate_samples": [
+    0.008480623364448547,
+    0.008501112461090088,
+    0.00845547765493393,
+    0.008475035429000854,
+    0.008474104106426239,
+    0.008500181138515472
+   ]
+  },
+  "longtail200_input_comparison_ms": {
+   "change_percent": -1.3941,
+   "worst_pair_percent": 2.8571,
+   "max_spread_percent": 7.1429,
+   "baseline_samples": [
+    0.000735,
+    0.00074,
+    0.0007355,
+    0.00075,
+    0.0007,
+    0.000705
+   ],
+   "candidate_samples": [
+    0.000725,
+    0.0007595,
+    0.0007405000000000001,
+    0.000725,
+    0.00072,
+    0.0007149999999999999
+   ]
+  },
+  "longtail200_narrative_ms": {
+   "change_percent": -0.3216,
+   "worst_pair_percent": 0.412,
+   "max_spread_percent": 2.9065,
+   "baseline_samples": [
+    0.2927095,
+    0.28894949999999997,
+    0.29266000000000003,
+    0.2913495,
+    0.29705000000000004,
+    0.29174900000000004
+   ],
+   "candidate_samples": [
+    0.29224,
+    0.29014,
+    0.29242999999999997,
+    0.28437900000000005,
+    0.2926445,
+    0.2902895
+   ]
+  },
+  "longtail200_retained_cost_ms": {
+   "change_percent": -2.9557,
+   "worst_pair_percent": 5.2198,
+   "max_spread_percent": 9.3407,
+   "baseline_samples": [
+    0.00199,
+    0.0018555,
+    0.0018755,
+    0.00199,
+    0.00182,
+    0.0018800000000000002
+   ],
+   "candidate_samples": [
+    0.001815,
+    0.0018295,
+    0.00179,
+    0.0017699999999999999,
+    0.001915,
+    0.001845
+   ]
+  },
+  "longtail200_row_projection_ms": {
+   "change_percent": -2.726,
+   "worst_pair_percent": 4.8338,
+   "max_spread_percent": 9.3656,
+   "baseline_samples": [
+    0.0016905000000000002,
+    0.00174,
+    0.001745,
+    0.00181,
+    0.0017455,
+    0.001655
+   ],
+   "candidate_samples": [
+    0.00164,
+    0.001735,
+    0.001655,
+    0.0016095,
+    0.0017404999999999999,
+    0.001735
+   ]
+  },
+  "longtail200_state_reset_ms": {
+   "change_percent": 0.0,
+   "worst_pair_percent": 60.0,
+   "max_spread_percent": 33.3333,
+   "baseline_samples": [
+    3e-05,
+    3e-05,
+    2.5e-05,
+    3e-05,
+    3e-05,
+    3e-05
+   ],
+   "candidate_samples": [
+    3e-05,
+    3e-05,
+    4e-05,
+    3e-05,
+    3e-05,
+    3e-05
+   ]
+  },
+  "longtail200_summary_ms": {
+   "change_percent": 0.0,
+   "worst_pair_percent": 0.0,
+   "max_spread_percent": 3.4483,
+   "baseline_samples": [
+    2.9e-05,
+    3e-05,
+    3e-05,
+    3e-05,
+    3e-05,
+    3e-05
+   ],
+   "candidate_samples": [
+    2.9e-05,
+    3e-05,
+    3e-05,
+    3e-05,
+    3e-05,
+    2.95e-05
+   ]
+  },
+  "longtail200_tool_projection_ms": {
+   "change_percent": -1.2339,
+   "worst_pair_percent": 3.1247,
+   "max_spread_percent": 6.3406,
+   "baseline_samples": [
+    0.0045455,
+    0.0044805,
+    0.0044005,
+    0.004535,
+    0.00445,
+    0.004475
+   ],
+   "candidate_samples": [
+    0.004345,
+    0.0046205,
+    0.00444,
+    0.004405,
+    0.0043805,
+    0.0044399999999999995
+   ]
+  },
+  "longtail200_total_ms": {
+   "change_percent": -0.5972,
+   "worst_pair_percent": 0.3814,
+   "max_spread_percent": 1.6503,
+   "baseline_samples": [
+    0.4269885,
+    0.4261585,
+    0.42598349999999996,
+    0.4291695,
+    0.43136399999999997,
+    0.4278195
+   ],
+   "candidate_samples": [
+    0.42720349999999996,
+    0.427784,
+    0.426564,
+    0.420839,
+    0.4231395,
+    0.4228145
+   ]
+  },
+  "longtail200_turn_projection_ms": {
+   "change_percent": -0.0721,
+   "worst_pair_percent": 1.5235,
+   "max_spread_percent": 2.971,
+   "baseline_samples": [
+    0.1351545,
+    0.1358495,
+    0.1370495,
+    0.135214,
+    0.13917000000000002,
+    0.13589
+   ],
+   "candidate_samples": [
+    0.1368095,
+    0.1356745,
+    0.135869,
+    0.137274,
+    0.133604,
+    0.133919
+   ]
+  },
+  "memory_keys": {
+   "change_percent": 0.0,
+   "worst_pair_percent": 10.0,
+   "max_spread_percent": 10.0,
+   "baseline_samples": [
+    0.11,
+    0.11,
+    0.1,
+    0.11,
+    0.11,
+    0.1
+   ],
+   "candidate_samples": [
+    0.1,
+    0.11,
+    0.11,
+    0.11,
+    0.11,
+    0.11
+   ]
+  },
+  "older_page_full_chain": {
+   "change_percent": -1.3841,
+   "worst_pair_percent": 1.3734,
+   "max_spread_percent": 5.7296,
+   "baseline_samples": [
+    11.61,
+    11.3,
+    11.65,
+    11.65,
+    11.19,
+    11.51
+   ],
+   "candidate_samples": [
+    11.48,
+    11.17,
+    11.47,
+    11.81,
+    11.33,
+    11.25
+   ]
+  },
+  "page_model_total": {
+   "change_percent": 1.819,
+   "worst_pair_percent": 10.596,
+   "max_spread_percent": 10.7852,
+   "baseline_samples": [
+    10.57,
+    11.71,
+    11.38,
+    11.19,
+    11.22,
+    11.32
+   ],
+   "candidate_samples": [
+    11.69,
+    11.26,
+    10.92,
+    11.77,
+    11.71,
+    10.8
+   ]
+  },
+  "page_narrative": {
+   "change_percent": 5.1724,
+   "worst_pair_percent": 7.1429,
+   "max_spread_percent": 14.2857,
+   "baseline_samples": [
+    0.28,
+    0.32,
+    0.29,
+    0.29,
+    0.29,
+    0.31
+   ],
+   "candidate_samples": [
+    0.3,
+    0.32,
+    0.3,
+    0.3,
+    0.31,
+    0.31
+   ]
+  },
+  "page_retained_cost": {
+   "change_percent": 2.0833,
+   "worst_pair_percent": 19.8758,
+   "max_spread_percent": 27.044,
+   "baseline_samples": [
+    3.22,
+    3.85,
+    3.58,
+    3.5,
+    3.62,
+    3.73
+   ],
+   "candidate_samples": [
+    3.86,
+    3.39,
+    3.49,
+    3.94,
+    4.04,
+    3.18
+   ]
+  },
+  "page_row_projection": {
+   "change_percent": 0.0,
+   "worst_pair_percent": 50.0,
+   "max_spread_percent": 50.0,
+   "baseline_samples": [
+    0.02,
+    0.02,
+    0.02,
+    0.02,
+    0.02,
+    0.02
+   ],
+   "candidate_samples": [
+    0.02,
+    0.03,
+    0.02,
+    0.02,
+    0.02,
+    0.02
+   ]
+  },
+  "page_tool_projection": {
+   "change_percent": 1.3667,
+   "worst_pair_percent": 20.7207,
+   "max_spread_percent": 25.8216,
+   "baseline_samples": [
+    2.1,
+    2.22,
+    2.26,
+    2.18,
+    2.21,
+    2.17
+   ],
+   "candidate_samples": [
+    2.23,
+    2.68,
+    2.13,
+    2.17,
+    2.55,
+    2.22
+   ]
+  },
+  "page_turn_projection": {
+   "change_percent": 2.4845,
+   "worst_pair_percent": 3.99,
+   "max_spread_percent": 7.0175,
+   "baseline_samples": [
+    3.99,
+    4.01,
+    4.0,
+    4.27,
+    4.06,
+    4.04
+   ],
+   "candidate_samples": [
+    4.08,
+    4.17,
+    4.0,
+    4.18,
+    4.18,
+    3.98
+   ]
+  },
+  "presentation_update": {
+   "change_percent": 2.3256,
+   "worst_pair_percent": 2.3256,
+   "max_spread_percent": 4.7619,
+   "baseline_samples": [
+    0.43,
+    0.44,
+    0.43,
+    0.43,
+    0.44,
+    0.43
+   ],
+   "candidate_samples": [
+    0.42,
+    0.44,
+    0.44,
+    0.44,
+    0.44,
+    0.44
+   ]
+  },
+  "presented_rows": {
+   "change_percent": 0.0,
+   "worst_pair_percent": 7.1429,
+   "max_spread_percent": 7.1429,
+   "baseline_samples": [
+    0.15,
+    0.15,
+    0.14,
+    0.15,
+    0.14,
+    0.15
+   ],
+   "candidate_samples": [
+    0.15,
+    0.14,
+    0.15,
+    0.15,
+    0.15,
+    0.15
+   ]
+  },
+  "release_model_state": {
+   "change_percent": 6.4123,
+   "worst_pair_percent": 11.3782,
+   "max_spread_percent": 14.9123,
+   "baseline_samples": [
+    12.84,
+    12.48,
+    12.41,
+    13.0,
+    14.13,
+    12.58
+   ],
+   "candidate_samples": [
+    12.76,
+    13.9,
+    13.75,
+    14.41,
+    13.3,
+    12.54
+   ]
+  },
+  "running_ids@1280": {
+   "change_percent": 0.0,
+   "worst_pair_percent": 0.0,
+   "max_spread_percent": 0.0,
+   "baseline_samples": [
+    0.001,
+    0.001,
+    0.001,
+    0.001,
+    0.001,
+    0.001
+   ],
+   "candidate_samples": [
+    0.001,
+    0.001,
+    0.001,
+    0.001,
+    0.001,
+    0.001
+   ]
+  },
+  "running_ids@320": {
+   "change_percent": 0.0,
+   "worst_pair_percent": 0.0,
+   "max_spread_percent": 0.0,
+   "baseline_samples": [
+    0.001,
+    0.001,
+    0.001,
+    0.001,
+    0.001,
+    0.001
+   ],
+   "candidate_samples": [
+    0.001,
+    0.001,
+    0.001,
+    0.001,
+    0.001,
+    0.001
+   ]
+  },
+  "running_ids@6400": {
+   "change_percent": 0.0,
+   "worst_pair_percent": 0.0,
+   "max_spread_percent": 0.0,
+   "baseline_samples": [
+    0.003,
+    0.003,
+    0.003,
+    0.003,
+    0.003,
+    0.003
+   ],
+   "candidate_samples": [
+    0.003,
+    0.003,
+    0.003,
+    0.003,
+    0.003,
+    0.003
+   ]
+  },
+  "single_turn_activity@2000": {
+   "change_percent": -0.3404,
+   "worst_pair_percent": 1.7964,
+   "max_spread_percent": 3.7376,
+   "baseline_samples": [
+    1.333,
+    1.321,
+    1.303,
+    1.336,
+    1.313,
+    1.323
+   ],
+   "candidate_samples": [
+    1.311,
+    1.316,
+    1.319,
+    1.36,
+    1.311,
+    1.324
+   ]
+  },
+  "single_turn_activity@400": {
+   "change_percent": -0.3752,
+   "worst_pair_percent": 0.7491,
+   "max_spread_percent": 2.6718,
+   "baseline_samples": [
+    0.267,
+    0.264,
+    0.264,
+    0.267,
+    0.266,
+    0.267
+   ],
+   "candidate_samples": [
+    0.264,
+    0.263,
+    0.262,
+    0.269,
+    0.267,
+    0.268
+   ]
+  },
+  "stage_conversation_activity": {
+   "change_percent": 0.0,
+   "worst_pair_percent": 0.0,
+   "max_spread_percent": 0.0,
+   "baseline_samples": [
+    0.07,
+    0.07,
+    0.07,
+    0.07,
+    0.07,
+    0.07
+   ],
+   "candidate_samples": [
+    0.07,
+    0.07,
+    0.07,
+    0.07,
+    0.07,
+    0.07
+   ]
+  },
+  "stage_narrative": {
+   "change_percent": 0.0,
+   "worst_pair_percent": 9.5238,
+   "max_spread_percent": 9.5238,
+   "baseline_samples": [
+    0.21,
+    0.22,
+    0.22,
+    0.21,
+    0.22,
+    0.22
+   ],
+   "candidate_samples": [
+    0.21,
+    0.22,
+    0.23,
+    0.23,
+    0.22,
+    0.22
+   ]
+  },
+  "stage_presentation_update": {
+   "change_percent": -0.6853,
+   "worst_pair_percent": 2.2989,
+   "max_spread_percent": 8.7778,
+   "baseline_samples": [
+    9.5,
+    9.47,
+    9.61,
+    9.57,
+    9.34,
+    9.42
+   ],
+   "candidate_samples": [
+    9.49,
+    9.0,
+    9.43,
+    9.79,
+    9.41,
+    9.2
+   ]
+  },
+  "stage_presented_rows": {
+   "change_percent": -2.2613,
+   "worst_pair_percent": 14.1243,
+   "max_spread_percent": 14.1243,
+   "baseline_samples": [
+    2.01,
+    1.77,
+    1.97,
+    2.02,
+    1.79,
+    2.01
+   ],
+   "candidate_samples": [
+    1.81,
+    2.02,
+    1.95,
+    1.94,
+    1.86,
+    1.98
+   ]
+  },
+  "stage_retained_cost": {
+   "change_percent": 0.0,
+   "worst_pair_percent": 0.0,
+   "max_spread_percent": 0.0,
+   "baseline_samples": [
+    0.01,
+    0.01,
+    0.01,
+    0.01,
+    0.01,
+    0.01
+   ],
+   "candidate_samples": [
+    0.01,
+    0.01,
+    0.01,
+    0.01,
+    0.01,
+    0.01
+   ]
+  },
+  "stage_row_projection": {
+   "change_percent": 0.0,
+   "worst_pair_percent": 0.0,
+   "max_spread_percent": 0.0,
+   "baseline_samples": [
+    0.02,
+    0.02,
+    0.02,
+    0.02,
+    0.02,
+    0.02
+   ],
+   "candidate_samples": [
+    0.02,
+    0.02,
+    0.02,
+    0.02,
+    0.02,
+    0.02
+   ]
+  },
+  "stage_tool_projection": {
+   "change_percent": -7.1429,
+   "worst_pair_percent": 16.6667,
+   "max_spread_percent": 16.6667,
+   "baseline_samples": [
+    0.07,
+    0.07,
+    0.06,
+    0.07,
+    0.06,
+    0.07
+   ],
+   "candidate_samples": [
+    0.07,
+    0.06,
+    0.06,
+    0.07,
+    0.07,
+    0.06
+   ]
+  },
+  "stage_total": {
+   "change_percent": 2.5641,
+   "worst_pair_percent": 2.5641,
+   "max_spread_percent": 5.2632,
+   "baseline_samples": [
+    0.39,
+    0.4,
+    0.39,
+    0.39,
+    0.39,
+    0.39
+   ],
+   "candidate_samples": [
+    0.38,
+    0.4,
+    0.4,
+    0.4,
+    0.4,
+    0.39
+   ]
+  },
+  "stage_turn_projection": {
+   "change_percent": 0.0,
+   "worst_pair_percent": 0.0,
+   "max_spread_percent": 0.0,
+   "baseline_samples": [
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.06
+   ],
+   "candidate_samples": [
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.06,
+    0.06
+   ]
+  },
+  "token2000_fixture_tail_replace_ms": {
+   "change_percent": 0.2813,
+   "worst_pair_percent": 2.6875,
+   "max_spread_percent": 5.1174,
+   "baseline_samples": [
+    0.08557271212339401,
+    0.08586980402469635,
+    0.08708145469427109,
+    0.08995179086923599,
+    0.08594244718551636,
+    0.08656736463308334
+   ],
+   "candidate_samples": [
+    0.08641276508569717,
+    0.08705258369445801,
+    0.08603651076555252,
+    0.08658226579427719,
+    0.08825212717056274,
+    0.08541345596313477
+   ]
+  },
+  "token2000_input_comparison_ms": {
+   "change_percent": 13.7931,
+   "worst_pair_percent": 25.0,
+   "max_spread_percent": 17.5,
+   "baseline_samples": [
+    0.00043,
+    0.0004,
+    0.00044,
+    0.00047000000000000004,
+    0.00042,
+    0.000445
+   ],
+   "candidate_samples": [
+    0.00049,
+    0.0005,
+    0.0004755,
+    0.0005405,
+    0.0004695,
+    0.0005
+   ]
+  },
+  "token2000_narrative_ms": {
+   "change_percent": -2.4854,
+   "worst_pair_percent": 1.496,
+   "max_spread_percent": 7.0793,
+   "baseline_samples": [
+    0.055037,
+    0.054477,
+    0.054762000000000005,
+    0.056437,
+    0.054431499999999994,
+    0.052812
+   ],
+   "candidate_samples": [
+    0.053052,
+    0.055292,
+    0.053472000000000006,
+    0.0516365,
+    0.054117,
+    0.0517915
+   ]
+  },
+  "token2000_retained_cost_ms": {
+   "change_percent": -0.9363,
+   "worst_pair_percent": 30.1413,
+   "max_spread_percent": 39.7249,
+   "baseline_samples": [
+    0.0031850000000000003,
+    0.003985,
+    0.00395,
+    0.004025,
+    0.0043,
+    0.004064999999999999
+   ],
+   "candidate_samples": [
+    0.004144999999999999,
+    0.00396,
+    0.0029805,
+    0.0032455,
+    0.0041645,
+    0.003974999999999999
+   ]
+  },
+  "token2000_row_projection_ms": {
+   "change_percent": 5.8124,
+   "worst_pair_percent": 29.4118,
+   "max_spread_percent": 29.0323,
+   "baseline_samples": [
+    0.00186,
+    0.0021149999999999997,
+    0.00188,
+    0.00193,
+    0.001905,
+    0.00187
+   ],
+   "candidate_samples": [
+    0.0019,
+    0.00208,
+    0.00217,
+    0.001925,
+    0.0018755,
+    0.00242
+   ]
+  },
+  "token2000_state_reset_ms": {
+   "change_percent": 0.0,
+   "worst_pair_percent": 0.0,
+   "max_spread_percent": 0.0,
+   "baseline_samples": [
+    3e-05,
+    3e-05,
+    3e-05,
+    3e-05,
+    3e-05,
+    3e-05
+   ],
+   "candidate_samples": [
+    3e-05,
+    3e-05,
+    3e-05,
+    3e-05,
+    3e-05,
+    3e-05
+   ]
+  },
+  "token2000_summary_ms": {
+   "change_percent": 0.0,
+   "worst_pair_percent": 0.0,
+   "max_spread_percent": 1.6949,
+   "baseline_samples": [
+    3e-05,
+    3e-05,
+    3e-05,
+    3e-05,
+    3e-05,
+    3e-05
+   ],
+   "candidate_samples": [
+    3e-05,
+    3e-05,
+    2.95e-05,
+    3e-05,
+    3e-05,
+    3e-05
+   ]
+  },
+  "token2000_tool_projection_ms": {
+   "change_percent": -0.5028,
+   "worst_pair_percent": 3.41,
+   "max_spread_percent": 7.9536,
+   "baseline_samples": [
+    0.01906,
+    0.0189005,
+    0.0192005,
+    0.0188055,
+    0.018695999999999997,
+    0.0188905
+   ],
+   "candidate_samples": [
+    0.019031,
+    0.019545,
+    0.018860500000000002,
+    0.0187405,
+    0.018105,
+    0.018381
+   ]
+  },
+  "token2000_total_ms": {
+   "change_percent": -1.7146,
+   "worst_pair_percent": 1.3798,
+   "max_spread_percent": 5.9646,
+   "baseline_samples": [
+    0.14598,
+    0.1453445,
+    0.1446845,
+    0.151905,
+    0.145685,
+    0.1433545
+   ],
+   "candidate_samples": [
+    0.14313,
+    0.14735,
+    0.1429095,
+    0.1421395,
+    0.14356999999999998,
+    0.14181500000000002
+   ]
+  },
+  "token2000_turn_projection_ms": {
+   "change_percent": -0.6243,
+   "worst_pair_percent": 1.6551,
+   "max_spread_percent": 5.6018,
+   "baseline_samples": [
+    0.063082,
+    0.062837,
+    0.06345200000000001,
+    0.066357,
+    0.062957,
+    0.063487
+   ],
+   "candidate_samples": [
+    0.0626075,
+    0.063877,
+    0.063107,
+    0.06346750000000001,
+    0.062337000000000004,
+    0.062637
+   ]
+  },
+  "token200_fixture_tail_replace_ms": {
+   "change_percent": -0.2255,
+   "worst_pair_percent": 0.4839,
+   "max_spread_percent": 0.9167,
+   "baseline_samples": [
+    0.008468516170978546,
+    0.008480623364448547,
+    0.008471310138702393,
+    0.008466653525829315,
+    0.008430331945419312,
+    0.008448027074337006
+   ],
+   "candidate_samples": [
+    0.008509494364261627,
+    0.008440576493740082,
+    0.008460134267807007,
+    0.008439645171165466,
+    0.008432194590568542,
+    0.008456408977508545
+   ]
+  },
+  "token200_input_comparison_ms": {
+   "change_percent": 0.8929,
+   "worst_pair_percent": 5.5556,
+   "max_spread_percent": 11.1111,
+   "baseline_samples": [
+    0.00027,
+    0.0003,
+    0.00027,
+    0.00028,
+    0.00028,
+    0.00028
+   ],
+   "candidate_samples": [
+    0.000285,
+    0.00029,
+    0.000285,
+    0.00028,
+    0.00027,
+    0.00027499999999999996
+   ]
+  },
+  "token200_narrative_ms": {
+   "change_percent": 1.0177,
+   "worst_pair_percent": 3.5779,
+   "max_spread_percent": 4.8894,
+   "baseline_samples": [
+    0.047106,
+    0.0477165,
+    0.045711,
+    0.046732,
+    0.047616500000000006,
+    0.0464065
+   ],
+   "candidate_samples": [
+    0.047897,
+    0.047957,
+    0.0473465,
+    0.0457215,
+    0.0474465,
+    0.046771499999999994
+   ]
+  },
+  "token200_retained_cost_ms": {
+   "change_percent": -3.6439,
+   "worst_pair_percent": 1.1538,
+   "max_spread_percent": 18.0769,
+   "baseline_samples": [
+    0.001535,
+    0.00148,
+    0.0013,
+    0.0015249999999999999,
+    0.0015305,
+    0.00146
+   ],
+   "candidate_samples": [
+    0.0014555,
+    0.001445,
+    0.001315,
+    0.0013145000000000001,
+    0.00151,
+    0.0014505
+   ]
+  },
+  "token200_row_projection_ms": {
+   "change_percent": -0.9091,
+   "worst_pair_percent": 3.0798,
+   "max_spread_percent": 13.7649,
+   "baseline_samples": [
+    0.001591,
+    0.00165,
+    0.00165,
+    0.00165,
+    0.00168,
+    0.00181
+   ],
+   "candidate_samples": [
+    0.00164,
+    0.00163,
+    0.0016755,
+    0.00157,
+    0.0016554999999999999,
+    0.00158
+   ]
+  },
+  "token200_state_reset_ms": {
+   "change_percent": 0.0,
+   "worst_pair_percent": 0.0,
+   "max_spread_percent": 0.0,
+   "baseline_samples": [
+    3e-05,
+    3e-05,
+    3e-05,
+    3e-05,
+    3e-05,
+    3e-05
+   ],
+   "candidate_samples": [
+    3e-05,
+    3e-05,
+    3e-05,
+    3e-05,
+    3e-05,
+    3e-05
+   ]
+  },
+  "token200_summary_ms": {
+   "change_percent": 0.0,
+   "worst_pair_percent": 0.0,
+   "max_spread_percent": 0.0,
+   "baseline_samples": [
+    3e-05,
+    3e-05,
+    3e-05,
+    3e-05,
+    3e-05,
+    3e-05
+   ],
+   "candidate_samples": [
+    3e-05,
+    3e-05,
+    3e-05,
+    3e-05,
+    3e-05,
+    3e-05
+   ]
+  },
+  "token200_tool_projection_ms": {
+   "change_percent": -0.878,
+   "worst_pair_percent": -0.2364,
+   "max_spread_percent": 5.6106,
+   "baseline_samples": [
+    0.004255,
+    0.00441,
+    0.00422,
+    0.00432,
+    0.00423,
+    0.00422
+   ],
+   "candidate_samples": [
+    0.004200499999999999,
+    0.00432,
+    0.00421,
+    0.0040905,
+    0.00422,
+    0.004176
+   ]
+  },
+  "token200_total_ms": {
+   "change_percent": 0.937,
+   "worst_pair_percent": 3.4479,
+   "max_spread_percent": 5.5962,
+   "baseline_samples": [
+    0.081433,
+    0.0798925,
+    0.07817750000000001,
+    0.0825525,
+    0.0813175,
+    0.07875750000000001
+   ],
+   "candidate_samples": [
+    0.081667,
+    0.0818175,
+    0.079953,
+    0.07984250000000001,
+    0.0812475,
+    0.081473
+   ]
+  },
+  "token200_turn_projection_ms": {
+   "change_percent": -0.387,
+   "worst_pair_percent": 0.9824,
+   "max_spread_percent": 2.2301,
+   "baseline_samples": [
+    0.024431,
+    0.024420999999999998,
+    0.024416,
+    0.0249605,
+    0.0249155,
+    0.0245305
+   ],
+   "candidate_samples": [
+    0.024671,
+    0.024385999999999998,
+    0.024385999999999998,
+    0.024385999999999998,
+    0.024535,
+    0.0243405
+   ]
+  }
+ },
+ "binary_sha256": {
+  "baseline": "f13ede19dc737452d3cdaa65c82214576915741b8ba6e1153feff429fef48460",
+  "candidate": "f88cc8c6b134780dc56e8add36e1e685b5e73822ce250d64649fd6e48a940b35"
+ },
+ "binary_sha256_after_all_pairs": {
+  "baseline": "f13ede19dc737452d3cdaa65c82214576915741b8ba6e1153feff429fef48460",
+  "candidate": "f88cc8c6b134780dc56e8add36e1e685b5e73822ce250d64649fd6e48a940b35"
+ },
+ "hashes_unchanged": true,
+ "rebuild_verification": {
+  "candidate": {
+   "rebuilt_sha256": "f88cc8c6b134780dc56e8add36e1e685b5e73822ce250d64649fd6e48a940b35",
+   "byte_identical": true,
+   "head": "c3d38a2c7b0b1f70a4a8ed314c43c21bb83868c4",
+   "porcelain": 2,
+   "porcelain_scope": "paths retained in receipt (F11 protocol): untracked round-24 report + round-24 archive directory; INDEX not among them; Sources/Tests committed at c3d38a2"
+  },
+  "baseline": {
+   "rebuilt_sha256": "f219e3db1fdb2a0b67d5661fe9d91f03bddb33d85ea7fc736bd4a3e85f28bd24",
+   "tested_sha256": "f13ede19dc737452d3cdaa65c82214576915741b8ba6e1153feff429fef48460",
+   "byte_identical": false,
+   "head": "1bcbc00f0b46fc35100b385c2e0dccc114e7c25a",
+   "porcelain": 3,
+   "porcelain_scope": "A/M Tests (tests patch checked into scratch worktree) + untracked build.log/rebuild.log (paths retained)",
+   "note": "THIRTEENTH occurrence of environment-level Linux baseline rebuild nondeterminism (round-22 F7 receipt protocol; causality remains HYPOTHESIS). Candidate rebuild byte-identical."
+  }
+ },
+ "driver_facts": {
+  "porcelain_main": 2,
+  "porcelain_main_scope": "paths retained: untracked round-24 report + round-24 archive directory (docs only; INDEX NOT among them — review F5 correction)",
+  "bench_runs_exit0": 60
+ },
+ "checks": {
+  "baseline": {
+   "exit": 132,
+   "expected": true,
+   "pass_before_trap": 14,
+   "trap_evidence": "same MISMATCH line as Mac; first structural case precondition (reviewer-confirmed: trap at structural case, not the walk; first 20 lines identical across platforms)"
+  },
+  "candidate": {
+   "exit": 0,
+   "pass": 104,
+   "skip": 1
+  },
+  "candidate_walk": "2669 strict-path (=2662+7), 1109267 fast-path, 0 fusion gaps",
+  "candidate_fuzz": "500 texts; 259/241 corpus classification identical to Mac"
+ },
+ "positives_beyond_spread_median_classifier": "edit64_crlf +2.46% (6/6 separated positive; spread 1.07%); ALL OTHER 94 metrics: no positive median beyond spread",
+ "per_pair_positive_exceptions": [
+  {
+   "metric": "edit64_crlf",
+   "pair": 1,
+   "pair_change_percent": 2.73,
+   "metric_spread_percent": 1.07
+  },
+  {
+   "metric": "edit64_crlf",
+   "pair": 2,
+   "pair_change_percent": 1.82,
+   "metric_spread_percent": 1.07
+  },
+  {
+   "metric": "edit64_crlf",
+   "pair": 3,
+   "pair_change_percent": 2.71,
+   "metric_spread_percent": 1.07
+  },
+  {
+   "metric": "edit64_crlf",
+   "pair": 4,
+   "pair_change_percent": 2.86,
+   "metric_spread_percent": 1.07
+  },
+  {
+   "metric": "edit64_crlf",
+   "pair": 5,
+   "pair_change_percent": 2.39,
+   "metric_spread_percent": 1.07
+  },
+  {
+   "metric": "edit64_crlf",
+   "pair": 6,
+   "pair_change_percent": 2.52,
+   "metric_spread_percent": 1.07
+  },
+  {
+   "metric": "edit64_middle",
+   "pair": 3,
+   "pair_change_percent": 5.36,
+   "metric_spread_percent": 5.18
+  },
+  {
+   "metric": "edit64_trailing_empty",
+   "pair": 3,
+   "pair_change_percent": 5.28,
+   "metric_spread_percent": 4.72
+  },
+  {
+   "metric": "longtail200_state_reset_ms",
+   "pair": 3,
+   "pair_change_percent": 60.0,
+   "metric_spread_percent": 33.33
+  },
+  {
+   "metric": "token2000_input_comparison_ms",
+   "pair": 2,
+   "pair_change_percent": 25.0,
+   "metric_spread_percent": 17.5
+  },
+  {
+   "metric": "token2000_row_projection_ms",
+   "pair": 6,
+   "pair_change_percent": 29.41,
+   "metric_spread_percent": 29.03
+  }
+ ],
+ "per_pair_exceptions_note": "11 exceptions: 6 are edit64_crlf's own pairs; edit64_middle P3 and edit64_trailing_empty P3 borderline; longtail200_state_reset P3 (+60%/33.33%) and token2000_input_comparison P2 (+25%/17.5%) are ~0.0002ms micro-metric print-grid steps; token2000_row_projection P6 +29.41/29.03 borderline.",
+ "iteration_history": {
+  "v1_172fd87": {
+   "status": "reviewer-verified iteration history",
+   "headline": "95 metrics zero positives beyond spread; 5 borderline per-pair exceptions; edit512_unchanged -4.65% 6/6 negative = build/layout or run-noise hypothesis (formal sides share identical Tests bytes; NOT reappearing in v2: +1.19% in band)",
+   "binary_sha256": {
+    "baseline": "354046d56eeed57e9b811f4ba593f23d6a4bc4dec4549bed82bcf55e159e3835",
+    "candidate": "dc6b16db0786cc46bc7961cc73123a5925ca5bc7ee9a28d4b4689bb6b54182ab"
+   },
+   "rebuild": {
+    "candidate_byte_identical": true,
+    "baseline_nondeterminism": "twelfth occurrence (ae42e3c1 vs tested 354046d5)"
+   },
+   "full_data": "git d231162 round-24/linux.json; raw logs .local/round24/ab24/; summary .local/round24/linux-ab-summary.json"
+  }
+ },
+ "disclosures": [
+  "edit64_crlf +2.46% 6/6 separated positive (edit512_crlf +3.11% in band): the crlf scenarios route through lineDiff's probe path (single-line whole-text canonical comparison; fullLineDiff never entered at >1024B); SessionEditStats.swift has ZERO changes in this round's diff (verifiable); this round's product change lives in ConversationProjection.swift (same WorkbenchCore module) — a machine-level layout-effect mechanism remains HYPOTHESIS (no instruction-level forensics; review F4 discipline: unchanged source does not prove unchanged generated instructions). Magnitude +2.46% is far inside the registered round-8 Linux edit-lines layout-sensitivity band (+-23-31% on untouched scenarios across builds); round-23 v2 showed the same crlf-family signature (+3.84%/+2.18% separated) on a tests-only byte move. Mac (arbitration) crlf metrics in band. Disposed per round-15 precedent: full disclosure, Mac arbitrates; does not block the no-regression gate.",
+  "Baseline rebuild nondeterminism (thirteenth occurrence) receipted with path lists; candidate rebuild byte-identical (f88cc8c6)."
+ ],
+ "iteration_history_note": "v1=172fd87 formal data (reviewer-verified: 183 metrics recomputed from 120 raw logs, zero mismatches) is retained in git history at commit d231162 (round-24/{macos,linux}.json v1 form) and in workspace summaries .local/round24/{macos,linux}-ab-summary.json; v2=c3d38a2 differs only by review F1/F6 comment+print corrections (product logic unchanged)."
+}

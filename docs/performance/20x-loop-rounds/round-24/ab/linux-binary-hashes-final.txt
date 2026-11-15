@@ -1,0 +1,2 @@
+354046d56eeed57e9b811f4ba593f23d6a4bc4dec4549bed82bcf55e159e3835  .local/round24/base-checks24
+dc6b16db0786cc46bc7961cc73123a5925ca5bc7ee9a28d4b4689bb6b54182ab  .local/round24/cand-checks24

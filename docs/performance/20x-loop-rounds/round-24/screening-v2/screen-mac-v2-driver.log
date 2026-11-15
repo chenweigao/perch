@@ -1,0 +1,55 @@
+=== prepare Sun Nov 15 23:38:58 CST 2026 ===
+HEAD is now at 1bcbc00 Merge pull request #345 from chenweigao/perf/20x-loop-23-20261115
+HEAD=1bcbc00f0b46fc35100b385c2e0dccc114e7c25a
+porcelain_before=0
+=== apply tests patch + base build (v2 design: BOTH sides carry the tests
+# patch so bench-code layout is isolated; the base check run is EXPECTED to trap on
+# the zero-gap assertion — that trap is the evidence the unfixed product violates
+# the new contract, and it is recorded, not gated on) Sun Nov 15 23:39:01 CST 2026 ===
+tests_patch=ok
+base_build_exit=0
+=== apply product patch + candidate build Sun Nov 15 23:40:15 CST 2026 ===
+product_patch=ok
+cand_build_exit=0
+4ebeb42182c6f1c2323984e931da9b77ba744231d845c713d5971b018b74212f  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round24b-base/out/Products/Release/WorkbenchChecks
+6bac46c645ecc2d269714b49ec22629bd533047c8b23024c9c557abd843b421a  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round24b-cand/out/Products/Release/WorkbenchChecks
+=== checks: base (EXPECTED trap = gap evidence) + candidate (must pass) Sun Nov 15 23:41:27 CST 2026 ===
+/Users/<mini>/Library/Logs/perf-loop-20261115/screen-mac-v2.sh: line 39: 48653 Trace/BPT trap: 5       "$BASE" > "$RES/checks-base.log" 2>&1
+base_checks_exit=133 (EXPECTED nonzero: unfixed product violates the zero-gap assertion)
+base_walk_mismatch_lines=0
+cand_checks_exit=0 pass=105
+PASS: collapsedWhitespace whitespace-adjacent walk (2708 strict-path, 1109228 fast-path, 0 fusion gaps — pinned set U+0E33/U+0EB3/U+1F3FB-U+1F3FF complete on this toolchain)
+PASS: collapsedWhitespace fast-path fuzz (500 texts; 259 stayed on the byte path, 241 strict-routed)
+=== in-context screening: 3 alternating, presentation-token + streaming + mode 1 (in place) Sun Nov 15 23:41:53 CST 2026 ===
+it=1 side=base p_exit=0
+it=1 side=base s_exit=0
+it=1 side=base c_exit=0
+token200_narrative_ms=0.0391  token200_total_ms=0.0515  token2000_narrative_ms=0.0331  token2000_total_ms=0.0705  longtail200_narrative_ms=0.1472  longtail200_total_ms=0.1607  [it=1 side=base]
+it=1 side=base stream_narrative=0.17 cold@2000=6.66 find_bar=
+it=1 side=cand p_exit=0
+it=1 side=cand s_exit=0
+it=1 side=cand c_exit=0
+token200_narrative_ms=0.0380  token200_total_ms=0.0506  token2000_narrative_ms=0.0340  token2000_total_ms=0.0725  longtail200_narrative_ms=0.1479  longtail200_total_ms=0.1615  [it=1 side=cand]
+it=1 side=cand stream_narrative=0.17 cold@2000=6.78 find_bar=
+it=2 side=base p_exit=0
+it=2 side=base s_exit=0
+it=2 side=base c_exit=0
+token200_narrative_ms=0.0408  token200_total_ms=0.0549  token2000_narrative_ms=0.0334  token2000_total_ms=0.0704  longtail200_narrative_ms=0.1467  longtail200_total_ms=0.1603  [it=2 side=base]
+it=2 side=base stream_narrative=0.16 cold@2000=6.64 find_bar=
+it=2 side=cand p_exit=0
+it=2 side=cand s_exit=0
+it=2 side=cand c_exit=0
+token200_narrative_ms=0.0356  token200_total_ms=0.0471  token2000_narrative_ms=0.0337  token2000_total_ms=0.0700  longtail200_narrative_ms=0.1570  longtail200_total_ms=0.1702  [it=2 side=cand]
+it=2 side=cand stream_narrative=0.17 cold@2000=6.73 find_bar=
+it=3 side=base p_exit=0
+it=3 side=base s_exit=0
+it=3 side=base c_exit=0
+token200_narrative_ms=0.0362  token200_total_ms=0.0475  token2000_narrative_ms=0.0331  token2000_total_ms=0.0703  longtail200_narrative_ms=0.1475  longtail200_total_ms=0.1618  [it=3 side=base]
+it=3 side=base stream_narrative=0.16 cold@2000=6.93 find_bar=
+it=3 side=cand p_exit=0
+it=3 side=cand s_exit=0
+it=3 side=cand c_exit=0
+token200_narrative_ms=0.0374  token200_total_ms=0.0503  token2000_narrative_ms=0.0337  token2000_total_ms=0.0704  longtail200_narrative_ms=0.1482  longtail200_total_ms=0.1619  [it=3 side=cand]
+it=3 side=cand stream_narrative=0.17 cold@2000=6.84 find_bar=
+porcelain_after=0
+DONE Sun Nov 15 23:42:45 CST 2026

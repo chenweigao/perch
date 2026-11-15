@@ -1,0 +1,245 @@
+{
+ "run": "https://github.com/chenweigao/perch/actions/runs/43733666603 (head 89f2af0, first attempt)",
+ "gate_error": "Unclosed delimiter performance regressed (parse_unclosed_4096 ratio 1.2777 > limit 1.25)",
+ "round_variant_order": {
+  "round-1-baseline": "baseline",
+  "round-2-candidate": "candidate",
+  "round-3-candidate": "candidate",
+  "round-4-baseline": "baseline",
+  "round-5-baseline": "baseline",
+  "round-6-candidate": "candidate"
+ },
+ "recomputed_parse30_scenario_table": [
+  {
+   "scenario": "ordinary_backslashes",
+   "baseline_rounds_ms": [
+    5.6247,
+    3.4169,
+    4.1283
+   ],
+   "candidate_rounds_ms": [
+    4.6813,
+    3.253,
+    3.523
+   ],
+   "ratio_median": 0.8534,
+   "baseline_swing_x": 1.65,
+   "candidate_swing_x": 1.44,
+   "candidate_best_vs_baseline_median": 0.788
+  },
+  {
+   "scenario": "plain",
+   "baseline_rounds_ms": [
+    3.5371,
+    3.5948,
+    4.2954
+   ],
+   "candidate_rounds_ms": [
+    7.6439,
+    3.8033,
+    3.3053
+   ],
+   "ratio_median": 1.058,
+   "baseline_swing_x": 1.21,
+   "candidate_swing_x": 2.31,
+   "candidate_best_vs_baseline_median": 0.9195
+  },
+  {
+   "scenario": "reply",
+   "baseline_rounds_ms": [
+    2.4483,
+    2.3284,
+    3.0853
+   ],
+   "candidate_rounds_ms": [
+    3.7574,
+    2.8602,
+    2.162
+   ],
+   "ratio_median": 1.1682,
+   "baseline_swing_x": 1.33,
+   "candidate_swing_x": 1.74,
+   "candidate_best_vs_baseline_median": 0.8831
+  },
+  {
+   "scenario": "stream_16",
+   "baseline_rounds_ms": [
+    1.3793,
+    1.1845,
+    1.3815
+   ],
+   "candidate_rounds_ms": [
+    1.6902,
+    1.5365,
+    1.2363
+   ],
+   "ratio_median": 1.114,
+   "baseline_swing_x": 1.17,
+   "candidate_swing_x": 1.37,
+   "candidate_best_vs_baseline_median": 0.8964
+  },
+  {
+   "scenario": "stream_64",
+   "baseline_rounds_ms": [
+    1.4212,
+    1.2405,
+    1.2903
+   ],
+   "candidate_rounds_ms": [
+    1.5168,
+    1.4563,
+    1.1304
+   ],
+   "ratio_median": 1.1287,
+   "baseline_swing_x": 1.15,
+   "candidate_swing_x": 1.34,
+   "candidate_best_vs_baseline_median": 0.8761
+  },
+  {
+   "scenario": "unclosed_256",
+   "baseline_rounds_ms": [
+    0.3009,
+    0.311,
+    0.2636
+   ],
+   "candidate_rounds_ms": [
+    0.7972,
+    0.2763,
+    0.2732
+   ],
+   "ratio_median": 0.9183,
+   "baseline_swing_x": 1.18,
+   "candidate_swing_x": 2.92,
+   "candidate_best_vs_baseline_median": 0.9078
+  },
+  {
+   "scenario": "unclosed_1024",
+   "baseline_rounds_ms": [
+    1.7849,
+    1.0884,
+    1.0345
+   ],
+   "candidate_rounds_ms": [
+    1.2301,
+    1.0536,
+    1.0379
+   ],
+   "ratio_median": 0.968,
+   "baseline_swing_x": 1.73,
+   "candidate_swing_x": 1.19,
+   "candidate_best_vs_baseline_median": 0.9536
+  },
+  {
+   "scenario": "unclosed_4096",
+   "baseline_rounds_ms": [
+    4.0138,
+    3.9205,
+    6.6778
+   ],
+   "candidate_rounds_ms": [
+    5.1285,
+    5.193,
+    4.272
+   ],
+   "ratio_median": 1.2777,
+   "baseline_swing_x": 1.7,
+   "candidate_swing_x": 1.22,
+   "candidate_best_vs_baseline_median": 1.0643
+  }
+ ],
+ "candidate_earliest_round_slowest_in": "8/8 scenarios (r2/r3 ran back-to-back early; r6 late ≈ baseline norm)",
+ "candidate_round_detail": {
+  "ordinary_backslashes": {
+   "slowest_candidate_round": "round-2-candidate",
+   "values": {
+    "round-2-candidate": 4.6813,
+    "round-3-candidate": 3.253,
+    "round-6-candidate": 3.523
+   }
+  },
+  "plain": {
+   "slowest_candidate_round": "round-2-candidate",
+   "values": {
+    "round-2-candidate": 7.6439,
+    "round-3-candidate": 3.8033,
+    "round-6-candidate": 3.3053
+   }
+  },
+  "reply": {
+   "slowest_candidate_round": "round-2-candidate",
+   "values": {
+    "round-2-candidate": 3.7574,
+    "round-3-candidate": 2.8602,
+    "round-6-candidate": 2.162
+   }
+  },
+  "stream_16": {
+   "slowest_candidate_round": "round-2-candidate",
+   "values": {
+    "round-2-candidate": 1.6902,
+    "round-3-candidate": 1.5365,
+    "round-6-candidate": 1.2363
+   }
+  },
+  "stream_64": {
+   "slowest_candidate_round": "round-2-candidate",
+   "values": {
+    "round-2-candidate": 1.5168,
+    "round-3-candidate": 1.4563,
+    "round-6-candidate": 1.1304
+   }
+  },
+  "unclosed_256": {
+   "slowest_candidate_round": "round-2-candidate",
+   "values": {
+    "round-2-candidate": 0.7972,
+    "round-3-candidate": 0.2763,
+    "round-6-candidate": 0.2732
+   }
+  },
+  "unclosed_1024": {
+   "slowest_candidate_round": "round-2-candidate",
+   "values": {
+    "round-2-candidate": 1.2301,
+    "round-3-candidate": 1.0536,
+    "round-6-candidate": 1.0379
+   }
+  },
+  "unclosed_4096": {
+   "slowest_candidate_round": "round-3-candidate",
+   "values": {
+    "round-2-candidate": 5.1285,
+    "round-3-candidate": 5.193,
+    "round-6-candidate": 4.272
+   }
+  }
+ },
+ "noise_evidence": [
+  "CALL-PATH UNRELATED (verified this round despite Sources changing): the math app compiles all of WorkbenchCore, but its measured paths are ReplyDocument.parse (cmark), ReplyMathAttachment.string (SwiftMath typeset), ReplyMathImage cache metrics and window scheduling — none call collapsedWhitespace. The ONLY functions changed this round (beginsBindingMark via new isPinnedFusingScalar) are reachable exclusively through String.collapsedWhitespace, whose call sites are ActivityNarrative.swift:197, ConversationProjection excerpt derivations (lines 222/230/237) and ConversationThinkingSummary.swift:24 — never invoked by Tests/MathPerformancePreview/App.swift or the contracts binary. The changed code is DEAD in every math scenario; only whole-binary layout/codegen can differ.",
+  "Gated ratio 1.2777 is 2.2% over the 1.25 limit, driven by candidate median 5.128 (= its early round r2 value) vs baseline median 4.014; candidate LATE round r6 = 4.272 is within +6.4% of baseline median and +9.0% of baseline best 3.921 — inside the run's own x1.70 baseline / x1.22 candidate swing envelope.",
+  "Candidate early-round bias across scenarios: r2 is the slowest candidate round in 8/8 scenarios (ordinary 4.681, plain 7.644 = x2.31 own-swing outlier, reply 3.757, stream_16 1.690, stream_64 1.517, unclosed_256 0.797 = x2.92 outlier, unclosed_1024 1.230); baseline also carries an outlier (unclosed_4096 r5 = 6.678, x1.70). Same shared-runner early-round signature as round-23 (run 43724372194) and round-22 (e6af380).",
+  "Ungated scenario ratios span 0.85..1.17 in BOTH directions across the same binaries.",
+  "Shared runner: cpu_count 3.",
+  "Second consecutive first-attempt failure of this gate on this PR branch with identical error, while the previous head bc2d93d (round-23, containing the round-23 product change) passed 15/15 first try — repo-level runner conditions during this window."
+ ],
+ "disposition": "Same-head rerun (rounds 12/14/16/22/23 precedent) PLUS quiet-machine real-gate retest via PerfRunner (round-22 protocol; warranted this round because Sources changed unlike round-23): WORKBENCH_MATH_BASELINE_REF=1bcbc00 (PR base), fresh-directory guard inputs removed, real scripts/check-math-performance.sh. Gates never modified.",
+ "binary_sha256_from_job": {
+  "baseline": "see summary.json in artifact",
+  "note": "fingerprints baseline 287b6dbde0f1... candidate b47f1eff6f61... (source_input_sha256, changed_inputs=True)"
+ },
+ "quiet_machine_retest": {
+  "protocol": "round-14/16/22 precedent; real gate scripts/check-math-performance.sh on the mini via PerfRunner (quiet Aqua session), WORKBENCH_MATH_BASELINE_REF=1bcbc00f0b46fc35100b385c2e0dccc114e7c25a (PR base), head 89f2af0, fresh-directory guard inputs removed, porcelain 0/0",
+  "status": "passed",
+  "math_exit": 0,
+  "typeset_best_ratios": {
+   "typeset-32": 0.9943,
+   "typeset-128": 0.9933,
+   "typeset-512": 1.0045
+  },
+  "note": "warranted this round because Sources changed (unlike round-23 where the same-sources green control sufficed)",
+  "evidence": [
+   "round-24/ci/math-retest-89f2af0.log",
+   "round-24/ci/math-retest-summary.json"
+  ]
+ }
+}

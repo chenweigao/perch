@@ -5,6 +5,15 @@ import WorkbenchCore
 /// split/join on adversarial whitespace: non-ASCII whitespace (U+3000, NBSP,
 /// U+2000), combining marks right after a space (they fuse into one
 /// non-whitespace Character), CRLF, ZWJ sequences and variation selectors.
+///
+/// Round-24 contract fix: Thai/Lao Sara-Am (U+0E33/U+0EB3) and the emoji
+/// skin-tone modifiers (U+1F3FB…U+1F3FF) fuse with a PRECEDING space into one
+/// Character whose `isWhitespace` is true — the strict form drops the whole
+/// cluster, while the pre-fix byte path kept the scalar (the exhaustive walk's
+/// seven characterized gaps, identical on both toolchains). The product now
+/// pins them in `beginsBindingMark` and falls back to strict; the walk below
+/// asserts zero remaining gaps, and the structural cases and fast-path fuzz
+/// cover the shapes around the fix.
 func checkCollapsedWhitespace() {
     let cases = [
         "", " ", "   ", "\t", "\r\n", "a", "  a  ",
@@ -19,6 +28,14 @@ func checkCollapsedWhitespace() {
         "malayalam \u{D4E} letter", "double \u{600}\u{600} prepend",
         "kaithi \u{110BD} digit", "a\u{600}b c",
         String(repeating: "word 中文\tmixed ", count: 120),
+        // Round-24 pinned fusion set: whitespace-adjacent shapes. Strict
+        // drops the space+fused-scalar cluster; the product must match that
+        // exactly (it now falls back to strict for these).
+        " \u{0E33}x", "a \u{0E33} b", "a  \u{0E33}  b", "a \u{0E33}", "\u{0E33}", "\u{0EB3} leading",
+        "thai ก\u{0E33} after letter stays fast", "a\u{0E33}b c",
+        " \u{1F3FB}x", "a \u{1F3FF} b", "\u{1F3FC}", "tab\t\u{1F3FD}x",
+        "👍\u{1F3FB} after emoji base stays fast", "👍 \u{1F3FE}modifier after space",
+        "mixed \u{0E33}\u{1F3FB} run", "x \u{0E33}\u{0E33} y",
     ]
     for text in cases {
         let expected = text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
@@ -67,18 +84,21 @@ func checkCollapsedWhitespace() {
         precondition(text.collapsedWhitespace == expected,
                      "prepend fast-path miss at U+\(String(fusingValue, radix: 16, uppercase: true))")
     }
-    // Whitespace-adjacent exhaustive walk, pinning the never-binding prefilter:
-    // for every scalar, the byte path must equal exactly what the property
-    // logic that decides the strict fallback dictates. A scalar detected as a
-    // binder (or as non-ASCII whitespace) must yield the Character-accurate
-    // split/join; every other scalar — including all scalars inside the pinned
-    // never-binding ranges — must come back from the fast path as itself.
-    // Scalars whose real fusion disagrees with the property logic (Thai/Lao/
-    // Myanmar Sara-Am class, Apple corporate-PUA on macOS, emoji skin-tone
-    // modifiers) are a pre-existing fast-path contract gap; this walk
-    // characterizes them per platform, so a future fix — or Unicode drift —
-    // fails here loudly instead of moving excerpts silently.
-    var binding = 0, fastPath = 0, characterizedGap = 0
+    // Whitespace-adjacent exhaustive walk, pinning the never-binding prefilter
+    // AND the pinned fusion set: for every scalar, the byte path must equal
+    // exactly what the detection logic that decides the strict fallback
+    // dictates. A scalar detected as a binder (property logic, ZWJ, the
+    // round-24 pinned fusion set, or non-ASCII whitespace) must yield the
+    // Character-accurate split/join; every other scalar — including all
+    // scalars inside the pinned never-binding ranges — must come back from
+    // the fast path as itself. Round-24: the formerly characterized seven
+    // gaps (Thai/Lao Sara-Am, emoji skin-tone modifiers) are now pinned in
+    // the product, so any scalar that really fuses with a preceding space
+    // MUST be detected — a gap is a contract violation and fails here
+    // loudly. Unicode data drift that introduces a new fuser therefore
+    // surfaces as this precondition, exactly like a Prepend-set lag.
+    var binding = 0, fastPath = 0, fusionGap = 0
+    var gapScalars: [String] = []
     var misses: [String] = []
     var probe: UInt32 = 0x80
     while probe < 0x110000 {
@@ -86,7 +106,8 @@ func checkCollapsedWhitespace() {
         if let scalar = Unicode.Scalar(probe) {
             let text = " " + String(scalar) + " "
             let category = scalar.properties.generalCategory
-            let detected = probe == 0x200D || scalar.properties.isGraphemeExtend
+            let pinnedFuses = probe == 0x0E33 || probe == 0x0EB3 || (0x1F3FB...0x1F3FF).contains(probe)
+            let detected = probe == 0x200D || pinnedFuses || scalar.properties.isGraphemeExtend
                 || category == .nonspacingMark || category == .spacingMark || category == .enclosingMark
                 || scalar.properties.isWhitespace
             // GB9b runs the other way: a Prepend scalar absorbs the trailing
@@ -100,13 +121,63 @@ func checkCollapsedWhitespace() {
                 misses.append("U+\(String(probe, radix: 16, uppercase: true)) expected=\(expected.debugDescription) got=\(got.debugDescription)")
             }
             if detected { binding += 1 } else { fastPath += 1 }
-            if !detected, (" " + String(scalar)).count == 1 { characterizedGap += 1 }
+            if !detected, (" " + String(scalar)).count == 1 {
+                fusionGap += 1
+                gapScalars.append("U+\(String(probe, radix: 16, uppercase: true))")
+            }
         }
         probe += 1
     }
     for miss in misses { print("WHITESPACE-ADJACENT MISMATCH \(miss)") }
     precondition(misses.isEmpty, "whitespace-adjacent walk: \(misses.count) mismatches")
-    print("PASS: collapsedWhitespace whitespace-adjacent walk (\(binding) strict-path, \(fastPath) fast-path, \(characterizedGap) characterized gaps)")
+    precondition(fusionGap == 0,
+                 "undetected whitespace-adjacent fusers (contract gap; extend the product's pinned fusion set): \(gapScalars.joined(separator: " "))")
+    print("PASS: collapsedWhitespace whitespace-adjacent walk (\(binding) strict-path, \(fastPath) fast-path, \(fusionGap) fusion gaps — pinned set U+0E33/U+0EB3/U+1F3FB-U+1F3FF complete on this toolchain)")
     print("PASS: collapsedWhitespace prepend set matches stdlib fusion (\(fusing.count) fusing scalars)")
+
+    // Round-24 fast-path fuzz: the mixed corpus above contains non-ASCII
+    // whitespace, so it always routes to strict and never exercises the byte
+    // path. This seeded fuzz keeps whitespace ASCII-only (so the fast path
+    // runs) while placing the pinned fusion scalars, combining marks, ZWJ and
+    // emoji bases in whitespace-adjacent and interior positions.
+    // Even-indexed texts draw only from fast pieces (guaranteed byte-path
+    // coverage); odd-indexed texts mix in the strict triggers.
+    let fastPieces = ["a", " ", "\t", "\n", "  ", "x", "👍", "中", "b", "\r\n", "word", "  中文  "]
+    let mixedPieces = fastPieces + ["\u{0E33}", "\u{0EB3}", "\u{1F3FB}", "\u{1F3FF}", "\u{301}", "\u{200D}"]
+    var state: UInt64 = 0x2026_1115_6347_0024
+    func next() -> Int {
+        state = state &* 6364136223846793005 &+ 1442695040888963407
+        return Int((state >> 32) & 0x7FFF_FFFF)
+    }
+    var fastPathFuzzed = 0, strictRouted = 0
+    for index in 0..<500 {
+        let fuzzPieces = (index % 2 == 0) ? fastPieces : mixedPieces
+        var text = ""
+        for _ in 0..<(1 + next() % 40) { text += fuzzPieces[next() % fuzzPieces.count] }
+        let expected = text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        precondition(text.collapsedWhitespace == expected,
+                     "fast-path fuzz mismatch for \(text.debugDescription)")
+        // Corpus classification (NOT execution routing): needsStrict flags any
+        // text CONTAINING a potential strict-trigger scalar anywhere, while the
+        // product only triggers on whitespace-adjacent positions — texts with a
+        // trigger in non-adjacent position stay on the byte path (review F1:
+        // independent source-level routing replay counted 304 byte-path / 196
+        // strict for this corpus). The even-indexed fast-pieces-only half still
+        // GUARANTEES byte-path coverage because those texts contain no trigger
+        // scalar at all.
+        let needsStrict = text.unicodeScalars.contains { s in
+            let v = s.value
+            return v == 0x200D || v == 0x0E33 || v == 0x0EB3 || (0x1F3FB...0x1F3FF).contains(v)
+                || s.properties.isGraphemeExtend || v == 0x0600
+                || { switch s.properties.generalCategory {
+                    case .nonspacingMark, .spacingMark, .enclosingMark: return true
+                    default: return false } }()
+                || (v >= 0x80 && s.properties.isWhitespace)
+        }
+        if needsStrict { strictRouted += 1 } else { fastPathFuzzed += 1 }
+    }
+    precondition(fastPathFuzzed >= 200 && strictRouted > 0,
+                 "fast-path fuzz degenerate: fast \(fastPathFuzzed), strict \(strictRouted)")
+    print("PASS: collapsedWhitespace fast-path fuzz (500 texts; \(fastPathFuzzed) contain no potential strict-trigger scalar, \(strictRouted) contain at least one; corpus classification, not execution counts)")
     print("PASS: collapsedWhitespace equals Character-accurate split/join on adversarial whitespace")
 }

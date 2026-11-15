@@ -1,0 +1,94 @@
+HEAD_main=172fd875dd30bb3910563e05f0e6e2ee571e75fd
+porcelain_main=2
+=== build candidate in main worktree (172fd87) Sun Nov 15 23:46:10 CST 2026 ===
+candidate_build_exit=0
+=== build baseline (1bcbc00 + 172fd87 Tests; tree kept alive) Sun Nov 15 23:46:10 CST 2026 ===
+baseline_build_exit=0
+=== checks both sides (base trap EXPECTED = gap evidence; candidate must pass) Sun Nov 15 23:48:54 CST 2026 ===
+candidate_checks_exit=0 pass=104 skip=1
+.local/round24/run-r24.sh: line 28: 2199221 Illegal instruction     (core dumped) "$out/base-checks24" > "$out/ab24/checks-base.log" 2>&1
+baseline_checks_exit=132 (EXPECTED nonzero) pass_before_trap=14
+MISMATCH input=" ำx" expected="x" got="\u{0E33}x"
+PASS: collapsedWhitespace whitespace-adjacent walk (2669 strict-path, 1109267 fast-path, 0 fusion gaps — pinned set U+0E33/U+0EB3/U+1F3FB-U+1F3FF complete on this toolchain)
+PASS: collapsedWhitespace fast-path fuzz (500 texts; 259 stayed on the byte path, 241 strict-routed)
+354046d56eeed57e9b811f4ba593f23d6a4bc4dec4549bed82bcf55e159e3835  .local/round24/base-checks24
+dc6b16db0786cc46bc7961cc73123a5925ca5bc7ee9a28d4b4689bb6b54182ab  .local/round24/cand-checks24
+=== pairs Sun Nov 15 23:49:04 CST 2026 ===
+pair=1 variant=baseline mode=1 exit=0
+pair=1 variant=baseline mode=streaming exit=0
+pair=1 variant=baseline mode=activity exit=0
+pair=1 variant=baseline mode=edit-lines exit=0
+pair=1 variant=baseline mode=presentation-token exit=0
+pair=1 variant=candidate mode=1 exit=0
+pair=1 variant=candidate mode=streaming exit=0
+pair=1 variant=candidate mode=activity exit=0
+pair=1 variant=candidate mode=edit-lines exit=0
+pair=1 variant=candidate mode=presentation-token exit=0
+pair=2 variant=baseline mode=1 exit=0
+pair=2 variant=baseline mode=streaming exit=0
+pair=2 variant=baseline mode=activity exit=0
+pair=2 variant=baseline mode=edit-lines exit=0
+pair=2 variant=baseline mode=presentation-token exit=0
+pair=2 variant=candidate mode=1 exit=0
+pair=2 variant=candidate mode=streaming exit=0
+pair=2 variant=candidate mode=activity exit=0
+pair=2 variant=candidate mode=edit-lines exit=0
+pair=2 variant=candidate mode=presentation-token exit=0
+pair=3 variant=baseline mode=1 exit=0
+pair=3 variant=baseline mode=streaming exit=0
+pair=3 variant=baseline mode=activity exit=0
+pair=3 variant=baseline mode=edit-lines exit=0
+pair=3 variant=baseline mode=presentation-token exit=0
+pair=3 variant=candidate mode=1 exit=0
+pair=3 variant=candidate mode=streaming exit=0
+pair=3 variant=candidate mode=activity exit=0
+pair=3 variant=candidate mode=edit-lines exit=0
+pair=3 variant=candidate mode=presentation-token exit=0
+pair=4 variant=baseline mode=1 exit=0
+pair=4 variant=baseline mode=streaming exit=0
+pair=4 variant=baseline mode=activity exit=0
+pair=4 variant=baseline mode=edit-lines exit=0
+pair=4 variant=baseline mode=presentation-token exit=0
+pair=4 variant=candidate mode=1 exit=0
+pair=4 variant=candidate mode=streaming exit=0
+pair=4 variant=candidate mode=activity exit=0
+pair=4 variant=candidate mode=edit-lines exit=0
+pair=4 variant=candidate mode=presentation-token exit=0
+pair=5 variant=baseline mode=1 exit=0
+pair=5 variant=baseline mode=streaming exit=0
+pair=5 variant=baseline mode=activity exit=0
+pair=5 variant=baseline mode=edit-lines exit=0
+pair=5 variant=baseline mode=presentation-token exit=0
+pair=5 variant=candidate mode=1 exit=0
+pair=5 variant=candidate mode=streaming exit=0
+pair=5 variant=candidate mode=activity exit=0
+pair=5 variant=candidate mode=edit-lines exit=0
+pair=5 variant=candidate mode=presentation-token exit=0
+pair=6 variant=baseline mode=1 exit=0
+pair=6 variant=baseline mode=streaming exit=0
+pair=6 variant=baseline mode=activity exit=0
+pair=6 variant=baseline mode=edit-lines exit=0
+pair=6 variant=baseline mode=presentation-token exit=0
+pair=6 variant=candidate mode=1 exit=0
+pair=6 variant=candidate mode=streaming exit=0
+pair=6 variant=candidate mode=activity exit=0
+pair=6 variant=candidate mode=edit-lines exit=0
+pair=6 variant=candidate mode=presentation-token exit=0
+354046d56eeed57e9b811f4ba593f23d6a4bc4dec4549bed82bcf55e159e3835  .local/round24/base-checks24
+dc6b16db0786cc46bc7961cc73123a5925ca5bc7ee9a28d4b4689bb6b54182ab  .local/round24/cand-checks24
+=== rebuild verification (same paths, fresh .build) with retained receipts Sun Nov 15 23:50:56 CST 2026 ===
+candidate_rebuild_exit=0
+baseline_rebuild_exit=0
+candidate_rebuild_exit=0
+candidate_rebuild_head=172fd875dd30bb3910563e05f0e6e2ee571e75fd
+candidate_rebuild_porcelain=2
+?? docs/performance/20x-loop-rounds/2026-11-15-round-24.md
+?? docs/performance/20x-loop-rounds/round-24/
+dc6b16db0786cc46bc7961cc73123a5925ca5bc7ee9a28d4b4689bb6b54182ab  .build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+baseline_rebuild_head=1bcbc00f0b46fc35100b385c2e0dccc114e7c25a
+baseline_rebuild_porcelain=3
+M  Tests/WorkbenchCoreTests/CollapsedWhitespaceTests.swift
+?? build.log
+?? rebuild.log
+ae42e3c15a34612417b4d92c00bbd1e41773af73da31c5fa6750a354fee85e35  /tmp/r24-base/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+DONE Sun Nov 15 23:56:19 CST 2026
