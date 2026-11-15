@@ -1,0 +1,69 @@
+total=20016  narrative-make inclusive=10583 (52.87%)
+== top leaves inside make() ==
+     416  2.08%-of-all  3.93%-of-narr  _platform_strcmp$VARIANT$Base
+     371  1.85%-of-all  3.51%-of-narr  objc_msgSend
+     253  1.26%-of-all  2.39%-of-narr  Hasher.combine(bytes:)
+     246  1.23%-of-all  2.32%-of-narr  Hasher._combine(_:)
+     221  1.10%-of-all  2.09%-of-narr  tryCast(swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*, swift::Opaq
+     187  0.93%-of-all  1.77%-of-narr  swift_release
+     175  0.87%-of-all  1.65%-of-narr  _CFRelease
+     166  0.83%-of-all  1.57%-of-narr  _CFStringGetCStringPtrInternal
+     153  0.76%-of-all  1.45%-of-narr  specialized _StringGutsSlice.withFastUTF8<A, B>(_:)
+     151  0.75%-of-all  1.43%-of-narr  swift_bridgeObjectRelease
+     150  0.75%-of-all  1.42%-of-narr  _CFRetain
+     136  0.68%-of-all  1.29%-of-narr  _os_feature_enabled_impl
+     131  0.65%-of-all  1.24%-of-narr  _xzm_free_tc
+     131  0.65%-of-all  1.24%-of-narr  _StringGutsSlice._fastNFCCheck(_:_:)
+     131  0.65%-of-all  1.24%-of-narr  __CF_IS_OBJC
+     122  0.61%-of-all  1.15%-of-narr  _platform_strlen
+     120  0.60%-of-all  1.13%-of-narr  _stringCompareFastUTF8Abnormal(_:_:expecting:)
+     114  0.57%-of-all  1.08%-of-narr  objc_release
+     104  0.52%-of-all  0.98%-of-narr  _platform_memmove
+     102  0.51%-of-all  0.96%-of-narr  swift_retain
+      99  0.49%-of-all  0.94%-of-narr  ulocimp_getSubtags(std::__1::basic_string_view<char, std::__1::char_traits<char>>, icu::
+      98  0.49%-of-all  0.93%-of-narr  swift_bridgeObjectRetain
+      96  0.48%-of-all  0.91%-of-narr  _xzm_malloc_tc
+      91  0.45%-of-all  0.86%-of-narr  0x19336476d
+      88  0.44%-of-all  0.83%-of-narr  Hasher._finalize()
+H1-phase-contains: 324 (3.06% of narr)
+H2-clean-charset: 21 (0.20% of narr)
+H5-count-grapheme: 13 (0.12% of narr)
+H3-deep-equal: 41 (0.39% of narr)
+H4-lock-dict-hash: 4640 (43.84% of narr)
+
+== Hasher._combine: 246 (2.32% of narr) ==
+       234  protocol witness for Hashable._rawHashValue(seed:) in conformance String
+        12  specialized __RawDictionaryStorage.find<A>(_:)
+
+== _fastNFCCheck: 193 (1.82% of narr) ==
+       193  protocol witness for Hashable._rawHashValue(seed:) in conformance String
+
+== withFastUTF8: 381 (3.60% of narr) ==
+       381  protocol witness for Hashable._rawHashValue(seed:) in conformance String
+
+== _stringCompareFastUTF8Abnormal: 121 (1.14% of narr) ==
+        93  specialized __RawDictionaryStorage.find<A>(_:hashValue:)
+        24  specialized NarrativeTextCache.steps(for:derive:)
+         4  specialized Dictionary.subscript.getter
+
+== _normalizedHash: 707 (6.68% of narr) ==
+       703  protocol witness for Hashable._rawHashValue(seed:) in conformance String
+         4  specialized Dictionary.subscript.getter
+
+== sample backtrace containing _fastNFCCheck (leaf-ward first 16) ==
+    _StringGutsSlice._fastNFCCheck(_:_:)
+    specialized _StringGutsSlice._withNFCCodeUnits<A>(_:)
+    _StringGutsSlice._normalizedHash(into:)
+    protocol witness for Hashable._rawHashValue(seed:) in conformance String
+    specialized __RawDictionaryStorage.find<A>(_:)
+    specialized Dictionary.subscript.getter
+    specialized static NarrativeTextCache.value<A>(_:_:_:)
+    static NarrativeTextCache.narrativeText(_:_:)
+    specialized static ActivityNarrativeSnapshot.narrativeText(_:)
+    static ActivityNarrativeSnapshot.narrativeText(_:)
+    specialized closure #4 in static ActivityNarrativeProjection.make(entries:tools:isRunning:external:cache:)
+    closure #4 in static ActivityNarrativeProjection.make(entries:tools:isRunning:external:cache:)
+    specialized NarrativeTextCache.steps(for:derive:)
+    specialized NarrativeTextCache.steps(for:derive:)
+    specialized static ActivityNarrativeProjection.make(entries:tools:isRunning:external:cache:)
+    static ActivityNarrativeProjection.make(entries:tools:isRunning:external:cache:)

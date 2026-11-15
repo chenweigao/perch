@@ -1,0 +1,34 @@
+HEAD is now at c085fd9 Merge pull request #341 from chenweigao/perf/20x-loop-19-20261115
+HEAD=c085fd92f958f7d1f0208aa0f656886a3e4fd401
+tests_patch=ok
+base_build_exit=0
+=== localization runtime pins (BASE Localization.swift + new pins; working tree pre-product-patch) ===
+l10n_runtime_base_exit=137
+scripts/check-localization-runtime.sh: line 18: 30999 Killed: 9               "$app/Contents/MacOS/LocalizationChecks"
+product_patch=ok
+cand_build_exit=0
+02ef597ccfaaeefc614ac9b18a6439cafadc3011473d208a00b2131594a5b9ec  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round20-base/out/Products/Release/WorkbenchChecks
+9be5f23387d01167006d0059a26ac858d0d060255cbdfc0a53a7bd23851304dc  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round20-cand/out/Products/Release/WorkbenchChecks
+=== checks + golden verification ===
+base_checks_exit=0 pass=101
+PASS: narrative byte-keyed tables preserve snapshots across canonical pairs and 1500 fuzz texts (digest 4e46d66eff016205, 1382 staged, 883 keyword-phased)
+cand_checks_exit=0 pass=101
+PASS: narrative byte-keyed tables preserve snapshots across canonical pairs and 1500 fuzz texts (digest 4e46d66eff016205, 1382 staged, 883 keyword-phased)
+=== localization runtime pins (CANDIDATE Localization.swift) ===
+l10n_runtime_cand_exit=137
+scripts/check-localization-runtime.sh: line 18: 33115 Killed: 9               "$app/Contents/MacOS/LocalizationChecks"
+=== in-context screening: 3 alternating, presentation-token + streaming + mode 1 (in place) Sun Nov 15 12:12:00 CST 2026 ===
+token200_narrative_ms=0.1986  token200_total_ms=0.2197  token2000_narrative_ms=0.1038  token2000_total_ms=0.1388  [it=1 side=base]
+it=1 side=base stage_narrative= cold@2000=6.58
+token200_narrative_ms=0.1087  token200_total_ms=0.1196  token2000_narrative_ms=0.1085  token2000_total_ms=0.1443  [it=1 side=cand]
+it=1 side=cand stage_narrative= cold@2000=6.66
+token200_narrative_ms=0.1042  token200_total_ms=0.1160  token2000_narrative_ms=0.1020  token2000_total_ms=0.1406  [it=2 side=base]
+it=2 side=base stage_narrative= cold@2000=6.73
+token200_narrative_ms=0.1098  token200_total_ms=0.1216  token2000_narrative_ms=0.1107  token2000_total_ms=0.1473  [it=2 side=cand]
+it=2 side=cand stage_narrative= cold@2000=6.65
+token200_narrative_ms=0.1032  token200_total_ms=0.1144  token2000_narrative_ms=0.1079  token2000_total_ms=0.1433  [it=3 side=base]
+it=3 side=base stage_narrative= cold@2000=6.61
+token200_narrative_ms=0.0946  token200_total_ms=0.1059  token2000_narrative_ms=0.0950  token2000_total_ms=0.1339  [it=3 side=cand]
+it=3 side=cand stage_narrative= cold@2000=6.73
+porcelain_after=0
+DONE Sun Nov 15 12:12:51 CST 2026

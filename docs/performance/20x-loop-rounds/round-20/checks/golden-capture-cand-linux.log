@@ -1,0 +1,76 @@
+PASS: step reading preserves order, edit identities, historical patches and outcome-aware churn
+PASS: phase reading groups Bash and thoughts, preserves edit receipts, separates historical failures from pending work and uses grounded command labels
+PASS: live public summaries, completed process folding, manual expansion, uniform folding of edits and failures
+PASS: PI steady streaming cadence, Unicode boundaries, replacement and immediate completion
+PASS: parsed-block release retains Unicode, styling, links and complete rich Markdown
+PASS: incremental reply parse matches full parses at every streaming prefix
+PASS: live progress, missing summaries, thinking-only output, tool-only notice and provider model groups
+PASS: process fold groups completed turns, preserves order, keeps the running turn live
+PASS: presentation parity, same-ID edits, pagination, epoch/language/live handoff, scoped LRU, oversized active state and metrics
+PASS: presentation history reuse matches complete recomputation across tokens, paging, crossings, language, epoch and overlays
+PASS: paging and new prompts reuse unchanged earlier turns and match complete recomputation (19/20 pages)
+PASS: window identity reuse ends at any earlier in-place edit, survives a rebuilt window and matches complete recomputation
+PASS: find-bar entry reuse equals a complete search across growth, isolated payload edits, reroutes, rebuilds, pages, running flips and query/option switches
+PROBE PASS: prefix zero-sign flip under an unchanged query
+PROBE PASS: NFD regex query after the canonically equal NFC query, and back
+PROBE PASS: payload NFC to NFD swap under an unchanged regex query
+PROBE PASS: object-key NFC to NFD swap under an unchanged regex query
+PROBE PASS: case-sensitive literal NFD query after the canonically equal NFC query, and back
+PASS: find-bar cache-hole probes (prefix zero sign, regex and literal query encoding round trips, payload encoding, key encoding) equal complete searches
+PASS: collapsedWhitespace whitespace-adjacent walk (2662 strict-path, 1109274 fast-path, 7 characterized gaps)
+PASS: collapsedWhitespace prepend set matches stdlib fusion (27 fusing scalars)
+PASS: collapsedWhitespace equals Character-accurate split/join on adversarial whitespace
+PASS: single-part excerpt fast path equals original Character budgets across Unicode boundaries and mixed parts
+PASS: compaction summary display strips harness scaffolding
+PASS: unified activity narratives, source priority, bounded external refinement and Codex metadata
+GOLDEN_CAPTURE narrative-byte-key digest: 4e46d66eff016205 (staged 1382/1500, keyword-phased 883)
+
+*** Signal 4: Backtracing from 0x55b998307468... done ***
+
+*** Swift runtime failure: precondition failure ***
+
+Platform: x86_64 Linux (Alibaba Cloud Linux 3 (Soaring Falcon))
+
+Thread 0 "WorkbenchChecks" crashed:
+
+  0 [inlined] [system] 0x000055b998307468 Swift runtime failure: precondition failure in WorkbenchChecks at //<compiler-generated>
+  1 [inlined]          0x000055b998307468 static String.== infix(_:_:) in WorkbenchChecks at <worktree>/Tests/WorkbenchCoreTests/NarrativeByteKeyTests.swift:159:5
+  2                    0x000055b998307468 checkNarrativeByteKeyedTables() + 7192 in WorkbenchChecks at <worktree>/Tests/WorkbenchCoreTests/NarrativeByteKeyTests.swift:159:5
+  3 [ra]               0x000055b998359555 specialized static ProtocolTests.main() + 484 in WorkbenchChecks at <worktree>/Tests/WorkbenchCoreTests/ProtocolTests.swift:51:13
+  4 [async] [system]   0x000055b998352950 specialized thunk for @escaping @convention(thin) @async () -> () in WorkbenchChecks at //<compiler-generated>
+  5 [async]            0x00007f88ad5e5190 completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*) in libswift_Concurrency.so
+...
+
+
+Registers:
+
+rax 0x0000000000000000  0
+rdx 0x000055b99a0363f0  56 f5 9a c1 bc 55 00 00 10 d0 ec 99 b9 55 00 00  Võ·Á¼U···Ðì·¹U··
+rcx 0xe700000000000001  16645304222761353217
+rbx 0x00474e49444e4501  20070799932015873
+rsi 0x0000000000000000  0
+rdi 0x000055b99a035d20  34 65 34 36 64 36 36 65 66 66 30 31 36 32 30 35  4e46d66eff016205
+rbp 0x00007ffe7db5a570  d0 a5 b5 7d fe 7f 00 00 55 95 35 98 b9 55 00 00  Ð¥µ}þ···U·5·¹U··
+rsp 0x00007ffe7db5a1a0  75 00 00 00 00 00 00 00 00 00 00 00 00 00 00 e1  u··············á
+ r8 0x0000000000000000  0
+ r9 0x4000000000000000  4611686018427387904
+r10 0x0000000100000003  4294967299
+r11 0x0000000000000200  512
+r12 0x0000000000000000  0
+r13 0x00007ffe7db5a4f8  61 00 00 00 00 00 00 f0 50 4b ef 99 b9 55 00 00  a······ðPKï·¹U··
+r14 0x000055b99a035d00  30 d6 be ad 88 7f 00 00 03 00 00 00 00 00 00 00  0Ö¾­············
+r15 0x00007ffe7db5a4f8  61 00 00 00 00 00 00 f0 50 4b ef 99 b9 55 00 00  a······ðPKï·¹U··
+rip 0x000055b998307468  0f 0b 4c 89 ff e8 9e 38 d8 ff 0f 0b 48 89 df e8  ··L·ÿè·8Øÿ··H·ßè
+
+rflags 0x0000000000010246  ZF PF
+
+cs 0x0033  fs 0x0000  gs 0x0000
+
+
+Images (48 omitted):
+
+0x000055b998000000–0x000055b9987c64e0 c5948fa2bd6c3510efda43505ed429e19228f2ae WorkbenchChecks         <worktree>/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+0x00007f88ad559000–0x00007f88ad5ec660 ab7a387eca696d31db096d9ebebea096c2cf1bc3 libswift_Concurrency.so /home/<dev>/.local/swift/6.3.3/usr/lib/swift/linux/libswift_Concurrency.so
+
+Backtrace took 0.63s
+

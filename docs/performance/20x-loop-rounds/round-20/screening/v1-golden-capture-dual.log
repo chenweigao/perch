@@ -1,0 +1,13 @@
+=== run base checks (capture digest from trap; expect nonzero exit at the golden assert) ===
+.local/round20/capture-golden.sh: line 21: 2374124 Illegal instruction     (core dumped) /tmp/r20-base/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks > "$out/capture-base.log" 2>&1
+base_checks_exit=132
+20
+DONE Sun Nov 15 11:24:24 CST 2026
+=== candidate side ===
+cand_build_exit=0
+/bin/bash: line 1: 2383891 Illegal instruction     (core dumped) .build/x86_64-unknown-linux-gnu/release/WorkbenchChecks > .local/round20/capture/capture-cand.log 2>&1
+cand_exit=132
+.local/round20/capture/capture-cand.log:GOLDEN_CAPTURE narrative-byte-key digest: db78d984133ee569 (staged 1392/1500, keyword-phased 827)
+.local/round20/capture/capture-base.log:GOLDEN_CAPTURE narrative-byte-key digest: 726a314af7f88cc1 (staged 1392/1500, keyword-phased 827)
+
+[exited with code 0]

@@ -74,6 +74,8 @@ Mac mini 同机 A/B 超过该轮实测噪声才采纳，不能把 Linux 特有�
 | 18 | 2026-11-15 | TimelineEntry visible() 的 trimmingCharacters 判空 → 零分配 allSatisfy(whitespacesAndNewlines.contains) | **不采纳（候选撤回，产品零改动）**：Mac cold@2000 **-0.07%**（6.7250→6.7200ms，worst +3.90%、spread 4.37%——变化为噪声带 1/60，逐对分布完全重叠），cold@1000/500/100 全带内、find_bar_cold_query +0.08%、**Mac 80 项零正向超 spread 且零回归**（连 round-10 式回归信号都无，纯中性）；Linux cold 四档 **-53.96～-55.20% 六对全分离** + find_bar_cold_query -2.20%（搜索每查询调 TimelineEntry.make）——**round-10 否定清单条目同构复现**：corelibs trimmingCharacters 走 UTF-16 物化为 Linux 特有开销、Apple Foundation 两端扫描即止近乎免费，按红线"Linux 特有开销不算产品收益"否决；输出等价双端实测（mode-1 行数/部件/字节全等、Mac 非空校验 ROWS_IDENTICAL_NONEMPTY、双侧 checks 全绿 Mac 99/Linux 98+1 SKIP、六对哈希首末恒定）；归因洞见（复核更正表述）：visible() 的 376 样本（1.8762%）是 **Mac 调用点归属桶（含被调；以 visible 为叶仅 9 样本）**而非 self-time，且属 Mac trace——教训为**归属占比低不保证系统性成本低**（round-13"self-time 不保证可转化"的镜像），跨平台可迁移性仍由 Mac 仲裁裁决；flush 主体（每 part 构造 KimiMessage(content:[part]) 的结构性 ARC/malloc）评估为高风险未选；Linux 15 行 edit64/512 正向（+6.8～+31.4%）= 已登记布局摆动家族（路径可证不含本改动）；harness 伪影如实披露：Mac 粗筛首次拷贝二进制被 SIGKILL（exit 137）→ ROWS_IDENTICAL 空==空假阳性 → 原地重跑+非空断言（教训入否定清单）；停止规则计数 **1/3**（rounds 14-17 连续采纳后首个不采纳轮）；独立评审（df8ccb8）确认否决成立（165 项指标+120 份日志重算零失配、等价性实现级论证：Apple 按 scalar 裁剪/corelibs 按 UTF-16 unit 扫描、26 成员 BMP 集合下两谓词无反例）+2 BLOCKING 文档更正（self-time 误标→"Mac 调用点归属桶、以 visible 为叶仅 9 样本"；门槛行误引粗筛哈希→正式 16b851bd/ceca9c9d）+5 非阻塞（JSON 粗筛元数据纠错、Mac 行数档补全字段、SIGKILL 现场复跑再证 exit 137、卫生、**F7 计数更正：round-2 已否决同函数变体、本轮为家族第三数据点+选题未反查否定清单的流程失误披露**）全部照改（0d06a53）；CI 15/15 绿@df8ccb8/0d06a53 双 head 零重跑；Codex 零发现 | [round-18](2026-11-15-round-18.md)；[数据](round-18/macos.json)；[撤回补丁](round-18/rejected-visible-whitespace.patch)；[粗筛](round-18/screening/)；[#340](https://github.com/chenweigao/perch/pull/340)，merge=89e5976（07:28） |
 | 19 | 2026-11-15 | splitInline 美元守卫改字节级扫描（contains("$") → utf8.contains(36)；超集+保值无操作不变量等价） | **已采纳/合并（采纳数据 v2=1f9b5d4，含复核处置字节）：Mac find_bar_cold_query -5.93%**（1185.56→1115.21ms，spread 1.73%，六对全分离，最差对 -4.98%，逐对 -58.37～-78.89ms；v1=fe17ef1 -5.58% 逐对 -74.84～-60.60ms——复核 F4 更正误植端点——粗筛 -5.75%，三次独立测量幅度一致 0.35pp 内）；Mac v2 全部 80 项指标零正向超 spread（80 vs 81：stage_retained_cost 按全零打印格规则掉出，v1 仅因单对 0.01ms 刻度存活）、温路径 0.00%；**Linux 筛选端同向更大：v2 -9.54% 六对全分离**（610.88→552.60ms，逐对 -55.79～-60.57ms，与 v1 逐位同幅）（守卫平台中立；旧守卫实为 grapheme 感知 Foundation 子串搜索 StringProtocol.contains<A>→range<A>——复核 F3 更正表征，两平台同贵）；归因（复核 F1 BLOCKING 更正后唯一口径，重算脚本归档 round-19/attr/）：round-17 纯冷 find-bar 专剖 21,222 样本 inclusive 归属——含 splitInline 闭包帧 1,199（5.65%）、其叶方向 StringProtocol.contains 1,163（5.48%），语料无字面 math；round-17 报告的 795/3.7% 为不可复现的归属桶计数，已全点替换；增益与归属份额一致（-5.58% vs 5.65%），初版"超归因/每字节成本更高"表述撤回（样本份额×墙钟比较不能建立每字节成本论断，机制读法仅 HYPOTHESIS）；等价论证（不变量口径）：0x24 UTF-8 自同步且一切旧搜索形态需该字节 ⇒ 字节缺失拒绝集重合（准入为超集）；凡 Characters 无裸 "$" 的 run 在 split() 下保值无操作（零命中、终点 flush 单 run 值相等）——准入分歧无关紧要（探针实证：全融合 Prepend 形态 macOS 旧守卫拒/corelibs 缺 GB9b 准入，输出仍逐位一致）、无需平台回落；钉死：checkSplitInlineByteGuard——结构例逐规则（货币/空白/CJK/融合开启符+裸未配对 closer 重描述/strong 穿透/代码隔离+兄弟对）+ **全融合直调例 v2 新增**（\u{0600}$x\u{0600}$、$◌̈x$◌́：恰一 run、UTF-8 逐字节相等、旗标全保留——复核 F2）+ 3,000 fuzz **单一跨平台黄金摘要 5d1506ed4a822a53**（语料规避 URL 形态、运行时断言把守；未改产品捕获、四方一致；999/3000 提取）；双端上下文内粗筛先行通过（Mac -5.75%/Linux -10%，3/3 分离；Mac 二进制原地运行+非空校验）；选题按函数名/机制名反查否定清单无命中；两端检查全绿无预期失败（Mac 各 100/Linux 各 99+1 SKIP，基线=旧守卫过全部新断言；v2 钉死强化后 Linux matched 双侧 99+1 复证）、portable 10/10、六对哈希首末恒定（v2：Mac 415bf279/ce54227a、Linux 14e2b460/d68c1203；v1：Mac 0c84672a/80269d5a、Linux 5ff9465d/4d87a6ad）；portable 10/10（v2 产品树@256c097；v1@fe17ef1 并存）；Linux 候选 clean 重建字节一致 d68c1203 且**完整凭证留存**（复核 F7 处置）、基线侧非确定性第六次披露（因果假设；v2 起双侧留存重建退出码+源态+摘要+日志；v1 摘要 c93e8422 标注 operator-reported）；v2 黄金摘要四方一致（Mac/Linux×基线/候选）；Linux 正向：v2 仅 edit64_crlf +2.25%（v1 17 行 +1.20～+28.76%）——同一产品语义下家族振幅随构建摆动（round-17 v2 16 行→v3 2 行同型），本身即已登记布局摆动家族假设的最强佐证（SessionEditStats 无 ReplyMath 调用、grep 可证路径无关；采纳平台 Mac 零正向）；**独立评审（2f65eeb）1 BLOCKING + 6 非阻塞**（F1 归因口径/F2 结构例描述+全融合直调例/F3 旧守卫表征/F4 区间端点/F5 heading 不调用/F6 归档元数据/F7 重建凭证）逐项处置于 v2=1f9b5d4（评审方独立核验 166 指标/120 配对日志零失配、1,112,064 标量扫描零失配；A/B 采纳信号不受 F1 影响获评审确认）；产品/钉死字节移动 ⇒ v2 双端六对全量重跑已完成（本报告数据）；**复核轮（7518f45）1 BLOCKING + 3 非阻塞**（F1' INDEX 队列后记残留已撤回断言与未限定 3.7%/F2' 粗筛记录残留旧守卫表征/F3' CI 记录漏 math 失败与聚合器+归因强度/F4' JSON 夹具路径失实）——全部文档类逐字更正照改自证（免新复核轮；评审方独立重提取 240 配对日志、重算 331 指标/3,360 内层中位数零失配）；CI：2f65eeb（v1 产品态）与终 head 7518f45（v2 产品态）各 15/15 一次全绿；被替代 head 256c097 两个独立主失败（math unclosed_4096 ratio 1.5704——双侧 ~1.9x 轮间摆动、非门槛项全线候选更快；streaming 组 dashboard 夹具超时 capture-none 135.08s）+聚合器，判共享 runner 噪声家族并由终 head 同产品树双门槛通过实证确证（取证 round-19/ci/，评审方重算零失配）；Mac 产品门槛 2f65eeb 与 7518f45 双 head 通过（各 build 0+5/5+porcelain 0/0）；停止规则计数归 0（rounds 14-17、19 采纳） | [round-19](2026-11-15-round-19.md)；[数据](round-19/macos.json)；[粗筛](round-19/screening/)；[探针](round-19/checks/guard-admission-probe-record.md)；[#341](https://github.com/chenweigao/perch/pull/341)，merge=c085fd9（10:23） |
 
+| 20 | 2026-11-15 | presentation-token narrative 段双机制候选（v1=NarrativeTextCache 文本表字节键消 NFC 规范化哈希；v2=L() 解析链精化：CFPreferences 单键读+规范标识符恒等捷径+静态 Locale 表） | **不采纳（双候选均被 Mac 上下文内粗筛否决，产品零改动，两项钉死按 round-10 先例保留）**：选题=presentation-token（19 轮后唯一未归因 bench 族；产品自带阶段仪表显示 narrative 段（ActivityNarrativeProjection.make）占 token 更新 **75.2～90.9%**、每 delta ~0.11ms 恒定与窗口无关——流式渲染热路径）；选题反查执行：lowercased() inclusive 仅 0.87% 粗筛前否决（caller 桶 3.6% 误读经下钻纠正——round-18 F1 陷阱再现）、cronFire trimmingCharacters 命中否定清单家族否决、Todo/TimelineEntry 结构性散点不选；**归因两次（脚本/输出/runner 日志归档 round-20/attr/）**：首跑（尾部 ~5KB harness，20,053 样本）make() 74.74%、String 键 NFC 规范化哈希（_rawHashValue→_normalizedHash：Hasher._combine 18.91%/_fastNFCCheck/withFastUTF8/getNormData）**50.01% of narrative**、调用链 NarrativeTextCache.value→Dictionary.subscript→find 样本级确证；**复跑（bench 保真 ≤280B 尾部，20,016 样本）机制排序反转**：NFC 哈希塌缩 ~8%（与 v1 粗筛 token2000 -7.7% 部分改善吻合）、**L(_:locale:) 默认参数链 ≈29%+**（tryCast 16.45% 单叶= persistentDomain(globalDomain) 全域字典物化+as?[String]、strcmp 3.93%、objc_msgSend 3.69%、CF retain/release ~4.7%、ICU ulocimp 2.31%——每 L() 付全域物化+两遍 preferredLocalizations+Locale 逐次构造；bench 每 delta 调 2-4 次）；**v1=1ac4f52**（ByteText UTF-8 字节等值+连续缓冲 SipHash、CleanKey 消插值键拷贝；等价=字节同命中不变、NFC/NFD 变体各自重算而派生规范协调+下游仅规范==/渲染观察）：Mac 粗筛 token200_narrative +2.8% 重叠、token2000 -7.7% 仅 2/3、totals 重叠→否决；钉死捕获期发现：语料含规范变体对时未改产品与候选黄金**合法字节分歧**（726a…/db78…而 staged 计数一致）——按 round-17 先例变体对移出语料+结构例钉规范等价，收敛后黄金 **4e46d66eff016205 未改产品捕获、四方一致（逐字节相等）**；**v2=567529b**（无缓存设计——LocalizationChecks 直接写 UserDefaults 逐调用生效的行为钉死禁止缓存；三点精化保持逐调用活读；Linux #else 不动=无变化护栏）：Mac 粗筛四项 token 中位数**全部重叠且反向 +2.6～+4.8%**（逐轮符号不一致=噪声带内；按 round-13 先例披露为弱回归信号）、Linux 零信号→否决；29% 归属份额零墙钟转化=归因≠可转化家族第三数据点（HYPOTHESIS：CFPreferences 进程内域缓存已摊薄物化成本）；验证环境披露：check-localization-runtime.sh 双侧 exit 137（WORKSPACE-DESIGN.md:166 早记录 mini SIGKILL 裸 swiftc 二进制；经查该脚本不在任何 CI 组）→SwiftPM scratch 编译验证通过；**.app 硬链接二进制仍 137（round-18 原地规则新数据点：重定位含硬链接均被杀）**、浅 bundle 原地可跑但资源不加载（133 环境伪影）→钉死运行时载体移入 WorkbenchCoreTests（CI core-regression macOS 侧执法）；**平台分歧探针**：corelibs Bundle.preferredLocalizations 完全忽略 preferences 恒返回首候选（6 组实测归档）、Apple 为 ICU 匹配——产品 Linux 侧永不走该链（潜在无害），钉死按平台条件（round-17 先例）：Darwin 断言 ICU 语义+CFPreferences/persistentDomain 读一致性（v2 等价前提留证）、Linux 断言实测 legacy 行为防漂移；终形态 eb13b26：Sources diff 为空、Linux 101 PASS+1 SKIP、**Mac 终形态 102 PASS 原地跑（Darwin 分支钉死运行时首验+黄金 Mac 复证）**、portable 10/10、既有三黄金完好；**方法学教训入否定清单：归因 harness 负载分布必须与采纳指标同构**（5KB→280B 尾部使机制排序 50%↔8% 反转——round-15 教训的归因侧镜像）；粗筛制度化第三次在正式六对前拦下无效候选；停止规则计数 **1/3** | [round-20](2026-11-15-round-20.md)；[归因](round-20/attr/)；[粗筛](round-20/screening/)；[探针](round-20/checks/)；[v1 补丁](round-20/rejected-bytekey-tables.patch)；[v2 补丁](round-20/rejected-lean-l10n-chain.patch)；PR 待开 |
+
 ## 否定清单（勿重复尝试）
 
 - timeline 的 `trim(...).isEmpty` 改成标量早停：Linux Foundation 大幅受益，Mac
@@ -101,6 +103,31 @@ Mac mini 同机 A/B 超过该轮实测噪声才采纳，不能把 Linux 特有�
   校验必须**断言非空**（否则空==空的假阳性会掩盖整批无效测量）；**选题
   流程教训（round 18）**：归因选靶后、粗筛前，必须按函数名与机制名反查
   本否定清单（visible() 早停变体 round-2 已否决在案）。
+- **归因 harness 的负载分布必须与采纳指标同构**（round 20）：presentation
+  narrative 段首跑归因用 ~5KB 尾部文本，String 键 NFC 规范化哈希占 50%；
+  采纳指标（token bench）尾部实际 ≤280B，同机制份额塌缩到 ~8%，机制排序
+  完全反转（bench 尺度真正大头是 L() 解析链 ~29% 与弥散固定成本）。归因
+  harness 的输入规模/形态必须先对照 bench 夹具核实，再谈机制份额；这是
+  round-15"孤立微基准两个方向都不可外推"在归因侧的镜像。
+- **NarrativeTextCache 文本表字节键化**（round 20 v1）：消除 String 键 NFC
+  规范化哈希（ByteText UTF-8 等值+连续缓冲 SipHash+CleanKey 消插值键）——
+  等价论证成立（黄金 4e46d66eff016205 四方逐字节一致、NFC/NFD 结构例
+  钉规范等价），但机制仅对 KB 级尾部文本成立：Mac 粗筛 token200_narrative
+  +2.8% 重叠、token2000 -7.7% 仅 2/3 分离——bench 采纳指标不敏感，否决。
+  勿在 bench 尾部形态不变的前提下重试；若未来指标覆盖 KB 级流式尾部
+  （real-stream 族）可凭本轮等价设计与钉死直接复用。
+- **L()/AppLanguage 解析链微优**（round 20 v2）：归因份额 ~29% of
+  narrative 段（persistentDomain 全域物化 tryCast 16.45%+双遍 ICU+Locale
+  构造），CFPreferences 单键读+规范标识符恒等捷径+静态 Locale 表三点
+  精化后 Mac 粗筛四项 token 指标**全部重叠且中位反向 +2.6～+4.8%**——
+  份额零转化（HYPOTHESIS：CFPreferences 进程内域缓存已摊薄物化成本）。
+  勿重试该链的微优；等价前提钉死保留在 checkLocalizationResolutionChain
+  （Darwin ICU 语义+CFPreferences/persistentDomain 一致性；Linux corelibs
+  忽略 preferences 恒返回首候选的 legacy 行为）。注意：该链**禁止事件
+  失效缓存**（LocalizationChecks 直接写 UserDefaults 逐调用生效是行为
+  钉死）。配套 mini harness 数据点：重定位 SwiftPM 二进制**含硬链接**
+  均 SIGKILL（原地规则强化）；check-localization-runtime.sh 不在 CI 组、
+  mini 上不可执行（WORKSPACE-DESIGN.md:166），钉死载体用 WorkbenchCoreTests。
 - excerpt 的 `prefix(320)` 字素行走/物化开销：round 12 立项前的 Mac 粗筛（SwiftPM
   scratch 包，9×20,000 次交替、64 轮换输入、哈希消费防提升）否决——`prefix(320)`
   本就把全部下游 collapse 工作截到 ≤320 字符，超过 320 标量的文本要先付一次到
@@ -185,6 +212,12 @@ Mac mini 同机 A/B 超过该轮实测噪声才采纳，不能把 Linux 特有�
    （循环形态重写需指令级新证据——round-15 collapsedWhitespace 粗筛
    先例）、CF 查询匹配红线域。find-bar 冷首查的 WorkbenchCore 侧可动
    机械热点至此基本清空。
+   **round-20 后记（presentation-token 已探明）**：narrative 段
+   （ActivityNarrativeProjection.make，占 token 更新 75～91%）bench 尺度
+   构成=弥散固定成本（小字符串比较/字典/ARC/CF/锁，无单一机制 >4%）+
+   L() 解析链 ~29%（微优零转化，入否定清单）+ NFC 哈希 ~8%（仅 KB 级
+   尾部有效，入否定清单）；文本比例成本只在真实流式 KB 尾部显著——bench
+   采纳指标下该场景低余量。五个 bench 族至此全部归因过一遍。
 2. **SessionEditStats 残余（小项）**：`lowercased()` 每 tool_use 分配（0.22%）；
    `lines()` 的 Substring 构建扫描（lineCount 已由 round 15 SWAR 化——Mac -39%
    采纳、Linux 上下文回归已披露；`lines()` 若仿此改造必须先双端上下文内粗筛，

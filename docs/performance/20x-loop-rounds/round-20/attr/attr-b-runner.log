@@ -1,0 +1,26 @@
+=== prepare Sun Nov 15 11:46:11 CST 2026 ===
+HEAD is now at c085fd9 Merge pull request #341 from chenweigao/perf/20x-loop-19-20261115
+HEAD=c085fd92f958f7d1f0208aa0f656886a3e4fd401
+porcelain_before=0
+=== apply temporary profile loop mode ===
+porcelain_applied=2
+=== build Sun Nov 15 11:46:15 CST 2026 ===
+build_exit=0
+57c88417e044ed948ed5e3798c03520f3664e6db8f145489e0929f5c499ddb71  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round20b-profile/out/Products/Release/WorkbenchChecks
+=== record presentation Sun Nov 15 11:47:25 CST 2026 ===
+record_exit=0
+Recording completed. Saving output file...
+Output file saved as: presentation.trace
+export_exit=0
+total 16416
+drwxr-xr-x   7 <mini>  staff      224 Nov 15 11:47 .
+drwxr-xr-x  86 <mini>  staff     2752 Nov 15 11:46 ..
+-rw-r--r--   1 <mini>  staff     3020 Nov 15 11:47 build.log
+-rw-r--r--   1 <mini>  staff      124 Nov 15 11:47 export.log
+-rw-r--r--   1 <mini>  staff  7534792 Nov 15 11:47 presentation-time-profile.xml
+drwxr-xr-x  10 <mini>  staff      320 Nov 15 11:47 presentation.trace
+-rw-r--r--   1 <mini>  staff      259 Nov 15 11:47 record.log
+=== revert Sun Nov 15 11:47:53 CST 2026 ===
+porcelain_after=0
+DONE Sun Nov 15 11:47:54 CST 2026
+exit=0

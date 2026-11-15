@@ -1,0 +1,6 @@
+prefs=["zh-Hans"] -> ["zh-Hans"] first=zh-Hans
+prefs=["en"] -> ["zh-Hans"] first=zh-Hans
+prefs=["en-GB", "zh-Hans"] -> ["zh-Hans"] first=zh-Hans
+prefs=["zh-Hans-CN", "en"] -> ["zh-Hans"] first=zh-Hans
+prefs=["fr"] -> ["zh-Hans"] first=zh-Hans
+prefs=[] -> ["zh-Hans"] first=zh-Hans
