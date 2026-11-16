@@ -1,0 +1,43 @@
+HEAD_main=ce901c024bb5ac2b6d0926e34280209e9b4139f9 porcelain=0
+base_build=0
+it=1 base mode=activity exit=0
+it=1 base mode=streaming exit=0
+it=1 base mode=1 exit=0
+  conversation_activity       median_ms=    0.05
+  chain_total                 median_ms=    1.35
+    conversation_activity       median_ms=    0.07
+source_slots=100 actual_messages=117 actual_parts=117 cold_rows=117 appended_rows=117 cold_median_ms=2.45 cold_max_ms=3.97 append_median_ms=0.09 text_bytes=43079
+source_slots=500 actual_messages=583 actual_parts=583 cold_rows=583 appended_rows=584 cold_median_ms=12.01 cold_max_ms=12.64 append_median_ms=0.10 text_bytes=216839
+source_slots=1000 actual_messages=1167 actual_parts=1167 cold_rows=1167 appended_rows=1167 cold_median_ms=24.05 cold_max_ms=25.09 append_median_ms=0.12 text_bytes=433229
+source_slots=2000 actual_messages=2333 actual_parts=2333 cold_rows=2333 appended_rows=2334 cold_median_ms=47.96 cold_max_ms=50.14 append_median_ms=0.16 text_bytes=867923
+it=1 cand mode=activity exit=0
+it=1 cand mode=streaming exit=0
+it=1 cand mode=1 exit=0
+  conversation_activity       median_ms=    0.06
+  chain_total                 median_ms=    1.33
+    conversation_activity       median_ms=    0.07
+source_slots=100 actual_messages=117 actual_parts=117 cold_rows=117 appended_rows=117 cold_median_ms=2.45 cold_max_ms=3.91 append_median_ms=0.08 text_bytes=43079
+source_slots=500 actual_messages=583 actual_parts=583 cold_rows=583 appended_rows=584 cold_median_ms=12.01 cold_max_ms=12.69 append_median_ms=0.10 text_bytes=216839
+source_slots=1000 actual_messages=1167 actual_parts=1167 cold_rows=1167 appended_rows=1167 cold_median_ms=24.06 cold_max_ms=25.11 append_median_ms=0.12 text_bytes=433229
+source_slots=2000 actual_messages=2333 actual_parts=2333 cold_rows=2333 appended_rows=2334 cold_median_ms=48.51 cold_max_ms=50.52 append_median_ms=0.16 text_bytes=867923
+it=2 base mode=activity exit=0
+it=2 base mode=streaming exit=0
+it=2 base mode=1 exit=0
+  conversation_activity       median_ms=    0.05
+  chain_total                 median_ms=    1.33
+    conversation_activity       median_ms=    0.07
+source_slots=100 actual_messages=117 actual_parts=117 cold_rows=117 appended_rows=117 cold_median_ms=2.51 cold_max_ms=4.06 append_median_ms=0.09 text_bytes=43079
+source_slots=500 actual_messages=583 actual_parts=583 cold_rows=583 appended_rows=584 cold_median_ms=12.20 cold_max_ms=12.87 append_median_ms=0.10 text_bytes=216839
+source_slots=1000 actual_messages=1167 actual_parts=1167 cold_rows=1167 appended_rows=1167 cold_median_ms=24.32 cold_max_ms=25.45 append_median_ms=0.12 text_bytes=433229
+source_slots=2000 actual_messages=2333 actual_parts=2333 cold_rows=2333 appended_rows=2334 cold_median_ms=48.69 cold_max_ms=50.80 append_median_ms=0.17 text_bytes=867923
+it=2 cand mode=activity exit=0
+it=2 cand mode=streaming exit=0
+it=2 cand mode=1 exit=0
+  conversation_activity       median_ms=    0.06
+  chain_total                 median_ms=    1.35
+    conversation_activity       median_ms=    0.07
+source_slots=100 actual_messages=117 actual_parts=117 cold_rows=117 appended_rows=117 cold_median_ms=2.45 cold_max_ms=3.98 append_median_ms=0.08 text_bytes=43079
+source_slots=500 actual_messages=583 actual_parts=583 cold_rows=583 appended_rows=584 cold_median_ms=12.04 cold_max_ms=12.67 append_median_ms=0.10 text_bytes=216839
+source_slots=1000 actual_messages=1167 actual_parts=1167 cold_rows=1167 appended_rows=1167 cold_median_ms=23.97 cold_max_ms=25.18 append_median_ms=0.12 text_bytes=433229
+source_slots=2000 actual_messages=2333 actual_parts=2333 cold_rows=2333 appended_rows=2334 cold_median_ms=48.18 cold_max_ms=50.23 append_median_ms=0.17 text_bytes=867923
+DONE
