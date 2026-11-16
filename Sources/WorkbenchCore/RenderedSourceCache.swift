@@ -8,6 +8,11 @@ import Foundation
 /// which round-16 attribution measured at ~80% of a cold query (link
 /// detection 66.6% + parse 14%). Rendering is shared here across instances
 /// so a reopen or a keystroke re-search pays matching, not rendering.
+/// The same sharing dedups repeated sources WITHIN one pass: identical
+/// source strings (a tool output or answer text occurring in several
+/// entries) render once and are served from the table afterwards — the
+/// pre-cache code re-rendered every occurrence (round-27 probe on the
+/// 16k-message bench window: 18,216 occurrences, 963 unique).
 ///
 /// Design argument (the queue gate for WorkbenchCore-wide caches, "no
 /// global memo"):

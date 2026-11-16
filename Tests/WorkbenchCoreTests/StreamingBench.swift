@@ -94,10 +94,17 @@ func benchStreamingDelta() throws {
 
     let handle = ConversationPresentationHandle()
     let cache = ConversationPresentationCache()
-    // Round 27: existing find-bar metrics keep their exact pre-cache
-    // semantics — this instance renders everything itself (a fresh
-    // RenderedSourceCache, no cross-instance reuse), so find_bar_query_update
-    // and find_bar_cold_query measure precisely what they measured before.
+    // Round 27: existing find-bar metrics keep cross-instance semantics —
+    // this instance renders through a fresh RenderedSourceCache, so nothing
+    // is shared with other instances or metric phases. Within one pass the
+    // cache still dedups repeated source strings, which the pre-cache code
+    // re-rendered per occurrence: this fixture's tool outputs and answers
+    // are template texts repeated across turns (probe on the 16,142-message
+    // window: 18,216 source occurrences, 963 unique), so find_bar_cold_query
+    // now measures render-unique + lookup-duplicates instead of render-
+    // every-occurrence. The dedup is product behavior, not a bench change,
+    // but its share of this metric is fixture-amplified; the round report
+    // decomposes both effects with the probe counts.
     let findBar = ConversationSearch(renderedCache: RenderedSourceCache())
     var findStage: [Double] = []
     let key = "host:kimi:s"
@@ -249,7 +256,11 @@ func benchStreamingDelta() throws {
     // keystrokes). Measured after every pre-existing metric so it cannot
     // disturb them; the shared cache is warmed once, out of timing, by the
     // first search, and every timed reopen must reproduce the warm search's
-    // hits EXACTLY (bench-level purity check of the cache).
+    // hits EXACTLY (bench-level purity check of the cache). The reopen-minus-
+    // cold delta inside this one binary isolates the render of the unique
+    // sources; both metrics share the duplicate-dedup effect described at the
+    // findBar declaration, so neither is compared against the pre-cache cold
+    // shape as if semantics were unchanged.
     let reopenWarmup = ConversationSearch()
     let reopenExpected = reopenWarmup.hits(in: coldWindow, query: "已经处理", running: true)
     precondition(reopenExpected.hits.count >= completedTurns)

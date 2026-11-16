@@ -15,8 +15,10 @@ import WorkbenchCore
 /// instances and fresh-cache instances must produce IDENTICAL
 /// ConversationFindResults over a corpus whose sources include NFC and NFD
 /// variants of the same text (so a key-conflation defect would change
-/// results), URLs, code and math (the ReplyDocument.parse paths). This is
-/// the cache analogue of round 12's warm-vs-fresh reuse invariant.
+/// results), a byte-identical duplicate source across turns (the within-pass
+/// dedup path — the repeat must add its own occurrence at unchanged offsets),
+/// URLs, code and math (the ReplyDocument.parse paths). This is the cache
+/// analogue of round 12's warm-vs-fresh reuse invariant.
 func checkRenderedSourceCache() throws {
     // MARK: Part 1 — mechanism
 
@@ -105,6 +107,11 @@ func checkRenderedSourceCache() throws {
          "content": [["type": "text", "text": "第 1 轮：继续推进。"]]],
         ["id": "a1", "role": "assistant", "created_at": "000004",
          "content": [["type": "text", "text": nfdAnswer],
+                     // Byte-identical duplicate of a0's answer: building this
+                     // entry's sources must serve the repeat from the cache
+                     // (the within-pass dedup path the bench fixture amplifies)
+                     // with unchanged offsets and its own occurrence.
+                     ["type": "text", "text": nfcAnswer],
                      ["type": "tool_use", "tool_call_id": "w1", "tool_name": "Write",
                       "input": ["file_path": "/fixture/Out.swift", "content": "let caf\u{00E9} = 1\n"]]],
          ],
@@ -126,6 +133,15 @@ func checkRenderedSourceCache() throws {
     precondition(!sanity.hits.isEmpty, "fixture must produce hits (non-vacuous pin)")
     let sanityShared = ConversationSearch().hits(in: window, query: "caf\u{00E9}", running: false)
     precondition(!sanityShared.hits.isEmpty && sanityShared.hits == sanity.hits)
+    // Within-pass dedup pin: "café" (diacritic-insensitive) matches a0's answer
+    // in the first turn and, in the second, a1's NFD answer, its byte-identical
+    // duplicate and the Write content — so both turns must contribute hits and
+    // the duplicate must add its OWN occurrence. A dedup that corrupted the
+    // joined text's offsets would shift occurrences or excerpts.
+    precondition(Set(sanity.hits.map(\.entryID)).count >= 2,
+                 "both turns must contribute café hits, got \(Set(sanity.hits.map(\.entryID)))")
+    precondition(sanity.hits.count >= 3,
+                 "the duplicated answer must contribute its own occurrence, got \(sanity.hits.count)")
 
-    print("PASS: rendered-source cache — produce-once, NFC/NFD byte-exact keys, bounded eviction (512B budget, 200-source churn), oversized refusal, removeAll, 8x200 concurrency smoke, and shared/fresh/warm find-bar results identical on 6 queries (NFC+NFD corpus, non-vacuous)")
+    print("PASS: rendered-source cache — produce-once, NFC/NFD byte-exact keys, bounded eviction (512B budget, 200-source churn), oversized refusal, removeAll, 8x200 concurrency smoke, shared/fresh/warm find-bar results identical on 6 queries (NFC+NFD corpus, non-vacuous), and within-pass duplicate-source dedup keeping its own occurrence with cross-regime parity")
 }
