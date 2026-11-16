@@ -1,0 +1,3 @@
+ M docs/performance/20x-loop-rounds/2026-11-16-round-27.md
+?? docs/performance/20x-loop-rounds/round-27/macos-product-gates-afddf8f.log
+?? docs/performance/20x-loop-rounds/round-27/portable-results-afddf8f.json

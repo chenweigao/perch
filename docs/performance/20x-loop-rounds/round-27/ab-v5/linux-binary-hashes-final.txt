@@ -1,0 +1,2 @@
+2595493ca1de58c3058ddaa921a650a1aa68bb955b02b507faf9e1c437e859f3  .local/round27/base-checks27v5
+43fe2b72b74141bd37312fcadc5d39257c4a06a8f3d04b487d9c5189d2e98f27  .local/round27/cand-checks27v5

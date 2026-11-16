@@ -1,0 +1,32 @@
+streaming_bench messages=16142 entries=8993 rows=692 measured=30
+  apply                       median_ms=    0.00
+  display_messages_workspace  median_ms=    0.10
+  conversation_activity       median_ms=    0.02
+  display_messages_timeline   median_ms=    0.09
+  presentation_update         median_ms=    0.27
+  presented_rows              median_ms=    0.06
+  memory_keys                 median_ms=    0.05
+  chain_total                 median_ms=    0.59
+  presentation_update breakdown (separate warm model with metrics):
+    input_comparison            median_ms=    0.00
+    tool_projection             median_ms=    0.05
+    turn_projection             median_ms=    0.02
+    narrative                   median_ms=    0.17
+    row_projection              median_ms=    0.01
+    summary                     median_ms=    0.00
+    retained_cost               median_ms=    0.00
+    total                       median_ms=    0.26
+  find_bar_query_update       median_ms=    0.29
+  find_bar_cold_query         median_ms= 1122.34
+  older_page_full_chain       median_ms=    3.99
+    presentation_update         median_ms=    3.18
+    presented_rows              median_ms=    0.76
+    conversation_activity       median_ms=    0.03
+    presentation_update breakdown (separate warm model with metrics):
+      tool_projection             median_ms=    0.89
+      turn_projection             median_ms=    1.13
+      narrative                   median_ms=    0.18
+      row_projection              median_ms=    0.01
+      retained_cost               median_ms=    0.77
+      model_total                 median_ms=    3.29
+  release_model_state         median_ms=    5.23

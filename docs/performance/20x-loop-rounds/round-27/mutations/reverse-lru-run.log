@@ -1,0 +1,70 @@
+PASS: step reading preserves order, edit identities, historical patches and outcome-aware churn
+PASS: phase reading groups Bash and thoughts, preserves edit receipts, separates historical failures from pending work and uses grounded command labels
+PASS: live public summaries, completed process folding, manual expansion, uniform folding of edits and failures
+PASS: PI steady streaming cadence, Unicode boundaries, replacement and immediate completion
+PASS: parsed-block release retains Unicode, styling, links and complete rich Markdown
+PASS: incremental reply parse matches full parses at every streaming prefix
+PASS: live progress, missing summaries, thinking-only output, tool-only notice and provider model groups
+PASS: process fold groups completed turns, preserves order, keeps the running turn live
+PASS: presentation parity, same-ID edits, pagination, epoch/language/live handoff, scoped LRU, oversized active state and metrics
+PASS: presentation history reuse matches complete recomputation across tokens, paging, crossings, language, epoch and overlays
+PASS: paging and new prompts reuse unchanged earlier turns and match complete recomputation (19/20 pages)
+PASS: window identity reuse ends at any earlier in-place edit, survives a rebuilt window and matches complete recomputation
+PASS: find-bar entry reuse equals a complete search across growth, isolated payload edits, reroutes, rebuilds, pages, running flips and query/option switches
+PROBE PASS: prefix zero-sign flip under an unchanged query
+PROBE PASS: NFD regex query after the canonically equal NFC query, and back
+PROBE PASS: payload NFC to NFD swap under an unchanged regex query
+PROBE PASS: object-key NFC to NFD swap under an unchanged regex query
+PROBE PASS: case-sensitive literal NFD query after the canonically equal NFC query, and back
+PASS: find-bar cache-hole probes (prefix zero sign, regex and literal query encoding round trips, payload encoding, key encoding) equal complete searches
+
+*** Signal 4: Backtracing from 0x5576409b466d... done ***
+
+*** Swift runtime failure: precondition failure ***
+
+Platform: x86_64 Linux (Alibaba Cloud Linux 3 (Soaring Falcon))
+
+Thread 0 "WorkbenchChecks" crashed:
+
+  0 [inlined] [system] 0x00005576409b466d Swift runtime failure: precondition failure in WorkbenchChecks at //<compiler-generated>
+  1 [inlined]          0x00005576409b466d static String.== infix(_:_:) in WorkbenchChecks at /tmp/r27-mut/Tests/WorkbenchCoreTests/RenderedSourceCacheTests.swift:86:5
+  2                    0x00005576409b466d checkRenderedSourceCache() + 14717 in WorkbenchChecks at /tmp/r27-mut/Tests/WorkbenchCoreTests/RenderedSourceCacheTests.swift:86:5
+  3 [ra]               0x000055764096c02f specialized static ProtocolTests.main() + 446 in WorkbenchChecks at /tmp/r27-mut/Tests/WorkbenchCoreTests/ProtocolTests.swift:47:13
+  4 [async] [system]   0x0000557640965310 specialized thunk for @escaping @convention(thin) @async () -> () in WorkbenchChecks at //<compiler-generated>
+  5 [async]            0x00007fde370e2190 completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*) in libswift_Concurrency.so
+...
+
+
+Registers:
+
+rax 0x0000000000000000  0
+rdx 0xe200000000000000  16285016252571713536
+rcx 0xe800000000000000  16717361816799281152
+rbx 0x72422d414741494e  8233192827178273102
+rsi 0x8000000000000000  9223372036854775808
+rdi 0xe200000000000000  16285016252571713536
+rbp 0x00007fff2534f440  a0 f4 34 25 ff 7f 00 00 2f c0 96 40 76 55 00 00   ô4%ÿ···/À·@vU··
+rsp 0x00007fff2534f090  50 01 00 00 00 00 00 30 a0 8d 26 41 76 55 00 00  P······0 ·&AvU··
+ r8 0x0000000000000000  0
+ r9 0x6000000000000000  6917529027641081856
+r10 0x0000000100000003  4294967299
+r11 0x0000000000000000  0
+r12 0x0000000000000000  0
+r13 0x0000557641325490  88 69 e3 40 76 55 00 00 26 4e 25 c8 ae 0a 00 c0  ·iã@vU··&N%È®··À
+r14 0x0000000000000000  0
+r15 0xe800000000000000  16717361816799281152
+rip 0x00005576409b466d  0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b  ················
+
+rflags 0x0000000000010246  ZF PF
+
+cs 0x0033  fs 0x0000  gs 0x0000
+
+
+Images (48 omitted):
+
+0x0000557640600000–0x0000557640de72f8 66ae0bb53c7a779daf16cdb61681224df2923853 WorkbenchChecks         /tmp/r27-mut/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+0x00007fde37056000–0x00007fde370e9660 ab7a387eca696d31db096d9ebebea096c2cf1bc3 libswift_Concurrency.so /home/<dev>/.local/swift/6.3.3/usr/lib/swift/linux/libswift_Concurrency.so
+
+Backtrace took 0.64s
+
+timeout: the monitored command dumped core

@@ -1,0 +1,56 @@
+{
+  "cpu_count" : 3,
+  "dependencies" : {
+    "swift-cmark" : {
+      "revision" : "924936d0427cb25a61169739a7660230bffa6ea6",
+      "version" : "0.8.0"
+    },
+    "swift-markdown" : {
+      "revision" : "3c6f9523da3a1ec2fd829673e472d95b8097a3b8",
+      "version" : "0.8.0"
+    },
+    "swiftmath" : {
+      "revision" : "fa8244ed032f4a1ade4cb0571bf87d2f1a9fd2d7",
+      "version" : "1.7.3"
+    }
+  },
+  "fixture" : "synthetic; no sessions or network",
+  "measurements" : {
+    "display_formula_count" : 30,
+    "document_height_points" : 5221.2639999999992,
+    "initial_layout_cpu_ms" : 321.48399999999998,
+    "initial_layout_display_ms" : 384.99345833338339,
+    "inline_formula_count" : 7,
+    "rss_after_bytes" : 85753856,
+    "rss_before_bytes" : 40534016,
+    "scheduled_tick_gap" : {
+      "max_ms" : 41.747249999957603,
+      "median_ms" : 25.051249999933134,
+      "p95_ms" : 34.931583333332128,
+      "total_ms" : 2156.1675833332856
+    },
+    "scroll_cpu" : {
+      "max_ms" : 8.7989999999999782,
+      "median_ms" : 3.2789999999999964,
+      "p95_ms" : 7.5150000000000432,
+      "total_ms" : 311.17899999999975
+    },
+    "scroll_work" : {
+      "max_ms" : 9.3842500000391738,
+      "median_ms" : 3.4735416667217578,
+      "p95_ms" : 7.8247916666214223,
+      "total_ms" : 322.70512500065252
+    }
+  },
+  "mode" : "window",
+  "os" : "Version 27.0.1 (Build 26A434)",
+  "physical_memory_bytes" : 7516192768,
+  "revision" : "ed98b97e816d4eceda25bfe9a4134cacbab99cdb",
+  "scope" : "isolated synthetic AppKit\/SwiftUI work; not hardware input latency or certified FPS",
+  "source_input_sha256" : "0620f4e499fa976a2129f5ecf6b7a890ba4c76873e78dc351953e153911dd4e8",
+  "status" : "passed",
+  "suffix_search" : false,
+  "swiftmath_patch_sha256" : "68686f9cd8fbe4b1134ace3a22f162828b9d4bd89eb84816f050379aa06bb855",
+  "toolchain" : "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+  "variant" : "baseline"
+}

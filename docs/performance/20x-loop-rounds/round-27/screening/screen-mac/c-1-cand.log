@@ -1,0 +1,4 @@
+source_slots=100 actual_messages=117 actual_parts=117 cold_rows=117 appended_rows=117 cold_median_ms=0.38 cold_max_ms=2.28 append_median_ms=0.03 text_bytes=43079
+source_slots=500 actual_messages=583 actual_parts=583 cold_rows=583 appended_rows=584 cold_median_ms=1.83 cold_max_ms=2.08 append_median_ms=0.04 text_bytes=216839
+source_slots=1000 actual_messages=1167 actual_parts=1167 cold_rows=1167 appended_rows=1167 cold_median_ms=3.48 cold_max_ms=3.82 append_median_ms=0.06 text_bytes=433229
+source_slots=2000 actual_messages=2333 actual_parts=2333 cold_rows=2333 appended_rows=2334 cold_median_ms=6.90 cold_max_ms=7.55 append_median_ms=0.07 text_bytes=867923

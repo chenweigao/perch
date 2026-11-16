@@ -1,0 +1,61 @@
+=== driver log (tail) ===
+=== prepare Mon Nov 16 13:34:16 CST 2026 ===
+From github.com:chenweigao/perch
+   668ec61e..ed98b97e  main       -> origin/main
+Previous HEAD position was 2880464f docs(performance): dispose round-26 review (6B+4NB) and record v2 adoption data
+HEAD is now at ed98b97e Merge pull request #348 from chenweigao/perf/20x-loop-26-20261116
+HEAD=ed98b97e816d4eceda25bfe9a4134cacbab99cdb
+porcelain_before=0
+=== base build (pristine) Mon Nov 16 13:34:21 CST 2026 ===
+base_build_exit=0
+=== apply patches + candidate build Mon Nov 16 13:35:35 CST 2026 ===
+tests_patch=ok
+product_patch=ok
+cand_build_exit=0
+66733aa7571b39fe77b6d4ed5a0a24f27c38fd9cbe184aa1b335f70f1f7ca309  <worktree>/.build/round27-base/out/Products/Release/WorkbenchChecks
+4b0fb66cce9ba1608ab981e76a8a2308246512ba713bfff8132ba027275921a4  <worktree>/.build/round27-cand/out/Products/Release/WorkbenchChecks
+=== checks: base (old pin set, record) + candidate (gates) Mon Nov 16 13:36:48 CST 2026 ===
+base_checks_exit=0 pass=106
+cand_checks_exit=0 pass=107
+PASS: rendered-source cache — produce-once, NFC/NFD byte-exact keys, bounded eviction (512B budget, 200-source churn), oversized refusal, removeAll, 8x200 concurrency smoke, and shared/fresh/warm find-bar results identical on 6 queries (NFC+NFD corpus, non-vacuous)
+=== in-context screening: 3 alternating, streaming + mode 1 (in place) Mon Nov 16 13:37:12 CST 2026 ===
+it=1 side=base s_exit=0
+it=1 side=base c_exit=0
+it=1 side=base query_update=0.29 cold=1122.34 reopen=NA stream_narrative=0.17 cold@2000=6.73 older_page=
+it=1 side=cand s_exit=0
+it=1 side=cand c_exit=0
+it=1 side=cand query_update=0.28 cold=637.63 reopen=145.16 stream_narrative=0.17 cold@2000=6.90 older_page=
+it=2 side=base s_exit=0
+it=2 side=base c_exit=0
+it=2 side=base query_update=0.30 cold=1119.75 reopen=NA stream_narrative=0.17 cold@2000=6.77 older_page=
+it=2 side=cand s_exit=0
+it=2 side=cand c_exit=0
+it=2 side=cand query_update=0.27 cold=634.76 reopen=146.97 stream_narrative=0.17 cold@2000=6.63 older_page=
+it=3 side=base s_exit=0
+it=3 side=base c_exit=0
+it=3 side=base query_update=0.29 cold=1133.06 reopen=NA stream_narrative=0.17 cold@2000=6.99 older_page=
+it=3 side=cand s_exit=0
+it=3 side=cand c_exit=0
+it=3 side=cand query_update=0.28 cold=639.19 reopen=149.90 stream_narrative=0.17 cold@2000=6.78 older_page=
+porcelain_after=0
+DONE Mon Nov 16 13:37:58 CST 2026
+fetched to .local/round27/mac-screen27
+total 96
+drwxr-xr-x 2 weigao.cwg users  4096 Nov 16 14:01 .
+drwxr-xr-x 4 weigao.cwg users  4096 Nov 16 14:01 ..
+-rw-r--r-- 1 weigao.cwg users  3005 Nov 16 14:01 base-build.log
+-rw-r--r-- 1 weigao.cwg users   661 Nov 16 14:01 c-1-base.log
+-rw-r--r-- 1 weigao.cwg users   661 Nov 16 14:01 c-1-cand.log
+-rw-r--r-- 1 weigao.cwg users   661 Nov 16 14:01 c-2-base.log
+-rw-r--r-- 1 weigao.cwg users   661 Nov 16 14:01 c-2-cand.log
+-rw-r--r-- 1 weigao.cwg users   661 Nov 16 14:01 c-3-base.log
+-rw-r--r-- 1 weigao.cwg users   661 Nov 16 14:01 c-3-cand.log
+-rw-r--r-- 1 weigao.cwg users  2997 Nov 16 14:01 cand-build.log
+-rw-r--r-- 1 weigao.cwg users 13324 Nov 16 14:01 checks-base.log
+-rw-r--r-- 1 weigao.cwg users 13592 Nov 16 14:01 checks-cand.log
+-rw-r--r-- 1 weigao.cwg users  1670 Nov 16 14:01 s-1-base.log
+-rw-r--r-- 1 weigao.cwg users  1719 Nov 16 14:01 s-1-cand.log
+-rw-r--r-- 1 weigao.cwg users  1670 Nov 16 14:01 s-2-base.log
+-rw-r--r-- 1 weigao.cwg users  1719 Nov 16 14:01 s-2-cand.log
+-rw-r--r-- 1 weigao.cwg users  1670 Nov 16 14:01 s-3-base.log
+-rw-r--r-- 1 weigao.cwg users  1719 Nov 16 14:01 s-3-cand.log

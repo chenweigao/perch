@@ -1,0 +1,104 @@
+=== driver log ===
+=== prepare Mon Nov 16 14:16:02 CST 2026 ===
+HEAD is now at ed98b97e Merge pull request #348 from chenweigao/perf/20x-loop-26-20261116
+HEAD=ed98b97e816d4eceda25bfe9a4134cacbab99cdb
+porcelain_before=0
+=== base build (pristine) Mon Nov 16 14:16:06 CST 2026 ===
+base_build_exit=0
+=== apply v2 patches + candidate build Mon Nov 16 14:17:20 CST 2026 ===
+tests_patch=ok
+product_patch=ok
+cand_build_exit=0
+e3b98adc47c08d86905c5a5cf22bdc5100425b4d1835aaf661f508dabcc7f9c1  <worktree>/.build/round27-ab-base/out/Products/Release/WorkbenchChecks
+621cc480474843091c594d536616f4a57c13491b3d4e415f9e045f74fb133470  <worktree>/.build/round27-ab-cand/out/Products/Release/WorkbenchChecks
+=== checks both sides (base = old pin set, record; cand = gate) Mon Nov 16 14:18:33 CST 2026 ===
+base_checks_exit=0 pass=106
+cand_checks_exit=0 pass=107
+PASS: rendered-source cache — produce-once, NFC/NFD byte-exact keys, bounded eviction (512B budget, 200-source churn), oversized refusal, removeAll, 8x200 concurrency smoke, shared/fresh/warm find-bar results identical on 6 queries (NFC+NFD corpus, non-vacuous), and within-pass duplicate-source dedup keeping its own occurrence with cross-regime parity
+=== pairs Mon Nov 16 14:18:56 CST 2026 ===
+pair=1 variant=baseline mode=1 exit=0
+pair=1 variant=baseline mode=streaming exit=0
+pair=1 variant=baseline mode=activity exit=0
+pair=1 variant=baseline mode=edit-lines exit=0
+pair=1 variant=baseline mode=presentation-token exit=0
+pair=1 variant=candidate mode=1 exit=0
+pair=1 variant=candidate mode=streaming exit=0
+pair=1 variant=candidate mode=activity exit=0
+pair=1 variant=candidate mode=edit-lines exit=0
+pair=1 variant=candidate mode=presentation-token exit=0
+pair=2 variant=baseline mode=1 exit=0
+pair=2 variant=baseline mode=streaming exit=0
+pair=2 variant=baseline mode=activity exit=0
+pair=2 variant=baseline mode=edit-lines exit=0
+pair=2 variant=baseline mode=presentation-token exit=0
+pair=2 variant=candidate mode=1 exit=0
+pair=2 variant=candidate mode=streaming exit=0
+pair=2 variant=candidate mode=activity exit=0
+pair=2 variant=candidate mode=edit-lines exit=0
+pair=2 variant=candidate mode=presentation-token exit=0
+pair=3 variant=baseline mode=1 exit=0
+pair=3 variant=baseline mode=streaming exit=0
+pair=3 variant=baseline mode=activity exit=0
+pair=3 variant=baseline mode=edit-lines exit=0
+pair=3 variant=baseline mode=presentation-token exit=0
+pair=3 variant=candidate mode=1 exit=0
+pair=3 variant=candidate mode=streaming exit=0
+pair=3 variant=candidate mode=activity exit=0
+pair=3 variant=candidate mode=edit-lines exit=0
+pair=3 variant=candidate mode=presentation-token exit=0
+pair=4 variant=baseline mode=1 exit=0
+pair=4 variant=baseline mode=streaming exit=0
+pair=4 variant=baseline mode=activity exit=0
+pair=4 variant=baseline mode=edit-lines exit=0
+pair=4 variant=baseline mode=presentation-token exit=0
+pair=4 variant=candidate mode=1 exit=0
+pair=4 variant=candidate mode=streaming exit=0
+pair=4 variant=candidate mode=activity exit=0
+pair=4 variant=candidate mode=edit-lines exit=0
+pair=4 variant=candidate mode=presentation-token exit=0
+pair=5 variant=baseline mode=1 exit=0
+pair=5 variant=baseline mode=streaming exit=0
+pair=5 variant=baseline mode=activity exit=0
+pair=5 variant=baseline mode=edit-lines exit=0
+pair=5 variant=baseline mode=presentation-token exit=0
+pair=5 variant=candidate mode=1 exit=0
+pair=5 variant=candidate mode=streaming exit=0
+pair=5 variant=candidate mode=activity exit=0
+pair=5 variant=candidate mode=edit-lines exit=0
+pair=5 variant=candidate mode=presentation-token exit=0
+pair=6 variant=baseline mode=1 exit=0
+pair=6 variant=baseline mode=streaming exit=0
+pair=6 variant=baseline mode=activity exit=0
+pair=6 variant=baseline mode=edit-lines exit=0
+pair=6 variant=baseline mode=presentation-token exit=0
+pair=6 variant=candidate mode=1 exit=0
+pair=6 variant=candidate mode=streaming exit=0
+pair=6 variant=candidate mode=activity exit=0
+pair=6 variant=candidate mode=edit-lines exit=0
+pair=6 variant=candidate mode=presentation-token exit=0
+e3b98adc47c08d86905c5a5cf22bdc5100425b4d1835aaf661f508dabcc7f9c1  <worktree>/.build/round27-ab-base/out/Products/Release/WorkbenchChecks
+621cc480474843091c594d536616f4a57c13491b3d4e415f9e045f74fb133470  <worktree>/.build/round27-ab-cand/out/Products/Release/WorkbenchChecks
+porcelain_after=0
+DONE Mon Nov 16 14:20:34 CST 2026
+fetched to .local/round27/macos-ab
+base-build.log
+binary-hashes-final.txt
+binary-hashes.txt
+cand-build.log
+checks-base.log
+checks-cand.log
+fixture-hashes-base.txt
+fixture-hashes-cand.txt
+pair1-baseline-1.log
+pair1-baseline-activity.log
+pair1-baseline-edit-lines.log
+pair1-baseline-presentation-token.log
+pair1-baseline-streaming.log
+pair1-candidate-1.log
+pair1-candidate-activity.log
+pair1-candidate-edit-lines.log
+pair1-candidate-presentation-token.log
+pair1-candidate-streaming.log
+pair2-baseline-1.log
+pair2-baseline-activity.log
+69

@@ -94,7 +94,18 @@ func benchStreamingDelta() throws {
 
     let handle = ConversationPresentationHandle()
     let cache = ConversationPresentationCache()
-    let findBar = ConversationSearch()
+    // Round 27: existing find-bar metrics keep cross-instance semantics —
+    // this instance renders through a fresh RenderedSourceCache, so nothing
+    // is shared with other instances or metric phases. Within one pass the
+    // cache still dedups repeated source strings, which the pre-cache code
+    // re-rendered per occurrence: this fixture's tool outputs and answers
+    // are template texts repeated across turns (probe on the 16,142-message
+    // window: 18,216 source occurrences, 963 unique), so find_bar_cold_query
+    // now measures render-unique + lookup-duplicates instead of render-
+    // every-occurrence. The dedup is product behavior, not a bench change,
+    // but its share of this metric is fixture-amplified; the round report
+    // decomposes both effects with the probe counts.
+    let findBar = ConversationSearch(renderedCache: RenderedSourceCache())
     var findStage: [Double] = []
     let key = "host:kimi:s"
     var stages: [String: [Double]] = [:]
@@ -228,16 +239,52 @@ func benchStreamingDelta() throws {
     // Round 16: the cold full-window first-query cost — a fresh
     // ConversationSearch per iteration, so every run pays the complete
     // render + match pass (the find bar pays it per open; workspace history
-    // search pays it per keystroke per session). Measured last so it cannot
-    // disturb the other metrics' timing.
+    // search pays it per executed explicit search — the product cancels
+    // in-flight searches on query change rather than re-searching per
+    // keystroke, round-27 review F3 wording fix). Measured last so it
+    // cannot disturb the other metrics' timing.
     let coldWindow = conversation.displayMessages
     var coldFind: [Double] = []
     for _ in 0..<5 {
-        let fresh = ConversationSearch()
+        let fresh = ConversationSearch(renderedCache: RenderedSourceCache())
         let t = benchNow()
         let found = fresh.hits(in: coldWindow, query: "已经处理", running: true)
         coldFind.append(ms(t))
         precondition(found.hits.count >= completedTurns)
+    }
+    // Round 27: the find-bar REOPEN shape — a fresh ConversationSearch over
+    // the process-wide shared rendered-source cache. On reopen the find bar
+    // re-renders nothing AS LONG AS the sources stay admitted, unevicted and
+    // in the same locale generation; history workers reuse renders across
+    // repeated explicit searches (not per keystroke — review F3). A hit is
+    // not free: it still pays key construction, hashing, lock and lastUse
+    // work (review F8). Measured after every pre-existing metric so it
+    // cannot disturb them; the shared cache is warmed once, out of timing,
+    // by the first search, and every timed reopen must reproduce the warm
+    // search's hits EXACTLY — a within-candidate warm-shape equality check,
+    // NOT a proof of zero produces and NOT an independent oracle against
+    // the pre-cache product (the pin's byteBudget-0 regime is the
+    // render-every-occurrence oracle). The reopen-minus-cold delta inside
+    // this one binary is the miss-path render of the unique sources plus
+    // the miss/hit overhead difference — not an isolated pure-render
+    // timing; both metrics share the duplicate-dedup effect described at
+    // the findBar declaration, so neither is compared against the pre-cache
+    // cold shape as if semantics were unchanged.
+    let reopenWarmup = ConversationSearch()
+    let reopenExpected = reopenWarmup.hits(in: coldWindow, query: "已经处理", running: true)
+    precondition(reopenExpected.hits.count >= completedTurns)
+    var reopenFind: [Double] = []
+    for _ in 0..<5 {
+        let reopen = ConversationSearch()
+        let t = benchNow()
+        let found = reopen.hits(in: coldWindow, query: "已经处理", running: true)
+        reopenFind.append(ms(t))
+        // Canonical == plus UTF-8 byte equality of every excerpt: String ==
+        // alone would admit canonically-equal-but-byte-different renders
+        // (round-27 review recheck: NFC-normalization mutants).
+        precondition(found.hits == reopenExpected.hits
+                     && found.hits.map { Array($0.excerpt.utf8) } == reopenExpected.hits.map { Array($0.excerpt.utf8) },
+                     "shared rendered-source cache changed search results")
     }
     func median(_ values: [Double]) -> Double { values.sorted()[values.count / 2] }
     func line(_ name: String, _ value: Double, indent: String = "  ") -> String {
@@ -255,6 +302,7 @@ func benchStreamingDelta() throws {
     }
     print(line("find_bar_query_update", median(findStage)))
     print(line("find_bar_cold_query", median(coldFind)))
+    print(line("find_bar_reopen_query", median(reopenFind)))
     print(line("older_page_full_chain", median(paged)))
     for name in ["presentation_update", "presented_rows", "conversation_activity"] {
         print(line(name, median(pageStages[name]!), indent: "    "))

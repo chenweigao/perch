@@ -1,0 +1,26 @@
+HEAD_main=d191e9c2f9bb2744f9c8982f0cc6207fbc9d294b
+porcelain_main=0
+cand_build_exit=0
+base_build_exit=0
+3bec5c5632896099701ff499f8296c82633b19a650c51c171303b90fddfb5c7c  /tmp/r27-screen-base/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+6f044495aa18e29d411a6243ffb7385eed2beb53522449eb81c27bd13b83c9ad  <worktree>/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+=== screening: 3 alternating, streaming + mode 1 Mon Nov 16 13:36:04 CST 2026 ===
+it=1 side=base s_exit=0
+it=1 side=base c_exit=0
+it=1 side=base query_update=0.53 cold=554.48 reopen=NA stream_narrative=0.24 cold@2000=48.20 older_page=
+it=1 side=cand s_exit=0
+it=1 side=cand c_exit=0
+it=1 side=cand query_update=0.52 cold=349.57 reopen=229.52 stream_narrative=0.24 cold@2000=48.03 older_page=
+it=2 side=base s_exit=0
+it=2 side=base c_exit=0
+it=2 side=base query_update=0.53 cold=549.91 reopen=NA stream_narrative=0.24 cold@2000=48.33 older_page=
+it=2 side=cand s_exit=0
+it=2 side=cand c_exit=0
+it=2 side=cand query_update=0.54 cold=353.12 reopen=229.34 stream_narrative=0.23 cold@2000=48.17 older_page=
+it=3 side=base s_exit=0
+it=3 side=base c_exit=0
+it=3 side=base query_update=0.53 cold=551.24 reopen=NA stream_narrative=0.23 cold@2000=48.27 older_page=
+it=3 side=cand s_exit=0
+it=3 side=cand c_exit=0
+it=3 side=cand query_update=0.52 cold=350.89 reopen=227.69 stream_narrative=0.22 cold@2000=48.52 older_page=
+DONE Mon Nov 16 13:36:50 CST 2026

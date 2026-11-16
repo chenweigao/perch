@@ -1,0 +1,300 @@
+swift-driver version: 1.168.6 Fetching https://github.com/swiftlang/swift-cmark.git
+Fetching https://github.com/mgriebling/SwiftMath.git
+[1/2375] Fetching swiftmath
+[2376/21061] Fetching swiftmath, swift-cmark
+Fetched https://github.com/swiftlang/swift-cmark.git (2.56s)
+Fetched https://github.com/mgriebling/SwiftMath.git (2.56s)
+Fetching https://github.com/swiftlang/swift-markdown.git
+[1/7844] Fetching swift-markdown
+Fetched https://github.com/swiftlang/swift-markdown.git (1.17s)
+Computing version for https://github.com/mgriebling/SwiftMath.git
+Computed https://github.com/mgriebling/SwiftMath.git at 1.7.3 (10.30s)
+Computing version for https://github.com/swiftlang/swift-cmark.git
+Computed https://github.com/swiftlang/swift-cmark.git at 0.8.0 (0.73s)
+Computing version for https://github.com/swiftlang/swift-markdown.git
+Computed https://github.com/swiftlang/swift-markdown.git at 0.8.0 (2.83s)
+Creating working copy for https://github.com/mgriebling/SwiftMath.git
+Working copy of https://github.com/mgriebling/SwiftMath.git resolved at 1.7.3
+Creating working copy for https://github.com/swiftlang/swift-cmark.git
+Working copy of https://github.com/swiftlang/swift-cmark.git resolved at 0.8.0
+Creating working copy for https://github.com/swiftlang/swift-markdown.git
+Working copy of https://github.com/swiftlang/swift-markdown.git resolved at 0.8.0
+warning: 'baseline': dependency 'swiftmath' is not used by any target
+Building for production...
+[0/4] Copying Info.plist
+[1/4] Copying mathFonts.bundle
+[2/4] Write sources
+[3/4] Write swift-version--16E2670AF4A3377F.txt
+[5/5] Compiling SwiftMath MTFontMathTableV2.swift
+Build of target: 'SwiftMath' complete! (28.99s)
+warning: '--build-system native' has been deprecated and will be removed in a future release; please report an issue at https://github.com/swiftlang/swift-package-manager/issues if you are unable to adopt the default build system.
+warning: 'baseline': dependency 'swiftmath' is not used by any target
+[0/1] Planning build
+Building for production...
+[0/37] Write sources
+[1/38] Write swift-version--16E2670AF4A3377F.txt
+[2/38] Compiling cmark-gfm-extensions tasklist.c
+[3/38] Compiling cmark-gfm-extensions tagfilter.c
+[4/38] Compiling cmark-gfm-extensions strikethrough.c
+[5/38] Compiling cmark-gfm-extensions ext_scanners.c
+[6/38] Compiling cmark-gfm-extensions core-extensions.c
+[7/38] Compiling cmark-gfm-extensions table.c
+[8/38] Compiling cmark-gfm xml.c
+[9/38] Compiling cmark-gfm syntax_extension.c
+[10/38] Compiling cmark-gfm-extensions autolink.c
+[11/38] Compiling cmark-gfm render.c
+[12/38] Compiling cmark-gfm registry.c
+[13/38] Compiling cmark-gfm references.c
+[14/38] Compiling cmark-gfm plugin.c
+[15/38] Compiling cmark-gfm plaintext.c
+[16/38] Compiling cmark-gfm scanners.c
+[17/38] Compiling cmark-gfm utf8.c
+[18/38] Compiling cmark-gfm node.c
+[19/38] Compiling cmark-gfm map.c
+[20/38] Compiling cmark-gfm man.c
+[21/38] Compiling cmark-gfm linked_list.c
+[22/38] Compiling cmark-gfm latex.c
+[23/38] Compiling cmark-gfm iterator.c
+[24/38] Compiling cmark-gfm html.c
+[25/38] Compiling cmark-gfm houdini_html_u.c
+[26/38] Compiling cmark-gfm houdini_html_e.c
+[27/38] Compiling cmark-gfm houdini_href_e.c
+[28/38] Compiling cmark-gfm footnotes.c
+[29/38] Compiling cmark-gfm cmark_ctype.c
+[30/38] Compiling cmark-gfm commonmark.c
+[31/38] Compiling cmark-gfm cmark.c
+[32/38] Compiling cmark-gfm buffer.c
+[33/38] Compiling cmark-gfm inlines.c
+[34/38] Write sources
+[35/38] Compiling cmark-gfm arena.c
+[36/38] Compiling CAtomic CAtomic.c
+[37/38] Compiling cmark-gfm blocks.c
+[39/39] Compiling Markdown ChildIndexPath.swift
+[40/40] Compiling WorkbenchCore ActivityNarrative.swift
+Build of target: 'WorkbenchCore' complete! (101.17s)
+warning: '--build-system native' has been deprecated and will be removed in a future release; please report an issue at https://github.com/swiftlang/swift-package-manager/issues if you are unable to adopt the default build system.
+warning: '--build-system native' has been deprecated and will be removed in a future release; please report an issue at https://github.com/swiftlang/swift-package-manager/issues if you are unable to adopt the default build system.
+/Users/<runner>/work/perch/perch/.local/math-performance-sources/baseline/Sources/AgentWorkbench/ReplyMarkdownView.swift:2409:34: warning: Storing a closure in '@Entry var documentOpenLink' may invalidate dependents on every update because closures may not be comparable. (from macro 'Entry ')
+2407 |     @Entry var documentMutedText = false
+2408 |     @Entry var documentQuery: String = ""
+2409 |     @Entry var documentOpenLink: ((URL) -> Bool)? = nil
+     |                                  `- warning: Storing a closure in '@Entry var documentOpenLink' may invalidate dependents on every update because closures may not be comparable. (from macro 'Entry ')
+2410 |     @Entry var documentSelection: ((String) -> Void)? = nil
+2411 | }
+
+/Users/<runner>/work/perch/perch/.local/math-performance-sources/baseline/Sources/AgentWorkbench/ReplyMarkdownView.swift:2410:35: warning: Storing a closure in '@Entry var documentSelection' may invalidate dependents on every update because closures may not be comparable. (from macro 'Entry ')
+2408 |     @Entry var documentQuery: String = ""
+2409 |     @Entry var documentOpenLink: ((URL) -> Bool)? = nil
+2410 |     @Entry var documentSelection: ((String) -> Void)? = nil
+     |                                   `- warning: Storing a closure in '@Entry var documentSelection' may invalidate dependents on every update because closures may not be comparable. (from macro 'Entry ')
+2411 | }
+2412 | @MainActor private final class DocumentSelectionAction: NSObject {
+/Users/<runner>/work/perch/perch/build/Math Performance baseline.app: replacing existing signature
+/Users/<runner>/work/perch/perch/build/Math Performance baseline.app
+swift-driver version: 1.168.6 Fetching https://github.com/swiftlang/swift-cmark.git from cache
+Fetching https://github.com/mgriebling/SwiftMath.git from cache
+Fetched https://github.com/mgriebling/SwiftMath.git from cache (0.50s)
+Fetching https://github.com/swiftlang/swift-markdown.git from cache
+Fetched https://github.com/swiftlang/swift-cmark.git from cache (0.62s)
+Fetched https://github.com/swiftlang/swift-markdown.git from cache (0.41s)
+Computing version for https://github.com/mgriebling/SwiftMath.git
+Computed https://github.com/mgriebling/SwiftMath.git at 1.7.3 (0.99s)
+Computing version for https://github.com/swiftlang/swift-cmark.git
+Computed https://github.com/swiftlang/swift-cmark.git at 0.8.0 (0.02s)
+Computing version for https://github.com/swiftlang/swift-markdown.git
+Computed https://github.com/swiftlang/swift-markdown.git at 0.8.0 (0.03s)
+Creating working copy for https://github.com/swiftlang/swift-cmark.git
+Working copy of https://github.com/swiftlang/swift-cmark.git resolved at 0.8.0
+Creating working copy for https://github.com/swiftlang/swift-markdown.git
+Working copy of https://github.com/swiftlang/swift-markdown.git resolved at 0.8.0
+Creating working copy for https://github.com/mgriebling/SwiftMath.git
+Working copy of https://github.com/mgriebling/SwiftMath.git resolved at 1.7.3
+warning: 'candidate': dependency 'swiftmath' is not used by any target
+Building for production...
+[0/4] Write sources
+[1/4] Copying Info.plist
+[2/4] Copying mathFonts.bundle
+[3/4] Write swift-version--16E2670AF4A3377F.txt
+[5/5] Compiling SwiftMath MTFontMathTableV2.swift
+Build of target: 'SwiftMath' complete! (33.49s)
+warning: '--build-system native' has been deprecated and will be removed in a future release; please report an issue at https://github.com/swiftlang/swift-package-manager/issues if you are unable to adopt the default build system.
+warning: 'candidate': dependency 'swiftmath' is not used by any target
+[0/1] Planning build
+Building for production...
+[0/38] Write sources
+[1/38] Write swift-version--16E2670AF4A3377F.txt
+[2/38] Compiling cmark-gfm-extensions tagfilter.c
+[3/38] Compiling cmark-gfm-extensions strikethrough.c
+[4/38] Compiling cmark-gfm-extensions tasklist.c
+[5/38] Compiling cmark-gfm-extensions core-extensions.c
+[6/38] Compiling cmark-gfm-extensions ext_scanners.c
+[7/38] Compiling cmark-gfm-extensions table.c
+[8/38] Compiling cmark-gfm xml.c
+[9/38] Compiling cmark-gfm syntax_extension.c
+[10/38] Compiling cmark-gfm-extensions autolink.c
+[11/38] Compiling cmark-gfm render.c
+[12/38] Compiling cmark-gfm registry.c
+[13/38] Compiling cmark-gfm references.c
+[14/38] Compiling cmark-gfm plugin.c
+[15/38] Compiling cmark-gfm plaintext.c
+[16/38] Compiling cmark-gfm scanners.c
+[17/38] Compiling cmark-gfm utf8.c
+[18/38] Compiling cmark-gfm map.c
+[19/38] Compiling cmark-gfm node.c
+[20/38] Compiling cmark-gfm man.c
+[21/38] Compiling cmark-gfm linked_list.c
+[22/38] Compiling cmark-gfm latex.c
+[23/38] Compiling cmark-gfm iterator.c
+[24/38] Compiling cmark-gfm houdini_html_u.c
+[25/38] Compiling cmark-gfm html.c
+[26/38] Compiling cmark-gfm houdini_href_e.c
+[27/38] Compiling cmark-gfm houdini_html_e.c
+[28/38] Compiling cmark-gfm footnotes.c
+[29/38] Compiling cmark-gfm cmark_ctype.c
+[30/38] Compiling cmark-gfm commonmark.c
+[31/38] Compiling cmark-gfm cmark.c
+[32/38] Compiling cmark-gfm buffer.c
+[33/38] Compiling cmark-gfm inlines.c
+[34/38] Write sources
+[35/38] Compiling cmark-gfm arena.c
+[36/38] Compiling CAtomic CAtomic.c
+[37/38] Compiling cmark-gfm blocks.c
+[39/39] Compiling Markdown ChildIndexPath.swift
+[40/40] Compiling WorkbenchCore ActivityNarrative.swift
+Build of target: 'WorkbenchCore' complete! (64.62s)
+warning: '--build-system native' has been deprecated and will be removed in a future release; please report an issue at https://github.com/swiftlang/swift-package-manager/issues if you are unable to adopt the default build system.
+warning: '--build-system native' has been deprecated and will be removed in a future release; please report an issue at https://github.com/swiftlang/swift-package-manager/issues if you are unable to adopt the default build system.
+/Users/<runner>/work/perch/perch/.local/math-performance-sources/candidate/Sources/AgentWorkbench/ReplyMarkdownView.swift:2409:34: warning: Storing a closure in '@Entry var documentOpenLink' may invalidate dependents on every update because closures may not be comparable. (from macro 'Entry ')
+2407 |     @Entry var documentMutedText = false
+2408 |     @Entry var documentQuery: String = ""
+2409 |     @Entry var documentOpenLink: ((URL) -> Bool)? = nil
+     |                                  `- warning: Storing a closure in '@Entry var documentOpenLink' may invalidate dependents on every update because closures may not be comparable. (from macro 'Entry ')
+2410 |     @Entry var documentSelection: ((String) -> Void)? = nil
+2411 | }
+
+/Users/<runner>/work/perch/perch/.local/math-performance-sources/candidate/Sources/AgentWorkbench/ReplyMarkdownView.swift:2410:35: warning: Storing a closure in '@Entry var documentSelection' may invalidate dependents on every update because closures may not be comparable. (from macro 'Entry ')
+2408 |     @Entry var documentQuery: String = ""
+2409 |     @Entry var documentOpenLink: ((URL) -> Bool)? = nil
+2410 |     @Entry var documentSelection: ((String) -> Void)? = nil
+     |                                   `- warning: Storing a closure in '@Entry var documentSelection' may invalidate dependents on every update because closures may not be comparable. (from macro 'Entry ')
+2411 | }
+2412 | @MainActor private final class DocumentSelectionAction: NSObject {
+/Users/<runner>/work/perch/perch/.local/math-performance-sources/candidate/Sources/AgentWorkbench/ReplyMarkdownView.swift:2409:34: warning: Storing a closure in '@Entry var documentOpenLink' may invalidate dependents on every update because closures may not be comparable. (from macro 'Entry ')
+2407 |     @Entry var documentMutedText = false
+2408 |     @Entry var documentQuery: String = ""
+2409 |     @Entry var documentOpenLink: ((URL) -> Bool)? = nil
+     |                                  `- warning: Storing a closure in '@Entry var documentOpenLink' may invalidate dependents on every update because closures may not be comparable. (from macro 'Entry ')
+2410 |     @Entry var documentSelection: ((String) -> Void)? = nil
+2411 | }
+
+/Users/<runner>/work/perch/perch/.local/math-performance-sources/candidate/Sources/AgentWorkbench/ReplyMarkdownView.swift:2410:35: warning: Storing a closure in '@Entry var documentSelection' may invalidate dependents on every update because closures may not be comparable. (from macro 'Entry ')
+2408 |     @Entry var documentQuery: String = ""
+2409 |     @Entry var documentOpenLink: ((URL) -> Bool)? = nil
+2410 |     @Entry var documentSelection: ((String) -> Void)? = nil
+     |                                   `- warning: Storing a closure in '@Entry var documentSelection' may invalidate dependents on every update because closures may not be comparable. (from macro 'Entry ')
+2411 | }
+2412 | @MainActor private final class DocumentSelectionAction: NSObject {
+/Users/<runner>/work/perch/perch/build/Math Performance candidate.app/Contents/MacOS/MathPerformanceContracts: replacing existing signature
+/Users/<runner>/work/perch/perch/build/Math Performance candidate.app: replacing existing signature
+/Users/<runner>/work/perch/perch/build/Math Performance candidate.app
+1 baseline: parse-30
+1 baseline: typeset-32
+1 baseline: typeset-128
+1 baseline: typeset-512
+1 baseline: window-30
+1 baseline: window-128
+2 candidate: parse-30
+2 candidate: typeset-32
+2 candidate: typeset-128
+2 candidate: typeset-512
+2 candidate: window-30
+2 candidate: window-128
+3 candidate: parse-30
+3 candidate: typeset-32
+3 candidate: typeset-128
+3 candidate: typeset-512
+3 candidate: window-30
+3 candidate: window-128
+4 baseline: parse-30
+4 baseline: typeset-32
+4 baseline: typeset-128
+4 baseline: typeset-512
+4 baseline: window-30
+4 baseline: window-128
+5 baseline: parse-30
+5 baseline: typeset-32
+5 baseline: typeset-128
+5 baseline: typeset-512
+5 baseline: window-30
+5 baseline: window-128
+6 candidate: parse-30
+6 candidate: typeset-32
+6 candidate: typeset-128
+6 candidate: typeset-512
+6 candidate: window-30
+6 candidate: window-128
+{
+  "status": "failed",
+  "binary_sha256": {
+    "baseline": "5574861aed552477f52db404cbc896226bdd9db827b326be77b248d9abd2e16a",
+    "candidate": "d81d11bb4ad189d22ab99d189c77dba73b6af0b82d2b32c2158a311d94c8f12e",
+    "contracts": "bc1c7a9b558cab35c98b612176c5d3f7612d7c8e527cdce16ecf02e601e5d7ec"
+  },
+  "order": [
+    "baseline",
+    "candidate",
+    "candidate",
+    "baseline",
+    "baseline",
+    "candidate"
+  ],
+  "contracts": {
+    "cpu_count": 3,
+    "dependencies": {
+      "swift-cmark": {
+        "revision": "924936d0427cb25a61169739a7660230bffa6ea6",
+        "version": "0.8.0"
+      },
+      "swift-markdown": {
+        "revision": "3c6f9523da3a1ec2fd829673e472d95b8097a3b8",
+        "version": "0.8.0"
+      },
+      "swiftmath": {
+        "revision": "fa8244ed032f4a1ade4cb0571bf87d2f1a9fd2d7",
+        "version": "1.7.3"
+      }
+    },
+    "fixture": "synthetic; no sessions or network",
+    "measurements": {
+      "cache": {
+        "cache_hits": 128,
+        "cost_estimate_bytes": 17790152,
+        "entries": 1,
+        "failed_bytes": 65508,
+        "failures": 106,
+        "inline_entries": 1,
+        "requests": 1288,
+        "typesets": 1808
+      },
+      "checks": [
+        "nonblank light/dark, font-size geometry, boxed border dimensions and explicit TeX color",
+        "native inks typeset once each; cache hits and appearance revisits do not typeset",
+        "display images generate only requested native ink and reuse appearances",
+        "128-formula inline working set is reused without typesetting",
+        "successful and failed cache entry/byte budgets under churn"
+      ]
+    },
+    "mode": "contracts",
+    "os": "Version 27.0.1 (Build 26A434)",
+    "physical_memory_bytes": 7516192768,
+    "revision": "115368e9a904d1b2ea3f2ff72a0b2beafdd0eab3",
+    "scope": "isolated synthetic AppKit/SwiftUI work; not hardware input latency or certified FPS",
+    "source_input_sha256": "a7ef17717cfb061d097895b6cccaca5575ec7791e86a7487f6711a106dc12800",
+    "status": "passed",
+    "suffix_search": false,
+    "swiftmath_patch_sha256": "68686f9cd8fbe4b1134ace3a22f162828b9d4bd89eb84816f050379aa06bb855",
+    "toolchain": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+    "variant": "candidate"
+  },
+  "error": "Typeset/draw regression exceeds 15% at 32"
+}

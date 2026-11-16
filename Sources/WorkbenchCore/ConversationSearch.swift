@@ -81,7 +81,18 @@ public final class ConversationSearch {
     }
     private var entries: [String: Entry] = [:]
     private var earlier: Earlier?
-    public init() {}
+    /// Round 27: rendered sources are shared across instances through this
+    /// cache — a reopened find bar or a repeated explicit history search
+    /// (the product re-searches on explicit requests, not per keystroke —
+    /// review F3) pays matching plus cache lookups instead of rendering, as
+    /// long as the sources stay admitted, unevicted and in the same locale
+    /// generation. The default keeps every existing call site unchanged;
+    /// benchmarks measuring true cold rendering inject a fresh cache (see
+    /// StreamingBench's cold/reopen metrics).
+    private let renderedCache: RenderedSourceCache
+    public init(renderedCache: RenderedSourceCache = .shared) {
+        self.renderedCache = renderedCache
+    }
 
     public func hits(in messages: [KimiMessage], query: String, running: Bool,
                      options: ConversationFindOptions = ConversationFindOptions()) -> ConversationFindResult {
@@ -152,7 +163,9 @@ public final class ConversationSearch {
                 text = previous.text
                 sourceEnds = previous.sourceEnds
             } else {
-                let rendered = sources.map { Self.renderedText(ReplyDocument.parse($0)) }
+                let rendered = sources.map { source in
+                    renderedCache.rendered(source) { Self.renderedText(ReplyDocument.parse(source)) }
+                }
                 var end = 0
                 sourceEnds = rendered.map { text in end += (text as NSString).length + 1; return end }
                 text = rendered.joined(separator: "\n") as NSString
