@@ -1,0 +1,19 @@
+=== prepare Mon Nov 16 18:10:41 CST 2026 ===
+From github.com:chenweigao/perch
+   ed98b97e..b89851f3  main       -> origin/main
+Previous HEAD position was 8523e478 docs(performance): round-27 final-review corrections — state_reset wording, third-round record
+HEAD is now at b89851f3 Merge pull request #349 from chenweigao/perf/20x-loop-27-20261116
+HEAD=b89851f37e4650397ab419829e5ce7152e24495f
+porcelain_before=0
+=== base build (pristine) Mon Nov 16 18:10:47 CST 2026 ===
+base_build_exit=0
+=== apply patches + candidate build Mon Nov 16 18:12:02 CST 2026 ===
+tests_patch=ok
+product_patch=ok
+cand_build_exit=0
+24670f4a8b6453981d7499112a8172d1edab88f32548cd8de8a8c0502054737c  <worktree>/.build/round28-base/out/Products/Release/WorkbenchChecks
+ae0a36d65bef6b43fe5ced4b825b491caacbb19efb18203e388af5966e3b2ebe  <worktree>/.build/round28-cand/out/Products/Release/WorkbenchChecks
+=== checks candidate (gate) Mon Nov 16 18:13:15 CST 2026 ===
+cand_checks_exit=0 pass=108
+PASS: SWAR utf16 count — product surface (ConversationActivity.outputCharacters == stdlib oracle on tricky corpus), exhaustive scalar sweep (1112064 scalars × 9 alignments) + 14 structural + 20000 seeded fuzz strings all byte-exact vs stdlib utf16.count
+/Users/<mini>/Library/Logs/perf-loop-20261116/screen-mac.sh: line 36: cand_checks_exit: unbound variable
