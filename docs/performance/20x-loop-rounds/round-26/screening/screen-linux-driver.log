@@ -1,0 +1,39 @@
+HEAD_main=77157a9a0f54c76251731bf9c3ed11c1287b5e63
+porcelain_main=0
+cand_build_exit=0
+base_tests_patch=ok
+base_build_exit=0
+7150ea3523093ed6b51899ba706b95b137b12b4383a6e84f4517df97f492b09f  /tmp/r26-screen-base/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+6a72cbebab543ab8dee9a1ddea09a9649079a86f25cbbc6118f934a270635086  <worktree>/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+=== screening: 3 alternating, presentation-token + streaming + mode 1 Mon Nov 16 10:46:02 CST 2026 ===
+it=1 side=base p_exit=0
+it=1 side=base s_exit=0
+it=1 side=base c_exit=0
+token200_narrative_ms=0.050502  token200_total_ms=0.084013  token2000_narrative_ms=0.055482  token2000_total_ms=0.143140  longtail200_narrative_ms=0.290840  longtail200_total_ms=0.426733  [it=1 side=base]
+it=1 side=base stream_narrative=0.24 cold@2000=48.62
+it=1 side=cand p_exit=0
+it=1 side=cand s_exit=0
+it=1 side=cand c_exit=0
+token200_narrative_ms=0.044376  token200_total_ms=0.078077  token2000_narrative_ms=0.047297  token2000_total_ms=0.137675  longtail200_narrative_ms=0.245828  longtail200_total_ms=0.382258  [it=1 side=cand]
+it=1 side=cand stream_narrative=0.22 cold@2000=49.00
+it=2 side=base p_exit=0
+it=2 side=base s_exit=0
+it=2 side=base c_exit=0
+token200_narrative_ms=0.048416  token200_total_ms=0.082553  token2000_narrative_ms=0.055152  token2000_total_ms=0.145525  longtail200_narrative_ms=0.294264  longtail200_total_ms=0.429519  [it=2 side=base]
+it=2 side=base stream_narrative=0.22 cold@2000=48.14
+it=2 side=cand p_exit=0
+it=2 side=cand s_exit=0
+it=2 side=cand c_exit=0
+token200_narrative_ms=0.045026  token200_total_ms=0.077578  token2000_narrative_ms=0.050472  token2000_total_ms=0.140375  longtail200_narrative_ms=0.247773  longtail200_total_ms=0.385327  [it=2 side=cand]
+it=2 side=cand stream_narrative=0.24 cold@2000=48.80
+it=3 side=base p_exit=0
+it=3 side=base s_exit=0
+it=3 side=base c_exit=0
+token200_narrative_ms=0.048991  token200_total_ms=0.082498  token2000_narrative_ms=0.056281  token2000_total_ms=0.148620  longtail200_narrative_ms=0.296845  longtail200_total_ms=0.431489  [it=3 side=base]
+it=3 side=base stream_narrative=0.24 cold@2000=48.60
+it=3 side=cand p_exit=0
+it=3 side=cand s_exit=0
+it=3 side=cand c_exit=0
+token200_narrative_ms=0.045386  token200_total_ms=0.079713  token2000_narrative_ms=0.051897  token2000_total_ms=0.142580  longtail200_narrative_ms=0.250738  longtail200_total_ms=0.385888  [it=3 side=cand]
+it=3 side=cand stream_narrative=0.24 cold@2000=48.61
+DONE Mon Nov 16 10:46:49 CST 2026

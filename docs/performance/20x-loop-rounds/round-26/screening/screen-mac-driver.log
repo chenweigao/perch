@@ -1,0 +1,53 @@
+=== prepare Mon Nov 16 10:44:01 CST 2026 ===
+From github.com:chenweigao/perch
+   1bcbc00f..668ec61e  main       -> origin/main
+Previous HEAD position was d54c0336 docs(performance): dispose round-24 review (5B+3NB) and record v2 adoption data
+HEAD is now at 668ec61e Merge pull request #347 from chenweigao/perf/20x-loop-25-20261116
+HEAD=668ec61e511b7f76dc06ab4edf7c442ef86ead24
+porcelain_before=0
+=== apply tests patch + base build Mon Nov 16 10:44:06 CST 2026 ===
+tests_patch=ok
+base_build_exit=0
+=== apply product patch + candidate build Mon Nov 16 10:45:21 CST 2026 ===
+product_patch=ok
+cand_build_exit=0
+422eae233146f86f9842f5c8b2a767bbb20d41fab0c0c8944f0f76f2f502b686  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round26-base/out/Products/Release/WorkbenchChecks
+2c43d0d19a3a2d54e9e6133217a0611b48a46f3e9a968446102f0deffec93a3c  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round26-cand/out/Products/Release/WorkbenchChecks
+=== checks both sides (differential pin: base must also pass) Mon Nov 16 10:46:34 CST 2026 ===
+base_checks_exit=0 pass=106
+cand_checks_exit=0 pass=106
+PASS: narrative delimiter scan — exhaustive sweep 0 canonical bridges to separator atoms; 29 structural cases + 2000 fuzz texts zero mismatches vs the previous range(of:) chain (corpus classification: fullwidth 503, colon-space 649, boundary-hazard 159, reference split 865 / whole 1135)
+PASS: narrative delimiter scan — exhaustive sweep 0 canonical bridges to separator atoms; 29 structural cases + 2000 fuzz texts zero mismatches vs the previous range(of:) chain (corpus classification: fullwidth 503, colon-space 649, boundary-hazard 159, reference split 865 / whole 1135)
+=== in-context screening: 3 alternating, presentation-token + streaming + mode 1 (in place) Mon Nov 16 10:47:22 CST 2026 ===
+it=1 side=base p_exit=0
+it=1 side=base s_exit=0
+it=1 side=base c_exit=0
+token200_narrative_ms=0.038749  token200_total_ms=0.051312  token2000_narrative_ms=0.035271  token2000_total_ms=0.073146  longtail200_narrative_ms=0.150917  longtail200_total_ms=0.164687  [it=1 side=base]
+it=1 side=base stream_narrative=0.16 cold@2000=6.70
+it=1 side=cand p_exit=0
+it=1 side=cand s_exit=0
+it=1 side=cand c_exit=0
+token200_narrative_ms=0.035812  token200_total_ms=0.048730  token2000_narrative_ms=0.029416  token2000_total_ms=0.065812  longtail200_narrative_ms=0.092855  longtail200_total_ms=0.106479  [it=1 side=cand]
+it=1 side=cand stream_narrative=0.17 cold@2000=6.75
+it=2 side=base p_exit=0
+it=2 side=base s_exit=0
+it=2 side=base c_exit=0
+token200_narrative_ms=0.038021  token200_total_ms=0.050209  token2000_narrative_ms=0.035896  token2000_total_ms=0.073729  longtail200_narrative_ms=0.152812  longtail200_total_ms=0.167771  [it=2 side=base]
+it=2 side=base stream_narrative=0.16 cold@2000=6.71
+it=2 side=cand p_exit=0
+it=2 side=cand s_exit=0
+it=2 side=cand c_exit=0
+token200_narrative_ms=0.035146  token200_total_ms=0.048208  token2000_narrative_ms=0.029979  token2000_total_ms=0.066708  longtail200_narrative_ms=0.091583  longtail200_total_ms=0.106063  [it=2 side=cand]
+it=2 side=cand stream_narrative=0.16 cold@2000=6.66
+it=3 side=base p_exit=0
+it=3 side=base s_exit=0
+it=3 side=base c_exit=0
+token200_narrative_ms=0.035417  token200_total_ms=0.046917  token2000_narrative_ms=0.037167  token2000_total_ms=0.077041  longtail200_narrative_ms=0.147166  longtail200_total_ms=0.161792  [it=3 side=base]
+it=3 side=base stream_narrative=0.16 cold@2000=7.03
+it=3 side=cand p_exit=0
+it=3 side=cand s_exit=0
+it=3 side=cand c_exit=0
+token200_narrative_ms=0.034625  token200_total_ms=0.047230  token2000_narrative_ms=0.030541  token2000_total_ms=0.069375  longtail200_narrative_ms=0.086313  longtail200_total_ms=0.100438  [it=3 side=cand]
+it=3 side=cand stream_narrative=0.17 cold@2000=6.89
+porcelain_after=0
+DONE Mon Nov 16 10:48:14 CST 2026

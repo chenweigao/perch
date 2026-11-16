@@ -202,11 +202,34 @@ public struct ActivityNarrativeSnapshot: Equatable, Sendable {
         }
     }
 
+    /// Separator literals with their exact UTF-8 bytes; the patterns and the
+    /// strings must stay in sync (the pin re-derives the bytes from the
+    /// strings and asserts equality).
+    private static let narrativeSeparators: [(text: String, bytes: [UInt8])] = [
+        ("：", [0xEF, 0xBC, 0x9A]),
+        (": ", [0x3A, 0x20]),
+    ]
+
     fileprivate static func narrativeText(_ value: String) -> (headline: String, detail: String?) {
         NarrativeTextCache.narrativeText(value) {
             let text = clean(value)
-            for separator in ["：", ": "] {
-                guard let range = text.range(of: separator) else { continue }
+            for separator in narrativeSeparators {
+                // Round 26: byte-level first-occurrence search with a two-sided
+                // grapheme-boundary proof; falls back to the original grapheme-
+                // aware range(of:) whenever a boundary is unprovable, so the
+                // result is identical on every input (NarrativeDelimiterScan).
+                let range: Range<String.Index>?
+                switch NarrativeDelimiterScan.firstOccurrence(in: text, pattern: separator.bytes) {
+                case .match(let byteRange):
+                    let view = text.utf8
+                    range = view.index(view.startIndex, offsetBy: byteRange.lowerBound)
+                        ..< view.index(view.startIndex, offsetBy: byteRange.upperBound)
+                case .absent:
+                    range = nil
+                case .inconclusive:
+                    range = text.range(of: separator.text)
+                }
+                guard let range else { continue }
                 let headline = clean(String(text[..<range.lowerBound]), limit: 80)
                 let detail = clean(String(text[range.upperBound...]))
                 if !headline.isEmpty, headline.count <= 48, !detail.isEmpty {
@@ -218,6 +241,130 @@ public struct ActivityNarrativeSnapshot: Equatable, Sendable {
     }
 }
 
+
+/// Round 26: byte-level first-occurrence search for the two `narrativeText`
+/// separators (U+FF1A and ": "), replacing two grapheme-aware `range(of:)`
+/// full-text searches per cache miss on the streaming progress derivation
+/// path (long-tail bench tails are unique per update, i.e. miss-heavy).
+///
+/// Equivalence argument (round-17/22 boundary-proof playbook):
+/// 1. **No false positions.** UTF-8 self-synchronization: the pattern bytes
+///    (EF BC 9A / 3A 20) can only occur at scalar boundaries inside valid
+///    UTF-8, so a byte match is always a whole-scalar occurrence.
+/// 2. **No false positives.** Boundary-proven occurrences are accepted by
+///    the original search. This proof is sufficient, not necessary;
+///    corelibs' GB9b behavior (Linux `range(of:)` can match inside a
+///    Prepend-fused cluster) remains delegated to `range(of:)`. A byte
+///    occurrence is proven when (a) no Prepend scalar precedes it (GB9b
+///    would absorb it into the previous cluster) and (b) no binding scalar
+///    follows it (Extend/ZWJ/SpacingMark/pinned fusers would absorb it into
+///    the next cluster). All Prepend and binding scalars are non-ASCII, so
+///    an ASCII preceding byte (or the string start) proves the preceding
+///    boundary outright; non-ASCII predecessors are decided by the pinned
+///    exhaustive set `String.isPrependScalar`. The following boundary is
+///    delegated to `String.beginsBindingMark`, whose completeness is pinned
+///    by the round-24 `fusionGap == 0` walk — but it only decodes non-ASCII
+///    scalars, so ASCII successors currently fall back conservatively
+///    (review F8: no binding class contains ASCII, so the hit path has
+///    unexploited headroom there; queued as a future candidate, unmeasured).
+///    Unprovable boundaries yield `.inconclusive` and the caller falls back
+///    to the original `range(of:)`, so legacy semantics decide exactly where
+///    the proof does not reach.
+/// 3. **No false negatives.** An exhaustive operational canonical-equivalence
+///    sweep (all 1,112,064 scalars, both toolchains, 2026-11-16; pinned in
+///    checkNarrativeDelimiterScan) found ZERO scalars canonically equal to
+///    U+FF1A, U+003A or U+0020 other than themselves, so no separator
+///    occurrence can hide behind different bytes; multi-scalar sequences
+///    cannot compose the atoms either (canonical decomposition acts per
+///    scalar; a combining mark cannot cancel into ":" or " " — round-22's
+///    multi-scalar composition argument). `.absent` therefore implies
+///    `range(of:)` would also find nothing.
+/// 4. **First-match identity.** The scan inspects byte occurrences in order;
+///    the FIRST confirmed occurrence is necessarily the first grapheme match
+///    (an earlier grapheme match would be an earlier byte occurrence). The
+///    first inconclusive occurrence defers the whole decision to `range(of:)`.
+private enum NarrativeDelimiterScan {
+    enum Outcome {
+        /// Byte range of the first boundary-proven occurrence.
+        case match(Range<Int>)
+        /// No byte occurrence at all; range(of:) would find none either.
+        case absent
+        /// Boundary unprovable at the first occurrence; caller must use range(of:).
+        case inconclusive
+    }
+
+    static func firstOccurrence(in text: String, pattern: [UInt8]) -> Outcome {
+        var contiguous = text
+        return contiguous.withUTF8 { bytes in
+            let n = bytes.count
+            let m = pattern.count
+            guard m > 0, n >= m else { return .absent }
+            var offset = 0
+            while offset + m <= n {
+                if bytes[offset] != pattern[0] { offset += 1; continue }
+                var k = 1
+                while k < m, bytes[offset + k] == pattern[k] { k += 1 }
+                if k < m { offset += 1; continue }
+                let lower = offset
+                let upper = offset + m
+                // Preceding boundary (GB9b): only Prepend scalars fuse forward
+                // over the separator, and all are non-ASCII — an ASCII
+                // preceding byte or the string start proves safety.
+                if lower > 0, bytes[lower - 1] >= 0x80 {
+                    guard let previous = precedingScalar(in: bytes, before: lower),
+                          !String.isPrependScalar(previous) else { return .inconclusive }
+                }
+                // Following boundary: any scalar that binds onto the previous
+                // character (Extend/ZWJ/Mn/Mc/Me plus the round-24 pinned
+                // fusers) would absorb the separator's last character.
+                // beginsBindingMark decodes only non-ASCII scalars and answers
+                // true (conservative) for ASCII, so ASCII successors currently
+                // take the range(of:) fallback even though no binding class
+                // contains ASCII (review F8; safe, unexploited headroom).
+                if upper < n, String.beginsBindingMark(in: bytes, at: upper) {
+                    return .inconclusive
+                }
+                return .match(lower..<upper)
+            }
+            return .absent
+        }
+    }
+
+    /// Decodes the scalar ending exactly at `index`; nil on any malformed or
+    /// unexpected shape (nil forces the safe `.inconclusive` fallback).
+    private static func precedingScalar(in bytes: UnsafeBufferPointer<UInt8>, before index: Int) -> UInt32? {
+        var start = index - 1
+        var walked = 0
+        while start > 0, bytes[start] & 0xC0 == 0x80 {
+            start -= 1
+            walked += 1
+            if walked > 3 { return nil }
+        }
+        let lead = bytes[start]
+        let length: Int
+        var value: UInt32
+        switch lead {
+        case 0x00...0x7F:
+            if start + 1 != index { return nil }
+            return UInt32(lead)
+        case 0xC2...0xDF:
+            length = 2; value = UInt32(lead & 0x1F)
+        case 0xE0...0xEF:
+            length = 3; value = UInt32(lead & 0x0F)
+        case 0xF0...0xF4:
+            length = 4; value = UInt32(lead & 0x07)
+        default:
+            return nil
+        }
+        guard start + length == index else { return nil }
+        for i in (start + 1)..<index {
+            guard bytes[i] & 0xC0 == 0x80 else { return nil }
+            value = value << 6 | UInt32(bytes[i] & 0x3F)
+        }
+        guard Unicode.Scalar(value) != nil else { return nil }
+        return value
+    }
+}
 
 /// Round 22: single-pass byte-level multi-pattern scan replacing the phase
 /// closure's `lowercased()` full-text copy plus up to 32 grapheme-aware

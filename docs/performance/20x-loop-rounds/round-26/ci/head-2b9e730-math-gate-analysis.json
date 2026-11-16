@@ -1,0 +1,63 @@
+{
+ "run": "https://github.com/chenweigao/perch/actions/runs/43796524331 (head 2b9e730, first attempt)",
+ "gate_error": "Typeset/draw regression exceeds 15% at 32",
+ "same_sources_green_control": "git diff 6ab2912..2b9e730 -- Sources/ Tests/ = 0 lines; run 43796398950 at 6ab2912 (identical product+test bytes, docs-only difference) completed 15/15 SUCCESS one hour earlier \u2014 the same binary source pair passed this gate (its math artifacts were no longer listable at forensic time; the run conclusion is the evidence).",
+ "typeset32_recomputed_from_artifact": {
+  "baseline_rounds_total_ms": {
+   "round-1": 205.02,
+   "round-4": 87.22,
+   "round-5": 93.93
+  },
+  "candidate_rounds_total_ms": {
+   "round-2": 125.34,
+   "round-3": 131.34,
+   "round-6": 120.45
+  },
+  "baseline_median": 93.93,
+  "candidate_median": 125.34,
+  "median_ratio": 1.334,
+  "baseline_best": 87.22,
+  "candidate_best": 120.45,
+  "best_ratio": 1.381,
+  "baseline_swing_x": 2.35,
+  "candidate_swing_x": 1.09,
+  "round_order": [
+   "baseline",
+   "candidate",
+   "candidate",
+   "baseline",
+   "baseline",
+   "candidate"
+  ]
+ },
+ "signature_analysis": [
+  "DIFFERENT signature from rounds 23/24 early-round bias: candidate rounds are internally consistent (120.45-131.34, swing x1.09) including the LATE round r6, while the baseline carries the outlier (r1 = 205.02, x2.35 of its own best).",
+  "The consistent within-run ~35% gap with identical source bytes passing the same gate an hour earlier points to the per-run BUILD LOTTERY of the math apps (fresh swiftc builds each run; SwiftMath typeset is layout/allocator sensitive \u2014 rounds 12/14/16 recorded best_ratio swings 1.27-1.60 across runs of unchanged code).",
+  "Call-path relation: NONE \u2014 this round changed ActivityNarrative.narrativeText (delimiter search) and two visibility modifiers; the math gate measures MathPerformance (SwiftMath typeset/draw, ReplyDocument.parse, window scheduling) which never calls narrativeText (its callers are the streaming progress derivation in ActivityNarrativeProjection).",
+  "Baseline r1 outlier 205.02 lowered the baseline median (93.93 vs best 87.22), inflating the median ratio; even the best-to-best ratio (1.381) exceeds the 15% typeset threshold in THIS run's builds."
+ ],
+ "disposition": "Two-track per round-22 protocol: (1) quiet-machine real-gate retest via PerfRunner at 2b9e730 with WORKBENCH_MATH_BASELINE_REF=668ec61 (fresh builds = fresh lottery; the authoritative quiet measurement); (2) same-head CI rerun. Gates never modified. If both agree with the same-sources green control, the first-attempt failure is recorded as build-lottery/runner noise.",
+ "quiet_machine_retest": {
+  "protocol": "round-14/16/22 precedent; real gate scripts/check-math-performance.sh on the mini via PerfRunner (quiet Aqua session), WORKBENCH_MATH_BASELINE_REF=668ec61 (PR base), head 2b9e730, fresh-directory guard inputs removed, porcelain 0/0",
+  "status": "passed",
+  "math_exit": 0,
+  "typeset_best_ratios": {
+   "typeset-32": {
+    "best_ratio": 1.0147,
+    "ratio": 1.0189
+   },
+   "typeset-128": {
+    "best_ratio": 1.003,
+    "ratio": 1.0005
+   },
+   "typeset-512": {
+    "best_ratio": 0.9882,
+    "ratio": 0.9915
+   }
+  },
+  "evidence": [
+   "round-26/ci/math-retest-2b9e730.log",
+   "round-26/ci/math-retest-summary.json"
+  ]
+ }
+}

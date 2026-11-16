@@ -1,0 +1,15 @@
+=== prepare Mon Nov 16 11:30:50 CST 2026 ===
+From github.com:chenweigao/perch
+ * [new branch]        perf/20x-loop-26-20261116 -> origin/perf/20x-loop-26-20261116
+Previous HEAD position was 668ec61e Merge pull request #347 from chenweigao/perf/20x-loop-25-20261116
+HEAD is now at 2b9e7301 docs(performance): reference round-26 PR #348
+HEAD=2b9e73010d53cad8db99aca365cfaf0138f41b1b
+porcelain_before=0
+=== math gate Mon Nov 16 11:30:55 CST 2026 ===
+math_exit=0
+  },
+  "scope": "same-runner sequential synthetic A/B; window timings are not hardware input latency or FPS"
+}
+status: passed
+porcelain_after=0
+DONE Mon Nov 16 11:33:41 CST 2026

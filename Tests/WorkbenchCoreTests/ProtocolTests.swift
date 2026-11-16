@@ -50,6 +50,7 @@ struct ProtocolTests {
         try checkActivitySummaries()
         try checkNarrativeByteKeyedTables()
         try checkNarrativePhaseSinglePass()
+        try checkNarrativeDelimiterScan()
         checkLocalizationResolutionChain()
         try checkTaskRecaps()
         checkReviewContext()

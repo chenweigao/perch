@@ -1,0 +1,15 @@
+candidate_rebuild_exit=0
+candidate_rebuild_head=3e306a054783264dbafd3e48cedbd82e8c7a249c
+candidate_rebuild_porcelain=4
+ M docs/performance/20x-loop-rounds/2026-11-16-round-26.md
+ M docs/performance/20x-loop-rounds/INDEX.md
+ M docs/performance/20x-loop-rounds/round-26/ab/fixture-hashes-note.md
+?? docs/performance/20x-loop-rounds/round-26/ci/
+84c3abd52b5732c353444e82dd505c279fcf07d64c32926d5ddcb30a9b24f72f  .build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+baseline_rebuild_head=668ec61e511b7f76dc06ab4edf7c442ef86ead24
+baseline_rebuild_porcelain=4
+A  Tests/WorkbenchCoreTests/NarrativeDelimiterScanTests.swift
+M  Tests/WorkbenchCoreTests/ProtocolTests.swift
+?? build.log
+?? rebuild.log
+748b68fb4f4afe2e1eafbec049c0578d16c38bbe08283f398cc00a36ccd8e7ed  /tmp/r26v2-base/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
