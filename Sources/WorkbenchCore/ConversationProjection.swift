@@ -107,6 +107,10 @@ extension String {
     /// Internal (not private) since round 26: ActivityNarrative's delimiter
     /// scan reuses this exact predicate for its following-boundary proof, so
     /// the fusionGap==0 exhaustive walk pins both call sites at once.
+    /// This predicate decodes only non-ASCII scalars; an ASCII byte position
+    /// yields `true` (conservative). The collapsedWhitespace call site guards
+    /// with `bytes[i] >= 0x80`; the round-26 delimiter scan therefore routes
+    /// ASCII successors to its range(of:) fallback (review F8).
     static func beginsBindingMark(in bytes: UnsafeBufferPointer<UInt8>, at i: Int) -> Bool {
         guard let (value, _) = utf8Scalar(in: bytes, at: i), let scalar = Unicode.Scalar(value) else { return true }
         // Scalars the pinned ranges below prove cannot bind skip the property

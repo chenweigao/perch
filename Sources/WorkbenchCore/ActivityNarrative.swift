@@ -251,16 +251,22 @@ public struct ActivityNarrativeSnapshot: Equatable, Sendable {
 /// 1. **No false positions.** UTF-8 self-synchronization: the pattern bytes
 ///    (EF BC 9A / 3A 20) can only occur at scalar boundaries inside valid
 ///    UTF-8, so a byte match is always a whole-scalar occurrence.
-/// 2. **No false positives.** `range(of:)` matches only grapheme-aligned
-///    occurrences. A byte occurrence is grapheme-aligned standalone when
-///    (a) no Prepend scalar precedes it (GB9b would absorb it into the
-///    previous cluster) and (b) no binding scalar follows it (Extend/ZWJ/
-///    SpacingMark/pinned fusers would absorb it into the next cluster).
-///    All Prepend and binding scalars are non-ASCII, so ASCII neighbors (or
-///    string edges) prove the boundary outright; non-ASCII neighbors are
-///    decided by the pinned exhaustive sets `String.isPrependScalar`
-///    (preceding) and `String.beginsBindingMark` (following) — the latter's
-///    completeness is pinned by the round-24 `fusionGap == 0` walk.
+/// 2. **No false positives.** Boundary-proven occurrences are accepted by
+///    the original search. This proof is sufficient, not necessary;
+///    corelibs' GB9b behavior (Linux `range(of:)` can match inside a
+///    Prepend-fused cluster) remains delegated to `range(of:)`. A byte
+///    occurrence is proven when (a) no Prepend scalar precedes it (GB9b
+///    would absorb it into the previous cluster) and (b) no binding scalar
+///    follows it (Extend/ZWJ/SpacingMark/pinned fusers would absorb it into
+///    the next cluster). All Prepend and binding scalars are non-ASCII, so
+///    an ASCII preceding byte (or the string start) proves the preceding
+///    boundary outright; non-ASCII predecessors are decided by the pinned
+///    exhaustive set `String.isPrependScalar`. The following boundary is
+///    delegated to `String.beginsBindingMark`, whose completeness is pinned
+///    by the round-24 `fusionGap == 0` walk — but it only decodes non-ASCII
+///    scalars, so ASCII successors currently fall back conservatively
+///    (review F8: no binding class contains ASCII, so the hit path has
+///    unexploited headroom there; queued as a future candidate, unmeasured).
 ///    Unprovable boundaries yield `.inconclusive` and the caller falls back
 ///    to the original `range(of:)`, so legacy semantics decide exactly where
 ///    the proof does not reach.
@@ -311,6 +317,10 @@ private enum NarrativeDelimiterScan {
                 // Following boundary: any scalar that binds onto the previous
                 // character (Extend/ZWJ/Mn/Mc/Me plus the round-24 pinned
                 // fusers) would absorb the separator's last character.
+                // beginsBindingMark decodes only non-ASCII scalars and answers
+                // true (conservative) for ASCII, so ASCII successors currently
+                // take the range(of:) fallback even though no binding class
+                // contains ASCII (review F8; safe, unexploited headroom).
                 if upper < n, String.beginsBindingMark(in: bytes, at: upper) {
                     return .inconclusive
                 }

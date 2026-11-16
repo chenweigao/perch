@@ -74,7 +74,10 @@ func checkNarrativeDelimiterScan() throws {
         return (headline, nt.detail.map { referenceClean($0) })
     }
 
-    // MARK: - Separator byte-pattern sync (product constant vs literals).
+    // MARK: - Separator byte-pattern encodings.
+    // The assertions pin the literals' expected UTF-8 encodings; they do not
+    // access this private table. Source inspection and behavioral differential
+    // tests cover the product table. (review F7)
 
     precondition(Array("：".utf8) == [0xEF, 0xBC, 0x9A], "fullwidth colon UTF-8 pattern drifted")
     precondition(Array(": ".utf8) == [0x3A, 0x20], "colon-space UTF-8 pattern drifted")
