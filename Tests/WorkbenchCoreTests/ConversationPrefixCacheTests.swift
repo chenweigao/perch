@@ -117,11 +117,16 @@ func checkConversationPrefixCache() throws {
     precondition(cost == ConversationPrefixCache.estimatedCost(of: node) + kBasic.count + nfcQ.utf8.count,
                  "admission cost must include key and query bytes (Codex P2 pattern)")
     // hand-computed full formula: window walk + node hit excerpts + every
-    // payload's round-30 cost (the double count of window messages inside
-    // payloads is part of the convention — conservative by design).
-    var manualWindow = 0
+    // payload's expanded round-30 v3 cost + its entry-ID dictionary key (the
+    // double count of window messages inside payloads is part of the
+    // convention — conservative by design). The payload expansion is
+    // inlined rather than delegated to estimatedCost so this pin
+    // independently detects omissions in that function too (review finding:
+    // a delegating assertion cannot catch what it delegates).
+    var manualWindow = windowP.count * MemoryLayout<KimiMessage>.stride
     for m in windowP {
         manualWindow += m.id.utf8.count + m.role.utf8.count + m.createdAt.utf8.count
+        manualWindow += m.content.count * MemoryLayout<KimiPart>.stride
         if let md = m.metadata { manualWindow += ConversationEntryCache.jsonValueSize(md) }
         for part in m.content {
             manualWindow += part.type.utf8.count
@@ -130,6 +135,7 @@ func checkConversationPrefixCache() throws {
             if let n = part.name { manualWindow += n.utf8.count }
             if let tn = part.toolName { manualWindow += tn.utf8.count }
             if let tc = part.toolCallId { manualWindow += tc.utf8.count }
+            if let fid = part.fileId { manualWindow += fid.utf8.count }
             if let i = part.input { manualWindow += ConversationEntryCache.jsonValueSize(i) }
             if let o = part.output { manualWindow += ConversationEntryCache.jsonValueSize(o) }
             if let src = part.source { manualWindow += ConversationEntryCache.jsonValueSize(src) }
@@ -137,9 +143,33 @@ func checkConversationPrefixCache() throws {
     }
     precondition(ConversationPrefixCache.windowCost(windowP) == manualWindow,
                  "windowCost must equal the hand-computed per-message walk")
+    var manualPayload = entryPayload.text.length * 2
+    manualPayload += entryPayload.sources.count * MemoryLayout<String>.stride
+    manualPayload += entryPayload.sourceEnds.count * MemoryLayout<Int>.stride
+    manualPayload += entryPayload.hits.count * MemoryLayout<ConversationSearchHit>.stride
+    manualPayload += entryPayload.messages.count * MemoryLayout<KimiMessage>.stride
+    for source in entryPayload.sources { manualPayload += source.utf8.count }
+    for hit in entryPayload.hits { manualPayload += hit.excerpt.utf8.count }
+    for m in entryPayload.messages {
+        manualPayload += m.id.utf8.count + m.role.utf8.count + m.createdAt.utf8.count
+        manualPayload += m.content.count * MemoryLayout<KimiPart>.stride
+        if let md = m.metadata { manualPayload += ConversationEntryCache.jsonValueSize(md) }
+        for part in m.content {
+            manualPayload += part.type.utf8.count
+            if let t = part.text { manualPayload += t.utf8.count }
+            if let th = part.thinking { manualPayload += th.utf8.count }
+            if let n = part.name { manualPayload += n.utf8.count }
+            if let tn = part.toolName { manualPayload += tn.utf8.count }
+            if let tc = part.toolCallId { manualPayload += tc.utf8.count }
+            if let fid = part.fileId { manualPayload += fid.utf8.count }
+            if let i = part.input { manualPayload += ConversationEntryCache.jsonValueSize(i) }
+            if let o = part.output { manualPayload += ConversationEntryCache.jsonValueSize(o) }
+            if let src = part.source { manualPayload += ConversationEntryCache.jsonValueSize(src) }
+        }
+    }
     let manual = manualWindow
         + nodeHits.reduce(0) { $0 + $1.excerpt.utf8.count }
-        + ConversationEntryCache.estimatedCost(of: entryPayload)
+        + manualPayload
         + "text:a0:0".utf8.count  // the retained dictionary key (entry ID)
     precondition(ConversationPrefixCache.estimatedCost(of: node) == manual,
                  "exact node cost formula: \(ConversationPrefixCache.estimatedCost(of: node)) != \(manual)")
@@ -246,6 +276,100 @@ func checkConversationPrefixCache() throws {
     precondition(ConversationPrefixCache.estimatedCost(of: heavyNode) >= 24_000,
                  "the double-counted heavy trees must dominate the cost: \(ConversationPrefixCache.estimatedCost(of: heavyNode))")
 
+    // part fileId retention in the WINDOW walk (review probe REVIEW_FILE_ID):
+    // an arbitrary-size field the pre-v3 formula missed in both conventions.
+    let fileIdWindow = try messages([
+        ["id": "fu0", "role": "user", "created_at": "000001",
+         "content": [["type": "text", "text": "prompt"]]],
+        ["id": "fa0", "role": "assistant", "created_at": "000002",
+         "content": [["type": "text", "text": "answer",
+                      "file_id": String(repeating: "重", count: 4000)]]],
+    ])
+    precondition(ConversationPrefixCache.windowCost(fileIdWindow) >= 12_000,
+                 "the fileId bytes must dominate the window cost: \(ConversationPrefixCache.windowCost(fileIdWindow))")
+    let fileIdCache = ConversationPrefixCache(byteBudget: 256)
+    let fileIdKey = store(fileIdCache, source: fileIdWindow)
+    precondition(fileIdCache.estimatedByteCount == 0
+                 && fileIdCache.node(forKey: fileIdKey, prefix: fileIdWindow[...]) == nil,
+                 "a multi-KB fileId window must not fit a 256B budget (REVIEW_FILE_ID shape refused)")
+
+    // part element STORAGE (review probe REVIEW_PART_STORAGE): 2,000
+    // empty-field parts retain ~stride×count bytes of array slots while
+    // their field bytes are ~zero — structural-exclusion mutants die here.
+    let partsWindow = try messages([
+        ["id": "pu0", "role": "user", "created_at": "000001",
+         "content": [["type": "text", "text": "prompt"]]],
+        ["id": "pa0", "role": "assistant", "created_at": "000002",
+         "content": Array(repeating: ["type": ""], count: 2000)],
+    ])
+    precondition(ConversationPrefixCache.windowCost(partsWindow)
+                 >= 2000 * MemoryLayout<KimiPart>.stride,
+                 "part element slots must dominate the window cost")
+    let partsCache = ConversationPrefixCache(byteBudget: 8192)
+    let partsKey = store(partsCache, source: partsWindow)
+    precondition(partsCache.estimatedByteCount == 0
+                 && partsCache.node(forKey: partsKey, prefix: partsWindow[...]) == nil,
+                 "a 2000-part window must not fit an 8KB budget (REVIEW_PART_STORAGE shape refused)")
+
+    // offset array element storage at NODE level (review probe
+    // REVIEW_OFFSETS): a payload whose only heavy surface is sourceEnds.
+    let offsetsPayload = ConversationEntryCache.Payload(
+        messages: [], sources: [], text: "" as NSString,
+        sourceEnds: Array(repeating: 0, count: 4096), role: .assistant,
+        isRunning: false, query: "q", options: opts, hits: [])
+    precondition(ConversationEntryCache.estimatedCost(of: offsetsPayload)
+                 >= 4096 * MemoryLayout<Int>.stride,
+                 "the offset array's element storage must count")
+    let offsetsCache = ConversationPrefixCache(byteBudget: 256)
+    let offsetsKey = store(offsetsCache, entries: ["o": offsetsPayload])
+    precondition(offsetsCache.estimatedByteCount == 0
+                 && offsetsCache.node(forKey: offsetsKey, prefix: windowP[...]) == nil,
+                 "a multi-KB offset payload must not fit a 256B budget (REVIEW_OFFSETS shape refused)")
+
+    // query-storage normalization (review probe REVIEW_QUERY_SHARING): a
+    // turn-advance chain of INDEPENDENTLY DECODED equal queries must yield a
+    // node whose payload queries share ONE storage with node.query — without
+    // the v3 normalization the node retains one buffer per generation while
+    // the cost convention counts the query once.
+    do {
+        let queryBytes = 256 * 1024  // far beyond small-string optimization
+        let encodedQuery = try JSONEncoder().encode(String(repeating: "z", count: queryBytes))
+        let shareCache = ConversationPrefixCache(byteBudget: 3 * queryBytes)
+        var shareSearch: ConversationSearch? = ConversationSearch(
+            renderedCache: RenderedSourceCache(byteBudget: 0),
+            entryCache: ConversationEntryCache(byteBudget: 0), prefixCache: shareCache)
+        var shareWindow: [KimiMessage] = []
+        for i in 0..<4 {
+            shareWindow += try messages([
+                ["id": "qu\(i)", "role": "user", "created_at": "0",
+                 "content": [["type": "text", "text": "prompt"]]],
+                ["id": "qa\(i)", "role": "assistant", "created_at": "0",
+                 "content": [["type": "text", "text": "answer"]]],
+            ])
+            let freshQuery = try JSONDecoder().decode(String.self, from: encodedQuery)
+            _ = shareSearch!.hits(in: shareWindow, query: freshQuery, running: false)
+        }
+        shareSearch = nil
+        let split = shareWindow.lastIndex(where: \.isUserPrompt)!
+        let finalQuery = try JSONDecoder().decode(String.self, from: encodedQuery)
+        let shareKey = ConversationEntryCache.key(entryID: "", query: finalQuery,
+                                                  options: opts, isRunning: false)
+        guard let shareNode = shareCache.node(forKey: shareKey, prefix: shareWindow[..<split]) else {
+            fatalError("the sharing fixture node must be admitted")
+        }
+        func bufferAddress(_ text: String) -> UInt {
+            text.utf8.withContiguousStorageIfAvailable { UInt(bitPattern: $0.baseAddress!) }!
+        }
+        var buffers: Set<UInt> = [bufferAddress(shareNode.query)]
+        for entry in ConversationTimelineEntry.make(Array(shareWindow[..<split]), isRunning: false) {
+            if let payload = shareNode.payload(entryID: entry.id) {
+                buffers.insert(bufferAddress(payload.query))
+            }
+        }
+        precondition(buffers.count == 1,
+                     "node.query and every payload query must share ONE storage (turn-chain normalization): \(buffers.count) distinct buffers")
+    }
+
     // locale generation: notification drops every node
     let locale = ConversationPrefixCache()
     let kLocale = store(locale)
@@ -299,6 +423,65 @@ func checkConversationPrefixCache() throws {
     }
     precondition(concurrent.estimatedByteCount == expected,
                  "single-copy accounting under concurrent same-key stores: \(concurrent.estimatedByteCount) != \(expected)")
+
+    // mechanism sentinels (review-provided shapes): kill the PERFORMANCE-ONLY
+    // bypass mutants that keep every result correct — a hand-stored node with
+    // sentinel hits must actually be CONSUMED by hits() (a bypassed shared
+    // branch rebuilds and never returns the sentinel), and a stored payload
+    // must actually flow through the Entries.shared conversion on a
+    // within-instance turn advance (a dropped conversion rebuilds and never
+    // returns the payload's sentinel).
+    do {
+        let probeWindow = try messages([
+            ["id": "su0", "role": "user", "created_at": "0",
+             "content": [["type": "text", "text": "prompt"]]],
+            ["id": "sa0", "role": "assistant", "created_at": "0",
+             "content": [["type": "text", "text": "answer"]]],
+            ["id": "su1", "role": "user", "created_at": "0",
+             "content": [["type": "text", "text": "tail"]]],
+        ])
+        let probeQuery = "NO_MATCH_REVIEW_SENTINEL"
+        let probeKey = ConversationEntryCache.key(entryID: "", query: probeQuery,
+                                                  options: opts, isRunning: false)
+        let sentinelCache = ConversationPrefixCache()
+        let sentinel = ConversationSearchHit(entryID: "shared-hit-sentinel", occurrence: 0,
+                                             excerpt: "CACHE-SERVED")
+        sentinelCache.store(source: Array(probeWindow[..<2]), query: probeQuery, options: opts,
+                            hits: [sentinel], entries: [:],
+                            forKey: probeKey, generation: sentinelCache.generationNow)
+        let served = ConversationSearch(renderedCache: RenderedSourceCache(byteBudget: 0),
+                                        entryCache: ConversationEntryCache(byteBudget: 0),
+                                        prefixCache: sentinelCache)
+            .hits(in: probeWindow, query: probeQuery, running: false)
+        precondition(served.hits.count == 1 && Array(served.hits[0].excerpt.utf8) == Array("CACHE-SERVED".utf8),
+                     "mechanism: hits() must CONSUME the injected shared node, not merely leave it retrievable (bypass-shared-hit dies here)")
+
+        let payloadCache = ConversationPrefixCache()
+        guard let probeEntry = ConversationTimelineEntry.make(Array(probeWindow[..<2]), isRunning: false)
+            .first(where: { $0.messages.contains(where: { $0.id == "sa0" }) }) else {
+            fatalError("fixture: the sa0 timeline entry must exist")
+        }
+        let entrySentinel = ConversationSearchHit(entryID: probeEntry.id, occurrence: 0,
+                                                  excerpt: "CONVERSION-SERVED")
+        let sentinelPayload = ConversationEntryCache.Payload(
+            messages: probeEntry.messages, sources: ["answer"], text: "answer" as NSString,
+            sourceEnds: [7], role: .assistant, isRunning: false, query: probeQuery,
+            options: opts, hits: [entrySentinel])
+        payloadCache.store(source: Array(probeWindow[..<2]), query: probeQuery, options: opts,
+                           hits: [], entries: [probeEntry.id: sentinelPayload],
+                           forKey: probeKey, generation: payloadCache.generationNow)
+        let adopting = ConversationSearch(renderedCache: RenderedSourceCache(byteBudget: 0),
+                                          entryCache: ConversationEntryCache(byteBudget: 0),
+                                          prefixCache: payloadCache)
+        _ = adopting.hits(in: probeWindow, query: probeQuery, running: false)  // adopts .shared
+        let advancedProbe = probeWindow + (try messages([
+            ["id": "su2", "role": "user", "created_at": "0",
+             "content": [["type": "text", "text": "next turn"]]],
+        ]))
+        let converted = adopting.hits(in: advancedProbe, query: probeQuery, running: false)
+        precondition(converted.hits.count == 1 && Array(converted.hits[0].excerpt.utf8) == Array("CONVERSION-SERVED".utf8),
+                     "mechanism: advancing over Entries.shared must CONVERT and reuse the stored payload (drop-converted-entry dies here)")
+    }
 
     // MARK: Part 2 — end-to-end purity through the public API
 
@@ -468,5 +651,5 @@ func checkConversationPrefixCache() throws {
                       noCache().hits(in: advanced, query: "结论", running: false),
                       "the advanced prefix must serve the next instance identically")
 
-    print("PASS: prefix cache — round-30 key encoding at prefix-table level (canonical-reorder DICTIONARY-LEVEL retrieval refusal), round-12 window predicate as the only reuse gate (same-count edit / NFD rebuild / count change refused), reference adoption (=== node), exact retention-inclusive accounting (hand-computed window walk + node excerpts + payload costs + entry-ID dictionary keys + node key + query bytes), replace accounting, generation-guarded store, budget-0 oracle, concrete LRU, oversized node AND key refusal, heavy window+payload JSONValue retention (24KB-budget refusal), locale invalidation, removeAll, 8x100 concurrency single-copy accounting, four-regime (all-three-tiers budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 8 queries at canonical AND byte level, shared-warm non-vacuity, and the staleness matrix (prefix edit/options/running/turn-boundary across instances + within-instance advance over an adopted shared node) against the budget-0 oracle")
+    print("PASS: prefix cache — round-30 key encoding at prefix-table level (canonical-reorder DICTIONARY-LEVEL retrieval refusal), round-12 window predicate as the only reuse gate (same-count edit / NFD rebuild / count change refused), reference adoption (=== node), exact retention-inclusive accounting (INDEPENDENTLY hand-computed window walk + node excerpts + expanded payload costs incl. fileId/offsets/element-stride storage + entry-ID dictionary keys + node key + query bytes), replace accounting, generation-guarded store, budget-0 oracle, concrete LRU, oversized node AND key refusal, heavy window+payload JSONValue retention (24KB-budget refusal), REVIEW-shape refusals (fileId window / 2000-empty-part window / 4096-offset payload), query-storage normalization over a turn-advance chain of independently decoded queries (single shared buffer), mechanism SENTINELS (hits() must consume the shared node; turn advance must convert Entries.shared payloads — perf-only bypass mutants die), locale invalidation, removeAll, 8x100 concurrency single-copy accounting, four-regime (all-three-tiers budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 8 queries at canonical AND byte level, shared-warm non-vacuity, and the staleness matrix (prefix edit/options/running/turn-boundary across instances + within-instance advance over an adopted shared node) against the budget-0 oracle")
 }

@@ -259,13 +259,28 @@ public final class ConversationEntryCache: @unchecked Sendable {
     /// The payload-only part of the cost convention: message metadata fields
     /// + recursive JSONValue sizes (input/output/source/metadata — the
     /// retained trees a text-phase entry carries with its message's full
-    /// content array) + sources + joined text (UTF-16 ×2) + hit excerpts.
+    /// content array) + part fileId bytes + sources + joined text
+    /// (UTF-16 ×2) + hit excerpts + STRUCTURAL element storage (the array
+    /// slots retaining messages, parts, sources, offsets and hits, priced at
+    /// MemoryLayout stride — count×stride is a lower-bound estimate since
+    /// arrays may hold spare capacity; round-32 v3 closure after the review
+    /// probes measured 8MiB fileId / 8MiB offset / 12MiB part-element
+    /// retentions inside tiny accounted costs — the same uncounted-field-
+    /// class defect as round-30 v5's JSONValue finding, in the classes it
+    /// missed; fixed here and in the prefix window walk together so both
+    /// conventions stay identical). Fixed-size fields (isError, role,
+    /// isRunning, option flags) stay unpriced like other in-struct scalars.
     public static func estimatedCost(of payload: Payload) -> Int {
         var cost = payload.text.length * 2
+        cost += payload.sources.count * MemoryLayout<String>.stride
+        cost += payload.sourceEnds.count * MemoryLayout<Int>.stride
+        cost += payload.hits.count * MemoryLayout<ConversationSearchHit>.stride
+        cost += payload.messages.count * MemoryLayout<KimiMessage>.stride
         for source in payload.sources { cost += source.utf8.count }
         for hit in payload.hits { cost += hit.excerpt.utf8.count }
         for message in payload.messages {
             cost += message.id.utf8.count + message.role.utf8.count + message.createdAt.utf8.count
+            cost += message.content.count * MemoryLayout<KimiPart>.stride
             if let metadata = message.metadata { cost += jsonValueSize(metadata) }
             for part in message.content {
                 cost += part.type.utf8.count
@@ -274,6 +289,7 @@ public final class ConversationEntryCache: @unchecked Sendable {
                 if let name = part.name { cost += name.utf8.count }
                 if let toolName = part.toolName { cost += toolName.utf8.count }
                 if let toolCallId = part.toolCallId { cost += toolCallId.utf8.count }
+                if let fileId = part.fileId { cost += fileId.utf8.count }
                 if let input = part.input { cost += jsonValueSize(input) }
                 if let output = part.output { cost += jsonValueSize(output) }
                 if let source = part.source { cost += jsonValueSize(source) }

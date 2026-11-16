@@ -190,10 +190,19 @@ public final class ConversationSearch {
             var payloads: [String: ConversationEntryCache.Payload] = [:]
             payloads.reserveCapacity(found.count)
             for (id, entry) in found {
+                // query normalization (round-32 v3, review finding): every
+                // entry in `found` passed sameQueryKey against THIS call's
+                // query (or was built from it), so the values are
+                // byte-identical; storing the current parameter's storage
+                // keeps the node's payloads on ONE query buffer, making the
+                // cost convention's single-count claim true by construction
+                // (a turn-advance chain of independently decoded equal
+                // queries would otherwise retain a distinct buffer per
+                // generation inside the node).
                 payloads[id] = ConversationEntryCache.Payload(messages: entry.messages, sources: entry.sources,
                                                               text: entry.text, sourceEnds: entry.sourceEnds,
                                                               role: entry.role, isRunning: entry.isRunning,
-                                                              query: entry.query, options: entry.options,
+                                                              query: query, options: entry.options,
                                                               hits: entry.hits)
             }
             // MATERIALIZED window (Array(prefix), never the slice: a stored

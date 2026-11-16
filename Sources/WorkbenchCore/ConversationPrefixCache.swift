@@ -271,15 +271,20 @@ public final class ConversationPrefixCache: @unchecked Sendable {
     }
 
     /// The per-message retention walk for a window: id/role/createdAt,
-    /// metadata JSONValue trees, and every content part's fields including
-    /// recursive input/output/source JSONValue sizes. Same terms and same
-    /// estimate convention as ConversationEntryCache.estimatedCost's
-    /// message loop (duplicated deliberately: both are frozen cost
-    /// conventions pinned by hand-computed assertions).
+    /// metadata JSONValue trees, every content part's fields including
+    /// recursive input/output/source JSONValue sizes and fileId bytes, plus
+    /// the STRUCTURAL element storage (message and part array slots at
+    /// MemoryLayout stride). Same terms and same estimate convention as
+    /// ConversationEntryCache.estimatedCost's message loop (duplicated
+    /// deliberately: both are frozen cost conventions pinned by
+    /// hand-computed assertions; the round-32 v3 closure extended both
+    /// together — the review probes' fileId and part-element findings were
+    /// inherited from the round-30 formula).
     public static func windowCost(_ messages: [KimiMessage]) -> Int {
-        var cost = 0
+        var cost = messages.count * MemoryLayout<KimiMessage>.stride
         for message in messages {
             cost += message.id.utf8.count + message.role.utf8.count + message.createdAt.utf8.count
+            cost += message.content.count * MemoryLayout<KimiPart>.stride
             if let metadata = message.metadata { cost += ConversationEntryCache.jsonValueSize(metadata) }
             for part in message.content {
                 cost += part.type.utf8.count
@@ -288,6 +293,7 @@ public final class ConversationPrefixCache: @unchecked Sendable {
                 if let name = part.name { cost += name.utf8.count }
                 if let toolName = part.toolName { cost += toolName.utf8.count }
                 if let toolCallId = part.toolCallId { cost += toolCallId.utf8.count }
+                if let fileId = part.fileId { cost += fileId.utf8.count }
                 if let input = part.input { cost += ConversationEntryCache.jsonValueSize(input) }
                 if let output = part.output { cost += ConversationEntryCache.jsonValueSize(output) }
                 if let source = part.source { cost += ConversationEntryCache.jsonValueSize(source) }
