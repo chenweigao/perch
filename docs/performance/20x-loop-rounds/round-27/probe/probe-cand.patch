@@ -1,0 +1,54 @@
+diff --git a/Sources/WorkbenchCore/RenderedSourceCache.swift b/Sources/WorkbenchCore/RenderedSourceCache.swift
+index ef23e80..fa4a30c 100644
+--- a/Sources/WorkbenchCore/RenderedSourceCache.swift
++++ b/Sources/WorkbenchCore/RenderedSourceCache.swift
+@@ -65,6 +65,8 @@ public final class RenderedSourceCache: @unchecked Sendable {
+         let generation: Int
+     }
+ 
++    public private(set) var produceCalls = 0
++    public private(set) var hitCalls = 0
+     private let lock = NSLock()
+     private var table: [[UInt8]: Node] = [:]
+     private var estimatedBytes = 0
+@@ -109,6 +111,7 @@ public final class RenderedSourceCache: @unchecked Sendable {
+         let stamp = tick
+         let currentGeneration = generation
+         if let node = table[key], node.generation == currentGeneration {
++            hitCalls += 1
+             var refreshed = node
+             refreshed.lastUse = stamp
+             table[key] = refreshed
+@@ -117,6 +120,7 @@ public final class RenderedSourceCache: @unchecked Sendable {
+         }
+         lock.unlock()
+ 
++        produceCalls += 1
+         let produced = produce()
+ 
+         let cost = produced.utf16.count * 2 + key.count
+diff --git a/Tests/WorkbenchCoreTests/StreamingBench.swift b/Tests/WorkbenchCoreTests/StreamingBench.swift
+index d72fd86..049a44c 100644
+--- a/Tests/WorkbenchCoreTests/StreamingBench.swift
++++ b/Tests/WorkbenchCoreTests/StreamingBench.swift
+@@ -236,12 +236,18 @@ func benchStreamingDelta() throws {
+     // disturb the other metrics' timing.
+     let coldWindow = conversation.displayMessages
+     var coldFind: [Double] = []
+-    for _ in 0..<5 {
+-        let fresh = ConversationSearch(renderedCache: RenderedSourceCache())
++    for probeIt in 0..<5 {
++        let probeCache = RenderedSourceCache()
++        let fresh = ConversationSearch(renderedCache: probeCache)
+         let t = benchNow()
+         let found = fresh.hits(in: coldWindow, query: "已经处理", running: true)
+         coldFind.append(ms(t))
+         precondition(found.hits.count >= completedTurns)
++        let t2 = benchNow()
++        let found2 = fresh.hits(in: coldWindow, query: "已经处理", running: true)
++        let matchOnly = ms(t2)
++        precondition(found2.hits == found.hits)
++        print("PROBE cold it=\(probeIt) first_ms=\(String(format: "%.2f", coldFind[probeIt])) match_only_ms=\(String(format: "%.2f", matchOnly)) produce=\(probeCache.produceCalls) hit=\(probeCache.hitCalls) bytes=\(probeCache.estimatedByteCount)")
+     }
+     // Round 27: the find-bar REOPEN shape — a fresh ConversationSearch over
+     // the process-wide shared rendered-source cache (the find bar re-renders

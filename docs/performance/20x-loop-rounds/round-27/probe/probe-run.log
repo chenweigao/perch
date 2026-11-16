@@ -1,0 +1,50 @@
+Round-27 attribution probe (Linux, Swift 6.3.3, probe-only binaries — never used for adoption numbers).
+Question: candidate find_bar_cold_query 350ms vs base 551ms (-36%) despite fresh-cache-per-iteration
+that was claimed to preserve semantics. Probe: per-instance produce/hit counters in RenderedSourceCache
++ second same-instance hits() timing (Entry-cache path) in both binaries, 2 alternating runs.
+
+=== run=1 side=base ===
+PROBE cold it=0 first_ms=553.37 match_only_ms=0.16
+PROBE cold it=1 first_ms=552.41 match_only_ms=0.16
+PROBE cold it=2 first_ms=552.33 match_only_ms=0.19
+PROBE cold it=3 first_ms=554.99 match_only_ms=0.20
+PROBE cold it=4 first_ms=553.51 match_only_ms=0.19
+  find_bar_query_update       median_ms=    0.52
+  find_bar_cold_query         median_ms=  553.37
+=== run=1 side=cand ===
+PROBE cold it=0 first_ms=351.00 match_only_ms=0.16 produce=963 hit=17253 bytes=7550375
+PROBE cold it=1 first_ms=351.11 match_only_ms=0.16 produce=963 hit=17253 bytes=7550375
+PROBE cold it=2 first_ms=352.25 match_only_ms=0.17 produce=963 hit=17253 bytes=7550375
+PROBE cold it=3 first_ms=352.74 match_only_ms=0.17 produce=963 hit=17253 bytes=7550375
+PROBE cold it=4 first_ms=354.92 match_only_ms=0.16 produce=963 hit=17253 bytes=7550375
+  find_bar_query_update       median_ms=    0.55
+  find_bar_cold_query         median_ms=  352.25
+  find_bar_reopen_query       median_ms=  228.20
+=== run=2 side=base ===
+PROBE cold it=0 first_ms=562.41 match_only_ms=0.16
+PROBE cold it=1 first_ms=559.74 match_only_ms=0.16
+PROBE cold it=2 first_ms=559.69 match_only_ms=0.16
+PROBE cold it=3 first_ms=558.68 match_only_ms=0.16
+PROBE cold it=4 first_ms=559.69 match_only_ms=0.16
+  find_bar_query_update       median_ms=    0.53
+  find_bar_cold_query         median_ms=  559.69
+=== run=2 side=cand ===
+PROBE cold it=0 first_ms=353.58 match_only_ms=0.16 produce=963 hit=17253 bytes=7550375
+PROBE cold it=1 first_ms=352.25 match_only_ms=0.16 produce=963 hit=17253 bytes=7550375
+PROBE cold it=2 first_ms=351.28 match_only_ms=0.16 produce=963 hit=17253 bytes=7550375
+PROBE cold it=3 first_ms=351.60 match_only_ms=0.15 produce=963 hit=17253 bytes=7550375
+PROBE cold it=4 first_ms=352.54 match_only_ms=0.16 produce=963 hit=17253 bytes=7550375
+  find_bar_query_update       median_ms=    0.53
+  find_bar_cold_query         median_ms=  352.25
+  find_bar_reopen_query       median_ms=  229.55
+
+Finding: the fresh-per-iteration cache records 17,253 HITS and only 963 produces per cold pass —
+the bench fixture builds every turn from the same template strings (thinking/prompt/answer/
+readOutput/bashOutput/grepOutput/oldBlock/newBlock/written), so 18,216 source occurrences collapse
+to 963 unique (94.7% duplicates). The pre-cache code re-rendered every occurrence; the cache dedups
+within the pass. The -36% cold delta is REAL product behavior (dedup), fixture-amplified in share.
+match_only_ms=0.16 is the round-12 Entry-cache reuse path (second call on the same instance skips
+rendering AND matching), not a match-only decomposition.
+Consequences (v2): bench comments corrected (semantics-preservation claim was wrong for duplicates);
+pin corpus gained a byte-identical duplicate source + occurrence/entryID assertions; product doc
+gained the within-pass dedup note. Probe binaries/patches kept here; never used for adoption.

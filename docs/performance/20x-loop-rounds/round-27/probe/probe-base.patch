@@ -1,0 +1,23 @@
+diff --git a/Tests/WorkbenchCoreTests/StreamingBench.swift b/Tests/WorkbenchCoreTests/StreamingBench.swift
+index 98e3e21..daa1811 100644
+--- a/Tests/WorkbenchCoreTests/StreamingBench.swift
++++ b/Tests/WorkbenchCoreTests/StreamingBench.swift
+@@ -232,12 +232,17 @@ func benchStreamingDelta() throws {
+     // disturb the other metrics' timing.
+     let coldWindow = conversation.displayMessages
+     var coldFind: [Double] = []
+-    for _ in 0..<5 {
++    for probeIt in 0..<5 {
+         let fresh = ConversationSearch()
+         let t = benchNow()
+         let found = fresh.hits(in: coldWindow, query: "已经处理", running: true)
+         coldFind.append(ms(t))
+         precondition(found.hits.count >= completedTurns)
++        let t2 = benchNow()
++        let found2 = fresh.hits(in: coldWindow, query: "已经处理", running: true)
++        let matchOnly = ms(t2)
++        precondition(found2.hits == found.hits)
++        print("PROBE cold it=\(probeIt) first_ms=\(String(format: "%.2f", coldFind[probeIt])) match_only_ms=\(String(format: "%.2f", matchOnly))")
+     }
+     func median(_ values: [Double]) -> Double { values.sorted()[values.count / 2] }
+     func line(_ name: String, _ value: Double, indent: String = "  ") -> String {
