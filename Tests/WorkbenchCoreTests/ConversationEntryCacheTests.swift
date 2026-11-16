@@ -90,6 +90,21 @@ func checkConversationEntryCache() throws {
     precondition(ConversationEntryCache.key(entryID: "e0", query: orderA, options: opts, isRunning: false)
                  != ConversationEntryCache.key(entryID: "e0", query: orderB, options: opts, isRunning: false),
                  "canonically-equal reorder queries must be distinct keys (byte-wise equality only)")
+    // DICTIONARY-LEVEL retrieval pin: distinct key BYTES are necessary but
+    // not sufficient — conflation would happen inside the table's Key
+    // equality, which a canonical-comparison mutant keeps correct at the
+    // byte-builder level (the v3 canonical-string-key mutant survived the
+    // byte-level assertion above; only retrieval through the table catches
+    // it). Store under orderA's key; orderB's key must NOT retrieve it.
+    let reorderCache = ConversationEntryCache()
+    let kOrderA = ConversationEntryCache.key(entryID: "e0", query: orderA, options: opts, isRunning: false)
+    let kOrderB = ConversationEntryCache.key(entryID: "e0", query: orderB, options: opts, isRunning: false)
+    reorderCache.store(payload: payload("重排文本", query: orderA), forKey: kOrderA,
+                       generation: reorderCache.generationNow)
+    precondition(reorderCache.payload(forKey: kOrderB, messages: windowA[1...]) == nil,
+                 "a canonically-equal reorder query must NOT retrieve the other query's node (dictionary-level conflation)")
+    precondition(reorderCache.payload(forKey: kOrderA, messages: windowA[1...]) != nil,
+                 "the stored key itself must still retrieve")
     var regexOpts = ConversationFindOptions(); regexOpts.regex = true
     precondition(ConversationEntryCache.key(entryID: "e", query: "q", options: opts, isRunning: false)
                  != ConversationEntryCache.key(entryID: "e", query: "q", options: regexOpts, isRunning: false))
@@ -300,5 +315,5 @@ func checkConversationEntryCache() throws {
     let runOracle = noCache().hits(in: window, query: "结论", running: true)
     precondition(runShared == runOracle && byteShape(runShared) == byteShape(runOracle))
 
-    print("PASS: entry cache — injective length-prefixed byte-exact keys (NUL-collision AND canonical-reorder pairs pinned), round-12 verification as the only reuse gate (same-ID edit and NFD rebuild refused), exact retention-inclusive admission accounting (payload+key+query bytes — Codex P2), generation-guarded store (stale-locale build refused), budget-0 stores nothing, concrete LRU (touch/victim/new-insert), oversized payload AND oversized key refusal against a non-empty table, locale-generation invalidation, removeAll, 8x100 concurrency with single-copy accounting, and four-regime (budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 6 queries at canonical AND byte level plus cross-instance staleness and running-flag isolation")
+    print("PASS: entry cache — injective length-prefixed byte-exact keys (NUL-collision pair, canonical-reorder pair AND dictionary-level reorder-retrieval refusal pinned), round-12 verification as the only reuse gate (same-ID edit and NFD rebuild refused), exact retention-inclusive admission accounting (payload+key+query bytes — Codex P2), generation-guarded store (stale-locale build refused), budget-0 stores nothing, concrete LRU (touch/victim/new-insert), oversized payload AND oversized key refusal against a non-empty table, locale-generation invalidation, removeAll, 8x100 concurrency with single-copy accounting, and four-regime (budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 6 queries at canonical AND byte level plus cross-instance staleness and running-flag isolation")
 }
