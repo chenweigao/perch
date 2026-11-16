@@ -1,0 +1,2 @@
+6ead9f2566c8f546a011fcfc138a8e40046eb72adb40447e102cd1b1cc3d2c24  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round26v2-baseline/out/Products/Release/WorkbenchChecks
+1caee0e195d43455df22633d7973b19e8ad3345bd712902ceaf36967720ea928  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round26v2-cand/out/Products/Release/WorkbenchChecks

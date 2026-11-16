@@ -1,0 +1,2 @@
+c2e8b283dcb7f9f014579c2c30fb2e8b4babefc9376961e6c5fb01aa7b3486c6  .local/round26/base-checks26v2
+84c3abd52b5732c353444e82dd505c279fcf07d64c32926d5ddcb30a9b24f72f  .local/round26/cand-checks26v2
