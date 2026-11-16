@@ -23,15 +23,20 @@ import WorkbenchCore
 /// coalescingAdjacentAssistantParts — review F1: the v2 fixture's duplicate
 /// never became its own source occurrence), so the duplicate lives in a
 /// separate `repeat-a0` message and the pass exercises the within-pass dedup
-/// path for real. FOUR regimes must agree exactly — a byteBudget-0 cache
-/// (nothing is ever stored, so every occurrence renders independently: the
-/// pre-cache product semantics as an in-product oracle), shared cold,
-/// fresh, shared warm — and the duplicate's hit is asserted by exact entry
-/// identity, exact hit counts, occurrence indices and byte-exact excerpts,
-/// so the review-F1 "duplicate renders empty" mutation changes the hit
-/// count and dies. Inline math is NOT searchable by existing product design
-/// (its run text is U+FFFC; only display-math latex renders into search
-/// text) — this pin asserts that shape and does not change it.
+/// path for real. FOUR regimes must agree — a byteBudget-0 cache (nothing is
+/// ever stored, so every occurrence renders independently: the pre-cache
+/// product semantics as an in-product oracle), shared cold, fresh, shared
+/// warm — at TWO levels: Equatable (canonical String ==) AND per-hit UTF-8
+/// byte equality. The byte level is required: the review recheck's
+/// NFC-normalization mutants (hit path / render path returning
+/// precomposedStringWithCanonicalMapping) survived canonical == — oracle
+/// excerpt 100B NFD vs warm 99B NFC is canonical_equal=true,
+/// byte_equal=false. The duplicate's hit is asserted by exact entry
+/// identity, exact hit counts, occurrence indices and UTF-8-byte-exact
+/// excerpts, so the review-F1 "duplicate renders empty" mutation changes
+/// the hit count and dies. Inline math is NOT searchable by existing product
+/// design (its run text is U+FFFC; only display-math latex renders into
+/// search text) — this pin asserts that shape and does not change it.
 func checkRenderedSourceCache() throws {
     // MARK: Part 1 — mechanism
 
@@ -206,7 +211,28 @@ func checkRenderedSourceCache() throws {
 
     // FOUR regimes must agree exactly on every query: byteBudget-0 (never
     // stores — every occurrence renders independently, the pre-cache product
-    // semantics), shared cold, fresh, shared warm.
+    // semantics), shared cold, fresh, shared warm. Agreement is asserted at
+    // TWO levels: the Equatable result (canonical String ==) AND the UTF-8
+    // bytes of every hit field. Swift's String == is canonical-equality, so
+    // == alone admits a cache that returns canonically equal but byte-
+    // different renders — the review recheck's normalize-cache-hit/render
+    // NFC mutants survived the v3 pin through exactly this gap (proof:
+    // oracle excerpt 100B NFD vs warm 99B NFC, canonical_equal=true,
+    // byte_equal=false). The byte level kills them; the design contract is
+    // "the stored render is byte-identical to re-rendering" (round-12
+    // sameRenderedUTF8 reasoning), so bytes, not canonical values, are the
+    // invariant under test.
+    func byteShape(_ result: ConversationFindResult) -> [[UInt8]] {
+        result.hits.map { hit in
+            var bytes: [UInt8] = []
+            bytes.append(contentsOf: hit.entryID.utf8); bytes.append(0)
+            bytes.append(contentsOf: hit.excerpt.utf8); bytes.append(0)
+            bytes.append(contentsOf: String(hit.occurrence).utf8); bytes.append(0)
+            bytes.append(contentsOf: (hit.toolID ?? "").utf8); bytes.append(0)
+            bytes.append(contentsOf: String(hit.toolOccurrence ?? -1).utf8)
+            return bytes
+        }
+    }
     for query in ["caf\u{00E9}", "cafe\u{0301}", "ALPHA", "example.com", "x^2 + 1", "结论"] {
         let viaNoCache = ConversationSearch(renderedCache: RenderedSourceCache(byteBudget: 0))
             .hits(in: window, query: query, running: false)
@@ -216,6 +242,10 @@ func checkRenderedSourceCache() throws {
         let viaSharedWarm = ConversationSearch().hits(in: window, query: query, running: false)
         precondition(viaNoCache == viaSharedCold && viaSharedCold == viaFresh && viaFresh == viaSharedWarm,
                      "rendered-source cache changed find-bar results for query \(query.debugDescription)")
+        precondition(byteShape(viaNoCache) == byteShape(viaSharedCold)
+                     && byteShape(viaSharedCold) == byteShape(viaFresh)
+                     && byteShape(viaFresh) == byteShape(viaSharedWarm),
+                     "regimes must agree BYTE-for-byte for query \(query.debugDescription) (canonical == admits normalization mutants)")
         precondition(!viaNoCache.hits.isEmpty,
                      "query \(query.debugDescription) must produce hits (non-vacuous pin)")
     }
@@ -229,10 +259,12 @@ func checkRenderedSourceCache() throws {
     precondition(cafe.hits.map(\.entryID) == ["text:a0:0", "text:a1:0", "activity:tool:w1", "text:repeat-a0:0"],
                  "unexpected entry identities/order: \(cafe.hits.map(\.entryID))")
     precondition(cafe.hits.allSatisfy { $0.occurrence == 0 }, "each entry contributes exactly one café hit")
-    precondition(cafe.hits[0].excerpt == renderedNFC, "a0 excerpt bytes: \(cafe.hits[0].excerpt.debugDescription)")
-    precondition(cafe.hits[1].excerpt == renderedNFD, "a1 excerpt bytes: \(cafe.hits[1].excerpt.debugDescription)")
+    precondition(Array(cafe.hits[0].excerpt.utf8) == Array(renderedNFC.utf8),
+                 "a0 excerpt bytes: \(cafe.hits[0].excerpt.debugDescription)")
+    precondition(Array(cafe.hits[1].excerpt.utf8) == Array(renderedNFD.utf8),
+                 "a1 excerpt must keep its NFD bytes (100B, not the 99B NFC normalization): \(cafe.hits[1].excerpt.debugDescription)")
     precondition(cafe.hits[2].excerpt.contains("let caf\u{00E9} = 1"), "tool excerpt: \(cafe.hits[2].excerpt.debugDescription)")
-    precondition(cafe.hits[3].excerpt == renderedNFC && cafe.hits[3].entryID == "text:repeat-a0:0",
+    precondition(Array(cafe.hits[3].excerpt.utf8) == Array(renderedNFC.utf8) && cafe.hits[3].entryID == "text:repeat-a0:0",
                  "the duplicate source must keep its own byte-exact hit")
     // Display math is searchable by its latex; inline math is not (U+FFFC).
     let math = ConversationSearch().hits(in: window, query: "x^2 + 1", running: false)
@@ -249,5 +281,5 @@ func checkRenderedSourceCache() throws {
     precondition(ConversationSearch().hits(in: window, query: "example.com", running: false).hits.count == 3)
     precondition(ConversationSearch().hits(in: window, query: "结论", running: false).hits.count == 3)
 
-    print("PASS: rendered-source cache — produce-once, NFC/NFD byte-exact keys, exact cost accounting, concrete LRU (touch-retention + victim identity), oversized refusal against a non-empty sentinel table, 512B/200-source churn, removeAll, 8x200 concurrency with single-copy accounting, locale-generation invalidation via the real notification, and four-regime (budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 6 queries with exact counts, entry identities, occurrences and byte-exact excerpts for the true duplicate source (own message, coalescing-safe)")
+    print("PASS: rendered-source cache — produce-once, NFC/NFD byte-exact keys, exact cost accounting, concrete LRU (touch-retention + victim identity), oversized refusal against a non-empty sentinel table, 512B/200-source churn, removeAll, 8x200 concurrency with single-copy accounting, locale-generation invalidation via the real notification, and four-regime (budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 6 queries at BOTH canonical and per-hit UTF-8 byte levels (canonical == alone admits NFC-normalization mutants) with exact counts, entry identities, occurrences and byte-exact excerpts for the true duplicate source (own message, coalescing-safe)")
 }

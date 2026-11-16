@@ -279,7 +279,12 @@ func benchStreamingDelta() throws {
         let t = benchNow()
         let found = reopen.hits(in: coldWindow, query: "已经处理", running: true)
         reopenFind.append(ms(t))
-        precondition(found.hits == reopenExpected.hits, "shared rendered-source cache changed search results")
+        // Canonical == plus UTF-8 byte equality of every excerpt: String ==
+        // alone would admit canonically-equal-but-byte-different renders
+        // (round-27 review recheck: NFC-normalization mutants).
+        precondition(found.hits == reopenExpected.hits
+                     && found.hits.map { Array($0.excerpt.utf8) } == reopenExpected.hits.map { Array($0.excerpt.utf8) },
+                     "shared rendered-source cache changed search results")
     }
     func median(_ values: [Double]) -> Double { values.sorted()[values.count / 2] }
     func line(_ name: String, _ value: Double, indent: String = "  ") -> String {
