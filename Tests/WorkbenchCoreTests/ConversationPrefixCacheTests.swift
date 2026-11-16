@@ -11,8 +11,9 @@ import WorkbenchCore
 /// refuse), reference adoption (a repeated verified lookup returns the SAME
 /// immutable node), exact retention-inclusive admission accounting with a
 /// hand-computed formula (window walk + node hit excerpts + every entry
-/// payload's full round-30 cost + key + query bytes; the deliberate
-/// window/entries double count is part of the convention), replace
+/// payload's full round-30 cost + its entry-ID dictionary key + node key +
+/// query bytes; the deliberate window/entries double count is part of the
+/// convention), replace
 /// accounting under one key, generation-guarded store, budget-0 oracle,
 /// concrete LRU, oversized node AND oversized key refusal, heavy JSONValue
 /// retention (window AND payload trees counted), locale invalidation,
@@ -139,6 +140,7 @@ func checkConversationPrefixCache() throws {
     let manual = manualWindow
         + nodeHits.reduce(0) { $0 + $1.excerpt.utf8.count }
         + ConversationEntryCache.estimatedCost(of: entryPayload)
+        + "text:a0:0".utf8.count  // the retained dictionary key (entry ID)
     precondition(ConversationPrefixCache.estimatedCost(of: node) == manual,
                  "exact node cost formula: \(ConversationPrefixCache.estimatedCost(of: node)) != \(manual)")
 
@@ -279,6 +281,7 @@ func checkConversationPrefixCache() throws {
     let perNode = ConversationPrefixCache.windowCost(windowP)
         + nodeHits.reduce(0) { $0 + $1.excerpt.utf8.count }
         + ConversationEntryCache.estimatedCost(of: entryPayload)
+        + "text:a0:0".utf8.count
     let expected = (0..<25).reduce(0) { acc, i in
         acc + perNode
             + ConversationEntryCache.key(entryID: "", query: "k\(i)", options: opts, isRunning: false).count
@@ -465,5 +468,5 @@ func checkConversationPrefixCache() throws {
                       noCache().hits(in: advanced, query: "结论", running: false),
                       "the advanced prefix must serve the next instance identically")
 
-    print("PASS: prefix cache — round-30 key encoding at prefix-table level (canonical-reorder DICTIONARY-LEVEL retrieval refusal), round-12 window predicate as the only reuse gate (same-count edit / NFD rebuild / count change refused), reference adoption (=== node), exact retention-inclusive accounting (hand-computed window walk + node excerpts + payload costs + key + query bytes), replace accounting, generation-guarded store, budget-0 oracle, concrete LRU, oversized node AND key refusal, heavy window+payload JSONValue retention (24KB-budget refusal), locale invalidation, removeAll, 8x100 concurrency single-copy accounting, four-regime (all-three-tiers budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 8 queries at canonical AND byte level, shared-warm non-vacuity, and the staleness matrix (prefix edit/options/running/turn-boundary across instances + within-instance advance over an adopted shared node) against the budget-0 oracle")
+    print("PASS: prefix cache — round-30 key encoding at prefix-table level (canonical-reorder DICTIONARY-LEVEL retrieval refusal), round-12 window predicate as the only reuse gate (same-count edit / NFD rebuild / count change refused), reference adoption (=== node), exact retention-inclusive accounting (hand-computed window walk + node excerpts + payload costs + entry-ID dictionary keys + node key + query bytes), replace accounting, generation-guarded store, budget-0 oracle, concrete LRU, oversized node AND key refusal, heavy window+payload JSONValue retention (24KB-budget refusal), locale invalidation, removeAll, 8x100 concurrency single-copy accounting, four-regime (all-three-tiers budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 8 queries at canonical AND byte level, shared-warm non-vacuity, and the staleness matrix (prefix edit/options/running/turn-boundary across instances + within-instance advance over an adopted shared node) against the budget-0 oracle")
 }

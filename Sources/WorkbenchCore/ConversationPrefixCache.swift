@@ -53,12 +53,17 @@ import Foundation
 ///    JSONValue trees, sources, joined text, offsets and hit excerpts. The
 ///    admission cost counts ALL of them: the window-message walk mirrors
 ///    ConversationEntryCache.estimatedCost's per-message terms, each entry
-///    payload adds its full round-30 estimatedCost, plus node hit excerpts,
-///    key bytes and query UTF-8 bytes. Window messages and their per-entry
-///    copies are therefore counted MORE THAN ONCE, and payload texts may
-///    double-count with the entry cache's own nodes — a deliberate
-///    conservative overestimate (round-30 v5 lesson: an UNCOUNTED field
-///    class is blocking; an overcount only shrinks effective capacity).
+///    payload adds its full round-30 estimatedCost PLUS its dictionary-key
+///    (entry ID) UTF-8 bytes — the retained [String: Payload] keys are a
+///    field class of their own (round-30 v5 lesson), and the dictionary's
+///    bucket storage stays excluded exactly like round-30's table buckets —
+///    plus node hit excerpts, key bytes and query UTF-8 bytes. The payloads'
+///    query strings COW-share the node's single storage and are counted once
+///    through it. Window messages and their per-entry copies are therefore
+///    counted MORE THAN ONCE, and payload texts may double-count with the
+///    entry cache's own nodes — a deliberate conservative overestimate (an
+///    UNCOUNTED field class is blocking; an overcount only shrinks effective
+///    capacity).
 ///    Batch-LRU eviction with the round-29 F9 honest churn note; a node
 ///    costing more than the whole budget is built but not stored.
 /// 4. **Locale generation, including the build window.** Prefix hits and
@@ -250,16 +255,17 @@ public final class ConversationPrefixCache: @unchecked Sendable {
     /// walk (mirrors ConversationEntryCache.estimatedCost's per-message
     /// terms — metadata fields and recursive JSONValue sizes included) +
     /// the node-level hit excerpts + every entry payload's full round-30
-    /// estimatedCost. Window messages and their per-entry copies count
-    /// more than once BY DESIGN (conservative overestimate, design point 3).
+    /// estimatedCost + every dictionary-key (entry ID) UTF-8 byte length.
+    /// Window messages and their per-entry copies count more than once BY
+    /// DESIGN (conservative overestimate, design point 3).
     public static func estimatedCost(of node: Node) -> Int {
         var cost = windowCost(node.source)
         for hit in node.hits { cost += hit.excerpt.utf8.count }
-        // entryCount-exposed payloads: iterate via the public accessor is
-        // not possible per-key; the dictionary is walked here where it is
-        // in scope (fileprivate storage).
-        for (_, payload) in node.entries {
-            cost += ConversationEntryCache.estimatedCost(of: payload)
+        // The dictionary is walked here where its fileprivate storage is in
+        // scope; the payload query strings COW-share node.query's single
+        // storage and are counted once through it (design point 3).
+        for (id, payload) in node.entries {
+            cost += ConversationEntryCache.estimatedCost(of: payload) + id.utf8.count
         }
         return cost
     }
