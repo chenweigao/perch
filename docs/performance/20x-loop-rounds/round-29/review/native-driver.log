@@ -1,0 +1,420 @@
+mechanism-original build=0 exit= 0 pin_original= False PASS original round-27 Part 1 assertions
+
+reverse-lru build=0 exit= 132 pin_original= False 
+*** Signal 4: Backtracing from 0x557227908f1f... done ***
+
+*** Swift runtime failure: precondition failure ***
+
+Platform: x86_64 Linux (Alibaba Cloud Linux 3 (Soaring Falcon))
+
+Thread 0 "run" crashed:
+
+  0 [inlined] [system] 0x0000557227908f1f Swift runtime failure: precondition failure in run at //<compiler-generated>
+  1 [inlined]          0x0000557227908f1f static String.== infix(_:_:) in run at /tmp/perch-r29-review.vgmZGm/reverse-lru/Pin.swift:90:5
+  2                    0x0000557227908f1f checkRenderedSourceCache() + 7103 in run at /tmp/perch-r29-review.vgmZGm/reverse-lru/Pin.swift:90:5
+...
+
+
+Registers:
+
+rax 0x0000000000000000  0
+rdx 0xe200000000000000  16285016252571713536
+rcx 0xe800000000000000  16717361816799281152
+rbx 0x72422d414741494e  8233192827178273102
+rsi 0x8000000000000000  9223372036854775808
+rdi 0xe200000000000000  16285016252571713536
+rbp 0x000055722933d2c0  e0 e3 90 27 72 55 00 00 24 7c 26 45 ae 0a 00 c0  àã·'rU··$|&E®··À
+rsp 0x00007fff9833e830  68 e8 33 98 ff 7f 00 00 c3 7d 90 27 72 55 00 00  hè3·ÿ···Ã}·'rU··
+ r8 0x0000000000000000  0
+ r9 0x6000000000000000  6917529027641081856
+r10 0x0000000100000003  4294967299
+r11 0x0000000000000000  0
+r12 0x0000000000000000  0
+r13 0x000055722933d2c0  e0 e3 90 27 72 55 00 00 24 7c 26 45 ae 0a 00 c0  àã·'rU··$|&E®··À
+r14 0x4e494147412d4272  5641111782550225522
+r15 0x800055722790e2f0  9223465985633215216
+rip 0x0000557227908f1f  0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b  ················
+
+rflags 0x0000000000010246  ZF PF
+
+cs 0x0033  fs 0x0000  gs 0x0000
+
+
+Images (23 omitted):
+
+0x0000557227902000–0x000055722790be10 e6f74198fcefe27b7edc607b35fd76054c59d970 run /tmp/perch-r29-review.vgmZGm/reverse-lru/run
+
+Backtrace took 0.00s
+
+
+zero-accounting build=0 exit= 132 pin_original= False 
+*** Signal 4: Backtracing from 0x5581e5cf4eba... done ***
+
+*** Swift runtime failure: precondition failure ***
+
+Platform: x86_64 Linux (Alibaba Cloud Linux 3 (Soaring Falcon))
+
+Thread 0 "run" crashed:
+
+  0 [inlined] [system] 0x00005581e5cf4eba Swift runtime failure: precondition failure in run at //<compiler-generated>
+  1                    0x00005581e5cf4eba checkRenderedSourceCache() + 6970 in run at /tmp/perch-r29-review.vgmZGm/zero-accounting/Pin.swift:69:5
+...
+
+
+Registers:
+
+rax 0x0000000000000007  7
+rdx 0x0000000000000000  0
+rcx 0x4000000000000002  4611686018427387906
+rbx 0xe200000000000000  16285016252571713536
+rsi 0x0000000000000002  2
+rdi 0x0000000000005958  22872
+rbp 0x4000000000000000  4611686018427387904
+rsp 0x00007fffe43c1bb0  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ················
+ r8 0x0000000000000000  0
+ r9 0x0000000000000000  0
+r10 0xfffffffffffff2f7  18446744073709548279
+r11 0x00007f04a407e420  55 48 89 e5 41 57 41 56 41 55 41 54 53 48 83 ec  UH·åAWAVAUATSH·ì
+r12 0x0000000000000000  0
+r13 0x00005581e6ba3320  e0 a3 cf e5 81 55 00 00 02 48 d7 3c b0 0a 00 c0  à£Ïå·U···H×<°··À
+r14 0xe200000000000000  16285016252571713536
+r15 0x00005581e6ba3320  e0 a3 cf e5 81 55 00 00 02 48 d7 3c b0 0a 00 c0  à£Ïå·U···H×<°··À
+rip 0x00005581e5cf4eba  0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b  ················
+
+rflags 0x0000000000010297  SF AF PF CF
+
+cs 0x0033  fs 0x0000  gs 0x0000
+
+
+Images (23 omitted):
+
+0x00005581e5cee000–0x00005581e5cf7e30 93f078ea714c41bd72d2a49705bf625a68eb8fcc run /tmp/perch-r29-review.vgmZGm/zero-accounting/run
+
+Backtrace took 0.00s
+
+
+admit-oversized build=0 exit= 132 pin_original= False 
+*** Signal 4: Backtracing from 0x55690f5bff21... done ***
+
+*** Swift runtime failure: precondition failure ***
+
+Platform: x86_64 Linux (Alibaba Cloud Linux 3 (Soaring Falcon))
+
+Thread 0 "run" crashed:
+
+  0 [inlined] [system] 0x000055690f5bff21 Swift runtime failure: precondition failure in run at //<compiler-generated>
+  1 [inlined]          0x000055690f5bff21 static String.== infix(_:_:) in run at /tmp/perch-r29-review.vgmZGm/admit-oversized/Pin.swift:92:5
+  2                    0x000055690f5bff21 checkRenderedSourceCache() + 7105 in run at /tmp/perch-r29-review.vgmZGm/admit-oversized/Pin.swift:92:5
+...
+
+
+Registers:
+
+rax 0x0000000000000000  0
+rdx 0x800055690f5c52f0  9223465946572411632
+rcx 0xe200000000000001  16285016252571713537
+rbx 0x0000000000004301  17153
+rsi 0x800055690f5c52f0  9223465946572411632
+rdi 0x000055690f5c5310  4d 55 53 54 2d 4e 4f 54 2d 50 52 4f 44 55 43 45  MUST-NOT-PRODUCE
+rbp 0x0000000000000000  0
+rsp 0x00007ffc34446330  68 63 44 34 fc 7f 00 00 bb ee 5b 0f 69 55 00 00  hcD4ü···»î[·iU··
+ r8 0x0000000000000000  0
+ r9 0x4000000000000000  4611686018427387904
+r10 0x0000000100000003  4294967299
+r11 0x0000000000000000  0
+r12 0x0000000000000000  0
+r13 0x00005569110aa2c0  e0 53 5c 0f 69 55 00 00 24 56 21 22 ad 0a 00 c0  àS\·iU··$V!"­··À
+r14 0xe200000000000000  16285016252571713536
+r15 0x800055690f5c52f0  9223465946572411632
+rip 0x000055690f5bff21  0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b  ················
+
+rflags 0x0000000000010246  ZF PF
+
+cs 0x0033  fs 0x0000  gs 0x0000
+
+
+Images (23 omitted):
+
+0x000055690f5b9000–0x000055690f5c2e10 ccfbf4691da1aca42f96c2d182a09552d7175fe7 run /tmp/perch-r29-review.vgmZGm/admit-oversized/run
+
+Backtrace took 0.00s
+
+
+string-key build=0 exit= 132 pin_original= False 
+*** Signal 4: Backtracing from 0x563eef153b40... done ***
+
+*** Swift runtime failure: precondition failure ***
+
+Platform: x86_64 Linux (Alibaba Cloud Linux 3 (Soaring Falcon))
+
+Thread 0 "run" crashed:
+
+  0 [inlined] [system] 0x0000563eef153b40 Swift runtime failure: precondition failure in run at //<compiler-generated>
+  1                    0x0000563eef153b40 checkRenderedSourceCache() + 7216 in run at /tmp/perch-r29-review.vgmZGm/string-key/Pin.swift:61:5
+...
+
+
+Registers:
+
+rax 0x0000000000000000  0
+rdx 0xe100000000000000  16212958658533785600
+rcx 0xe100000000000000  16212958658533785600
+rbx 0x4200000000000000  4755801206503243776
+rsi 0x8000000000000000  9223372036854775808
+rdi 0xe100000000000000  16212958658533785600
+rbp 0x0000000000000041  65
+rsp 0x00007ffe54db0ad0  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ················
+ r8 0x0000000000000000  0
+ r9 0x6000000000000000  6917529027641081856
+r10 0x0000000100000003  4294967299
+r11 0x3221300000000000  3612221152685981696
+r12 0x0000000000000000  0
+r13 0xe100000000000000  16212958658533785600
+r14 0xe100000000000000  16212958658533785600
+r15 0xe100000000000000  16212958658533785600
+rip 0x0000563eef153b40  0f 0b 66 66 66 66 66 2e 0f 1f 84 00 00 00 00 00  ··fffff.········
+
+rflags 0x0000000000010286  SF PF
+
+cs 0x0033  fs 0x0000  gs 0x0000
+
+
+Images (23 omitted):
+
+0x0000563eef14d000–0x0000563eef156928 85661489c0408764d6e3865b250461cfc1516b07 run /tmp/perch-r29-review.vgmZGm/string-key/run
+
+Backtrace took 0.00s
+
+
+no-locale-observer build=0 exit= 132 pin_original= False 7f1f772e7dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 9:
+
+  0  0x00007f1f772e7dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+
+Registers:
+
+rax 0x0000000000000007  7
+rdx 0xd00000000000002b  14987979559889010731
+rcx 0x0000000000000000  0
+rbx 0x0000000000000000  0
+rsi 0x00005570445efad0  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ················
+rdi 0x0000000000000000  0
+rbp 0x00007fff84829140  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ················
+rsp 0x00007fff84829130  2b 00 00 00 00 00 00 d0 90 49 13 77 1f 7f 00 80  +······Ð·I·w····
+ r8 0x0000000000000000  0
+ r9 0x0000000200000000  8589934592
+r10 0x0000000100000003  4294967299
+r11 0x00007f1f77b7bc00  55 48 89 e5 b0 01 5d c3 cc cc cc cc cc cc cc cc  UH·å°·]ÃÌÌÌÌÌÌÌÌ
+r12 0x0000000000000000  0
+r13 0x00005570445ef330  c0 93 71 43 70 55 00 00 03 00 00 00 00 00 00 00  À·qCpU··········
+r14 0x00007fff84829130  2b 00 00 00 00 00 00 d0 90 49 13 77 1f 7f 00 80  +······Ð·I·w····
+r15 0x80007f1f77134990  9223511809973242256
+rip 0x0000557043714ac7  0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b  ················
+
+rflags 0x0000000000010202  
+
+cs 0x0033  fs 0x0000  gs 0x0000
+
+
+Images (20 omitted):
+
+0x000055704370e000–0x0000557043717940 c11a0f731f97f7429c53e1010f209c25adc868dc run                /tmp/perch-r29-review.vgmZGm/no-locale-observer/run
+0x00007f1f7604b000–0x00007f1f761cfc5c 960891d022c59cee678476b8696e9224608859d0 libc-2.32.so       /usr/lib64/libc-2.32.so
+0x00007f1f772d6000–0x00007f1f772ebce1 ddd6cd0bb97a6a9a3ab90896f32eab60963bdfcb libpthread-2.32.so /usr/lib64/libpthread-2.32.so
+0x00007f1f77329000–0x00007f1f77371218 d08a244d278d89eeb5cfd6afd8bb084f99cd2acd libdispatch.so     /home/<dev>/.local/swift/6.3.3/usr/lib/swift/linux/libdispatch.so
+
+Backtrace took 0.00s
+
+
+mechanism-supplement build=0 exit= 0 pin_original= False PASS exact cost: NFC key 2 UTF8 bytes + astral render 2 UTF16 units *2 =6; budget 5 refuses
+PASS exact LRU: touch a, insert c evicts b; estimatedBytes=10
+DIAG oversized occupied cache: before=3 after=3 sentinel_produces=1
+PASS oversized does not thrash an occupied cache
+PASS locale: populated table invalidates; notification between lookup and insert blocks obsolete admission
+PASS produce is reentrant outside lock; exact two-entry bytes=30
+PASS forced concurrent misses replace one node: key4 + render5*2=14, not28
+PASS observer ownership does not retain cache; post-deinit notification safe
+
+buffer-and-rehash build=0 exit= 0 pin_original= False PASS empty/small/block-tail/65536B buffers and 10000-key Dictionary growth/rehash; exact cost=508485
+
+full-original build=0 exit= 0 pin_original= True PASS: rendered-source cache — produce-once, NFC/NFD byte-exact keys, exact cost accounting, concrete LRU (touch-retention + victim identity), oversized refusal against a non-empty sentinel table, 512B/200-source churn, removeAll, 8x200 concurrency with single-copy accounting, locale-generation invalidation via the real notification, and four-regime (budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 6 queries at BOTH canonical and per-hit UTF-8 byte levels (canonical == alone admits NFC-normalization mutants) with exact counts, entry identities, occurrences and byte-exact excerpts for the true duplicate source (own message, coalescing-safe)
+
+drop-duplicate build=0 exit= 132 pin_original= True ead-2.32.so
+...
+
+Thread 8:
+
+  0  0x00007f86206e7dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+
+Registers:
+
+rax 0x0000000000000000  0
+rdx 0x00007f8620ff6e60  60 d0 fe 20 86 7f 00 00 ff ff ff ff 04 00 00 80  `Ðþ ····ÿÿÿÿ····
+rcx 0x00007f861f2eaa40  e0 bd 0f 14 6c 55 00 00 00 00 00 00 00 00 00 00  à½··lU··········
+rbx 0x0000556c1411a6c0  00 00 00 00 00 00 00 00 81 00 00 00 00 00 00 00  ················
+rsi 0x0000000000000007  7
+rdi 0x0000000556c140fb  22930342139
+rbp 0x0000000000000001  1
+rsp 0x00007ffff22e6f20  00 00 00 00 00 00 00 00 30 ae 11 14 6c 55 00 00  ········0®··lU··
+ r8 0x0000000000000000  0
+ r9 0x0000000000000000  0
+r10 0x0000000100000003  4294967299
+r11 0xb716711cb02e9b00  13192856526457314048
+r12 0x0000000000000000  0
+r13 0x0000556c140fbdf0  3b e6 d0 42 69 55 00 00 03 00 00 00 01 00 00 00  ;æÐBiU··········
+r14 0x0000556c140ff840  b0 5b 10 21 86 7f 00 00 03 00 00 00 00 00 00 00  °[·!············
+r15 0x0000556c140fbe10  40 7d 10 14 6c 55 00 00 60 7d 10 14 6c 55 00 00  @}··lU··`}··lU··
+rip 0x0000556c120b62c8  0f 0b 31 ff 48 83 7c 24 10 02 40 0f 93 c7 4c 8d  ··1ÿH·|$··@··ÇL·
+
+rflags 0x0000000000010297  SF AF PF CF
+
+cs 0x0033  fs 0x0000  gs 0x0000
+
+
+Images (45 omitted):
+
+0x0000556c11e00000–0x0000556c124839f8 4f9676dea76c73a03461ab42f1df251414560cfc run                /tmp/perch-r29-review.vgmZGm/drop-duplicate/run
+0x00007f861f115000–0x00007f861f299c5c 960891d022c59cee678476b8696e9224608859d0 libc-2.32.so       /usr/lib64/libc-2.32.so
+0x00007f86206d6000–0x00007f86206ebce1 ddd6cd0bb97a6a9a3ab90896f32eab60963bdfcb libpthread-2.32.so /usr/lib64/libpthread-2.32.so
+0x00007f8620729000–0x00007f8620771218 d08a244d278d89eeb5cfd6afd8bb084f99cd2acd libdispatch.so     /home/<dev>/.local/swift/6.3.3/usr/lib/swift/linux/libdispatch.so
+
+Backtrace took 0.46s
+
+
+normalize-cache-hit-nfc build=0 exit= 132 pin_original= True f3a75346dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 8:
+
+  0  0x00007f3a75346dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+
+Registers:
+
+rax 0x0000000000000000  0
+rdx 0x0000561b32603640  03 70 ed 53 1e 56 00 00 03 00 00 00 01 00 00 00  ·píS·V··········
+rcx 0x00007f3a73eeaa28  40 4f 60 32 1b 56 00 00 80 80 5e 32 1b 56 00 00  @O`2·V····^2·V··
+rbx 0x0000561b32603630  00 00 00 00 00 00 00 a5 51 00 00 00 00 00 00 00  ·······¥Q·······
+rsi 0x8000000000000000  9223372036854775808
+rdi 0x0000000561b32604  23113967108
+rbp 0x0000000000000000  0
+rsp 0x00007ffe5010dfa0  00 00 00 00 00 00 00 a5 a0 51 60 32 1b 56 00 00  ·······¥ Q`2·V··
+ r8 0x0000000000000000  0
+ r9 0x0000000200000000  8589934592
+r10 0x0000000100000003  4294967299
+r11 0x0000000000000000  0
+r12 0x0000000000000000  0
+r13 0x0000000000000001  1
+r14 0x0000561b32604f50  34 10 d3 53 1e 56 00 00 03 00 00 00 01 00 00 00  4·ÓS·V··········
+r15 0x0000561b32604140  f4 72 d3 53 1e 56 00 00 10 20 5d 32 1b 56 00 00  ôrÓS·V··· ]2·V··
+rip 0x0000561b31cb5a76  0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b  ················
+
+rflags 0x0000000000010246  ZF PF
+
+cs 0x0033  fs 0x0000  gs 0x0000
+
+
+Images (45 omitted):
+
+0x0000561b31a00000–0x0000561b32083038 465416b527f556bc3e5f822387e9b698d53227c5 run                /tmp/perch-r29-review.vgmZGm/normalize-cache-hit-nfc/run
+0x00007f3a73d15000–0x00007f3a73e99c5c 960891d022c59cee678476b8696e9224608859d0 libc-2.32.so       /usr/lib64/libc-2.32.so
+0x00007f3a75335000–0x00007f3a7534ace1 ddd6cd0bb97a6a9a3ab90896f32eab60963bdfcb libpthread-2.32.so /usr/lib64/libpthread-2.32.so
+0x00007f3a75d21000–0x00007f3a75d69218 d08a244d278d89eeb5cfd6afd8bb084f99cd2acd libdispatch.so     /home/<dev>/.local/swift/6.3.3/usr/lib/swift/linux/libdispatch.so
+
+Backtrace took 0.45s
+
+
+normalize-render-nfc build=0 exit= 132 pin_original= True ...
+
+Thread 8:
+
+  0  0x00007f5ff14e7dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+
+Registers:
+
+rax 0x0000000000000001  1
+rdx 0x000055a83bfe1370  91 d1 7f 61 ad 55 00 00 10 e0 fa 3b a8 55 00 00  ·Ñ·a­U···àú;¨U··
+rcx 0x000055a83bfae010  07 00 07 00 07 00 07 00 07 00 07 00 07 00 07 00  ················
+rbx 0x0000000000000007  7
+rsi 0x000055ad617dacbc  94203153329340
+rdi 0x000055a83bfccf00  bc ac 7d 61 ad 55 00 00 10 e0 fa 3b a8 55 00 00  ¼¬}a­U···àú;¨U··
+rbp 0x0000000000000000  0
+rsp 0x00007ffc4ddfd3d0  10 00 00 00 00 00 00 f0 70 1a fe 3b a8 55 00 00  ·······ðp·þ;¨U··
+ r8 0x0000000000000000  0
+ r9 0x0000000200000000  8589934592
+r10 0x0000000100000003  4294967299
+r11 0xe2cd2fce5911cd00  16342771186101505280
+r12 0x0000000000000000  0
+r13 0x000055a83bfccf00  bc ac 7d 61 ad 55 00 00 10 e0 fa 3b a8 55 00 00  ¼¬}a­U···àú;¨U··
+r14 0x000055a83bfe1a70  50 5a f0 f1 5f 7f 00 00 03 00 00 00 00 00 00 00  PZðñ_···········
+r15 0x00007f5ff1dd5618  00 02 00 00 00 00 00 00 7c 07 e2 f1 5f 7f 00 00  ········|·âñ_···
+rip 0x000055a839cb35b1  0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 31 ff 48 83  ············1ÿH·
+
+rflags 0x0000000000010246  ZF PF
+
+cs 0x0033  fs 0x0000  gs 0x0000
+
+
+Images (45 omitted):
+
+0x000055a839a00000–0x000055a83a0807e8 8eaed154d422bbd7fb9605e813236236175b03d7 run                /tmp/perch-r29-review.vgmZGm/normalize-render-nfc/run
+0x00007f5feff15000–0x00007f5ff0099c5c 960891d022c59cee678476b8696e9224608859d0 libc-2.32.so       /usr/lib64/libc-2.32.so
+0x00007f5ff14d6000–0x00007f5ff14ebce1 ddd6cd0bb97a6a9a3ab90896f32eab60963bdfcb libpthread-2.32.so /usr/lib64/libpthread-2.32.so
+0x00007f5ff1529000–0x00007f5ff1571218 d08a244d278d89eeb5cfd6afd8bb084f99cd2acd libdispatch.so     /home/<dev>/.local/swift/6.3.3/usr/lib/swift/linux/libdispatch.so
+
+Backtrace took 0.46s
+
+
+normalize-excerpt-nfd build=0 exit= 132 pin_original= True ...
+
+Thread 9:
+
+  0  0x00007f75896dcdc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+
+Registers:
+
+rax 0x0000000000000001  1
+rdx 0x000055f39dcc5580  65 9c f5 c2 f6 55 00 00 10 b0 ca 9d f3 55 00 00  e·õÂöU···°Ê·óU··
+rcx 0x000055f39dcab010  07 00 07 00 07 00 07 00 07 00 07 00 07 00 07 00  ················
+rbx 0x0000000000000007  7
+rsi 0x000055f6c2f5895e  94518321187166
+rdi 0x000055f39dcde120  5e 89 f5 c2 f6 55 00 00 10 b0 ca 9d f3 55 00 00  ^·õÂöU···°Ê·óU··
+rbp 0x0000000000000000  0
+rsp 0x00007ffce0284cd0  10 00 00 00 00 00 00 f0 30 e4 cd 9d f3 55 00 00  ·······ð0äÍ·óU··
+ r8 0x0000000000000000  0
+ r9 0x0000000200000000  8589934592
+r10 0x0000000100000003  4294967299
+r11 0x3252dd666ed94900  3626204082002807040
+r12 0x0000000000000000  0
+r13 0x000055f39dcde120  5e 89 f5 c2 f6 55 00 00 10 b0 ca 9d f3 55 00 00  ^·õÂöU···°Ê·óU··
+r14 0x000055f39dcde430  50 5a 10 8a 75 7f 00 00 03 00 00 00 00 00 00 00  PZ··u···········
+r15 0x00007f7589fd5618  00 02 00 00 00 00 00 00 7c 07 02 8a 75 7f 00 00  ········|···u···
+rip 0x000055f39d4b578d  0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b  ················
+
+rflags 0x0000000000010246  ZF PF
+
+cs 0x0033  fs 0x0000  gs 0x0000
+
+
+Images (45 omitted):
+
+0x000055f39d200000–0x000055f39d882bd0 7109720be32fad01f50c5172a2972123eda2d5c9 run                /tmp/perch-r29-review.vgmZGm/normalize-excerpt-nfd/run
+0x00007f7588115000–0x00007f7588299c5c 960891d022c59cee678476b8696e9224608859d0 libc-2.32.so       /usr/lib64/libc-2.32.so
+0x00007f75896cb000–0x00007f75896e0ce1 ddd6cd0bb97a6a9a3ab90896f32eab60963bdfcb libpthread-2.32.so /usr/lib64/libpthread-2.32.so
+0x00007f7589729000–0x00007f7589771218 d08a244d278d89eeb5cfd6afd8bb084f99cd2acd libdispatch.so     /home/<dev>/.local/swift/6.3.3/usr/lib/swift/linux/libdispatch.so
+
+Backtrace took 0.49s
+
+
+NATIVE AUDIT COMPLETE

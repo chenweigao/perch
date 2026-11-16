@@ -1,0 +1,100 @@
+HEAD_main=d8b5f11c5781946c6635fc58669ed7b1ae71a8a4
+porcelain_main=0
+=== build candidate in main worktree (d8b5f11) Mon Nov 16 20:11:58 CST 2026 ===
+candidate_build_exit=0
+=== build baseline (PRISTINE 406b547; tree kept alive) Mon Nov 16 20:12:00 CST 2026 ===
+baseline_build_exit=0
+=== checks both sides (trees alive) Mon Nov 16 20:14:46 CST 2026 ===
+candidate_checks_exit=0 pass=106 skip=1
+baseline_checks_exit=0 pass=106 skip=1
+PASS: rendered-source cache — produce-once, NFC/NFD byte-exact keys, exact cost accounting, concrete LRU (touch-retention + victim identity), oversized refusal against a non-empty sentinel table, 512B/200-source churn, removeAll, 8x200 concurrency with single-copy accounting, locale-generation invalidation via the real notification, and four-regime (budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 6 queries at BOTH canonical and per-hit UTF-8 byte levels (canonical == alone admits NFC-normalization mutants) with exact counts, entry identities, occurrences and byte-exact excerpts for the true duplicate source (own message, coalescing-safe)
+89790711ab7c4afd95d8c70eec190e428644197060047886a286093f9bd092a5  .local/round27/base-checks29
+d73e33ab8dce15e7666fc963c227889298dde244cf7c2edf1d0964e43954bbed  .local/round27/cand-checks29
+e430aa2005b964493dca025795915183bd371167eda670b472abf0d460169e71  base:Tests/WorkbenchCoreTests/StreamingBench.swift
+e430aa2005b964493dca025795915183bd371167eda670b472abf0d460169e71  cand:Tests/WorkbenchCoreTests/StreamingBench.swift
+38fcb58430e95097a3da735f62c1da769d25729725d4c07553fa21014fb97c4e  base:Tests/WorkbenchCoreTests/ActivityBench.swift
+38fcb58430e95097a3da735f62c1da769d25729725d4c07553fa21014fb97c4e  cand:Tests/WorkbenchCoreTests/ActivityBench.swift
+eebe68e23b14788dd4fbe5712a663144d1f746fbcf4d1e51fe608d5880ff8bc8  base:Tests/WorkbenchCoreTests/EditLineBench.swift
+eebe68e23b14788dd4fbe5712a663144d1f746fbcf4d1e51fe608d5880ff8bc8  cand:Tests/WorkbenchCoreTests/EditLineBench.swift
+f8f8723875b18eebffdbdbd42c1b07c9247f90328d1fd64f3d695687cfb816e3  base:Tests/WorkbenchCoreTests/BenchClock.swift
+f8f8723875b18eebffdbdbd42c1b07c9247f90328d1fd64f3d695687cfb816e3  cand:Tests/WorkbenchCoreTests/BenchClock.swift
+865439a8ad81716b8bb71ebcdebcbfb2ad617f1ffa2f4eb6a31586ff978d45ed  base:Tests/WorkbenchCoreTests/PresentationBench.swift
+865439a8ad81716b8bb71ebcdebcbfb2ad617f1ffa2f4eb6a31586ff978d45ed  cand:Tests/WorkbenchCoreTests/PresentationBench.swift
+=== pairs Mon Nov 16 20:15:01 CST 2026 ===
+pair=1 variant=baseline mode=1 exit=0
+pair=1 variant=baseline mode=streaming exit=0
+pair=1 variant=baseline mode=activity exit=0
+pair=1 variant=baseline mode=edit-lines exit=0
+pair=1 variant=baseline mode=presentation-token exit=0
+pair=1 variant=candidate mode=1 exit=0
+pair=1 variant=candidate mode=streaming exit=0
+pair=1 variant=candidate mode=activity exit=0
+pair=1 variant=candidate mode=edit-lines exit=0
+pair=1 variant=candidate mode=presentation-token exit=0
+pair=2 variant=baseline mode=1 exit=0
+pair=2 variant=baseline mode=streaming exit=0
+pair=2 variant=baseline mode=activity exit=0
+pair=2 variant=baseline mode=edit-lines exit=0
+pair=2 variant=baseline mode=presentation-token exit=0
+pair=2 variant=candidate mode=1 exit=0
+pair=2 variant=candidate mode=streaming exit=0
+pair=2 variant=candidate mode=activity exit=0
+pair=2 variant=candidate mode=edit-lines exit=0
+pair=2 variant=candidate mode=presentation-token exit=0
+pair=3 variant=baseline mode=1 exit=0
+pair=3 variant=baseline mode=streaming exit=0
+pair=3 variant=baseline mode=activity exit=0
+pair=3 variant=baseline mode=edit-lines exit=0
+pair=3 variant=baseline mode=presentation-token exit=0
+pair=3 variant=candidate mode=1 exit=0
+pair=3 variant=candidate mode=streaming exit=0
+pair=3 variant=candidate mode=activity exit=0
+pair=3 variant=candidate mode=edit-lines exit=0
+pair=3 variant=candidate mode=presentation-token exit=0
+pair=4 variant=baseline mode=1 exit=0
+pair=4 variant=baseline mode=streaming exit=0
+pair=4 variant=baseline mode=activity exit=0
+pair=4 variant=baseline mode=edit-lines exit=0
+pair=4 variant=baseline mode=presentation-token exit=0
+pair=4 variant=candidate mode=1 exit=0
+pair=4 variant=candidate mode=streaming exit=0
+pair=4 variant=candidate mode=activity exit=0
+pair=4 variant=candidate mode=edit-lines exit=0
+pair=4 variant=candidate mode=presentation-token exit=0
+pair=5 variant=baseline mode=1 exit=0
+pair=5 variant=baseline mode=streaming exit=0
+pair=5 variant=baseline mode=activity exit=0
+pair=5 variant=baseline mode=edit-lines exit=0
+pair=5 variant=baseline mode=presentation-token exit=0
+pair=5 variant=candidate mode=1 exit=0
+pair=5 variant=candidate mode=streaming exit=0
+pair=5 variant=candidate mode=activity exit=0
+pair=5 variant=candidate mode=edit-lines exit=0
+pair=5 variant=candidate mode=presentation-token exit=0
+pair=6 variant=baseline mode=1 exit=0
+pair=6 variant=baseline mode=streaming exit=0
+pair=6 variant=baseline mode=activity exit=0
+pair=6 variant=baseline mode=edit-lines exit=0
+pair=6 variant=baseline mode=presentation-token exit=0
+pair=6 variant=candidate mode=1 exit=0
+pair=6 variant=candidate mode=streaming exit=0
+pair=6 variant=candidate mode=activity exit=0
+pair=6 variant=candidate mode=edit-lines exit=0
+pair=6 variant=candidate mode=presentation-token exit=0
+89790711ab7c4afd95d8c70eec190e428644197060047886a286093f9bd092a5  .local/round27/base-checks29
+d73e33ab8dce15e7666fc963c227889298dde244cf7c2edf1d0964e43954bbed  .local/round27/cand-checks29
+=== rebuild verification (same paths, fresh .build) with retained receipts Mon Nov 16 20:16:55 CST 2026 ===
+candidate_rebuild_exit=0
+baseline_rebuild_exit=0
+candidate_rebuild_exit=0
+candidate_rebuild_head=d8b5f11c5781946c6635fc58669ed7b1ae71a8a4
+candidate_rebuild_porcelain=2
+?? docs/performance/20x-loop-rounds/2026-11-16-round-29.md
+?? docs/performance/20x-loop-rounds/round-29/
+d73e33ab8dce15e7666fc963c227889298dde244cf7c2edf1d0964e43954bbed  .build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+baseline_rebuild_head=406b54728b7e84e74e7ba84d2e38f3c60aaf9119
+baseline_rebuild_porcelain=2
+?? build.log
+?? rebuild.log
+515f506d68acbc448863f9e26b6d07ee36fb829e86ca9b733ec5150f450695eb  /tmp/r29-ab-base/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+DONE Mon Nov 16 20:22:22 CST 2026

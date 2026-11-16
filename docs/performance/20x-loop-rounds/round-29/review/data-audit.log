@@ -1,0 +1,53 @@
+linux metrics 96 numeric fields 1632 mismatches 0 positive ['edit512_unchanged'] negative ['edit64_crlf', 'find_bar_cold_query', 'find_bar_reopen_query'] exceptions 22
+find_bar_cold_query {"baseline_median": 350.08500000000004, "candidate_median": 323.175, "change_percent": -7.686704657440342, "max_spread_percent": 1.0313720983682004, "worst_pair_percent": -6.857618938175134, "baseline_samples": [350.17, 350.0, 349.38, 351.0, 351.67, 348.08], "candidate_samples": [322.97, 321.41, 323.38, 323.53, 322.91, 324.21]}
+find_bar_reopen_query {"baseline_median": 229.25, "candidate_median": 213.735, "change_percent": -6.767720828789525, "max_spread_percent": 1.1725955204216143, "worst_pair_percent": -6.0737812911725895, "baseline_samples": [230.37, 228.89, 230.07, 229.61, 228.06, 227.7], "candidate_samples": [214.01, 213.07, 215.46, 213.6, 213.12, 213.87]}
+edit512_unchanged {"baseline_median": 0.5995696410536766, "candidate_median": 0.6157802417874336, "change_percent": 2.7037060624465075, "max_spread_percent": 2.326302341019828, "worst_pair_percent": 3.846189932602543, "baseline_samples": [0.6007310003042221, 0.5984082818031311, 0.5948320031166077, 0.6046798080205917, 0.5955714732408524, 0.6086695939302444], "candidate_samples": [0.6180685013532639, 0.6134919822216034, 0.6112810224294662, 0.6184596568346024, 0.6184782832860947, 0.6064902991056442]}
+edit64_crlf {"baseline_median": 0.06502307951450348, "candidate_median": 0.06338115781545639, "change_percent": -2.5251367842103756, "max_spread_percent": 1.5677991313143333, "worst_pair_percent": -1.9947114279144629, "baseline_samples": [0.06474368274211884, 0.0649821013212204, 0.06506405770778656, 0.06511248648166656, 0.06480515003204346, 0.0650845468044281], "candidate_samples": [0.06327033042907715, 0.0630505383014679, 0.0635925680398941, 0.06349198520183563, 0.06351247429847717, 0.06261095404624939]}
+EXCEPTIONS [{"metric": "cold@1000", "pair": 1, "baseline_ms": 24.04, "candidate_ms": 24.49, "percent": 1.8718801996672183, "spread": 1.0313531353135312}, {"metric": "cold@1000", "pair": 5, "baseline_ms": 24.12, "candidate_ms": 24.41, "percent": 1.2023217247097808, "spread": 1.0313531353135312}, {"metric": "cold@500", "pair": 1, "baseline_ms": 11.99, "candidate_ms": 12.24, "percent": 2.0850708924103416, "spread": 1.417848206839032}, {"metric": "cold@500", "pair": 5, "baseline_ms": 12.08, "candidate_ms": 12.29, "percent": 1.7384105960264824, "spread": 1.417848206839032}, {"metric": "edit512_insert", "pair": 5, "baseline_ms": 0.600568950176239, "candidate_ms": 0.6417706608772278, "percent": 6.860446363219075, "spread": 6.766771032106266}, {"metric": "edit512_last", "pair": 1, "baseline_ms": 0.6033498793840408, "candidate_ms": 0.6802249699831009, "percent": 12.741378299029702, "spread": 12.713541007589482}, {"metric": "edit512_unchanged", "pair": 1, "baseline_ms": 0.6007310003042221, "candidate_ms": 0.6180685013532639, "percent": 2.886067314698541, "spread": 2.326302341019828}, {"metric": "edit512_unchanged", "pair": 2, "baseline_ms": 0.5984082818031311, "candidate_ms": 0.6134919822216034, "percent": 2.5206369759826686, "spread": 2.326302341019828}, {"metric": "edit512_unchanged", "pair": 3, "baseline_ms": 0.5948320031166077, "candidate_ms": 0.6112810224294662, "percent": 2.7653218432556335, "spread": 2.326302341019828}, {"metric": "edit512_unchanged", "pair": 5, "baseline_ms": 0.5955714732408524, "candidate_ms": 0.6184782832860947, "percent": 3.846189932602543, "spread": 2.326302341019828}, {"metric": "edit64_first", "pair": 4, "baseline_ms": 0.0967029482126236, "candidate_ms": 0.10418519377708435, "percent": 7.737350000963075, "spread": 6.9822986690294115}, {"metric": "edit64_first", "pair": 5, "baseline_ms": 0.09751319885253906, "candidate_ms": 0.10455213487148285, "percent": 7.218444376528117, "spread": 6.9822986690294115}, {"metric": "edit64_insert", "pair": 1, "baseline_ms": 0.10120309889316559, "candidate_ms": 0.10505691170692444, "percent": 3.807998822078663, "spread": 2.9045794563035945}, {"metric": "edit64_middle", "pair": 3, "baseline_ms": 0.09639188647270203, "candidate_ms": 0.10317564010620117, "percent": 7.0376811594202895, "spread": 6.931400966183575}, {"metric": "edit64_trailing_empty", "pair": 3, "baseline_ms": 0.10379403829574585, "candidate_ms": 0.10840408504009247, "percent": 4.441533271121958, "spread": 2.768801539792693}, {"metric": "edit_stats@320", "pair": 3, "baseline_ms": 0.162, "candidate_ms": 0.165, "percent": 1.8518518518518534, "spread": 1.234567901234569}, {"metric": "longtail200_input_comparison_ms", "pair": 5, "baseline_ms": 0.0007155, "candidate_ms": 0.0007800000000000001, "percent": 9.014675052410915, "spread": 8.163265306122454}, {"metric": "older_page_full_chain", "pair": 6, "baseline_ms": 11.01, "candidate_ms": 11.98, "percent": 8.810172570390561, "spread": 8.33333333333333}, {"metric": "page_tool_projection", "pair": 4, "baseline_ms": 2.06, "candidate_ms": 2.31, "percent": 12.135922330097088, "spread": 10.679611650485425}, {"metric": "stage_presentation_update", "pair": 6, "baseline_ms": 9.03, "candidate_ms": 9.93, "percent": 9.966777408637878, "spread": 8.053691275167793}, {"metric": "token200_tool_projection_ms", "pair": 3, "baseline_ms": 0.00415, "candidate_ms": 0.004405, "percent": 6.144578313253012, "spread": 4.631828978622324}, {"metric": "token200_tool_projection_ms", "pair": 6, "baseline_ms": 0.00415, "candidate_ms": 0.004345, "percent": 4.698795180722888, "spread": 4.631828978622324}]
+macos metrics 89 numeric fields 1513 mismatches 0 positive [] negative ['find_bar_cold_query', 'find_bar_reopen_query'] exceptions 3
+find_bar_cold_query {"baseline_median": 635.825, "candidate_median": 619.575, "change_percent": -2.555734675421696, "max_spread_percent": 1.142727655304125, "worst_pair_percent": -1.2781016477874199, "baseline_samples": [632.97, 637.39, 633.74, 634.67, 636.98, 638.99], "candidate_samples": [624.88, 617.82, 621.85, 619.34, 619.81, 617.85]}
+find_bar_reopen_query {"baseline_median": 147.48, "candidate_median": 139.26999999999998, "change_percent": -5.566856522918368, "max_spread_percent": 3.044650010925783, "worst_pair_percent": -2.562159928369722, "baseline_samples": [145.19, 147.39, 147.57, 146.69, 148.6, 148.32], "candidate_samples": [141.47, 137.29, 139.26, 139.14, 139.96, 139.28]}
+edit512_unchanged {"baseline_median": 0.5776458419859409, "candidate_median": 0.5701666814275086, "change_percent": -1.2947657569418414, "max_spread_percent": 4.303059697811682, "worst_pair_percent": 2.4071466182865637, "baseline_samples": [0.5837500793859363, 0.5664583295583725, 0.5908333696424961, 0.5677500739693642, 0.5715416045859456, 0.5879583768546581], "candidate_samples": [0.5677916342392564, 0.5704166833311319, 0.5699166795238853, 0.5814166506752372, 0.5672082770615816, 0.5878749070689082]}
+edit64_crlf {"baseline_median": 0.06987503729760647, "candidate_median": 0.0691041350364685, "change_percent": -1.1032584610360834, "max_spread_percent": 8.245411950148531, "worst_pair_percent": 2.8467667147276434, "baseline_samples": [0.06874999962747097, 0.0729166204109788, 0.07129169534891844, 0.06879167631268501, 0.06883335299789906, 0.07091672159731388], "candidate_samples": [0.06745837163180113, 0.06720831152051687, 0.07274991367012262, 0.07075001485645771, 0.06879167631268501, 0.069416593760252]}
+EXCEPTIONS [{"metric": "edit_stats@320", "pair": 3, "baseline_ms": 0.073, "candidate_ms": 0.082, "percent": 12.328767123287683, "spread": 10.958904109589051}, {"metric": "longtail200_turn_projection_ms", "pair": 1, "baseline_ms": 0.006458, "candidate_ms": 0.007125, "percent": 10.328275007742334, "spread": 9.96218844046609}, {"metric": "token200_tool_projection_ms", "pair": 3, "baseline_ms": 0.003334, "candidate_ms": 0.003541, "percent": 6.208758248350321, "spread": 4.9790041991601655}]
+CHECKS AND HASHES {
+  "linux": {
+    "checks": {
+      "base": {
+        "PASS": 106,
+        "SKIP": 1,
+        "sha256": "1eb11f2d8a14e5f74e12182d4e8a17d849dece6b251f7cb59b60885f5053455a"
+      },
+      "cand": {
+        "PASS": 106,
+        "SKIP": 1,
+        "sha256": "1eb11f2d8a14e5f74e12182d4e8a17d849dece6b251f7cb59b60885f5053455a"
+      }
+    },
+    "hashes": [
+      "89790711ab7c4afd95d8c70eec190e428644197060047886a286093f9bd092a5",
+      "d73e33ab8dce15e7666fc963c227889298dde244cf7c2edf1d0964e43954bbed"
+    ],
+    "driver_exits": 60
+  },
+  "macos": {
+    "checks": {
+      "base": {
+        "PASS": 107,
+        "SKIP": 0,
+        "sha256": "a34346400f0a16f7e0ddd6ad4c6bf9e709d680cd23848fad8774397b4848675a"
+      },
+      "cand": {
+        "PASS": 107,
+        "SKIP": 0,
+        "sha256": "a34346400f0a16f7e0ddd6ad4c6bf9e709d680cd23848fad8774397b4848675a"
+      }
+    },
+    "hashes": [
+      "c0dbf4e5eeb34247adbdbac40e19bf585ca6e87a6bce4176f61fda40a01ee6bb",
+      "9eb2a566bf1fc6a22b06126d120d4a2b639198b7ecf56715ff73facd52dff3e1"
+    ],
+    "driver_exits": 60
+  }
+}
+TREE {'head': '4cfb32c3d8f3e931229e68d716aafb34b5b9e2a5', 'status': '', 'source_diff': '20\t3\tSources/WorkbenchCore/RenderedSourceCache.swift\n', 'tests_diff_bytes': 0}

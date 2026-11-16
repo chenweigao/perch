@@ -1,0 +1,7 @@
+/tmp/perch-r29-review.vgmZGm/sizing.py:41: SyntaxWarning: invalid escape sequence '\.'
+  main=main.replace('\\.','\.')
+messages=16142 occurrences=18216 unique=963 bytes=3150941 skipped=256 skipped_bytes=115116 tld_bytes=116198 http=0 dotOnly=707
+x7 produces=6741 bytes=22056587 skipped=1792 skipped_bytes=805812 tld_bytes=813386 dotOnly=4949
+simple_byte_percent=3.6533848142507273 tld_byte_percent=3.687723762520466 skip_count_percent=26.583592938733126
+
+formula_simple 1.871657143300757 formula_tld 1.8892492506451002 rounded_3.7_formula 1.8955384615384616

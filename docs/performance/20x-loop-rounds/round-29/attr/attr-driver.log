@@ -1,0 +1,38 @@
+=== prepare Mon Nov 16 19:53:25 CST 2026 ===
+From github.com:chenweigao/perch
+   b89851f3..406b5472  main       -> origin/main
+Previous HEAD position was b89851f3 Merge pull request #349 from chenweigao/perf/20x-loop-27-20261116
+HEAD is now at 406b5472 Merge pull request #350 from chenweigao/perf/20x-loop-28-20261116
+HEAD=406b54728b7e84e74e7ba84d2e38f3c60aaf9119
+porcelain_before=0
+=== apply temporary profile loop modes ===
+porcelain_applied=2
+=== build Mon Nov 16 19:53:31 CST 2026 ===
+build_exit=0
+7eed84b14e64622b410a614cfe954a807e797832e1ae21fbeabeed95dc54e5ca  <worktree>/.build/round29-profile/out/Products/Release/WorkbenchChecks
+=== timing context runs (5s, untraced) Mon Nov 16 19:54:44 CST 2026 ===
+r29_profile shared=false iterations=8
+r29_profile_median_ms=631.924 min_ms=625.440 max_ms=650.785
+r29_profile shared=true iterations=34
+r29_profile_median_ms=143.945 min_ms=142.448 max_ms=150.605
+=== record cold Mon Nov 16 19:54:56 CST 2026 ===
+Recording completed. Saving output file...
+Output file saved as: cold.trace
+record_cold_exit=0
+Finished export to the file: <worktree>/.local/round29/cold-time-profile.xml
+=== record reopen Mon Nov 16 19:55:26 CST 2026 ===
+Recording completed. Saving output file...
+Output file saved as: reopen.trace
+record_reopen_exit=0
+Finished export to the file: <worktree>/.local/round29/reopen-time-profile.xml
+total 30736
+drwxr-xr-x   6 <mini>  staff      192 Nov 16 19:55 .
+drwxr-xr-x  28 <mini>  staff      896 Nov 16 19:54 ..
+-rw-r--r--   1 <mini>  staff  7467530 Nov 16 19:55 cold-time-profile.xml
+drwxr-xr-x  10 <mini>  staff      320 Nov 16 19:55 cold.trace
+-rw-r--r--   1 <mini>  staff  6606143 Nov 16 19:55 reopen-time-profile.xml
+drwxr-xr-x  10 <mini>  staff      320 Nov 16 19:55 reopen.trace
+=== revert Mon Nov 16 19:55:53 CST 2026 ===
+porcelain_after=0
+DONE Mon Nov 16 19:55:54 CST 2026
+exit=0

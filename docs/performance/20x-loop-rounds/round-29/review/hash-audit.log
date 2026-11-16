@@ -1,0 +1,2 @@
+PASS exact SourceKey hash contract cases=4272, lengths=267, offsets=16, max_bytes=1048576; explicit nil/0 buffer; 10000 arbitrary-byte keys rehash
+

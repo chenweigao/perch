@@ -82,8 +82,25 @@ public final class RenderedSourceCache: @unchecked Sendable {
         let generation: Int
     }
 
+    /// Table key: the source's exact UTF-8 bytes. Equality stays byte-wise
+    /// (never canonical — point 2 above), but hashing goes through
+    /// `Hasher.combine(bytes:)` over the contiguous buffer instead of the
+    /// per-element `Array<UInt8>` walk: round-29 Mac attribution put key
+    /// hashing at ~9.1% of the reopen shape and ~3.8% of the cold shape
+    /// (Hasher._combine + its dyld stub + Array.hash(into:) leaves). The
+    /// hash VALUE changes with the function; Dictionary semantics and the
+    /// byte-exact equality contract do not.
+    private struct SourceKey: Hashable {
+        let bytes: [UInt8]
+        init(_ bytes: [UInt8]) { self.bytes = bytes }
+        func hash(into hasher: inout Hasher) {
+            bytes.withUnsafeBufferPointer { hasher.combine(bytes: UnsafeRawBufferPointer($0)) }
+        }
+        static func == (lhs: SourceKey, rhs: SourceKey) -> Bool { lhs.bytes == rhs.bytes }
+    }
+
     private let lock = NSLock()
-    private var table: [[UInt8]: Node] = [:]
+    private var table: [SourceKey: Node] = [:]
     private var estimatedBytes = 0
     private var tick: UInt64 = 0
     private var generation = 0
@@ -120,7 +137,7 @@ public final class RenderedSourceCache: @unchecked Sendable {
     /// The rendered form of `source`: the stored value on a byte-exact hit,
     /// otherwise `produce()`'s result, stored if it fits the budget.
     public func rendered(_ source: String, produce: () -> String) -> String {
-        let key = Array(source.utf8)
+        let key = SourceKey(Array(source.utf8))
         lock.lock()
         tick &+= 1
         let stamp = tick
@@ -136,7 +153,7 @@ public final class RenderedSourceCache: @unchecked Sendable {
 
         let produced = produce()
 
-        let cost = produced.utf16.count * 2 + key.count
+        let cost = produced.utf16.count * 2 + key.bytes.count
         lock.lock()
         defer { lock.unlock() }
         guard generation == currentGeneration else { return produced }
