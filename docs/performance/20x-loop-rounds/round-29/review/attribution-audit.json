@@ -1,0 +1,362 @@
+{
+  "cold": {
+    "total": 20544,
+    "region_counts": {
+      "outside": 4,
+      "bench-harness": 9,
+      "cf-match": 16010,
+      "utf16-bridge": 873,
+      "setup-json": 832,
+      "sources-build": 333,
+      "teardown": 289,
+      "setup-wire-decode": 24,
+      "cache-mgmt": 818,
+      "timeline-make": 121,
+      "render": 950,
+      "search-mgmt": 230,
+      "role-derivation": 33,
+      "join-concat": 17,
+      "excerpt": 1
+    },
+    "cf_query_self": [
+      2953,
+      14.374026479750778
+    ],
+    "hash4_self": [
+      781,
+      3.8015965732087227
+    ],
+    "hash4_plus_uint8_witness": [
+      790,
+      3.845404984423676
+    ],
+    "dd_named8_self": [
+      5894,
+      28.689641744548286
+    ],
+    "dd_report8_self": [
+      5775,
+      28.110397196261683
+    ],
+    "JSONWriter_leaf_by_region": {
+      "setup-json": 236
+    },
+    "JSONWriter_sources_callers": {
+      "closure #4 in static ConversationSearch.sources(of:role:)": 236
+    },
+    "setup_json_contexts": {
+      "harness": 208,
+      "search": 624
+    },
+    "utf16_bridge_contexts": {
+      "other": 826,
+      "JSON-context": 31,
+      "substring-context": 16
+    },
+    "utf16_bridge_callers": {
+      "specialized turn #1 (_:running:) in benchR29Profile(shared:)": 2,
+      "benchR29Profile(shared:)": 36,
+      "ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)": 480,
+      "specialized static ReplyDocument.linkMatches(in:)": 238,
+      "specialized RenderedSourceCache.rendered(_:produce:)": 110,
+      "closure #2 in ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)": 3,
+      "closure #1 in closure #1 in ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)": 4
+    },
+    "utf16_named_leaf_callers": {
+      "String.UTF16View._nativeCopy(into:alignedRange:)": {
+        "benchR29Profile(shared:)": 12,
+        "ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)": 125
+      },
+      "String.UTF16View._nativeGetIndex(for:)": {
+        "ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)": 80
+      },
+      "String.UTF16View._nativeCopy(into:offsetRange:)": {
+        "ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)": 3
+      },
+      "_StringBreadcrumbs.init(_:)": {
+        "specialized static ReplyDocument.linkMatches(in:)": 110,
+        "ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)": 160,
+        "specialized RenderedSourceCache.rendered(_:produce:)": 107
+      }
+    },
+    "dd_pattern_self": [
+      6405,
+      31.176985981308412
+    ],
+    "memmove_malloc_leaf_by_region": {
+      "cf-match": 178,
+      "utf16-bridge": 22,
+      "bench-harness": 1,
+      "setup-json": 89,
+      "setup-wire-decode": 2,
+      "timeline-make": 20,
+      "render": 112,
+      "search-mgmt": 10,
+      "sources-build": 36,
+      "role-derivation": 8,
+      "join-concat": 9,
+      "cache-mgmt": 4
+    },
+    "cache_memmove_malloc": [
+      4,
+      0.019470404984423675
+    ],
+    "examples": {
+      "utf16-nativeCopy": [
+        "String.UTF16View._nativeCopy(into:alignedRange:)",
+        "__StringStorage.getCharacters(_:range:)",
+        "@objc __StringStorage.getCharacters(_:range:)",
+        "__CFStringEncodeByteStream",
+        "-[NSString(NSStringOtherEncodings) getBytes:maxLength:usedLength:encoding:options:range:remainingRange:]",
+        "CFStringGetBytes",
+        "_convertJSONString",
+        "_writeJSONString",
+        "___writeJSONObject_block_invoke",
+        "specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)",
+        "@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)",
+        "_writeJSONObject",
+        "___writeJSONArray_block_invoke",
+        "__NSARRAY_IS_CALLING_OUT_TO_A_BLOCK__",
+        "__NSArrayEnumerate",
+        "_writeJSONArray",
+        "___writeJSONObject_block_invoke",
+        "specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)",
+        "@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)",
+        "_writeJSONObject",
+        "___writeJSONArray_block_invoke",
+        "__NSARRAY_IS_CALLING_OUT_TO_A_BLOCK__",
+        "__NSArrayEnumerate",
+        "_writeJSONArray",
+        "___writeJSONObject_block_invoke",
+        "specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)",
+        "@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)",
+        "_writeJSONObject",
+        "___writeJSONObject_block_invoke",
+        "specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)",
+        "@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)",
+        "_writeJSONObject",
+        "-[_NSJSONWriter dataWithRootObject:options:]",
+        "+[NSJSONSerialization dataWithJSONObject:options:error:]",
+        "benchR29Profile(shared:)",
+        "specialized static ProtocolTests.main()",
+        "specialized thunk for @escaping @convention(thin) @async () -> ()",
+        "completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)"
+      ],
+      "JSONWriter": [
+        "JSONWriter.serializeString(_:)",
+        "specialized serializeObjectElement #1 (key:value:depth:) in JSONWriter.serializeObject(_:depth:)",
+        "JSONWriter.serializeObject(_:depth:)",
+        "JSONWriter.serializeJSON(_:depth:)",
+        "JSONEncoder.encode<A>(_:)",
+        "dispatch thunk of JSONEncoder.encode<A>(_:)",
+        "JSONValue.display.getter",
+        "closure #4 in static ConversationSearch.sources(of:role:)",
+        "specialized Sequence.flatMap<A>(_:)",
+        "specialized static ConversationSearch.sources(of:role:)",
+        "specialized static ConversationSearch.sources(of:role:)",
+        "static ConversationSearch.sources(of:role:)",
+        "ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)",
+        "ConversationSearch.hits(in:query:running:options:)",
+        "benchR29Profile(shared:)",
+        "specialized static ProtocolTests.main()",
+        "specialized thunk for @escaping @convention(thin) @async () -> ()",
+        "completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)"
+      ],
+      "cache-hash": [
+        "DYLD-STUB$$Hasher._combine(_:)",
+        "specialized Dictionary.subscript.getter",
+        "specialized RenderedSourceCache.rendered(_:produce:)",
+        "closure #1 in ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)",
+        "specialized Collection.map<A, B>(_:)",
+        "ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)",
+        "ConversationSearch.hits(in:query:running:options:)",
+        "benchR29Profile(shared:)",
+        "specialized static ProtocolTests.main()",
+        "specialized thunk for @escaping @convention(thin) @async () -> ()",
+        "completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)"
+      ]
+    },
+    "mismatches": []
+  },
+  "reopen": {
+    "total": 21033,
+    "region_counts": {
+      "outside": 5,
+      "cf-match": 10275,
+      "bench-harness": 9,
+      "teardown": 922,
+      "setup-json": 2774,
+      "utf16-bridge": 2128,
+      "setup-wire-decode": 19,
+      "join-concat": 64,
+      "search-mgmt": 895,
+      "sources-build": 1234,
+      "timeline-make": 454,
+      "render": 21,
+      "cache-mgmt": 2065,
+      "role-derivation": 168
+    },
+    "cf_query_self": [
+      9596,
+      45.62354395473779
+    ],
+    "hash4_self": [
+      1909,
+      9.076213569153236
+    ],
+    "hash4_plus_uint8_witness": [
+      1911,
+      9.08572243617173
+    ],
+    "dd_named8_self": [
+      190,
+      0.9033423667570009
+    ],
+    "dd_report8_self": [
+      185,
+      0.8795701992107641
+    ],
+    "JSONWriter_leaf_by_region": {
+      "setup-json": 982
+    },
+    "JSONWriter_sources_callers": {
+      "closure #4 in static ConversationSearch.sources(of:role:)": 982
+    },
+    "setup_json_contexts": {
+      "harness": 215,
+      "search": 2559
+    },
+    "utf16_bridge_contexts": {
+      "JSON-context": 33,
+      "other": 2013,
+      "substring-context": 82
+    },
+    "utf16_bridge_callers": {
+      "benchR29Profile(shared:)": 60,
+      "specialized static ReplyDocument.linkMatches(in:)": 7,
+      "ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)": 2034,
+      "specialized RenderedSourceCache.rendered(_:produce:)": 10,
+      "closure #2 in ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)": 17
+    },
+    "utf16_named_leaf_callers": {
+      "String.UTF16View._nativeCopy(into:alignedRange:)": {
+        "benchR29Profile(shared:)": 10,
+        "ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)": 492
+      },
+      "_StringBreadcrumbs.init(_:)": {
+        "benchR29Profile(shared:)": 2,
+        "specialized static ReplyDocument.linkMatches(in:)": 7,
+        "ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)": 662,
+        "specialized RenderedSourceCache.rendered(_:produce:)": 4
+      },
+      "String.UTF16View._nativeGetIndex(for:)": {
+        "ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)": 376
+      },
+      "String.UTF16View._nativeCopy(into:offsetRange:)": {
+        "ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)": 9
+      }
+    },
+    "dd_pattern_self": [
+      203,
+      0.9651500023772167
+    ],
+    "memmove_malloc_leaf_by_region": {
+      "bench-harness": 2,
+      "setup-json": 256,
+      "setup-wire-decode": 1,
+      "utf16-bridge": 68,
+      "timeline-make": 68,
+      "cf-match": 7,
+      "join-concat": 43,
+      "cache-mgmt": 40,
+      "render": 3,
+      "sources-build": 126,
+      "role-derivation": 43,
+      "search-mgmt": 33
+    },
+    "cache_memmove_malloc": [
+      40,
+      0.19017734036989492
+    ],
+    "examples": {
+      "utf16-nativeCopy": [
+        "String.UTF16View._nativeCopy(into:alignedRange:)",
+        "__StringStorage.getCharacters(_:range:)",
+        "@objc __StringStorage.getCharacters(_:range:)",
+        "__CFStringEncodeByteStream",
+        "-[NSString(NSStringOtherEncodings) getBytes:maxLength:usedLength:encoding:options:range:remainingRange:]",
+        "CFStringGetBytes",
+        "_convertJSONString",
+        "_writeJSONString",
+        "___writeJSONObject_block_invoke",
+        "specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)",
+        "@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)",
+        "_writeJSONObject",
+        "___writeJSONObject_block_invoke",
+        "specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)",
+        "@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)",
+        "_writeJSONObject",
+        "___writeJSONArray_block_invoke",
+        "__NSARRAY_IS_CALLING_OUT_TO_A_BLOCK__",
+        "__NSArrayEnumerate",
+        "_writeJSONArray",
+        "___writeJSONObject_block_invoke",
+        "specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)",
+        "@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)",
+        "_writeJSONObject",
+        "___writeJSONArray_block_invoke",
+        "__NSARRAY_IS_CALLING_OUT_TO_A_BLOCK__",
+        "__NSArrayEnumerate",
+        "_writeJSONArray",
+        "___writeJSONObject_block_invoke",
+        "specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)",
+        "@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)",
+        "_writeJSONObject",
+        "___writeJSONObject_block_invoke",
+        "specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)",
+        "@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)",
+        "_writeJSONObject",
+        "-[_NSJSONWriter dataWithRootObject:options:]",
+        "+[NSJSONSerialization dataWithJSONObject:options:error:]",
+        "benchR29Profile(shared:)",
+        "specialized static ProtocolTests.main()",
+        "specialized thunk for @escaping @convention(thin) @async () -> ()",
+        "completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)"
+      ],
+      "JSONWriter": [
+        "JSONWriter.serializeString(_:)",
+        "specialized serializeObjectElement #1 (key:value:depth:) in JSONWriter.serializeObject(_:depth:)",
+        "JSONWriter.serializeObject(_:depth:)",
+        "JSONWriter.serializeJSON(_:depth:)",
+        "JSONEncoder.encode<A>(_:)",
+        "dispatch thunk of JSONEncoder.encode<A>(_:)",
+        "JSONValue.display.getter",
+        "closure #4 in static ConversationSearch.sources(of:role:)",
+        "specialized Sequence.flatMap<A>(_:)",
+        "specialized static ConversationSearch.sources(of:role:)",
+        "specialized static ConversationSearch.sources(of:role:)",
+        "static ConversationSearch.sources(of:role:)",
+        "ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)",
+        "ConversationSearch.hits(in:query:running:options:)",
+        "benchR29Profile(shared:)",
+        "specialized static ProtocolTests.main()",
+        "specialized thunk for @escaping @convention(thin) @async () -> ()",
+        "completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)"
+      ],
+      "cache-hash": [
+        "DYLD-STUB$$Hasher._combine(_:)",
+        "specialized Dictionary.subscript.getter",
+        "specialized RenderedSourceCache.rendered(_:produce:)",
+        "closure #1 in ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)",
+        "specialized Collection.map<A, B>(_:)",
+        "ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)",
+        "ConversationSearch.hits(in:query:running:options:)",
+        "benchR29Profile(shared:)",
+        "specialized static ProtocolTests.main()",
+        "specialized thunk for @escaping @convention(thin) @async () -> ()",
+        "completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)"
+      ]
+    },
+    "mismatches": []
+  }
+}
