@@ -1,0 +1,32 @@
+--- Sources/WorkbenchCore/ConversationSearch.swift
++++ Sources/WorkbenchCore/ConversationSearch.swift
+@@ -97,6 +97,7 @@
+             case .owned(let entries): return entries[id]
+             case .shared(let node):
+                 guard let payload = node.payload(entryID: id) else { return nil }
++                print("REVIEW_CONVERT query=\(payload.query) id=\(id)")
+                 return Entry(sources: payload.sources, text: payload.text,
+                              sourceEnds: payload.sourceEnds, role: payload.role,
+                              messages: payload.messages, isRunning: payload.isRunning,
+@@ -227,6 +228,7 @@
+             if let previous = lookup(entry.id), previous.isRunning == isRunning,
+                Self.sameQueryKey(previous.query, query), previous.options == options,
+                KimiMessage.sameSearchableWindow(entry.messages[...], previous.messages[...]) {
++                print("REVIEW_REUSE query=\(query) id=\(entry.id)")
+                 var adopted = previous
+                 adopted.messages = entry.messages
+                 next[entry.id] = adopted
+--- Tests/WorkbenchCoreTests/ConversationPrefixCacheTests.swift
++++ Tests/WorkbenchCoreTests/ConversationPrefixCacheTests.swift
+@@ -461,9 +461,11 @@
+         ["id": "a3", "role": "assistant", "created_at": "000009",
+          "content": [["type": "text", "text": "结论：全部完成。"]]],
+     ])
++    print("REVIEW_D2_BEGIN")
+     assertOracleEqual(adopting.hits(in: advanced, query: "结论", running: false),
+                       noCache().hits(in: advanced, query: "结论", running: false),
+                       "a within-instance advance over an ADOPTED shared node must reuse converted entries exactly")
++    print("REVIEW_D2_END")
+     assertOracleEqual(ConversationSearch().hits(in: advanced, query: "结论", running: false),
+                       noCache().hits(in: advanced, query: "结论", running: false),
+                       "the advanced prefix must serve the next instance identically")

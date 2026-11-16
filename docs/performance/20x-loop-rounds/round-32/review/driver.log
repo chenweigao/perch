@@ -1,0 +1,14 @@
+START control
+{"case": "control", "build_exit": 0, "binary_sha256": "1de1dc262afe33f7d4d2cd727ebb615fc63a06a4dcf980f30a9c7e7b64c8ebfc", "checks_exit": 0, "pass_lines": 108, "seconds": 192.286}
+START bypass-shared-hit
+{"case": "bypass-shared-hit", "build_exit": 0, "binary_sha256": "83389d9f20c7d7d3fd9bddc1df9a9c9c5928c368bc0499f7ce86f7e315646149", "checks_exit": 0, "pass_lines": 108, "seconds": 65.7}
+START canonical-key
+{"case": "canonical-key", "build_exit": 0, "binary_sha256": "5f83fc8724106b0fdf1df4b1581c58eed56f6a24a996327b1183377b067fd52e", "checks_exit": -4, "pass_lines": 16, "seconds": 60.582}
+START skip-verification
+{"case": "skip-verification", "build_exit": 0, "binary_sha256": "038d57a2504de969b8835c2b02b43e4aa13c331fc2d91c0e6b0cd0775bdfc5ef", "checks_exit": -4, "pass_lines": 12, "seconds": 136.61}
+START d2-trace
+{"case": "d2-trace", "build_exit": 0, "binary_sha256": "98bdf2602c57f83f1f3e31306979b21a820a3fd7461ace8d99530f72a7de188d", "checks_exit": 0, "pass_lines": 108, "seconds": 142.617}
+START drop-converted-entry
+{"case": "drop-converted-entry", "build_exit": 0, "binary_sha256": "3bdbaa262dbc47b1d12414fef860103cfff835bb9cc812d60e5838692f24a973", "checks_exit": 0, "pass_lines": 108, "seconds": 142.583}
+START restored-control
+{"case": "restored-control", "build_exit": 0, "binary_sha256": "1de1dc262afe33f7d4d2cd727ebb615fc63a06a4dcf980f30a9c7e7b64c8ebfc", "checks_exit": 0, "pass_lines": 108, "seconds": 64.76}

@@ -1,0 +1,15 @@
+--- Sources/WorkbenchCore/ConversationPrefixCache.swift
++++ Sources/WorkbenchCore/ConversationPrefixCache.swift
+@@ -131,9 +131,9 @@
+     private struct Key: Hashable {
+         let bytes: [UInt8]
+         func hash(into hasher: inout Hasher) {
+-            bytes.withUnsafeBufferPointer { hasher.combine(bytes: UnsafeRawBufferPointer($0)) }
+-        }
+-        static func == (lhs: Key, rhs: Key) -> Bool { lhs.bytes == rhs.bytes }
++            hasher.combine(String(decoding: bytes, as: UTF8.self))
++        }
++        static func == (lhs: Key, rhs: Key) -> Bool { String(decoding: lhs.bytes, as: UTF8.self) == String(decoding: rhs.bytes, as: UTF8.self) }
+     }
+ 
+     private let lock = NSLock()

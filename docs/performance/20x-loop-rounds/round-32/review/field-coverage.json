@@ -1,0 +1,61 @@
+{
+  "candidate": "d19529feb45012c8a967c10f9516c6be983b1140",
+  "KimiMessage": {
+    "id": "UTF-8 counted by both message walks",
+    "role": "UTF-8 counted by both message walks",
+    "content": "Part content fields walked; KimiPart array element storage NOT counted",
+    "createdAt": "UTF-8 counted by both message walks",
+    "metadata": "Recursive JSONValue counted by both message walks"
+  },
+  "KimiPart": {
+    "type": "UTF-8 counted",
+    "text": "Optional UTF-8 counted",
+    "thinking": "Optional UTF-8 counted",
+    "toolCallId": "Optional UTF-8 counted",
+    "toolName": "Optional UTF-8 counted",
+    "input": "Recursive JSONValue counted",
+    "output": "Recursive JSONValue counted",
+    "isError": "Optional Bool NOT counted; fixed-size part field",
+    "source": "Recursive JSONValue counted",
+    "fileId": "Optional UTF-8 NOT counted; arbitrary-size retained field class",
+    "name": "Optional UTF-8 counted"
+  },
+  "JSONValue": {
+    "null": 1,
+    "bool": 1,
+    "number": 8,
+    "string": "UTF-8 byte count",
+    "array": "16 + recursive children",
+    "object": "16 + key UTF-8 bytes + recursive values"
+  },
+  "prefixNode": {
+    "source": "Materialized Array(prefix), counted by windowCost; no message/part element storage cost",
+    "query": "UTF-8 counted once by admissionCost",
+    "options": "Fixed-size flags; no independent storage term",
+    "hits": "Excerpt UTF-8 only; no hit array element storage term",
+    "entries": "Payload cost + each dictionary key UTF-8; dictionary buckets deliberately excluded (disclosed)"
+  },
+  "entryPayload": {
+    "messages": "Message content walk counted again; fileId and element storage omissions inherited",
+    "sources": "String UTF-8 counted; string-array element storage not counted",
+    "text": "NSString UTF-16 length * 2 counted (immutable for product-built payloads)",
+    "sourceEnds": "Array<Int> NOT counted by estimatedCost",
+    "role": "Fixed-size enum; no independent storage term",
+    "isRunning": "Fixed-size Bool; no independent storage term",
+    "query": "NOT counted per payload; claim of CoW sharing with node.query is not enforced when verified previous entries keep their original query allocation",
+    "options": "Fixed-size flags; no independent storage term",
+    "hits": "Excerpt UTF-8 counted; entryID aliases dictionary key and toolID aliases message.toolCallId in product-built payloads; no hit array element storage term"
+  },
+  "disclosed_and_accepted": [
+    "Window messages and payload messages double-counted",
+    "Payload texts and shared entry-cache texts potentially double-counted",
+    "Entry-ID dictionary keys counted in v2",
+    "Dictionary bucket storage excluded as an estimate convention"
+  ],
+  "not_proven_by_existing_pins": [
+    "Window hand-computed fixture has no fileId or isError",
+    "Heavy fixture exercises input JSON only",
+    "Payload accounting assertion delegates to existing estimatedCost, so it cannot independently detect omissions in that function",
+    "Single-query-storage claim needs end-to-end independent-decode / turn-advance probe"
+  ]
+}

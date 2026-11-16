@@ -1,0 +1,181 @@
+{
+  "head": "d19529feb45012c8a967c10f9516c6be983b1140",
+  "tracked_diff_empty": true,
+  "untracked_paths": [
+    "?? review-artifacts/audit_evidence.py",
+    "?? review-artifacts/audit_finish.py",
+    "?? review-artifacts/bypass-shared-hit-build.log",
+    "?? review-artifacts/bypass-shared-hit-checks.log",
+    "?? review-artifacts/bypass-shared-hit.patch",
+    "?? review-artifacts/canonical-key-build.log",
+    "?? review-artifacts/canonical-key-checks.log",
+    "?? review-artifacts/canonical-key.patch",
+    "?? review-artifacts/control-build.log",
+    "?? review-artifacts/control-checks.log",
+    "?? review-artifacts/d2-proof.json",
+    "?? review-artifacts/d2-trace-build.log",
+    "?? review-artifacts/d2-trace-checks.log",
+    "?? review-artifacts/d2-trace.patch",
+    "?? review-artifacts/diff-stat.txt",
+    "?? review-artifacts/driver.log",
+    "?? review-artifacts/drop-converted-entry-build.log",
+    "?? review-artifacts/drop-converted-entry-checks.log",
+    "?? review-artifacts/drop-converted-entry.patch",
+    "?? review-artifacts/evidence-audit.json",
+    "?? review-artifacts/evidence-audit.log",
+    "?? review-artifacts/field-coverage.json",
+    "?? review-artifacts/final-audit.log",
+    "?? review-artifacts/final-control-build.log",
+    "?? review-artifacts/final-control-checks.log",
+    "?? review-artifacts/mechanism-pin-proposal.swift",
+    "?? review-artifacts/mutation-results.json",
+    "?? review-artifacts/restore-receipt.json",
+    "?? review-artifacts/restored-control-build.log",
+    "?? review-artifacts/restored-control-checks.log",
+    "?? review-artifacts/retention-driver.log",
+    "?? review-artifacts/retention-probes-build.log",
+    "?? review-artifacts/retention-probes-checks.log",
+    "?? review-artifacts/retention-probes.patch",
+    "?? review-artifacts/retention-probes.swift",
+    "?? review-artifacts/retention-results.json",
+    "?? review-artifacts/run_retention.py",
+    "?? review-artifacts/run_review.py",
+    "?? review-artifacts/skip-verification-build.log",
+    "?? review-artifacts/skip-verification-checks.log",
+    "?? review-artifacts/skip-verification.patch",
+    "?? review-artifacts/test-extension.patch"
+  ],
+  "d2_conversion_events": [
+    [
+      "结论",
+      "text:u0:0"
+    ],
+    [
+      "结论",
+      "text:a0:0"
+    ],
+    [
+      "结论",
+      "text:u1:0"
+    ],
+    [
+      "结论",
+      "text:a1:0"
+    ],
+    [
+      "结论",
+      "activity:tool:w1"
+    ],
+    [
+      "结论",
+      "text:repeat-a0:0"
+    ]
+  ],
+  "d2_reuse_events": [
+    [
+      "结论",
+      "text:u0:0"
+    ],
+    [
+      "结论",
+      "text:a0:0"
+    ],
+    [
+      "结论",
+      "text:u1:0"
+    ],
+    [
+      "结论",
+      "text:a1:0"
+    ],
+    [
+      "结论",
+      "activity:tool:w1"
+    ],
+    [
+      "结论",
+      "text:repeat-a0:0"
+    ],
+    [
+      "结论",
+      "text:u2:0"
+    ],
+    [
+      "结论",
+      "text:a2:0"
+    ]
+  ],
+  "final_pass_lines": 108,
+  "final_skip_lines": [
+    "SKIP: math rendering smoke check requires AppKit"
+  ],
+  "final_binary_sha256": "1de1dc262afe33f7d4d2cd727ebb615fc63a06a4dcf980f30a9c7e7b64c8ebfc",
+  "temporary_build_output_removed": true,
+  "retention_probes": [
+    "REVIEW_FILE_ID budget=256 estimated=157 retained_file_id_utf8=8388608 entries=2",
+    "REVIEW_QUERY_SHARING budget=3145728 estimated=2098135 distinct_query_buffers=8 payload_query_buffers=7 payload_shares_node=false retained_query_utf8=8388608 node_query_accounted=1048576 entries=14",
+    "REVIEW_PART_STORAGE public_search=true budget=256 estimated=126 retained_part_element_bytes=12058624 parts=65536",
+    "REVIEW_OFFSETS synthetic_public_payload=true budget=64 estimated=20 retained_offsets_bytes=8388608",
+    "REVIEW_LAYOUT message_stride=80 part_stride=184 hit_stride=72",
+    "REVIEW_SENTINEL_SHARED_HIT consumed=true",
+    "REVIEW_SENTINEL_CONVERSION consumed=true"
+  ],
+  "mutations": [
+    {
+      "case": "control",
+      "build_exit": 0,
+      "binary_sha256": "1de1dc262afe33f7d4d2cd727ebb615fc63a06a4dcf980f30a9c7e7b64c8ebfc",
+      "checks_exit": 0,
+      "pass_lines": 108,
+      "seconds": 192.286
+    },
+    {
+      "case": "bypass-shared-hit",
+      "build_exit": 0,
+      "binary_sha256": "83389d9f20c7d7d3fd9bddc1df9a9c9c5928c368bc0499f7ce86f7e315646149",
+      "checks_exit": 0,
+      "pass_lines": 108,
+      "seconds": 65.7
+    },
+    {
+      "case": "canonical-key",
+      "build_exit": 0,
+      "binary_sha256": "5f83fc8724106b0fdf1df4b1581c58eed56f6a24a996327b1183377b067fd52e",
+      "checks_exit": -4,
+      "pass_lines": 16,
+      "seconds": 60.582
+    },
+    {
+      "case": "skip-verification",
+      "build_exit": 0,
+      "binary_sha256": "038d57a2504de969b8835c2b02b43e4aa13c331fc2d91c0e6b0cd0775bdfc5ef",
+      "checks_exit": -4,
+      "pass_lines": 12,
+      "seconds": 136.61
+    },
+    {
+      "case": "d2-trace",
+      "build_exit": 0,
+      "binary_sha256": "98bdf2602c57f83f1f3e31306979b21a820a3fd7461ace8d99530f72a7de188d",
+      "checks_exit": 0,
+      "pass_lines": 108,
+      "seconds": 142.617
+    },
+    {
+      "case": "drop-converted-entry",
+      "build_exit": 0,
+      "binary_sha256": "3bdbaa262dbc47b1d12414fef860103cfff835bb9cc812d60e5838692f24a973",
+      "checks_exit": 0,
+      "pass_lines": 108,
+      "seconds": 142.583
+    },
+    {
+      "case": "restored-control",
+      "build_exit": 0,
+      "binary_sha256": "1de1dc262afe33f7d4d2cd727ebb615fc63a06a4dcf980f30a9c7e7b64c8ebfc",
+      "checks_exit": 0,
+      "pass_lines": 108,
+      "seconds": 64.76
+    }
+  ]
+}

@@ -77,7 +77,33 @@ public final class ConversationSearch {
         let query: String
         let options: ConversationFindOptions
         let hits: [ConversationSearchHit]
-        let entries: [String: Entry]
+        let entries: Entries
+    }
+    /// Round 32: the prefix's per-entry results are either instance-owned
+    /// (rebuilt here) or adopted BY REFERENCE from a shared prefix node.
+    /// Reference adoption keeps a reopen O(1) in the number of prefix
+    /// entries: the dictionary is not rebuilt, and a stored payload converts
+    /// to an Entry only when a later search actually looks one up (a
+    /// turn-boundary prefix rebuild, or the suffix fallback). The converted
+    /// Entry carries the STORED messages copy; the reuse predicate in
+    /// search() verifies it against the caller's entry exactly as the
+    /// round-30 payload path does, and adoption then refreshes the messages
+    /// to the caller's copy.
+    private enum Entries {
+        case owned([String: Entry])
+        case shared(ConversationPrefixCache.Node)
+        func entry(_ id: String) -> Entry? {
+            switch self {
+            case .owned(let entries): return entries[id]
+            case .shared(let node):
+                guard let payload = node.payload(entryID: id) else { return nil }
+                return Entry(sources: payload.sources, text: payload.text,
+                             sourceEnds: payload.sourceEnds, role: payload.role,
+                             messages: payload.messages, isRunning: payload.isRunning,
+                             query: payload.query, options: payload.options,
+                             hits: payload.hits)
+            }
+        }
     }
     private var entries: [String: Entry] = [:]
     private var earlier: Earlier?
@@ -98,10 +124,20 @@ public final class ConversationSearch {
     /// existing call site unchanged; benchmarks measuring true per-instance
     /// rebuilds inject fresh caches (or byteBudget-0 for the no-cache oracle).
     private let entryCache: ConversationEntryCache
+    /// Round 32: verified PREFIX results (the whole earlier-turns range) are
+    /// shared across instances through this cache — a reopened find bar pays
+    /// one window verification plus reference adoption instead of timeline
+    /// construction and any per-prefix-entry work. Same injection discipline
+    /// as the other two caches: default keeps every existing call site
+    /// unchanged; benchmarks measuring true per-instance rebuilds inject
+    /// fresh caches (or byteBudget-0 for the no-cache oracle).
+    private let prefixCache: ConversationPrefixCache
     public init(renderedCache: RenderedSourceCache = .shared,
-                entryCache: ConversationEntryCache = .shared) {
+                entryCache: ConversationEntryCache = .shared,
+                prefixCache: ConversationPrefixCache = .shared) {
         self.renderedCache = renderedCache
         self.entryCache = entryCache
+        self.prefixCache = prefixCache
     }
 
     public func hits(in messages: [KimiMessage], query: String, running: Bool,
@@ -121,21 +157,65 @@ public final class ConversationSearch {
         let split = messages.lastIndex(where: \.isUserPrompt) ?? 0
         let prefix = messages[..<split]
         var hits: [ConversationSearchHit]
+        // Round 32: the shared prefix key — round-30's injective encoding
+        // with an empty entryID and isRunning false (the prefix always
+        // searches with isRunning false and has no entry identity, so the
+        // key is exactly (query bytes, options); its injectivity is pinned
+        // at the byte level since round 30).
+        let prefixKey = ConversationEntryCache.key(entryID: "", query: query,
+                                                   options: options, isRunning: false)
         if let earlier, Self.sameQueryKey(earlier.query, query), earlier.options == options,
            earlier.source.count == prefix.count, KimiMessage.sameSearchableWindow(prefix, earlier.source) {
             hits = earlier.hits
             self.earlier?.source = prefix
+        } else if let node = prefixCache.node(forKey: prefixKey, prefix: prefix) {
+            // Round 32: cross-instance prefix reuse — one whole-window
+            // verification inside node(forKey:) plus reference adoption of
+            // the immutable node replaces timeline construction, per-entry
+            // key builds, lookups, verification copies and the instance
+            // dictionary build with its teardown.
+            hits = node.hits
+            earlier = Earlier(source: prefix, query: query, options: options,
+                              hits: node.hits, entries: .shared(node))
         } else {
+            // Captured BEFORE the rebuild: a locale notification landing
+            // mid-build makes store() refuse the stale-locale node
+            // (round-30 discipline).
+            let prefixGeneration = prefixCache.generationNow
             var found: [String: Entry] = [:]
-            let previous = earlier?.entries ?? [:]
+            let previous = earlier?.entries
             hits = search(ConversationTimelineEntry.make(Array(prefix), isRunning: false), query: query, regex: regex,
-                          options: options, isRunning: false, cached: { previous[$0] ?? self.entries[$0] }, into: &found)
-            earlier = Earlier(source: prefix, query: query, options: options, hits: hits, entries: found)
+                          options: options, isRunning: false, cached: { previous?.entry($0) ?? self.entries[$0] }, into: &found)
+            earlier = Earlier(source: prefix, query: query, options: options, hits: hits, entries: .owned(found))
+            var payloads: [String: ConversationEntryCache.Payload] = [:]
+            payloads.reserveCapacity(found.count)
+            for (id, entry) in found {
+                // query normalization (round-32 v3, review finding): every
+                // entry in `found` passed sameQueryKey against THIS call's
+                // query (or was built from it), so the values are
+                // byte-identical; storing the current parameter's storage
+                // keeps the node's payloads on ONE query buffer, making the
+                // cost convention's single-count claim true by construction
+                // (a turn-advance chain of independently decoded equal
+                // queries would otherwise retain a distinct buffer per
+                // generation inside the node).
+                payloads[id] = ConversationEntryCache.Payload(messages: entry.messages, sources: entry.sources,
+                                                              text: entry.text, sourceEnds: entry.sourceEnds,
+                                                              role: entry.role, isRunning: entry.isRunning,
+                                                              query: query, options: entry.options,
+                                                              hits: entry.hits)
+            }
+            // MATERIALIZED window (Array(prefix), never the slice: a stored
+            // slice retains the caller's whole backing storage including
+            // the live-turn suffix — review replay measurement, design
+            // point 3 of ConversationPrefixCache).
+            prefixCache.store(source: Array(prefix), query: query, options: options, hits: hits,
+                              entries: payloads, forKey: prefixKey, generation: prefixGeneration)
         }
         var next: [String: Entry] = [:]
-        let held = earlier?.entries ?? [:]
+        let held = earlier?.entries
         hits += search(ConversationTimelineEntry.make(Array(messages[split...]), isRunning: running), query: query, regex: regex,
-                       options: options, isRunning: running, cached: { self.entries[$0] ?? held[$0] }, into: &next)
+                       options: options, isRunning: running, cached: { self.entries[$0] ?? held?.entry($0) }, into: &next)
         entries = next
         return ConversationFindResult(hits: hits, queryError: nil)
     }

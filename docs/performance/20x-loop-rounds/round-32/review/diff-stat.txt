@@ -1,0 +1,13 @@
+ .../WorkbenchCore/ConversationPrefixCache.swift    | 320 ++++++++++++++
+ Sources/WorkbenchCore/ConversationSearch.swift     |  85 +++-
+ .../ConversationEntryCacheTests.swift              |  12 +-
+ .../ConversationPrefixCacheTests.swift             | 472 +++++++++++++++++++++
+ Tests/WorkbenchCoreTests/ProtocolTests.swift       |   1 +
+ Tests/WorkbenchCoreTests/StreamingBench.swift      |  38 +-
+ .../20x-loop-rounds/2026-11-17-round-31.md         |  24 +-
+ docs/performance/20x-loop-rounds/INDEX.md          |   2 +-
+ .../round-31/ci/forensics-89d80c5-math.md          |  31 ++
+ .../round-31/ci/math-summary-failed-89d80c5.json   |  61 +++
+ .../round-31/ci/math-summary-green-761ff5f.json    | 188 ++++++++
+ .../round-31/portable-results-761ff5f.json         | 143 +++++++
+ 12 files changed, 1348 insertions(+), 29 deletions(-)

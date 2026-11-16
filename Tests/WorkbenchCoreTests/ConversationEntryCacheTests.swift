@@ -19,9 +19,9 @@ import WorkbenchCore
 /// Part 2 — end-to-end purity through the public find-bar API over the
 /// round-27 corpus (NFC/NFD variants, byte-identical duplicate source in its
 /// own message, display math, URLs, code): FOUR regimes must agree at both
-/// canonical and per-hit UTF-8 byte level — budget-0 caches on both tiers
-/// (nothing stored anywhere: the pre-round-27/30 product exactly), shared
-/// cold, fresh, shared warm. Staleness across instances: a same-ID edit
+/// canonical and per-hit UTF-8 byte level — budget-0 caches on all three
+/// tiers (nothing stored anywhere: the pre-round-27/30/32 product exactly),
+/// shared cold, fresh, shared warm. Staleness across instances: a same-ID edit
 /// after a warm search must produce the edited window's results, never the
 /// stale node (the mutation "reuse without verification" dies on the byte
 /// comparison against the budget-0 oracle). Query/running/options variations
@@ -119,12 +119,21 @@ func checkConversationEntryCache() throws {
     precondition(cost0 == ConversationEntryCache.estimatedCost(of: p0) + kNFC.count + nfcQ.utf8.count,
                  "admission cost must include key and query bytes")
     // hand-computed full formula on the text-only fixture (pins every term of
-    // the convention, including the recursive JSONValue walk being zero here)
+    // the convention, including the recursive JSONValue walk being zero here;
+    // round-32 v3 closure: structural element storage at MemoryLayout stride
+    // and part fileId bytes are terms of the convention too — the review
+    // probes measured multi-MB fileId/offset/element retentions inside tiny
+    // accounted costs under the v5 formula)
     var manual = p0.text.length * 2
+    manual += p0.sources.count * MemoryLayout<String>.stride
+    manual += p0.sourceEnds.count * MemoryLayout<Int>.stride
+    manual += p0.hits.count * MemoryLayout<ConversationSearchHit>.stride
+    manual += p0.messages.count * MemoryLayout<KimiMessage>.stride
     for source in p0.sources { manual += source.utf8.count }
     for hit in p0.hits { manual += hit.excerpt.utf8.count }
     for m in entryMessages {
         manual += m.id.utf8.count + m.role.utf8.count + m.createdAt.utf8.count
+        manual += m.content.count * MemoryLayout<KimiPart>.stride
         if let md = m.metadata { manual += ConversationEntryCache.jsonValueSize(md) }
         for part in m.content {
             manual += part.type.utf8.count
@@ -133,6 +142,7 @@ func checkConversationEntryCache() throws {
             if let n = part.name { manual += n.utf8.count }
             if let tn = part.toolName { manual += tn.utf8.count }
             if let tc = part.toolCallId { manual += tc.utf8.count }
+            if let fid = part.fileId { manual += fid.utf8.count }
             if let i = part.input { manual += ConversationEntryCache.jsonValueSize(i) }
             if let o = part.output { manual += ConversationEntryCache.jsonValueSize(o) }
             if let src = part.source { manual += ConversationEntryCache.jsonValueSize(src) }
@@ -229,6 +239,41 @@ func checkConversationEntryCache() throws {
                  && heavyCache.payload(forKey: heavyKey, messages: heavyWindow[1...]) == nil,
                  "message JSONValue payload must count against the budget (multi-MB-in-128B shape refused)")
 
+    // part fileId retention (round-32 v3 closure, review probe REVIEW_FILE_ID):
+    // an arbitrary-size field the v5 formula missed — a payload whose only
+    // heavy surface is fileId must NOT fit a small budget.
+    let fileIdWindow = try messages([
+        ["id": "f0", "role": "user", "created_at": "000001",
+         "content": [["type": "text", "text": "q"]]],
+        ["id": "f1", "role": "assistant", "created_at": "000002",
+         "content": [["type": "text", "text": "a", "file_id": String(repeating: "重", count: 4000)]]],
+    ])
+    let fileIdPayload = ConversationEntryCache.Payload(
+        messages: fileIdWindow, sources: ["a"], text: "a" as NSString,
+        sourceEnds: [2], role: .assistant, isRunning: false, query: "q",
+        options: opts, hits: [])
+    precondition(ConversationEntryCache.estimatedCost(of: fileIdPayload) >= 12000,
+                 "the fileId bytes must dominate the cost: \(ConversationEntryCache.estimatedCost(of: fileIdPayload))")
+    let fileIdCache = ConversationEntryCache(byteBudget: 128)
+    let fileIdKey = ConversationEntryCache.key(entryID: "f1", query: "q", options: opts, isRunning: false)
+    fileIdCache.store(payload: fileIdPayload, forKey: fileIdKey, generation: fileIdCache.generationNow)
+    precondition(fileIdCache.estimatedByteCount == 0
+                 && fileIdCache.payload(forKey: fileIdKey, messages: fileIdWindow[1...]) == nil,
+                 "fileId payload must count against the budget (review REVIEW_FILE_ID shape refused)")
+    // sourceEnds offset array retention (review probe REVIEW_OFFSETS)
+    let offsetsPayload = ConversationEntryCache.Payload(
+        messages: [], sources: [], text: "" as NSString,
+        sourceEnds: Array(repeating: 0, count: 4096), role: .assistant,
+        isRunning: false, query: "q", options: opts, hits: [])
+    precondition(ConversationEntryCache.estimatedCost(of: offsetsPayload)
+                 >= 4096 * MemoryLayout<Int>.stride,
+                 "the offset array's element storage must count")
+    let offsetsCache = ConversationEntryCache(byteBudget: 256)
+    let offsetsKey = ConversationEntryCache.key(entryID: "o1", query: "q", options: opts, isRunning: false)
+    offsetsCache.store(payload: offsetsPayload, forKey: offsetsKey, generation: offsetsCache.generationNow)
+    precondition(offsetsCache.estimatedByteCount == 0,
+                 "a multi-KB offset array must not fit a 256B budget (review REVIEW_OFFSETS shape refused)")
+
     // locale generation: notification drops every node
     let locale = ConversationEntryCache()
     locale.store(payload: p0, forKey: kNFC, generation: locale.generationNow)
@@ -310,10 +355,12 @@ func checkConversationEntryCache() throws {
     }
     func noCache() -> ConversationSearch {
         ConversationSearch(renderedCache: RenderedSourceCache(byteBudget: 0),
-                           entryCache: ConversationEntryCache(byteBudget: 0))
+                           entryCache: ConversationEntryCache(byteBudget: 0),
+                           prefixCache: ConversationPrefixCache(byteBudget: 0))
     }
     func freshCaches() -> ConversationSearch {
-        ConversationSearch(renderedCache: RenderedSourceCache(), entryCache: ConversationEntryCache())
+        ConversationSearch(renderedCache: RenderedSourceCache(), entryCache: ConversationEntryCache(),
+                           prefixCache: ConversationPrefixCache())
     }
 
     for query in ["caf\u{00E9}", "cafe\u{0301}", "a\u{0301}\u{0327}", "a\u{0327}\u{0301}",
@@ -363,5 +410,5 @@ func checkConversationEntryCache() throws {
     let runOracle = noCache().hits(in: window, query: "结论", running: true)
     precondition(runShared == runOracle && byteShape(runShared) == byteShape(runOracle))
 
-    print("PASS: entry cache — injective length-prefixed byte-exact keys (NUL-collision pair, canonical-reorder pair AND dictionary-level reorder-retrieval refusal pinned), round-12 verification as the only reuse gate (same-ID edit and NFD rebuild refused), exact retention-inclusive admission accounting (payload incl. recursive message JSONValue trees + key + query bytes — Codex P2 + closure-review, hand-computed formula pinned), generation-guarded store (stale-locale build refused), budget-0 stores nothing, concrete LRU (touch/victim/new-insert), oversized payload AND oversized key refusal against a non-empty table, locale-generation invalidation, removeAll, 8x100 concurrency with single-copy accounting, and four-regime (budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 6 queries at canonical AND byte level plus cross-instance staleness and running-flag isolation")
+    print("PASS: entry cache — injective length-prefixed byte-exact keys (NUL-collision pair, canonical-reorder pair AND dictionary-level reorder-retrieval refusal pinned), round-12 verification as the only reuse gate (same-ID edit and NFD rebuild refused), exact retention-inclusive admission accounting (payload incl. recursive message JSONValue trees + fileId + offset/element-stride storage + key + query bytes — Codex P2 + closure-review + round-32 v3 closure, hand-computed formula pinned; REVIEW_FILE_ID/REVIEW_OFFSETS shapes refused), generation-guarded store (stale-locale build refused), budget-0 stores nothing, concrete LRU (touch/victim/new-insert), oversized payload AND oversized key refusal against a non-empty table, locale-generation invalidation, removeAll, 8x100 concurrency with single-copy accounting, and four-regime (budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 6 queries at canonical AND byte level plus cross-instance staleness and running-flag isolation")
 }

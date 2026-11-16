@@ -1,0 +1,58 @@
+=== control build Tue Nov 17 04:52:09 CST 2026 ===
+control_build_exit=0
+control_exit=0 pass=108
+=== mutant skip-verification Tue Nov 17 04:55:12 CST 2026 ===
+.local/round32/mutation-kills-v3.sh: line 25: 1894765 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+skip-verification exit=132 kill_at=SearchEntryReuseTests.swift:120
+=== mutant canonical-key-full Tue Nov 17 04:57:28 CST 2026 ===
+.local/round32/mutation-kills-v3.sh: line 25: 1904550 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+canonical-key-full exit=132 kill_at=ConversationPrefixCacheTests.swift:95
+=== mutant zero-accounting Tue Nov 17 04:59:46 CST 2026 ===
+.local/round32/mutation-kills-v3.sh: line 25: 1912245 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+zero-accounting exit=132 kill_at=ConversationPrefixCacheTests.swift:115
+=== mutant reverse-lru Tue Nov 17 05:00:47 CST 2026 ===
+.local/round32/mutation-kills-v3.sh: line 25: 1921902 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+reverse-lru exit=132 kill_at=ConversationPrefixCacheTests.swift:223
+=== mutant no-generation-guard Tue Nov 17 05:01:46 CST 2026 ===
+.local/round32/mutation-kills-v3.sh: line 25: 1931858 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+no-generation-guard exit=132 kill_at=ConversationPrefixCacheTests.swift:389
+=== mutant payload-fields-exclusion Tue Nov 17 05:02:46 CST 2026 ===
+.local/round32/mutation-kills-v3.sh: line 25: 1940941 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+payload-fields-exclusion exit=132 kill_at=ConversationPrefixCacheTests.swift:174
+=== mutant entryid-cost-exclusion Tue Nov 17 05:03:47 CST 2026 ===
+.local/round32/mutation-kills-v3.sh: line 25: 1946821 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+entryid-cost-exclusion exit=132 kill_at=ConversationPrefixCacheTests.swift:174
+=== mutant window-exclusion Tue Nov 17 05:04:45 CST 2026 ===
+.local/round32/mutation-kills-v3.sh: line 25: 1954318 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+window-exclusion exit=132 kill_at=ConversationPrefixCacheTests.swift:174
+=== mutant admit-oversized Tue Nov 17 05:05:44 CST 2026 ===
+.local/round32/mutation-kills-v3.sh: line 25: 1959183 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+admit-oversized exit=132 kill_at=ConversationPrefixCacheTests.swift:234
+=== mutant no-locale-observer Tue Nov 17 05:06:42 CST 2026 ===
+.local/round32/mutation-kills-v3.sh: line 25: 1964228 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+no-locale-observer exit=132 kill_at=ConversationPrefixCacheTests.swift:378
+=== mutant replace-accounting-leak Tue Nov 17 05:07:40 CST 2026 ===
+.local/round32/mutation-kills-v3.sh: line 25: 1970669 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+replace-accounting-leak exit=132 kill_at=ConversationPrefixCacheTests.swift:206
+=== mutant bypass-shared-hit Tue Nov 17 05:08:39 CST 2026 ===
+.local/round32/mutation-kills-v3.sh: line 25: 1980162 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+bypass-shared-hit exit=132 kill_at=ConversationPrefixCacheTests.swift:456
+=== mutant drop-converted-entry Tue Nov 17 05:09:39 CST 2026 ===
+.local/round32/mutation-kills-v3.sh: line 25: 1994457 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+drop-converted-entry exit=132 kill_at=ConversationPrefixCacheTests.swift:482
+=== mutant fileid-exclusion Tue Nov 17 05:10:39 CST 2026 ===
+.local/round32/mutation-kills-v3.sh: line 25: 1999011 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+fileid-exclusion exit=132 kill_at=ConversationEntryCacheTests.swift:255
+=== mutant offsets-exclusion Tue Nov 17 05:11:38 CST 2026 ===
+.local/round32/mutation-kills-v3.sh: line 25: 2004407 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+offsets-exclusion exit=132 kill_at=ConversationEntryCacheTests.swift:151
+=== mutant structural-exclusion Tue Nov 17 05:12:36 CST 2026 ===
+.local/round32/mutation-kills-v3.sh: line 25: 2009452 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+structural-exclusion exit=132 kill_at=ConversationEntryCacheTests.swift:151
+=== mutant query-normalization-revert Tue Nov 17 05:13:34 CST 2026 ===
+.local/round32/mutation-kills-v3.sh: line 25: 2014592 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+query-normalization-revert exit=132 kill_at=ConversationPrefixCacheTests.swift:369
+=== control rerun (tree restored) Tue Nov 17 05:14:33 CST 2026 ===
+control_rebuild_exit=0
+control_rerun_exit=0 pass=108
+DONE Tue Nov 17 05:15:37 CST 2026

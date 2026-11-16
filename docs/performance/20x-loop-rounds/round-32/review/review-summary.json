@@ -1,0 +1,60 @@
+{
+  "verdict": "VERDICT: BLOCKING 3",
+  "candidate": "d19529feb45012c8a967c10f9516c6be983b1140",
+  "range": "5eb726a..d19529f",
+  "findings": [
+    {
+      "severity": "BLOCKING",
+      "locations": ["Sources/WorkbenchCore/ConversationPrefixCache.swift:279", "Sources/WorkbenchCore/ConversationEntryCache.swift:263"],
+      "description": "Retention cost omits KimiPart.fileId, variable array element storage including message.content, and Payload.sourceEnds. These are retained field/storage classes, not the disclosed dictionary buckets or an RSS-estimate error.",
+      "evidence": [
+        "Public hits(): 8 MiB fileId retained with byteBudget=256, estimatedByteCount=157, entryCount=2, search instance released.",
+        "Public hits(): 65,536 empty-type decoded parts retain 12,058,624 bytes of part elements with byteBudget=256, estimatedByteCount=126, search instance released.",
+        "Synthetic public store(): Array<Int> sourceEnds retains 8 MiB with byteBudget=64, estimatedByteCount=20. This last probe is not presented as an ordinary product-built payload."
+      ],
+      "suggested_fix": "Include fileId UTF-8 and variable message/part/source/offset/hit element storage in both retained-cost walks, preserving disclosed conservative double counts and separately disclosed dictionary-bucket exclusion. Independently pin each newly covered class with small-budget refusal fixtures, not a call to the same estimatedCost function under test."
+    },
+    {
+      "severity": "BLOCKING",
+      "locations": ["Sources/WorkbenchCore/ConversationPrefixCache.swift:265", "Sources/WorkbenchCore/ConversationSearch.swift:196", "Sources/WorkbenchCore/ConversationSearch.swift:230"],
+      "description": "The disclosed single query allocation / CoW-sharing premise is false after turn-boundary reuse. Verified previous entries keep previous.query; new node.query uses the current independently decoded query, and payload conversion preserves entry.query. Multiple equal-byte query allocations remain in one shared prefix node but only node.query is charged.",
+      "evidence": [
+        "Public hits(), eight turn advances with separately decoded equal 1 MiB queries and budget-0 lower tiers, then release the search instance: final prefix node has eight distinct retained query buffers (seven payload buffers, none sharing node.query), 8,388,608 query UTF-8 bytes, entryCount=14.",
+        "byteBudget=3,145,728; estimatedByteCount=2,098,135; only 1,048,576 node-query bytes charged, besides key bytes."
+      ],
+      "suggested_fix": "Charge every payload query conservatively, or enforce rebinding to the current node query during payload construction before relying on shared-storage accounting. Pin independent decoding and successive turn advances with a constrained budget, and correct the sharing documentation."
+    },
+    {
+      "severity": "major",
+      "locations": ["Tests/WorkbenchCoreTests/ConversationPrefixCacheTests.swift:366", "Tests/WorkbenchCoreTests/ConversationPrefixCacheTests.swift:432", "Sources/WorkbenchCore/ConversationSearch.swift:171"],
+      "description": "The non-vacuity assertion proves a node is in the table, not that hits() consumes it. The equality-only d2 assertion also cannot require conversion/reuse rather than lower-tier fallback.",
+      "evidence": [
+        "bypass-shared-hit: make the hits() shared-node else-if condition permanently false; complete release WorkbenchChecks still exits 0 with 108 PASS.",
+        "drop-converted-entry: make Entries.shared.entry always return nil; complete release WorkbenchChecks still exits 0 with 108 PASS.",
+        "Unmutated d2 is not vacuous: scoped instrumentation observed six successful shared payload conversions and reuse of all six, including activity:tool:w1."
+      ],
+      "suggested_fix": "Add branch-consumption mechanism pins using a seeded sentinel node and seeded sentinel entry payload, with budget-0 lower tiers; require the sentinel to emerge from hits() and from a within-instance boundary advance. Preserve the independent four-regime byte oracle. mechanism-pin-proposal.swift demonstrates both positive pins on the candidate; proposed fixes still require their own mutation red runs."
+    }
+  ],
+  "independent_mutations": {
+    "canonical_key": "SIGILL (-4), ConversationPrefixCacheTests.swift:95 dictionary-level refusal",
+    "skip_verification": "SIGILL (-4), existing SearchEntryReuseTests.swift:120",
+    "bypass_shared_hit": "SURVIVED",
+    "drop_converted_entry": "SURVIVED"
+  },
+  "other_review_results": {
+    "purity_and_adoption": "The window predicate, previous/held lookup order and stored-messages to adopted.messages refresh preserve the faithful-prefix-lift behavior. Materialized Array(prefix) prevents suffix backing-storage retention. No additional new result/staleness defect established.",
+    "locale": "Observer clears table and accounting and advances generation; generation captured before prefix rebuilding and checked at store. In-flight lookups can return their old immutable snapshot but do not reinsert invalidated nodes. Existing instance-level earlier/entry locale behavior is inherited, not newly claimed to be generation-checked.",
+    "thread_safety": "Single table lock, outside-lock immutable snapshot validation, benign duplicate builds and single-copy replacement accounting. Two-pass lastUse can be reordered or stamp a same-key replacement; effect is approximate eviction recency, not result corruption or budget-accounting leakage. Product-built NSString is immutable; public externally mutable payloads are outside this assumption. No Thread Sanitizer run performed.",
+    "bench": "Fresh rendered, entry and prefix caches isolate cold iterations and the same-instance query-update pass. Timed query updates follow five warm-up updates. Reopen uses default shared tiers and is warmed outside timing. Comments match implementation.",
+    "existing_tests": "ConversationEntryCacheTests helper only adds the third tier to budget-0/fresh injection; no preexisting assertion weakened. ProtocolTests adds one registration.",
+    "ab_evidence": "All v1/v2 raw metric samples (4,440 values) and the extra edit batch (240 values), plus all summary numeric fields, agree with supplied summaries. Mac v2 89 metrics positives=NONE under the documented rounded classifier; Mac base/candidate checks 108/109 PASS; first/final binary hashes equal. Linux cold and edit-family disclosures do not independently block this Mac-target candidate."
+  },
+  "review_items_unfinished": [],
+  "not_performed": [
+    "Mac product build/UI was not rerun from Linux; provided Mac evidence was audited read-only.",
+    "The complete 12-shape battery is assigned to the parent session; this review independently verifies canonical-key and skip-verification and supplies two additional surviving shapes.",
+    "Product fixes and mutation-red verification of the proposed stronger pins are not part of this review edit."
+  ],
+  "restoration": "Candidate tracked sources restored; final release build and full WorkbenchChecks pass (108 PASS + Linux math SKIP). Temporary dependency/build output removed; only requested review-artifacts remain untracked."
+}
