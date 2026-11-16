@@ -549,6 +549,41 @@ func checkConversationPrefixCache() throws {
     precondition(ConversationPrefixCache.shared.node(forKey: warmKey, prefix: window[..<splitIndex]) != nil,
                  "the shared-warm regime must be served by a stored prefix node (non-vacuous adoption)")
 
+    // round-33 concat-guard consumption pin (perf-only mutant class — the
+    // negative-list lesson: existence pins cannot kill bypass mutants): a
+    // warm reopen whose suffix contributes NO hits must return the node's
+    // hits array WITHOUT COW materialization (same backing storage), while
+    // a non-empty suffix must still concatenate into independent storage.
+    // The remove-guard mutant dies on the first identity; an
+    // always-skip-concat mutant dies on the second (and on the byte-level
+    // regime equality above).
+    do {
+        func bufferAddress(_ hits: [ConversationSearchHit]) -> UInt {
+            hits.withUnsafeBufferPointer { UInt(bitPattern: $0.baseAddress!) }
+        }
+        let prefixOnlyQuery = "第 0 轮"  // matches u0 (prefix) only, never the suffix
+        let prefixOnlyResult = ConversationSearch().hits(in: window, query: prefixOnlyQuery, running: false)
+        precondition(!prefixOnlyResult.hits.isEmpty, "fixture: the prefix-only query must hit")
+        let prefixOnlyKey = ConversationEntryCache.key(entryID: "", query: prefixOnlyQuery,
+                                                       options: opts, isRunning: false)
+        guard let prefixOnlyNode = ConversationPrefixCache.shared.node(forKey: prefixOnlyKey,
+                                                                       prefix: window[..<splitIndex]) else {
+            fatalError("the prefix-only node must be stored")
+        }
+        precondition(bufferAddress(prefixOnlyResult.hits) == bufferAddress(prefixOnlyNode.hits),
+                     "an empty-suffix reopen must return the node's hits WITHOUT COW materialization (concat guard consumed)")
+        let suffixQuery = "caf\u{00E9}"  // matches prefix AND suffix entries
+        let suffixResult = ConversationSearch().hits(in: window, query: suffixQuery, running: false)
+        let suffixKey = ConversationEntryCache.key(entryID: "", query: suffixQuery,
+                                                   options: opts, isRunning: false)
+        guard let suffixNode = ConversationPrefixCache.shared.node(forKey: suffixKey,
+                                                                   prefix: window[..<splitIndex]) else {
+            fatalError("the suffix-query node must be stored")
+        }
+        precondition(bufferAddress(suffixResult.hits) != bufferAddress(suffixNode.hits),
+                     "a non-empty suffix must concatenate into storage independent of the node")
+    }
+
     // staleness matrix against the budget-0 oracle — every reuse gate the
     // shared node could get wrong, each compared byte-for-byte.
     func assertOracleEqual(_ shared: ConversationFindResult, _ oracle: ConversationFindResult, _ label: String) {
@@ -651,5 +686,5 @@ func checkConversationPrefixCache() throws {
                       noCache().hits(in: advanced, query: "结论", running: false),
                       "the advanced prefix must serve the next instance identically")
 
-    print("PASS: prefix cache — round-30 key encoding at prefix-table level (canonical-reorder DICTIONARY-LEVEL retrieval refusal), round-12 window predicate as the only reuse gate (same-count edit / NFD rebuild / count change refused), reference adoption (=== node), exact retention-inclusive accounting (INDEPENDENTLY hand-computed window walk + node excerpts + expanded payload costs incl. fileId/offsets/element-stride storage + entry-ID dictionary keys + node key + query bytes), replace accounting, generation-guarded store, budget-0 oracle, concrete LRU, oversized node AND key refusal, heavy window+payload JSONValue retention (24KB-budget refusal), REVIEW-shape refusals (fileId window / 2000-empty-part window / 4096-offset payload), query-storage normalization over a turn-advance chain of independently decoded queries (single shared buffer), mechanism SENTINELS (hits() must consume the shared node; turn advance must convert Entries.shared payloads — perf-only bypass mutants die), locale invalidation, removeAll, 8x100 concurrency single-copy accounting, four-regime (all-three-tiers budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 8 queries at canonical AND byte level, shared-warm non-vacuity, and the staleness matrix (prefix edit/options/running/turn-boundary across instances + within-instance advance over an adopted shared node) against the budget-0 oracle")
+    print("PASS: prefix cache — round-30 key encoding at prefix-table level (canonical-reorder DICTIONARY-LEVEL retrieval refusal), round-12 window predicate as the only reuse gate (same-count edit / NFD rebuild / count change refused), reference adoption (=== node), exact retention-inclusive accounting (INDEPENDENTLY hand-computed window walk + node excerpts + expanded payload costs incl. fileId/offsets/element-stride storage + entry-ID dictionary keys + node key + query bytes), replace accounting, generation-guarded store, budget-0 oracle, concrete LRU, oversized node AND key refusal, heavy window+payload JSONValue retention (24KB-budget refusal), REVIEW-shape refusals (fileId window / 2000-empty-part window / 4096-offset payload), query-storage normalization over a turn-advance chain of independently decoded queries (single shared buffer), mechanism SENTINELS (hits() must consume the shared node; turn advance must convert Entries.shared payloads — perf-only bypass mutants die), locale invalidation, removeAll, 8x100 concurrency single-copy accounting, four-regime (all-three-tiers budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 8 queries at canonical AND byte level, shared-warm non-vacuity, round-33 concat-guard consumption (empty-suffix result SHARES the node's hits storage; non-empty suffix concatenates independently), and the staleness matrix (prefix edit/options/running/turn-boundary across instances + within-instance advance over an adopted shared node) against the budget-0 oracle")
 }

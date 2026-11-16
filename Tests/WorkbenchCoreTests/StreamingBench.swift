@@ -264,18 +264,22 @@ func benchStreamingDelta() throws {
         coldFind.append(ms(t))
         precondition(found.hits.count >= completedTurns)
     }
-    // Round 27/30/32: the find-bar REOPEN shape — a fresh ConversationSearch
+    // Round 27/30/32/33: the find-bar REOPEN shape — a fresh ConversationSearch
     // over ALL THREE process-wide shared caches (rendered sources + verified
     // entry results + verified prefix results). Round 32: the reopen's
     // prefix hits ONE shared prefix node — a single whole-window
-    // verification (bitwise-identical window storage short-circuits it;
-    // rebuilt windows pay the structural comparison ONCE, not per entry)
+    // verification (the stored node holds a MATERIALIZED copy whose struct
+    // padding defeats the bitwise tier — round-33 attribution — so rebuilt
+    // windows pay the value-tier structural comparison ONCE, not per entry)
     // plus reference adoption of the immutable node, replacing timeline
     // construction, per-entry key builds, lookups, verification copies and
-    // the instance dictionary build. Round-30's per-entry shape remains for
-    // the suffix (live-turn) search and as the prefix node's miss path, as
-    // long as nodes stay admitted, unevicted and in the same locale
-    // generation. A hit is not free: key construction, hashing, lock,
+    // the instance dictionary build. Round 33: this fixture's query matches
+    // the prefix only, so the suffix contributes no hits and the result
+    // SHARES the node's hits storage — no per-reopen copy or teardown of
+    // the 18k-hit array (the concat guard). Round-30's per-entry shape
+    // remains for the suffix (live-turn) search and as the prefix node's
+    // miss path, as long as nodes stay admitted, unevicted and in the same
+    // locale generation. A hit is not free: key construction, hashing, lock,
     // lastUse and the verification walk. Measured after every pre-existing metric so it
     // cannot disturb them; the shared cache is warmed once, out of timing,
     // by the first search, and every timed reopen must reproduce the warm
@@ -308,6 +312,13 @@ func benchStreamingDelta() throws {
     func line(_ name: String, _ value: Double, indent: String = "  ") -> String {
         indent + name.padding(toLength: 28, withPad: " ", startingAt: 0) + String(format: "median_ms=%8.2f", value)
     }
+    // Round 33: reopen sits at the 0.01ms print floor (0.10ms), where
+    // quantization alone is a 10% spread — finer deltas are unadjudicable.
+    // This metric prints at 0.1µs resolution; the baseline side of the A/B
+    // still prints two decimals (asymmetry disclosed in the round report).
+    func line4(_ name: String, _ value: Double) -> String {
+        "  " + name.padding(toLength: 28, withPad: " ", startingAt: 0) + String(format: "median_ms=%10.4f", value)
+    }
     let order = ["apply", "display_messages_workspace", "conversation_activity", "display_messages_timeline",
                  "presentation_update", "presented_rows", "memory_keys"]
     let total = order.reduce(0) { $0 + median(stages[$1]!) }
@@ -320,7 +331,7 @@ func benchStreamingDelta() throws {
     }
     print(line("find_bar_query_update", median(findStage)))
     print(line("find_bar_cold_query", median(coldFind)))
-    print(line("find_bar_reopen_query", median(reopenFind)))
+    print(line4("find_bar_reopen_query", median(reopenFind)))
     print(line("older_page_full_chain", median(paged)))
     for name in ["presentation_update", "presented_rows", "conversation_activity"] {
         print(line(name, median(pageStages[name]!), indent: "    "))
