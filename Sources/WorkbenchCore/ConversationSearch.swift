@@ -90,8 +90,18 @@ public final class ConversationSearch {
     /// benchmarks measuring true cold rendering inject a fresh cache (see
     /// StreamingBench's cold/reopen metrics).
     private let renderedCache: RenderedSourceCache
-    public init(renderedCache: RenderedSourceCache = .shared) {
+    /// Round 30: verified entry results are shared across instances through
+    /// this cache — a reopened find bar or a repeated explicit history search
+    /// pays round-12's verification predicate and copies instead of sources
+    /// building, display serialization, render lookups, joining and matching.
+    /// Same injection discipline as renderedCache: default keeps every
+    /// existing call site unchanged; benchmarks measuring true per-instance
+    /// rebuilds inject fresh caches (or byteBudget-0 for the no-cache oracle).
+    private let entryCache: ConversationEntryCache
+    public init(renderedCache: RenderedSourceCache = .shared,
+                entryCache: ConversationEntryCache = .shared) {
         self.renderedCache = renderedCache
+        self.entryCache = entryCache
     }
 
     public func hits(in messages: [KimiMessage], query: String, running: Bool,
@@ -154,6 +164,21 @@ public final class ConversationSearch {
             }
             let role = Self.role(of: entry)
             guard options.role == .all || role == options.role else { continue }
+            // Round 30: cross-instance reuse under round-12's exact predicate
+            // (byte-exact key + sameSearchableWindow verification inside the
+            // cache). A verified payload adopts the caller's messages copy,
+            // mirroring the instance-level reuse above.
+            let cacheKey = ConversationEntryCache.key(entryID: entry.id, query: query,
+                                                      options: options, isRunning: isRunning)
+            if let payload = entryCache.payload(forKey: cacheKey, messages: entry.messages[...]) {
+                next[entry.id] = Entry(sources: payload.sources, text: payload.text,
+                                       sourceEnds: payload.sourceEnds, role: payload.role,
+                                       messages: entry.messages, isRunning: payload.isRunning,
+                                       query: payload.query, options: payload.options,
+                                       hits: payload.hits)
+                hits += payload.hits
+                continue
+            }
             let pieces = Self.sources(of: entry, role: role)
             let sources = pieces.map(\.text)
             let previous = lookup(entry.id)
@@ -194,10 +219,17 @@ public final class ConversationSearch {
                                        toolID: toolID, toolOccurrence: toolOccurrence))
                 if let toolID { toolOccurrences[toolID, default: 0] += 1 }
             }
-            next[entry.id] = Entry(sources: sources, text: text, sourceEnds: sourceEnds, role: role,
-                                   messages: entry.messages, isRunning: isRunning,
-                                   query: query, options: options, hits: entryHits)
+            let built = Entry(sources: sources, text: text, sourceEnds: sourceEnds, role: role,
+                                messages: entry.messages, isRunning: isRunning,
+                                query: query, options: options, hits: entryHits)
+            next[entry.id] = built
             hits += entryHits
+            entryCache.store(payload: .init(messages: built.messages, sources: built.sources,
+                                            text: built.text, sourceEnds: built.sourceEnds,
+                                            role: built.role, isRunning: built.isRunning,
+                                            query: built.query, options: built.options,
+                                            hits: built.hits),
+                             forKey: cacheKey)
         }
         return hits
     }

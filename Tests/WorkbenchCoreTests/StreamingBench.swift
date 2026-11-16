@@ -105,7 +105,10 @@ func benchStreamingDelta() throws {
     // every-occurrence. The dedup is product behavior, not a bench change,
     // but its share of this metric is fixture-amplified; the round report
     // decomposes both effects with the probe counts.
-    let findBar = ConversationSearch(renderedCache: RenderedSourceCache())
+    // Round 30: fresh entry cache as well — cross-instance entry reuse must
+    // not leak into the per-instance metrics.
+    let findBar = ConversationSearch(renderedCache: RenderedSourceCache(),
+                                     entryCache: ConversationEntryCache())
     var findStage: [Double] = []
     let key = "host:kimi:s"
     var stages: [String: [Double]] = [:]
@@ -246,19 +249,22 @@ func benchStreamingDelta() throws {
     let coldWindow = conversation.displayMessages
     var coldFind: [Double] = []
     for _ in 0..<5 {
-        let fresh = ConversationSearch(renderedCache: RenderedSourceCache())
+        let fresh = ConversationSearch(renderedCache: RenderedSourceCache(),
+                                       entryCache: ConversationEntryCache())
         let t = benchNow()
         let found = fresh.hits(in: coldWindow, query: "已经处理", running: true)
         coldFind.append(ms(t))
         precondition(found.hits.count >= completedTurns)
     }
-    // Round 27: the find-bar REOPEN shape — a fresh ConversationSearch over
-    // the process-wide shared rendered-source cache. On reopen the find bar
-    // re-renders nothing AS LONG AS the sources stay admitted, unevicted and
-    // in the same locale generation; history workers reuse renders across
-    // repeated explicit searches (not per keystroke — review F3). A hit is
-    // not free: it still pays key construction, hashing, lock and lastUse
-    // work (review F8). Measured after every pre-existing metric so it
+    // Round 27/30: the find-bar REOPEN shape — a fresh ConversationSearch
+    // over BOTH process-wide shared caches (rendered sources + verified entry
+    // results). Round 30: a verified entry skips sources building, display
+    // serialization, render lookups, joining and matching entirely — the
+    // reopen pays round-12's verification predicate, key lookups and hits
+    // copies, as long as nodes stay admitted, unevicted and in the same
+    // locale generation. A hit is not free: key construction, hashing, lock,
+    // lastUse and the verification walk (bitwise-identical window storage
+    // short-circuits it; rebuilt windows pay the structural comparison). Measured after every pre-existing metric so it
     // cannot disturb them; the shared cache is warmed once, out of timing,
     // by the first search, and every timed reopen must reproduce the warm
     // search's hits EXACTLY — a within-candidate warm-shape equality check,
