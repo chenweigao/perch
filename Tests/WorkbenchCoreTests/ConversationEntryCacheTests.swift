@@ -19,9 +19,9 @@ import WorkbenchCore
 /// Part 2 — end-to-end purity through the public find-bar API over the
 /// round-27 corpus (NFC/NFD variants, byte-identical duplicate source in its
 /// own message, display math, URLs, code): FOUR regimes must agree at both
-/// canonical and per-hit UTF-8 byte level — budget-0 caches on both tiers
-/// (nothing stored anywhere: the pre-round-27/30 product exactly), shared
-/// cold, fresh, shared warm. Staleness across instances: a same-ID edit
+/// canonical and per-hit UTF-8 byte level — budget-0 caches on all three
+/// tiers (nothing stored anywhere: the pre-round-27/30/32 product exactly),
+/// shared cold, fresh, shared warm. Staleness across instances: a same-ID edit
 /// after a warm search must produce the edited window's results, never the
 /// stale node (the mutation "reuse without verification" dies on the byte
 /// comparison against the budget-0 oracle). Query/running/options variations
@@ -310,10 +310,12 @@ func checkConversationEntryCache() throws {
     }
     func noCache() -> ConversationSearch {
         ConversationSearch(renderedCache: RenderedSourceCache(byteBudget: 0),
-                           entryCache: ConversationEntryCache(byteBudget: 0))
+                           entryCache: ConversationEntryCache(byteBudget: 0),
+                           prefixCache: ConversationPrefixCache(byteBudget: 0))
     }
     func freshCaches() -> ConversationSearch {
-        ConversationSearch(renderedCache: RenderedSourceCache(), entryCache: ConversationEntryCache())
+        ConversationSearch(renderedCache: RenderedSourceCache(), entryCache: ConversationEntryCache(),
+                           prefixCache: ConversationPrefixCache())
     }
 
     for query in ["caf\u{00E9}", "cafe\u{0301}", "a\u{0301}\u{0327}", "a\u{0327}\u{0301}",
