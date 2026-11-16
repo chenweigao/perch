@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "<worktree>/.local/round31/analyze_r31.py", line 164, in <module>
+    main()
+  File "<worktree>/.local/round31/analyze_r31.py", line 92, in main
+    tree = ET.parse(path)
+           ^^^^^^^^^^^^^^
+  File "/home/<dev>/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/xml/etree/ElementTree.py", line 1204, in parse
+    tree.parse(source, parser)
+  File "/home/<dev>/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/xml/etree/ElementTree.py", line 558, in parse
+    source = open(source, "rb")
+             ^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '.local/round31/xml-c/reopen-time-profile.xml'
