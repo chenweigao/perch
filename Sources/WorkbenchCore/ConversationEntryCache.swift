@@ -39,12 +39,17 @@ import Foundation
 ///    String key would conflate NFC/NFD queries, the exact defect round 12's
 ///    `sameQueryKey` and round 27's byte-exact render keys exist to prevent.
 /// 3. **Bounded, retention-inclusive.** A node retains the verification
-///    messages, its key bytes and the query string, so the ADMISSION cost
-///    counts all of them: message metadata and text/thinking/tool fields,
+///    messages (INCLUDING their tool input/output/source JSONValue trees and
+///    message metadata — a text-phase entry keeps its message's whole content
+///    array), its key bytes and the query string, so the ADMISSION cost
+///    counts all of them: message metadata fields, recursive JSONValue sizes,
 ///    sources, joined text (UTF-16 ×2), hit excerpts, key bytes and query
-///    UTF-8 bytes (Codex P2: excluding key/query storage let 100 × 100KB
-///    query keys pass a 1KB budget while reporting 800B). The estimate is a
-///    cost convention (like the native math cache and RenderedSourceCache),
+///    UTF-8 bytes. Two review rounds shaped this: Codex P2 (excluding
+///    key/query storage let 100 × 100KB query keys pass a 1KB budget while
+///    reporting 800B) and the closure review (excluding JSONValue payloads
+///    let ~8MiB of tool-input metadata retain inside a 128B budget reporting
+///    77B — not an estimate error, an uncounted field class). The estimate is
+///    a cost convention (like the native math cache and RenderedSourceCache),
 ///    not exact RSS. Batch-LRU eviction;
 ///    honest churn note per round-29 F9: eviction stops AT the budget, so a
 ///    table at budget pays an O(N log N) sort under the lock per insert. A
@@ -251,15 +256,17 @@ public final class ConversationEntryCache: @unchecked Sendable {
         estimatedCost(of: payload) + keyBytes.count + payload.query.utf8.count
     }
 
-    /// The payload-only part of the cost convention: message metadata +
-    /// text/thinking/tool payload fields + sources + joined text (UTF-16 ×2)
-    /// + hit excerpts.
+    /// The payload-only part of the cost convention: message metadata fields
+    /// + recursive JSONValue sizes (input/output/source/metadata — the
+    /// retained trees a text-phase entry carries with its message's full
+    /// content array) + sources + joined text (UTF-16 ×2) + hit excerpts.
     public static func estimatedCost(of payload: Payload) -> Int {
         var cost = payload.text.length * 2
         for source in payload.sources { cost += source.utf8.count }
         for hit in payload.hits { cost += hit.excerpt.utf8.count }
         for message in payload.messages {
             cost += message.id.utf8.count + message.role.utf8.count + message.createdAt.utf8.count
+            if let metadata = message.metadata { cost += jsonValueSize(metadata) }
             for part in message.content {
                 cost += part.type.utf8.count
                 if let text = part.text { cost += text.utf8.count }
@@ -267,9 +274,27 @@ public final class ConversationEntryCache: @unchecked Sendable {
                 if let name = part.name { cost += name.utf8.count }
                 if let toolName = part.toolName { cost += toolName.utf8.count }
                 if let toolCallId = part.toolCallId { cost += toolCallId.utf8.count }
+                if let input = part.input { cost += jsonValueSize(input) }
+                if let output = part.output { cost += jsonValueSize(output) }
+                if let source = part.source { cost += jsonValueSize(source) }
             }
         }
         return cost
+    }
+
+    /// Recursive retained-size estimate of a JSONValue tree: string leaves by
+    /// UTF-8 length, numbers 8, bool/null 1, containers 16 + children (the
+    /// container constant approximates dictionary/array storage overhead —
+    /// estimate convention, not exact RSS).
+    public static func jsonValueSize(_ value: JSONValue) -> Int {
+        switch value {
+        case .null: return 1
+        case .bool: return 1
+        case .number: return 8
+        case .string(let text): return text.utf8.count
+        case .array(let items): return items.reduce(16) { $0 + jsonValueSize($1) }
+        case .object(let map): return map.reduce(16) { $0 + $1.key.utf8.count + jsonValueSize($1.value) }
+        }
     }
 
     /// Drops every entry (budget and generation unchanged; diagnostic

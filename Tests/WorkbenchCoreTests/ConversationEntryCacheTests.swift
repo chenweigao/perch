@@ -118,6 +118,28 @@ func checkConversationEntryCache() throws {
     let cost0 = ConversationEntryCache.admissionCost(of: p0, forKey: kNFC)
     precondition(cost0 == ConversationEntryCache.estimatedCost(of: p0) + kNFC.count + nfcQ.utf8.count,
                  "admission cost must include key and query bytes")
+    // hand-computed full formula on the text-only fixture (pins every term of
+    // the convention, including the recursive JSONValue walk being zero here)
+    var manual = p0.text.length * 2
+    for source in p0.sources { manual += source.utf8.count }
+    for hit in p0.hits { manual += hit.excerpt.utf8.count }
+    for m in entryMessages {
+        manual += m.id.utf8.count + m.role.utf8.count + m.createdAt.utf8.count
+        if let md = m.metadata { manual += ConversationEntryCache.jsonValueSize(md) }
+        for part in m.content {
+            manual += part.type.utf8.count
+            if let t = part.text { manual += t.utf8.count }
+            if let th = part.thinking { manual += th.utf8.count }
+            if let n = part.name { manual += n.utf8.count }
+            if let tn = part.toolName { manual += tn.utf8.count }
+            if let tc = part.toolCallId { manual += tc.utf8.count }
+            if let i = part.input { manual += ConversationEntryCache.jsonValueSize(i) }
+            if let o = part.output { manual += ConversationEntryCache.jsonValueSize(o) }
+            if let src = part.source { manual += ConversationEntryCache.jsonValueSize(src) }
+        }
+    }
+    precondition(ConversationEntryCache.estimatedCost(of: p0) == manual,
+                 "exact cost formula: \(ConversationEntryCache.estimatedCost(of: p0)) != \(manual)")
     precondition(basic.estimatedByteCount == cost0,
                  "exact cost accounting: \(basic.estimatedByteCount) != \(cost0)")
     guard let got = basic.payload(forKey: kNFC, messages: windowA[1...]) else {
@@ -180,6 +202,32 @@ func checkConversationEntryCache() throws {
     tinyBudget.store(payload: pLong, forKey: longKey, generation: tinyBudget.generationNow)
     precondition(tinyBudget.estimatedByteCount == 0,
                  "a key larger than the budget must be refused: \(tinyBudget.estimatedByteCount)")
+
+    // message JSONValue payload retention (closure-review finding): a node
+    // whose rendered surface is tiny but whose retained messages carry a
+    // huge tool input must NOT fit a small budget — v4 counted ~77B while
+    // retaining megabytes. The recursive jsonValueSize walk makes the
+    // admission cost see it; the payload-fields-exclusion mutant (v4 cost
+    // formula) dies here.
+    let heavyWindow = try messages([
+        ["id": "h0", "role": "user", "created_at": "000001",
+         "content": [["type": "text", "text": "q"]]],
+        ["id": "h1", "role": "assistant", "created_at": "000002",
+         "content": [["type": "tool_use", "tool_call_id": "t1", "tool_name": "Write",
+                      "input": ["content": String(repeating: "重", count: 4000)]]]],
+    ])
+    let heavyPayload = ConversationEntryCache.Payload(
+        messages: heavyWindow, sources: ["Write"], text: "小" as NSString,
+        sourceEnds: [2], role: .tool, isRunning: false, query: "q",
+        options: opts, hits: [])
+    precondition(ConversationEntryCache.estimatedCost(of: heavyPayload) >= 12000,
+                 "the tool-input JSONValue tree must dominate the cost: \(ConversationEntryCache.estimatedCost(of: heavyPayload))")
+    let heavyCache = ConversationEntryCache(byteBudget: 128)
+    let heavyKey = ConversationEntryCache.key(entryID: "h1", query: "q", options: opts, isRunning: false)
+    heavyCache.store(payload: heavyPayload, forKey: heavyKey, generation: heavyCache.generationNow)
+    precondition(heavyCache.estimatedByteCount == 0
+                 && heavyCache.payload(forKey: heavyKey, messages: heavyWindow[1...]) == nil,
+                 "message JSONValue payload must count against the budget (multi-MB-in-128B shape refused)")
 
     // locale generation: notification drops every node
     let locale = ConversationEntryCache()
@@ -315,5 +363,5 @@ func checkConversationEntryCache() throws {
     let runOracle = noCache().hits(in: window, query: "结论", running: true)
     precondition(runShared == runOracle && byteShape(runShared) == byteShape(runOracle))
 
-    print("PASS: entry cache — injective length-prefixed byte-exact keys (NUL-collision pair, canonical-reorder pair AND dictionary-level reorder-retrieval refusal pinned), round-12 verification as the only reuse gate (same-ID edit and NFD rebuild refused), exact retention-inclusive admission accounting (payload+key+query bytes — Codex P2), generation-guarded store (stale-locale build refused), budget-0 stores nothing, concrete LRU (touch/victim/new-insert), oversized payload AND oversized key refusal against a non-empty table, locale-generation invalidation, removeAll, 8x100 concurrency with single-copy accounting, and four-regime (budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 6 queries at canonical AND byte level plus cross-instance staleness and running-flag isolation")
+    print("PASS: entry cache — injective length-prefixed byte-exact keys (NUL-collision pair, canonical-reorder pair AND dictionary-level reorder-retrieval refusal pinned), round-12 verification as the only reuse gate (same-ID edit and NFD rebuild refused), exact retention-inclusive admission accounting (payload incl. recursive message JSONValue trees + key + query bytes — Codex P2 + closure-review, hand-computed formula pinned), generation-guarded store (stale-locale build refused), budget-0 stores nothing, concrete LRU (touch/victim/new-insert), oversized payload AND oversized key refusal against a non-empty table, locale-generation invalidation, removeAll, 8x100 concurrency with single-copy accounting, and four-regime (budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 6 queries at canonical AND byte level plus cross-instance staleness and running-flag isolation")
 }
