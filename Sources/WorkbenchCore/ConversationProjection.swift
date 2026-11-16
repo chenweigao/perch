@@ -57,7 +57,9 @@ extension String {
     /// surfaced them as Prepend in the current toolchain data; over-inclusion
     /// is the safe direction (a needless strict fallback, never a wrong
     /// answer), so the set may lead the data but must never lag it.
-    private static func isPrependScalar(_ scalar: UInt32) -> Bool {
+    /// Internal (not private) since round 26: reused by ActivityNarrative's
+    /// delimiter scan for the preceding-boundary (GB9b) proof.
+    static func isPrependScalar(_ scalar: UInt32) -> Bool {
         switch scalar {
         case 0x0600...0x0605, 0x06DD, 0x070F, 0x0890...0x0891, 0x08E2,
              0x0D4E, 0x110BD, 0x110CD, 0x111C2...0x111C3, 0x113D1,
@@ -102,7 +104,10 @@ extension String {
     /// guess, so any binder forces the strict path. ZWJ is checked by value:
     /// its grapheme-break class is ZWJ, not Extend, so `isGraphemeExtend`
     /// is false for it.
-    private static func beginsBindingMark(in bytes: UnsafeBufferPointer<UInt8>, at i: Int) -> Bool {
+    /// Internal (not private) since round 26: ActivityNarrative's delimiter
+    /// scan reuses this exact predicate for its following-boundary proof, so
+    /// the fusionGap==0 exhaustive walk pins both call sites at once.
+    static func beginsBindingMark(in bytes: UnsafeBufferPointer<UInt8>, at i: Int) -> Bool {
         guard let (value, _) = utf8Scalar(in: bytes, at: i), let scalar = Unicode.Scalar(value) else { return true }
         // Scalars the pinned ranges below prove cannot bind skip the property
         // lookups; CJK-heavy excerpts otherwise pay two table walks per
