@@ -550,28 +550,54 @@ func checkConversationPrefixCache() throws {
                  "the shared-warm regime must be served by a stored prefix node (non-vacuous adoption)")
 
     // round-33 concat-guard consumption pin (perf-only mutant class — the
-    // negative-list lesson: existence pins cannot kill bypass mutants): a
-    // warm reopen whose suffix contributes NO hits must return the node's
-    // hits array WITHOUT COW materialization (same backing storage), while
-    // a non-empty suffix must still concatenate into independent storage.
-    // The remove-guard mutant dies on the first identity; an
-    // always-skip-concat mutant dies on the second (and on the byte-level
-    // regime equality above).
+    // negative-list lesson: existence pins cannot kill bypass mutants).
+    // v2 (review finding): the FIRST call for a query takes the rebuild
+    // path, where the built array is COW-shared with the stored node — so
+    // the identity is asserted on ALL THREE routes that must preserve it:
+    // rebuild (first call), shared-node adoption (a fresh instance), and
+    // adoption under running: true (the streaming re-search shape — kills a
+    // running-conditional bypass variant the v1 pin could not see). A
+    // non-empty suffix must still concatenate into independent storage
+    // (always-skip-concat dies on that identity AND on the byte-level
+    // regime equality above), and a caller mutating a shared-storage result
+    // must copy-on-write, never poisoning the node.
     do {
         func bufferAddress(_ hits: [ConversationSearchHit]) -> UInt {
             hits.withUnsafeBufferPointer { UInt(bitPattern: $0.baseAddress!) }
         }
         let prefixOnlyQuery = "第 0 轮"  // matches u0 (prefix) only, never the suffix
-        let prefixOnlyResult = ConversationSearch().hits(in: window, query: prefixOnlyQuery, running: false)
-        precondition(!prefixOnlyResult.hits.isEmpty, "fixture: the prefix-only query must hit")
         let prefixOnlyKey = ConversationEntryCache.key(entryID: "", query: prefixOnlyQuery,
                                                        options: opts, isRunning: false)
+        // route 1 — rebuild: the first call stores the node and returns the
+        // same COW storage (no empty concat copy).
+        let prefixOnlyResult = ConversationSearch().hits(in: window, query: prefixOnlyQuery, running: false)
+        precondition(!prefixOnlyResult.hits.isEmpty, "fixture: the prefix-only query must hit")
         guard let prefixOnlyNode = ConversationPrefixCache.shared.node(forKey: prefixOnlyKey,
                                                                        prefix: window[..<splitIndex]) else {
             fatalError("the prefix-only node must be stored")
         }
         precondition(bufferAddress(prefixOnlyResult.hits) == bufferAddress(prefixOnlyNode.hits),
-                     "an empty-suffix reopen must return the node's hits WITHOUT COW materialization (concat guard consumed)")
+                     "the rebuild route must return the node's hits WITHOUT COW materialization (remove-guard dies here)")
+        // route 2 — shared-node adoption by a fresh instance.
+        let adopted = ConversationSearch().hits(in: window, query: prefixOnlyQuery, running: false)
+        precondition(bufferAddress(adopted.hits) == bufferAddress(prefixOnlyNode.hits),
+                     "the adoption route must return the node's hits WITHOUT COW materialization")
+        // route 3 — adoption under running: true (the streaming re-search /
+        // bench reopen shape): a running-conditional guard bypass dies here.
+        let adoptedRunning = ConversationSearch().hits(in: window, query: prefixOnlyQuery, running: true)
+        precondition(adoptedRunning.hits == prefixOnlyResult.hits, "fixture: this query has no running-turn hits")
+        precondition(bufferAddress(adoptedRunning.hits) == bufferAddress(prefixOnlyNode.hits),
+                     "the adoption route under running=true must keep the shared storage (running-conditional bypass dies here)")
+        // caller mutation must copy-on-write, never write through to the node
+        // (the guard's value-semantics premise; review poison probe shape).
+        var poisoned = adopted.hits
+        poisoned[0] = ConversationSearchHit(entryID: "poison", occurrence: 99, excerpt: "changed")
+        poisoned.reverse()
+        let afterPoison = ConversationSearch().hits(in: window, query: prefixOnlyQuery, running: false)
+        precondition(afterPoison.hits == prefixOnlyResult.hits
+                     && bufferAddress(prefixOnlyNode.hits) == bufferAddress(prefixOnlyResult.hits),
+                     "caller mutation of a shared-storage result must not poison the node")
+        // non-empty suffix: concatenation still produces independent storage.
         let suffixQuery = "caf\u{00E9}"  // matches prefix AND suffix entries
         let suffixResult = ConversationSearch().hits(in: window, query: suffixQuery, running: false)
         let suffixKey = ConversationEntryCache.key(entryID: "", query: suffixQuery,
