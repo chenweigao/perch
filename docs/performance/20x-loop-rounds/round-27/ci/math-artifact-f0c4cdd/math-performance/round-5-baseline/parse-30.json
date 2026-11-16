@@ -1,0 +1,109 @@
+{
+  "cpu_count" : 3,
+  "dependencies" : {
+    "swift-cmark" : {
+      "revision" : "924936d0427cb25a61169739a7660230bffa6ea6",
+      "version" : "0.8.0"
+    },
+    "swift-markdown" : {
+      "revision" : "3c6f9523da3a1ec2fd829673e472d95b8097a3b8",
+      "version" : "0.8.0"
+    },
+    "swiftmath" : {
+      "revision" : "fa8244ed032f4a1ade4cb0571bf87d2f1a9fd2d7",
+      "version" : "1.7.3"
+    }
+  },
+  "fixture" : "synthetic; no sessions or network",
+  "measurements" : {
+    "ordinary_backslashes" : {
+      "duration" : {
+        "max_ms" : 3.7701249999599895,
+        "median_ms" : 3.4839166667097743,
+        "p95_ms" : 3.7701249999599895,
+        "total_ms" : 17.582416666755307
+      },
+      "semantic_sha256" : "c7fe5f0d55e1b897dc31d70d83e5c86ce69d2da3e91b7f5cc16ee52922f4a58c",
+      "utf8_bytes" : 11600
+    },
+    "plain" : {
+      "duration" : {
+        "max_ms" : 6.6880416667345344,
+        "median_ms" : 3.9682500000708387,
+        "p95_ms" : 6.6880416667345344,
+        "total_ms" : 23.558875000048829
+      },
+      "semantic_sha256" : "5c0c3d662408b4eb7d888c9a2d74b5327d21c19487f3c30fde542b98c2cf4a26",
+      "utf8_bytes" : 13600
+    },
+    "reply" : {
+      "duration" : {
+        "max_ms" : 22.268666666718673,
+        "median_ms" : 2.4752916666557212,
+        "p95_ms" : 22.268666666718673,
+        "total_ms" : 32.001375000049848
+      },
+      "semantic_sha256" : "aca2724d3c8164a3b58f27f1ce1192c5c8124bc06bfe44d66ce591615ac0da75",
+      "utf8_bytes" : 4331
+    },
+    "stream_16" : {
+      "duration" : {
+        "max_ms" : 7.3680000000422297,
+        "median_ms" : 1.350999999999658,
+        "p95_ms" : 3.1647083333155024,
+        "total_ms" : 246.9560416668628
+      },
+      "updates" : 162
+    },
+    "stream_64" : {
+      "duration" : {
+        "max_ms" : 5.3270833333272094,
+        "median_ms" : 1.491166666596655,
+        "p95_ms" : 4.8070833332758411,
+        "total_ms" : 68.487125000046944
+      },
+      "updates" : 40
+    },
+    "unclosed_256" : {
+      "duration" : {
+        "max_ms" : 0.31324999997650593,
+        "median_ms" : 0.2662083334143972,
+        "p95_ms" : 0.31324999997650593,
+        "total_ms" : 1.385583333330942
+      },
+      "semantic_sha256" : "17347b62c94ece6260bdc4bb3f7272ad1734b6202af840577beceefb07f7dca0",
+      "utf8_bytes" : 1024
+    },
+    "unclosed_1024" : {
+      "duration" : {
+        "max_ms" : 1.4434166666887904,
+        "median_ms" : 1.102916666695819,
+        "p95_ms" : 1.4434166666887904,
+        "total_ms" : 5.7618749999619467
+      },
+      "semantic_sha256" : "991a4d01b1da02c25a14ec6c999fcfbf7888791628218c53c7650901e3ea36d3",
+      "utf8_bytes" : 4096
+    },
+    "unclosed_4096" : {
+      "duration" : {
+        "max_ms" : 8.8595416666521487,
+        "median_ms" : 5.9382916666663732,
+        "p95_ms" : 8.8595416666521487,
+        "total_ms" : 30.898125000021537
+      },
+      "semantic_sha256" : "fd1f367d8b4a481fb6a05e57809b07276abbf59174c5f6ac30ddfab38cf7bc18",
+      "utf8_bytes" : 16384
+    }
+  },
+  "mode" : "parse",
+  "os" : "Version 27.0.1 (Build 26A434)",
+  "physical_memory_bytes" : 7516192768,
+  "revision" : "ed98b97e816d4eceda25bfe9a4134cacbab99cdb",
+  "scope" : "isolated synthetic AppKit\/SwiftUI work; not hardware input latency or certified FPS",
+  "source_input_sha256" : "0620f4e499fa976a2129f5ecf6b7a890ba4c76873e78dc351953e153911dd4e8",
+  "status" : "passed",
+  "suffix_search" : false,
+  "swiftmath_patch_sha256" : "68686f9cd8fbe4b1134ace3a22f162828b9d4bd89eb84816f050379aa06bb855",
+  "toolchain" : "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+  "variant" : "baseline"
+}

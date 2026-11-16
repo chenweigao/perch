@@ -1,0 +1,96 @@
+
+*** Signal 4: Backtracing from 0x561bdd2b5966... done ***
+
+*** Swift runtime failure: precondition failure ***
+
+Platform: x86_64 Linux (Alibaba Cloud Linux 3 (Soaring Falcon))
+
+Thread 0 "run" crashed:
+
+  0 [inlined] [system] 0x0000561bdd2b5966 Swift runtime failure: precondition failure in run at //<compiler-generated>
+  1                    0x0000561bdd2b5966 checkRenderedSourceCache() + 16198 in run at <worktree>/.local/round27/mutations/standalone-v5/normalize-cache-hit-nfc-vs-v5/Pin.swift:244:9
+...
+
+Thread 1:
+
+  0  0x00007fb24be52dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 2:
+
+  0  0x00007fb24be52dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 3:
+
+  0  0x00007fb24be52dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 4:
+
+  0  0x00007fb24be52dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 5:
+
+  0  0x00007fb24be52dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 6:
+
+  0  0x00007fb24be52dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 7:
+
+  0      0x00007fb24ab8489e epoll_wait + 94 in libc-2.32.so
+  1 [ra] 0x00007fb24bff1022 _dispatch_mgr_invoke + 129 in libdispatch.so
+  2 [ra] 0x00007fb24bff0f8d _dispatch_mgr_thread + 108 in libdispatch.so
+  3 [ra] 0x00007fb24bff4195 _dispatch_worker_thread + 628 in libdispatch.so
+...
+
+Thread 8:
+
+  0  0x00007fb24be52dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 9:
+
+  0  0x00007fb24be52dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+
+Registers:
+
+rax 0x0000000000000000  0
+rdx 0x0000561bdf54e1c0  8e 5b ee be 1e 56 00 00 03 00 00 00 01 00 00 00  ·[î¾·V··········
+rcx 0x00007fb24ac15a28  a0 22 55 df 1b 56 00 00 d0 4f 53 df 1b 56 00 00   "Uß·V··ÐOSß·V··
+rbx 0x0000561bdf54e1b0  00 00 00 00 00 00 00 a5 51 00 00 00 00 00 00 00  ·······¥Q·······
+rsi 0x8000000000000000  9223372036854775808
+rdi 0x0000000561bdf552  23114675538
+rbp 0x0000000000000000  0
+rsp 0x00007ffd6ba0cbf0  00 00 00 00 00 00 00 a5 00 25 55 df 1b 56 00 00  ·······¥·%Uß·V··
+ r8 0x0000000000000000  0
+ r9 0x0000000200000000  8589934592
+r10 0x0000000100000003  4294967299
+r11 0x0000000000000000  0
+r12 0x0000000000000000  0
+r13 0x0000000000000001  1
+r14 0x0000561bdf5522b0  e2 14 e9 be 1e 56 00 00 03 00 00 00 01 00 00 00  â·é¾·V··········
+r15 0x0000561bdf555340  35 e1 e8 be 1e 56 00 00 10 f0 51 df 1b 56 00 00  5áè¾·V···ðQß·V··
+rip 0x0000561bdd2b5966  0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b  ················
+
+rflags 0x0000000000010246  ZF PF
+
+cs 0x0033  fs 0x0000  gs 0x0000
+
+
+Images (45 omitted):
+
+0x0000561bdd000000–0x0000561bdd682de0 177816e7e045579421a1152aa19626edc368bcc9 run                <worktree>/.local/round27/mutations/standalone-v5/normalize-cache-hit-nfc-vs-v5/run
+0x00007fb24aa40000–0x00007fb24abc4c5c 960891d022c59cee678476b8696e9224608859d0 libc-2.32.so       /usr/lib64/libc-2.32.so
+0x00007fb24be41000–0x00007fb24be56ce1 ddd6cd0bb97a6a9a3ab90896f32eab60963bdfcb libpthread-2.32.so /usr/lib64/libpthread-2.32.so
+0x00007fb24bfbf000–0x00007fb24c007218 d08a244d278d89eeb5cfd6afd8bb084f99cd2acd libdispatch.so     /home/<dev>/.local/swift/6.3.3/usr/lib/swift/linux/libdispatch.so
+
+Backtrace took 0.45s
+

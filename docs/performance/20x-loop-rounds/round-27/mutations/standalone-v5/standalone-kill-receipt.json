@@ -1,0 +1,25 @@
+{
+ "head": "a2ac5bb63fed91c10047edff0e20251256267561",
+ "pin_sha256": "a2d94d00f2b47f10a1d9a06ec4e1814828a605eb62bad7b2d1cfaaa50edc0a47",
+ "cache_sha256": "26a1130b3faef19b6a54c39aa23a9a628863bdceae1169c4268b9e08e961f9ae",
+ "variants": {
+  "normalize-cache-hit-nfc-vs-v5": {
+   "build_exit": 0,
+   "shell_exit": -4,
+   "stdout_tail": "",
+   "stderr_tail": "00000000  0\n r9 0x0000000200000000  8589934592\nr10 0x0000000100000003  4294967299\nr11 0x0000000000000000  0\nr12 0x0000000000000000  0\nr13 0x0000000000000001  1\nr14 0x000056150c7e2060  12 db 2f 6d 10 56 00 00 03 00 00 00 01 00 00 00  ·Û/m·V··········\nr15 0x000056150c7f8800  f8 ae 2f 6d 10 56 00 00 10 30 7c 0c 15 56 00 00  ø®/m·V···0|··V··\nrip 0x000056150bcb5966  0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b  ················\n\nrflags 0x0000000000010246  ZF PF\n\ncs 0x0033  fs 0x0000  gs 0x0000\n\n\nImages (45 omitted):\n\n0x000056150ba00000–0x000056150c082de0 177816e7e045579421a1152aa19626edc368bcc9 run                <worktree>/.local/round27/mutations/standalone-v5/normalize-cache-hit-nfc-vs-v5/run\n0x00007f176d315000–0x00007f176d499c5c 960891d022c59cee678476b8696e9224608859d0 libc-2.32.so       /usr/lib64/libc-2.32.so\n0x00007f176e935000–0x00007f176e94ace1 ddd6cd0bb97a6a9a3ab90896f32eab60963bdfcb libpthread-2.32.so /usr/lib64/libpthread-2.32.so\n0x00007f176f32e000–0x00007f176f376218 d08a244d278d89eeb5cfd6afd8bb084f99cd2acd libdispatch.so     /home/<dev>/.local/swift/6.3.3/usr/lib/swift/linux/libdispatch.so\n\nBacktrace took 0.46s\n\n"
+  },
+  "normalize-render-nfc-vs-v5": {
+   "build_exit": 0,
+   "shell_exit": -4,
+   "stdout_tail": "",
+   "stderr_tail": "99\nr11 0x1e4c8546a8204300  2183266457882739456\nr12 0x0000000000000000  0\nr13 0x000055a7d152be90  eb ef 2d 8b a2 55 00 00 10 a0 4f d1 a7 55 00 00  ëï-·¢U··· OÑ§U··\nr14 0x000055a7d152d640  90 5a 10 2e 99 7f 00 00 03 00 00 00 00 00 00 00  ·Z·.············\nr15 0x00007f992dfd5618  00 02 00 00 00 00 00 00 7c 07 02 2e 99 7f 00 00  ········|··.····\nrip 0x000055a7d08b34a1  0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 31 ff 48 83  ············1ÿH·\n\nrflags 0x0000000000010246  ZF PF\n\ncs 0x0033  fs 0x0000  gs 0x0000\n\n\nImages (45 omitted):\n\n0x000055a7d0600000–0x000055a7d0c805d0 5df4380d3229bf3eeb159dd42a18d94f45253e6d run                <worktree>/.local/round27/mutations/standalone-v5/normalize-render-nfc-vs-v5/run\n0x00007f992c315000–0x00007f992c499c5c 960891d022c59cee678476b8696e9224608859d0 libc-2.32.so       /usr/lib64/libc-2.32.so\n0x00007f992d0bf000–0x00007f992d0d4ce1 ddd6cd0bb97a6a9a3ab90896f32eab60963bdfcb libpthread-2.32.so /usr/lib64/libpthread-2.32.so\n0x00007f992d88a000–0x00007f992d8d2218 d08a244d278d89eeb5cfd6afd8bb084f99cd2acd libdispatch.so     /home/<dev>/.local/swift/6.3.3/usr/lib/swift/linux/libdispatch.so\n\nBacktrace took 0.45s\n\n"
+  },
+  "v5-original-control": {
+   "build_exit": 0,
+   "shell_exit": 0,
+   "stdout_tail": "s, exact cost accounting, concrete LRU (touch-retention + victim identity), oversized refusal against a non-empty sentinel table, 512B/200-source churn, removeAll, 8x200 concurrency with single-copy accounting, locale-generation invalidation via the real notification, and four-regime (budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 6 queries at BOTH canonical and per-hit UTF-8 byte levels (canonical == alone admits NFC-normalization mutants) with exact counts, entry identities, occurrences and byte-exact excerpts for the true duplicate source (own message, coalescing-safe)\n",
+   "stderr_tail": ""
+  }
+ }
+}

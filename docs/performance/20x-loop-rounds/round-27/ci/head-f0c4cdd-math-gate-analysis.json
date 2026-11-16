@@ -1,0 +1,91 @@
+{
+ "run": "https://github.com/chenweigao/perch/actions/runs/43818535357",
+ "head": "f0c4cdd",
+ "baseline_ref": "ed98b97 (PR base)",
+ "gate_error": "Typeset/draw regression exceeds 15% at 32",
+ "round_order": [
+  "baseline",
+  "candidate",
+  "candidate",
+  "baseline",
+  "baseline",
+  "candidate"
+ ],
+ "signature": {
+  "classification": "BUILD-LOTTERY / same-binary variance (round-24 2b9e730 family)",
+  "candidate_typeset32_draw_cpu_rounds_r2_r3_r6": [
+   1.5480000000000018,
+   1.5840000000000032,
+   1.5769999999999982
+  ],
+  "candidate_internal_spread_percent": 2.33,
+  "baseline_typeset32_draw_cpu_rounds_r1_r4_r5": [
+   1.5919999999999845,
+   1.1189999999999998,
+   1.1640000000000015
+  ],
+  "baseline_internal_spread_percent": 42.27,
+  "note": "同一二进制跨轮摆动：baseline r1=1.592 vs r4/r5=1.119/1.164（+37%）；candidate 三轮一致（2.3% 内）。r6（末轮、机器最热）candidate 仍 1.577 ⇒ 非早轮偏置。typeset-512 draw ratio 0.98（快）、typeset-128 draw 1.08 ⇒ 跨 scenario 不一致 = 非算法性回归形态。"
+ },
+ "call_path_isolation": {
+  "changed_inputs": "Sources/WorkbenchCore 整目录进 math preview 编译（build-math-performance-preview.sh:14 git archive）⇒ ConversationSearch.swift/RenderedSourceCache.swift 在编译面内（布局通道存在），changed_inputs=True 合法触发比率门",
+  "execution_isolation": "Tests/MathPerformancePreview/App.swift 对 ConversationSearch/RenderedSourceCache 引用数=0（grep refs=0）；math 测量场景（typeset/draw/parse/window）从不执行本轮改动代码 ⇒ 执行路径回归不可能，差异只能经构建/布局通道（HYPOTHESIS，round-24 F4 口径）"
+ },
+ "ratios_median_based": {
+  "typeset-128/cold_attachment": 1.0319,
+  "typeset-128/cold_cpu": 0.9889,
+  "typeset-128/draw_cpu": 1.0782,
+  "typeset-128/first_light_dark_draw": 1.1077,
+  "typeset-128/warm_attachment": 1.0,
+  "typeset-32/cold_attachment": 1.1562,
+  "typeset-32/cold_cpu": 1.138,
+  "typeset-32/draw_cpu": 1.3548,
+  "typeset-32/first_light_dark_draw": 1.303,
+  "typeset-32/warm_attachment": 0.9603,
+  "typeset-512/cold_attachment": 1.1188,
+  "typeset-512/cold_cpu": 1.1164,
+  "typeset-512/draw_cpu": 0.9841,
+  "typeset-512/first_light_dark_draw": 1.0084,
+  "typeset-512/warm_attachment": 0.8082,
+  "window-128/scheduled_tick_gap": 1.0049,
+  "window-128/scroll_cpu": 1.0106,
+  "window-128/scroll_work": 1.0215,
+  "window-30/scheduled_tick_gap": 1.0195,
+  "window-30/scroll_cpu": 0.8202,
+  "window-30/scroll_work": 0.8821
+ },
+ "precedent": "round-24 @2b9e730 同签名（Typeset/draw >15% at 32；candidate 内部一致、baseline 离群）→ 同源码绿对照 + 静机复测 typeset-32 best_ratio 1.0147 passed + 同 head 重跑绿；round-26 @2b9e730 首跑 math 噪声同法化解",
+ "disposition": "静机复测 status=passed、比率门 applied（typeset-32 ratio 1.0659 / best_ratio 1.0339，全部 scenario <1.15）⇒ CI 失败判共享 runner 噪声/构建彩票；同 head gh run rerun --failed；门槛零改动。",
+ "quiet_retest": {
+  "head": "f0c4cdd",
+  "baseline_ref": "ed98b97e816d4eceda25bfe9a4134cacbab99cdb",
+  "gate": "scripts/check-math-performance.sh (real gate, quiet Aqua session via PerfRunner)",
+  "status": "passed",
+  "relative_performance_gates": "applied",
+  "candidate_source_input_sha256": "a7ef17717cfb061d097895b6cccaca5575ec7791e86a7487f6711a106dc12800",
+  "matches_ci_candidate_source_input": true,
+  "typeset_32": {
+   "ratio": 1.065888812397767,
+   "best_ratio": 1.033850702378717
+  },
+  "typeset_128": {
+   "ratio": 0.9957855816951692,
+   "best_ratio": 0.9934674656264372
+  },
+  "typeset_512": {
+   "ratio": 1.0037215554030314,
+   "best_ratio": 0.9896174348359241
+  },
+  "parse_ratios": {
+   "parse_ordinary_backslashes": 1.0029,
+   "parse_plain": 0.9682,
+   "parse_reply": 1.0016,
+   "parse_stream_16": 0.9637,
+   "parse_stream_64": 0.9865,
+   "parse_unclosed_256": 0.9804,
+   "parse_unclosed_1024": 0.998,
+   "parse_unclosed_4096": 1.0116
+  },
+  "duration": "15:08:37→15:11:28 CST（预热快照包增量构建；六轮全跑，round 目录齐全）"
+ }
+}
