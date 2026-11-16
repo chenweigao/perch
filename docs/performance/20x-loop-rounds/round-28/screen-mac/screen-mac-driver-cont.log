@@ -1,0 +1,44 @@
+=== continuation Mon Nov 16 18:42:24 CST 2026 ===
+24670f4a8b6453981d7499112a8172d1edab88f32548cd8de8a8c0502054737c  <worktree>/.build/round28-base/out/Products/Release/WorkbenchChecks
+ae0a36d65bef6b43fe5ced4b825b491caacbb19efb18203e388af5966e3b2ebe  <worktree>/.build/round28-cand/out/Products/Release/WorkbenchChecks
+=== screening: 2 alternating pairs, activity/streaming/1 (in place) Mon Nov 16 18:42:24 CST 2026 ===
+it=1 base mode=activity exit=0
+it=1 base mode=streaming exit=0
+it=1 base mode=1 exit=0
+activity_bench single_turn_calls=200 messages=400 activity_init_median_ms=0.150 active=15
+activity_bench single_turn_calls=1000 messages=2000 activity_init_median_ms=0.715 active=15
+  conversation_activity       median_ms=    0.02
+  chain_total                 median_ms=    0.57
+    conversation_activity       median_ms=    0.03
+source_slots=2000 actual_messages=2333 actual_parts=2333 cold_rows=2333 appended_rows=2334 cold_median_ms=6.42 cold_max_ms=7.03 append_median_ms=0.07 text_bytes=867923
+it=1 cand mode=activity exit=0
+it=1 cand mode=streaming exit=0
+it=1 cand mode=1 exit=0
+activity_bench single_turn_calls=200 messages=400 activity_init_median_ms=0.146 active=15
+activity_bench single_turn_calls=1000 messages=2000 activity_init_median_ms=0.692 active=15
+  conversation_activity       median_ms=    0.02
+  chain_total                 median_ms=    0.57
+    conversation_activity       median_ms=    0.03
+source_slots=2000 actual_messages=2333 actual_parts=2333 cold_rows=2333 appended_rows=2334 cold_median_ms=6.39 cold_max_ms=6.97 append_median_ms=0.07 text_bytes=867923
+it=2 base mode=activity exit=0
+it=2 base mode=streaming exit=0
+it=2 base mode=1 exit=0
+activity_bench single_turn_calls=200 messages=400 activity_init_median_ms=0.151 active=15
+activity_bench single_turn_calls=1000 messages=2000 activity_init_median_ms=0.726 active=15
+  conversation_activity       median_ms=    0.02
+  chain_total                 median_ms=    0.57
+    conversation_activity       median_ms=    0.03
+source_slots=2000 actual_messages=2333 actual_parts=2333 cold_rows=2333 appended_rows=2334 cold_median_ms=6.63 cold_max_ms=7.26 append_median_ms=0.07 text_bytes=867923
+it=2 cand mode=activity exit=0
+it=2 cand mode=streaming exit=0
+it=2 cand mode=1 exit=0
+activity_bench single_turn_calls=200 messages=400 activity_init_median_ms=0.150 active=15
+activity_bench single_turn_calls=1000 messages=2000 activity_init_median_ms=0.717 active=15
+  conversation_activity       median_ms=    0.02
+  chain_total                 median_ms=    0.58
+    conversation_activity       median_ms=    0.03
+source_slots=2000 actual_messages=2333 actual_parts=2333 cold_rows=2333 appended_rows=2334 cold_median_ms=6.75 cold_max_ms=7.39 append_median_ms=0.07 text_bytes=867923
+24670f4a8b6453981d7499112a8172d1edab88f32548cd8de8a8c0502054737c  <worktree>/.build/round28-base/out/Products/Release/WorkbenchChecks
+ae0a36d65bef6b43fe5ced4b825b491caacbb19efb18203e388af5966e3b2ebe  <worktree>/.build/round28-cand/out/Products/Release/WorkbenchChecks
+porcelain_after=0
+DONE Mon Nov 16 18:42:53 CST 2026

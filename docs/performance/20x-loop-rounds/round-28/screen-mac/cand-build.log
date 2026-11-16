@@ -1,0 +1,62 @@
+Fetching https://github.com/Lakr233/MSDisplayLink.git from cache
+Fetching https://github.com/mgriebling/SwiftMath.git from cache
+Fetched https://github.com/Lakr233/MSDisplayLink.git from cache (0.04s)
+Fetching https://github.com/Lakr233/libghostty-spm.git from cache
+Fetched https://github.com/mgriebling/SwiftMath.git from cache (0.07s)
+Fetching https://github.com/apple/swift-asn1.git from cache
+Fetching https://github.com/apple/swift-crypto.git from cache
+Fetching https://github.com/swiftlang/swift-markdown.git from cache
+Fetching https://github.com/swiftlang/swift-cmark.git from cache
+Fetched https://github.com/Lakr233/libghostty-spm.git from cache (0.05s)
+Fetched https://github.com/swiftlang/swift-cmark.git from cache (0.04s)
+Fetched https://github.com/apple/swift-crypto.git from cache (0.06s)
+Fetched https://github.com/apple/swift-asn1.git from cache (0.06s)
+Fetched https://github.com/swiftlang/swift-markdown.git from cache (0.08s)
+Creating working copy for https://github.com/mgriebling/SwiftMath.git
+Creating working copy for https://github.com/apple/swift-crypto.git
+Creating working copy for https://github.com/Lakr233/MSDisplayLink.git
+Creating working copy for https://github.com/swiftlang/swift-markdown.git
+Creating working copy for https://github.com/swiftlang/swift-cmark.git
+Creating working copy for https://github.com/Lakr233/libghostty-spm.git
+Creating working copy for https://github.com/apple/swift-asn1.git
+Working copy of https://github.com/mgriebling/SwiftMath.git resolved at 1.7.3
+Working copy of https://github.com/apple/swift-asn1.git resolved at 1.7.4
+Working copy of https://github.com/Lakr233/MSDisplayLink.git resolved at 2.2.0
+Working copy of https://github.com/swiftlang/swift-cmark.git resolved at 0.8.0
+Working copy of https://github.com/Lakr233/libghostty-spm.git resolved at 121c8e286d24e21ea1a379da3eaa3556d3a1b8f5
+Working copy of https://github.com/swiftlang/swift-markdown.git resolved at 0.8.0
+Working copy of https://github.com/apple/swift-crypto.git resolved at 5.1.1
+Fetching binary artifact https://github.com/Lakr233/libghostty-spm/releases/download/upstream.82938b633ba6/GhosttyKit.xcframework.zip from cache
+Fetched https://github.com/Lakr233/libghostty-spm/releases/download/upstream.82938b633ba6/GhosttyKit.xcframework.zip from cache (2.04s)
+Building for production...
+[Pre-planning 1 / 246]
+[Planning deferred tasks]
+[49 / 148]
+[74 / 161] cmark-gfm-extensions
+[96 / 162]
+[115 / 164] cmark-gfm
+[128 / 164]
+[137 / 202] cmark-gfm-extensions
+[146 / 202] SwiftMath
+[154 / 235]
+[160 / 235]
+[165 / 235] cmark-gfm
+[167 / 235]
+[173 / 235]
+[176 / 235]
+[184 / 235]
+[186 / 235]
+[189 / 235]
+[190 / 235]
+[203 / 235]
+[204 / 235]
+[209 / 235]
+[211 / 235] Markdown
+[218 / 236] WorkbenchCore
+[221 / 238] SwiftMath
+[227 / 238] WorkbenchCore
+[234 / 239] WorkbenchChecks-product
+[236 / 240] WorkbenchChecks-product
+[238 / 240] WorkbenchChecks-product
+[239 / 240] WorkbenchChecks-product
+Build complete! (69.17秒)
