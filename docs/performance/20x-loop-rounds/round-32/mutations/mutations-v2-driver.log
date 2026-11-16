@@ -1,0 +1,41 @@
+=== control build Tue Nov 17 04:06:01 CST 2026 ===
+control_build_exit=0
+control_exit=0 pass=108
+=== mutant skip-verification Tue Nov 17 04:09:01 CST 2026 ===
+.local/round32/mutation-kills-v2.sh: line 25: 1558870 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+skip-verification exit=132 kill_at=
+=== mutant count-guard-only Tue Nov 17 04:11:16 CST 2026 ===
+count-guard-only exit=0 kill_at=
+=== mutant canonical-key Tue Nov 17 04:13:36 CST 2026 ===
+canonical-key exit=0 kill_at=
+=== mutant zero-accounting Tue Nov 17 04:14:42 CST 2026 ===
+.local/round32/mutation-kills-v2.sh: line 25: 1588752 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+zero-accounting exit=132 kill_at=
+=== mutant reverse-lru Tue Nov 17 04:15:43 CST 2026 ===
+.local/round32/mutation-kills-v2.sh: line 25: 1595006 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+reverse-lru exit=132 kill_at=
+=== mutant no-generation-guard Tue Nov 17 04:16:41 CST 2026 ===
+.local/round32/mutation-kills-v2.sh: line 25: 1607243 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+no-generation-guard exit=132 kill_at=
+=== mutant payload-fields-exclusion Tue Nov 17 04:17:42 CST 2026 ===
+.local/round32/mutation-kills-v2.sh: line 25: 1613544 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+payload-fields-exclusion exit=132 kill_at=
+=== mutant entryid-cost-exclusion Tue Nov 17 04:18:43 CST 2026 ===
+.local/round32/mutation-kills-v2.sh: line 25: 1626490 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+entryid-cost-exclusion exit=132 kill_at=
+=== mutant window-exclusion Tue Nov 17 04:19:41 CST 2026 ===
+.local/round32/mutation-kills-v2.sh: line 25: 1648902 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+window-exclusion exit=132 kill_at=
+=== mutant admit-oversized Tue Nov 17 04:20:39 CST 2026 ===
+.local/round32/mutation-kills-v2.sh: line 25: 1655169 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+admit-oversized exit=132 kill_at=
+=== mutant no-locale-observer Tue Nov 17 04:21:38 CST 2026 ===
+.local/round32/mutation-kills-v2.sh: line 25: 1660901 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+no-locale-observer exit=132 kill_at=
+=== mutant replace-accounting-leak Tue Nov 17 04:22:36 CST 2026 ===
+.local/round32/mutation-kills-v2.sh: line 25: 1668221 Illegal instruction     (core dumped) "$BIN" > "$OUT/$name-checks.log" 2>&1
+replace-accounting-leak exit=132 kill_at=
+=== control rerun (tree restored) Tue Nov 17 04:23:35 CST 2026 ===
+control_rebuild_exit=0
+control_rerun_exit=0 pass=108
+DONE Tue Nov 17 04:24:39 CST 2026

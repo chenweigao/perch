@@ -1,0 +1,9 @@
+{
+  "head": "d19529feb45012c8a967c10f9516c6be983b1140",
+  "restored": {
+    "Sources/WorkbenchCore/ConversationSearch.swift": true,
+    "Sources/WorkbenchCore/ConversationPrefixCache.swift": true,
+    "Tests/WorkbenchCoreTests/ConversationPrefixCacheTests.swift": true
+  },
+  "tracked_diff": ""
+}

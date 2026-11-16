@@ -1,0 +1,79 @@
+{
+  "head": "d19529feb45012c8a967c10f9516c6be983b1140",
+  "tracked_diff_empty": true,
+  "d2_conversion_events": [
+    [
+      "结论",
+      "text:u0:0"
+    ],
+    [
+      "结论",
+      "text:a0:0"
+    ],
+    [
+      "结论",
+      "text:u1:0"
+    ],
+    [
+      "结论",
+      "text:a1:0"
+    ],
+    [
+      "结论",
+      "activity:tool:w1"
+    ],
+    [
+      "结论",
+      "text:repeat-a0:0"
+    ]
+  ],
+  "d2_reuse_events": [
+    [
+      "结论",
+      "text:u0:0"
+    ],
+    [
+      "结论",
+      "text:a0:0"
+    ],
+    [
+      "结论",
+      "text:u1:0"
+    ],
+    [
+      "结论",
+      "text:a1:0"
+    ],
+    [
+      "结论",
+      "activity:tool:w1"
+    ],
+    [
+      "结论",
+      "text:repeat-a0:0"
+    ],
+    [
+      "结论",
+      "text:u2:0"
+    ],
+    [
+      "结论",
+      "text:a2:0"
+    ]
+  ],
+  "final_pass_lines": 108,
+  "final_skip_lines": [
+    "SKIP: math rendering smoke check requires AppKit"
+  ],
+  "final_binary_sha256": "1de1dc262afe33f7d4d2cd727ebb615fc63a06a4dcf980f30a9c7e7b64c8ebfc",
+  "temporary_build_output_removed": true,
+  "retention_probes": [
+    "REVIEW_FILE_ID budget=256 estimated=157 retained_file_id_utf8=8388608 entries=2",
+    "REVIEW_QUERY_SHARING budget=3145728 estimated=2098135 distinct_query_buffers=8 payload_query_buffers=7 payload_shares_node=false retained_query_utf8=8388608 node_query_accounted=1048576 entries=14",
+    "REVIEW_PART_STORAGE public_search=true budget=256 estimated=126 retained_part_element_bytes=12058624 parts=65536",
+    "REVIEW_OFFSETS synthetic_public_payload=true budget=64 estimated=20 retained_offsets_bytes=8388608",
+    "REVIEW_LAYOUT message_stride=80 part_stride=184 hit_stride=72",
+    "REVIEW_SENTINEL_SHARED_HIT consumed=true",
+    "REVIEW_SENTINEL_CONVERSION consumed=true"
+  ]
+}

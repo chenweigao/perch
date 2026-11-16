@@ -1,0 +1,6 @@
+macos-ab-v2-summary.json metrics= 89 arithmetic_mismatches= 0 positives= []
+linux-ab-v2-summary.json metrics= 96 arithmetic_mismatches= 0 positives= ['edit64_unchanged', 'find_bar_cold_query']
+linux-ab-v2-edit-extra-summary.json metrics= 20 arithmetic_mismatches= 0 positives= ['edit512_unchanged', 'edit64_crlf']
+macos-ab-v1-summary.json metrics= 89 arithmetic_mismatches= 0 positives= []
+linux-ab-v1-summary.json metrics= 96 arithmetic_mismatches= 0 positives= ['edit64_last', 'edit64_unicode', 'find_bar_cold_query']
+raw_mismatches= 0 checks= {'base': {'pass': 108, 'skip': 0}, 'cand': {'pass': 109, 'skip': 0}} mac_hashes_equal= True

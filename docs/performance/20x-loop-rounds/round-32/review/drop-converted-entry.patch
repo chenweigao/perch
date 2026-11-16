@@ -1,0 +1,11 @@
+--- Sources/WorkbenchCore/ConversationSearch.swift
++++ Sources/WorkbenchCore/ConversationSearch.swift
+@@ -96,7 +96,7 @@
+             switch self {
+             case .owned(let entries): return entries[id]
+             case .shared(let node):
+-                guard let payload = node.payload(entryID: id) else { return nil }
++                guard let payload = node.payload(entryID: id), false else { return nil }
+                 return Entry(sources: payload.sources, text: payload.text,
+                              sourceEnds: payload.sourceEnds, role: payload.role,
+                              messages: payload.messages, isRunning: payload.isRunning,

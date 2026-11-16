@@ -1,0 +1,10 @@
+candidate_rebuild_exit=0
+candidate_rebuild_head=ec3111e3502c96098404ced3dc31f8567c2ca7b0
+candidate_rebuild_porcelain=1
+?? docs/performance/20x-loop-rounds/2026-11-17-round-32.md
+48963f94741a52d560721fa112a26371e9e2ff72f54381786a105b098e7b5cae  .build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+baseline_rebuild_head=5eb726ae3d2f7ffd09d08c9be11f468983993f6d
+baseline_rebuild_porcelain=2
+?? build.log
+?? rebuild.log
+fef67d8e5111789a3094272c5d5c5ed9ca77f14eed7f1ebcf5563562619ab5f9  /tmp/r32v3-ab-base/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks

@@ -1,0 +1,61 @@
+PASS: step reading preserves order, edit identities, historical patches and outcome-aware churn
+PASS: phase reading groups Bash and thoughts, preserves edit receipts, separates historical failures from pending work and uses grounded command labels
+PASS: live public summaries, completed process folding, manual expansion, uniform folding of edits and failures
+PASS: PI steady streaming cadence, Unicode boundaries, replacement and immediate completion
+PASS: parsed-block release retains Unicode, styling, links and complete rich Markdown
+PASS: incremental reply parse matches full parses at every streaming prefix
+PASS: live progress, missing summaries, thinking-only output, tool-only notice and provider model groups
+PASS: process fold groups completed turns, preserves order, keeps the running turn live
+PASS: presentation parity, same-ID edits, pagination, epoch/language/live handoff, scoped LRU, oversized active state and metrics
+PASS: presentation history reuse matches complete recomputation across tokens, paging, crossings, language, epoch and overlays
+PASS: paging and new prompts reuse unchanged earlier turns and match complete recomputation (19/20 pages)
+PASS: window identity reuse ends at any earlier in-place edit, survives a rebuilt window and matches complete recomputation
+
+*** Signal 4: Backtracing from 0x5597961db30e... done ***
+
+*** Swift runtime failure: precondition failure ***
+
+Platform: x86_64 Linux (Alibaba Cloud Linux 3 (Soaring Falcon))
+
+Thread 0 "WorkbenchChecks" crashed:
+
+  0 [inlined] [system] 0x00005597961db30e Swift runtime failure: precondition failure in WorkbenchChecks at //<compiler-generated>
+  1                    0x00005597961db30e checkSearchEntryReuse() + 11038 in WorkbenchChecks at <worktree>/Tests/WorkbenchCoreTests/SearchEntryReuseTests.swift:120:5
+  2 [ra]               0x000055979617f533 specialized static ProtocolTests.main() + 418 in WorkbenchChecks at <worktree>/Tests/WorkbenchCoreTests/ProtocolTests.swift:45:13
+  3 [async] [system]   0x0000559796178830 specialized thunk for @escaping @convention(thin) @async () -> () in WorkbenchChecks at //<compiler-generated>
+  4 [async]            0x00007fd47009d190 completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*) in libswift_Concurrency.so
+...
+
+
+Registers:
+
+rax 0xe200000000000000  16285016252571713536
+rdx 0x00007fd46fdf6e60  60 d0 de 6f d4 7f 00 00 ff ff ff ff 04 00 00 80  `ÐÞoÔ···ÿÿÿÿ····
+rcx 0xfffffffe00000000  18446744065119617024
+rbx 0x80000002ffffffff  9223372049739677695
+rsi 0x0000000000000000  0
+rdi 0x00007fd46fdf6e60  60 d0 de 6f d4 7f 00 00 ff ff ff ff 04 00 00 80  `ÐÞoÔ···ÿÿÿÿ····
+rbp 0x00007ffe7b4eadf0  50 ae 4e 7b fe 7f 00 00 33 f5 17 96 97 55 00 00  P®N{þ···3õ···U··
+rsp 0x00007ffe7b4ea220  50 01 00 00 00 00 00 30 a0 74 8c 96 97 55 00 00  P······0 t···U··
+ r8 0x0000000000000000  0
+ r9 0x0000000000000000  0
+r10 0x0000000000000000  0
+r11 0xecdce0cda3350e00  17067763861638417920
+r12 0x0000000000000000  0
+r13 0x0000000000000001  1
+r14 0x00007fd46fdf6e60  60 d0 de 6f d4 7f 00 00 ff ff ff ff 04 00 00 80  `ÐÞoÔ···ÿÿÿÿ····
+r15 0x0000000000000000  0
+rip 0x00005597961db30e  0f 0b 49 89 c7 48 8d bd a0 f9 ff ff e8 11 7e eb  ··I·ÇH·½ ùÿÿè·~ë
+
+rflags 0x0000000000010293  SF AF CF
+
+cs 0x0033  fs 0x0000  gs 0x0000
+
+
+Images (48 omitted):
+
+0x0000559795e00000–0x0000559796609a88 311e9d1a9e9ad8713deaeca2d116c2e2d35b2f65 WorkbenchChecks         <worktree>/review-artifacts/build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+0x00007fd470011000–0x00007fd4700a4660 ab7a387eca696d31db096d9ebebea096c2cf1bc3 libswift_Concurrency.so /home/<dev>/.local/swift/6.3.3/usr/lib/swift/linux/libswift_Concurrency.so
+
+Backtrace took 0.65s
+

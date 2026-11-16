@@ -1,0 +1,2 @@
+3afe11a8be8d677f52cbe3449a5ec542eebc9e55369c505bcc568171a048c41e  .local/round32/base-checks32v1
+81d1fd6ff00b589985098fba731b0b84542f2a83228fe458a0b6afb20d75340e  .local/round32/cand-checks32v1

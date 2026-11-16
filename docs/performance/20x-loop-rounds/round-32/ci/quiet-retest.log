@@ -1,0 +1,17 @@
+=== prepare Tue Nov 17 05:03:58 CST 2026 ===
+HEAD is now at ec3111e3 perf(core): round-32 v3 — review closure: retention accounting + normalization + mechanism sentinels
+HEAD=ec3111e3502c96098404ced3dc31f8567c2ca7b0
+porcelain_before=0
+=== math gate Tue Nov 17 05:04:01 CST 2026 ===
+math_exit=0
+  },
+  "scope": "same-runner sequential synthetic A/B; window timings are not hardware input latency or FPS"
+}
+status: passed
+  typeset-32: ratio=0.9611 best_ratio=1.0129
+  typeset-128: ratio=1.0025 best_ratio=0.9936
+  typeset-512: ratio=0.9939 best_ratio=0.9939
+input_comparison: {"baseline": "c5c03c8b0e620f1e0944cfba12d4d129a522fdf7c6074974c986004ec2bd32f0", "candidate": "22ae55e25e4418308e9a032f9e68d812fcdddcf3f6072d8a27bb1ad4f74a1f30", "relative_performance_gates": "applied"}
+porcelain_after=0
+DONE Tue Nov 17 05:06:40 CST 2026
+exit=0

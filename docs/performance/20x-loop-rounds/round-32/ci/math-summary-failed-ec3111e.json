@@ -1,0 +1,65 @@
+{
+  "status": "failed",
+  "binary_sha256": {
+    "baseline": "6708af3449e5975ddf26b8d65e40719f609f0edd124a0d2f9989eab3d9041512",
+    "candidate": "ff30ba70cca8c0627392b2cb512a9f58f55c07ea33131bdf4248172e1742b748",
+    "contracts": "5223c7b8c792bd365f41595afa340ded8f295bce855caf9a0851ee7d35c82af9"
+  },
+  "order": [
+    "baseline",
+    "candidate",
+    "candidate",
+    "baseline",
+    "baseline",
+    "candidate"
+  ],
+  "contracts": {
+    "cpu_count": 3,
+    "dependencies": {
+      "swift-cmark": {
+        "revision": "924936d0427cb25a61169739a7660230bffa6ea6",
+        "version": "0.8.0"
+      },
+      "swift-markdown": {
+        "revision": "3c6f9523da3a1ec2fd829673e472d95b8097a3b8",
+        "version": "0.8.0"
+      },
+      "swiftmath": {
+        "revision": "fa8244ed032f4a1ade4cb0571bf87d2f1a9fd2d7",
+        "version": "1.7.3"
+      }
+    },
+    "fixture": "synthetic; no sessions or network",
+    "measurements": {
+      "cache": {
+        "cache_hits": 128,
+        "cost_estimate_bytes": 17790152,
+        "entries": 1,
+        "failed_bytes": 65508,
+        "failures": 106,
+        "inline_entries": 1,
+        "requests": 1288,
+        "typesets": 1808
+      },
+      "checks": [
+        "nonblank light/dark, font-size geometry, boxed border dimensions and explicit TeX color",
+        "native inks typeset once each; cache hits and appearance revisits do not typeset",
+        "display images generate only requested native ink and reuse appearances",
+        "128-formula inline working set is reused without typesetting",
+        "successful and failed cache entry/byte budgets under churn"
+      ]
+    },
+    "mode": "contracts",
+    "os": "Version 27.0.1 (Build 26A434)",
+    "physical_memory_bytes": 7516192768,
+    "revision": "aafc62bbe22410c883b965936c72f9452c202a64",
+    "scope": "isolated synthetic AppKit/SwiftUI work; not hardware input latency or certified FPS",
+    "source_input_sha256": "22ae55e25e4418308e9a032f9e68d812fcdddcf3f6072d8a27bb1ad4f74a1f30",
+    "status": "passed",
+    "suffix_search": false,
+    "swiftmath_patch_sha256": "68686f9cd8fbe4b1134ace3a22f162828b9d4bd89eb84816f050379aa06bb855",
+    "toolchain": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+    "variant": "candidate"
+  },
+  "error": "Typeset/draw regression exceeds 15% at 32"
+}

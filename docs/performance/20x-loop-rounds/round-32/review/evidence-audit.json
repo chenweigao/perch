@@ -1,0 +1,576 @@
+{
+  "summaries": {
+    "macos-ab-v2-summary.json": {
+      "metrics": 89,
+      "arithmetic_mismatches": [],
+      "positives_beyond_spread": [],
+      "focused": {
+        "edit64_unchanged": {
+          "baseline_median": 0.0884166220203042,
+          "baseline_samples": [
+            0.08870824240148067,
+            0.08791661821305752,
+            0.0887083588168025,
+            0.08695828728377819,
+            0.09320839308202267,
+            0.08812500163912773
+          ],
+          "candidate_median": 0.09062502067536116,
+          "candidate_samples": [
+            0.09154167491942644,
+            0.09549991227686405,
+            0.0923332991078496,
+            0.08820835500955582,
+            0.0864582834765315,
+            0.08970836643129587
+          ],
+          "change_percent": 2.4977188729850046,
+          "max_spread_percent": 10.45779355865518,
+          "worst_pair_percent": 8.625552504111504
+        },
+        "edit64_unicode": {
+          "baseline_median": 0.12081250315532088,
+          "baseline_samples": [
+            0.12354168575257063,
+            0.11929171159863472,
+            0.12025004252791405,
+            0.11833338066935539,
+            0.12562505435198545,
+            0.12137496378272772
+          ],
+          "candidate_median": 0.12066669296473265,
+          "candidate_samples": [
+            0.11908344458788633,
+            0.12149999383836985,
+            0.13579160440713167,
+            0.12245832476764917,
+            0.11862500105053186,
+            0.11983339209109545
+          ],
+          "change_percent": -0.1206913082504193,
+          "max_spread_percent": 14.471319877406938,
+          "worst_pair_percent": 12.924371212267896
+        },
+        "find_bar_cold_query": {
+          "baseline_median": 625.19,
+          "baseline_samples": [
+            625.47,
+            619.95,
+            627.37,
+            622.86,
+            626.96,
+            624.91
+          ],
+          "candidate_median": 629.5550000000001,
+          "candidate_samples": [
+            629.2,
+            627.3,
+            629.64,
+            629.53,
+            633.18,
+            629.58
+          ],
+          "change_percent": 0.6981877509237205,
+          "max_spread_percent": 1.1968707153802658,
+          "worst_pair_percent": 1.185579482216293
+        },
+        "find_bar_query_update": {
+          "baseline_median": 0.27,
+          "baseline_samples": [
+            0.28,
+            0.27,
+            0.27,
+            0.27,
+            0.26,
+            0.28
+          ],
+          "candidate_median": 0.28,
+          "candidate_samples": [
+            0.28,
+            0.27,
+            0.28,
+            0.27,
+            0.28,
+            0.28
+          ],
+          "change_percent": 3.703703703703707,
+          "max_spread_percent": 7.692307692307699,
+          "worst_pair_percent": 7.692307692307699
+        },
+        "find_bar_reopen_query": {
+          "baseline_median": 16.115,
+          "baseline_samples": [
+            16.15,
+            16.08,
+            16.03,
+            16.0,
+            16.31,
+            16.39
+          ],
+          "candidate_median": 0.1,
+          "candidate_samples": [
+            0.1,
+            0.1,
+            0.11,
+            0.1,
+            0.1,
+            0.11
+          ],
+          "change_percent": -99.37946013031336,
+          "max_spread_percent": 9.999999999999995,
+          "worst_pair_percent": -99.3137866500312
+        }
+      }
+    },
+    "linux-ab-v2-summary.json": {
+      "metrics": 96,
+      "arithmetic_mismatches": [],
+      "positives_beyond_spread": [
+        "edit64_unchanged",
+        "find_bar_cold_query"
+      ],
+      "focused": {
+        "edit64_unchanged": {
+          "baseline_median": 0.09734183549880981,
+          "baseline_samples": [
+            0.09744241833686829,
+            0.09724125266075134,
+            0.09904243052005768,
+            0.09846314787864685,
+            0.09707175195217133,
+            0.09715370833873749
+          ],
+          "candidate_median": 0.10053440928459167,
+          "candidate_samples": [
+            0.10094232857227325,
+            0.09838305413722992,
+            0.099891796708107,
+            0.10037422180175781,
+            0.10094419121742249,
+            0.10069459676742554
+          ],
+          "change_percent": 3.2797550707998466,
+          "max_spread_percent": 2.6032298983320397,
+          "worst_pair_percent": 3.9892545332437876
+        },
+        "edit64_unicode": {
+          "baseline_median": 0.1361677423119545,
+          "baseline_samples": [
+            0.1357831060886383,
+            0.13838522136211395,
+            0.13727322220802307,
+            0.1365523785352707,
+            0.13350509107112885,
+            0.13566389679908752
+          ],
+          "candidate_median": 0.14018546789884567,
+          "candidate_samples": [
+            0.14021620154380798,
+            0.13960525393486023,
+            0.13967417180538177,
+            0.14099664986133575,
+            0.14062412083148956,
+            0.14015473425388336
+          ],
+          "change_percent": 2.9505707582980527,
+          "max_spread_percent": 3.6553889082664806,
+          "worst_pair_percent": 5.332403208929194
+        },
+        "find_bar_cold_query": {
+          "baseline_median": 334.83500000000004,
+          "baseline_samples": [
+            339.24,
+            334.29,
+            332.62,
+            335.54,
+            333.51,
+            335.38
+          ],
+          "candidate_median": 345.17499999999995,
+          "candidate_samples": [
+            343.43,
+            343.67,
+            345.27,
+            345.08,
+            345.34,
+            350.14
+          ],
+          "change_percent": 3.088088162826442,
+          "max_spread_percent": 1.9902591545908257,
+          "worst_pair_percent": 4.400977995110022
+        },
+        "find_bar_query_update": {
+          "baseline_median": 0.53,
+          "baseline_samples": [
+            0.53,
+            0.54,
+            0.53,
+            0.53,
+            0.52,
+            0.55
+          ],
+          "candidate_median": 0.53,
+          "candidate_samples": [
+            0.52,
+            0.53,
+            0.54,
+            0.53,
+            0.52,
+            0.54
+          ],
+          "change_percent": 0.0,
+          "max_spread_percent": 5.7692307692307745,
+          "worst_pair_percent": 1.8867924528301903
+        },
+        "find_bar_reopen_query": {
+          "baseline_median": 46.89,
+          "baseline_samples": [
+            47.52,
+            47.09,
+            46.32,
+            46.69,
+            45.6,
+            47.31
+          ],
+          "candidate_median": 0.17,
+          "candidate_samples": [
+            0.17,
+            0.16,
+            0.17,
+            0.17,
+            0.17,
+            0.17
+          ],
+          "change_percent": -99.63744934954147,
+          "max_spread_percent": 6.250000000000005,
+          "worst_pair_percent": -99.62719298245614
+        }
+      }
+    },
+    "linux-ab-v2-edit-extra-summary.json": {
+      "metrics": 20,
+      "arithmetic_mismatches": [],
+      "positives_beyond_spread": [
+        "edit512_unchanged",
+        "edit64_crlf"
+      ],
+      "focused": {
+        "edit64_unchanged": {
+          "baseline_median": 0.09746383875608444,
+          "baseline_samples": [
+            0.09721331298351288,
+            0.0970941036939621,
+            0.09780190885066986,
+            0.097714364528656,
+            0.09706243872642517,
+            0.09817443788051605
+          ],
+          "candidate_median": 0.09923893958330154,
+          "candidate_samples": [
+            0.09845197200775146,
+            0.09979307651519775,
+            0.0993441790342331,
+            0.09913370013237,
+            0.09755045175552368,
+            0.09976513683795929
+          ],
+          "change_percent": 1.8212917220093452,
+          "max_spread_percent": 2.298938364011304,
+          "worst_pair_percent": 2.779749458054367
+        },
+        "edit64_unicode": {
+          "baseline_median": 0.13626553118228912,
+          "baseline_samples": [
+            0.13405270874500275,
+            0.1348443329334259,
+            0.13739429414272308,
+            0.13813190162181854,
+            0.13732537627220154,
+            0.1352056860923767
+          ],
+          "candidate_median": 0.1375153660774231,
+          "candidate_samples": [
+            0.13744458556175232,
+            0.14152377843856812,
+            0.13357587158679962,
+            0.1343023031949997,
+            0.13758614659309387,
+            0.13935379683971405
+          ],
+          "change_percent": 0.9172054622250776,
+          "max_spread_percent": 5.950106675219277,
+          "worst_pair_percent": 4.953449180871343
+        }
+      }
+    },
+    "macos-ab-v1-summary.json": {
+      "metrics": 89,
+      "arithmetic_mismatches": [],
+      "positives_beyond_spread": [],
+      "focused": {
+        "edit64_unchanged": {
+          "baseline_median": 0.08872919715940952,
+          "baseline_samples": [
+            0.08766667451709509,
+            0.0891250092536211,
+            0.08833338506519794,
+            0.08774991147220135,
+            0.09245832916349173,
+            0.0895416596904397
+          ],
+          "candidate_median": 0.08718750905245543,
+          "candidate_samples": [
+            0.0891250092536211,
+            0.08862500544637442,
+            0.08720834739506245,
+            0.08691661059856415,
+            0.08712499402463436,
+            0.0871666707098484
+          ],
+          "change_percent": -1.73752063166347,
+          "max_spread_percent": 5.465765266894274,
+          "worst_pair_percent": 1.663499550495252
+        },
+        "edit64_unicode": {
+          "baseline_median": 0.11943752178922296,
+          "baseline_samples": [
+            0.11887506116181612,
+            0.11912500485777855,
+            0.11975003872066736,
+            0.11849997099488974,
+            0.12312503531575203,
+            0.12237497139722109
+          ],
+          "candidate_median": 0.12081244494765997,
+          "candidate_samples": [
+            0.12166670057922602,
+            0.11954165529459715,
+            0.1184582943096757,
+            0.12391665950417519,
+            0.12120825704187155,
+            0.12041663285344839
+          ],
+          "change_percent": 1.1511651764371045,
+          "max_spread_percent": 4.60783706730585,
+          "worst_pair_percent": 4.571046274364947
+        },
+        "find_bar_cold_query": {
+          "baseline_median": 622.615,
+          "baseline_samples": [
+            618.28,
+            617.48,
+            621.38,
+            631.03,
+            623.85,
+            624.47
+          ],
+          "candidate_median": 628.8399999999999,
+          "candidate_samples": [
+            622.06,
+            628.53,
+            631.06,
+            632.81,
+            629.15,
+            627.3
+          ],
+          "change_percent": 0.9998152951663403,
+          "max_spread_percent": 2.1944030575889024,
+          "worst_pair_percent": 1.7895316447496201
+        },
+        "find_bar_query_update": {
+          "baseline_median": 0.27,
+          "baseline_samples": [
+            0.28,
+            0.27,
+            0.27,
+            0.29,
+            0.27,
+            0.27
+          ],
+          "candidate_median": 0.28,
+          "candidate_samples": [
+            0.28,
+            0.27,
+            0.28,
+            0.28,
+            0.28,
+            0.27
+          ],
+          "change_percent": 3.703703703703707,
+          "max_spread_percent": 7.407407407407393,
+          "worst_pair_percent": 3.703703703703707
+        },
+        "find_bar_reopen_query": {
+          "baseline_median": 16.45,
+          "baseline_samples": [
+            16.31,
+            16.26,
+            16.7,
+            16.59,
+            16.26,
+            16.66
+          ],
+          "candidate_median": 0.1,
+          "candidate_samples": [
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+            0.1,
+            0.1
+          ],
+          "change_percent": -99.39209726443768,
+          "max_spread_percent": 2.7060270602705887,
+          "worst_pair_percent": -99.38499384993848
+        }
+      }
+    },
+    "linux-ab-v1-summary.json": {
+      "metrics": 96,
+      "arithmetic_mismatches": [],
+      "positives_beyond_spread": [
+        "edit64_last",
+        "edit64_unicode",
+        "find_bar_cold_query"
+      ],
+      "focused": {
+        "edit64_unchanged": {
+          "baseline_median": 0.09817816317081451,
+          "baseline_samples": [
+            0.09816326200962067,
+            0.09819306433200836,
+            0.09903125464916229,
+            0.09955279529094696,
+            0.09775161743164062,
+            0.09689480066299438
+          ],
+          "candidate_median": 0.10040774941444397,
+          "candidate_samples": [
+            0.10065175592899323,
+            0.10016374289989471,
+            0.1021120697259903,
+            0.10377168655395508,
+            0.09880401194095612,
+            0.09905174374580383
+          ],
+          "change_percent": 2.2709594186950994,
+          "max_spread_percent": 5.027806579319446,
+          "worst_pair_percent": 4.2378430968997325
+        },
+        "edit64_unicode": {
+          "baseline_median": 0.13604853302240372,
+          "baseline_samples": [
+            0.13614259660243988,
+            0.13536401093006134,
+            0.13478286564350128,
+            0.138845294713974,
+            0.13595446944236755,
+            0.13741664588451385
+          ],
+          "candidate_median": 0.15830527991056442,
+          "candidate_samples": [
+            0.15751458704471588,
+            0.1596752554178238,
+            0.15909597277641296,
+            0.15736743807792664,
+            0.15736371278762817,
+            0.16671419143676758
+          ],
+          "change_percent": 16.359417035754138,
+          "max_spread_percent": 5.941953505989299,
+          "worst_pair_percent": 21.32023043036259
+        },
+        "find_bar_cold_query": {
+          "baseline_median": 334.235,
+          "baseline_samples": [
+            335.89,
+            333.02,
+            337.08,
+            333.68,
+            334.79,
+            333.1
+          ],
+          "candidate_median": 345.375,
+          "candidate_samples": [
+            344.9,
+            346.46,
+            345.43,
+            345.32,
+            343.19,
+            347.54
+          ],
+          "change_percent": 3.3329842775292793,
+          "max_spread_percent": 1.267519449867427,
+          "worst_pair_percent": 4.3350345241669155
+        },
+        "find_bar_query_update": {
+          "baseline_median": 0.535,
+          "baseline_samples": [
+            0.55,
+            0.54,
+            0.53,
+            0.53,
+            0.53,
+            0.54
+          ],
+          "candidate_median": 0.525,
+          "candidate_samples": [
+            0.53,
+            0.52,
+            0.53,
+            0.52,
+            0.52,
+            0.53
+          ],
+          "change_percent": -1.8691588785046744,
+          "max_spread_percent": 3.7735849056603805,
+          "worst_pair_percent": 0.0
+        },
+        "find_bar_reopen_query": {
+          "baseline_median": 47.28,
+          "baseline_samples": [
+            47.2,
+            50.11,
+            48.1,
+            47.36,
+            46.21,
+            46.57
+          ],
+          "candidate_median": 0.16,
+          "candidate_samples": [
+            0.16,
+            0.17,
+            0.16,
+            0.18,
+            0.15,
+            0.15
+          ],
+          "change_percent": -99.66159052453469,
+          "max_spread_percent": 20.0,
+          "worst_pair_percent": -99.61993243243244
+        }
+      }
+    }
+  },
+  "raw_checks": {
+    "base": {
+      "pass": 108,
+      "skip": 0
+    },
+    "cand": {
+      "pass": 109,
+      "skip": 0
+    }
+  },
+  "receipts": {
+    "mac_hashes_first_equal_last": true,
+    "linux_v1_rebuild": "candidate_rebuild_exit=0\ncandidate_rebuild_head=c38e85f688a90516e46338dced0b8e0c3f222c8b\ncandidate_rebuild_porcelain=1\n?? docs/performance/20x-loop-rounds/2026-11-17-round-32.md\n81d1fd6ff00b589985098fba731b0b84542f2a83228fe458a0b6afb20d75340e  .build/x86_64-unknown-linux-gnu/release/WorkbenchChecks\nbaseline_rebuild_head=5eb726ae3d2f7ffd09d08c9be11f468983993f6d\nbaseline_rebuild_porcelain=2\n?? build.log\n?? rebuild.log\n86b9d633e231f5a47be7e84ebea512782c007615a2683e924c368077f7be13d2  /tmp/r32-ab-base/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks\n",
+    "linux_v2_rebuild": "candidate_rebuild_exit=0\ncandidate_rebuild_head=d19529feb45012c8a967c10f9516c6be983b1140\ncandidate_rebuild_porcelain=1\n?? docs/performance/20x-loop-rounds/2026-11-17-round-32.md\nbe0f4c736f205c9ab2f1ab51b4efdbb31c5aeb99377285cb0f7877799e2f9884  .build/x86_64-unknown-linux-gnu/release/WorkbenchChecks\nbaseline_rebuild_head=5eb726ae3d2f7ffd09d08c9be11f468983993f6d\nbaseline_rebuild_porcelain=2\n?? build.log\n?? rebuild.log\n429eac7481d48db95a89b3b71e602fff61ceaeabe127b110445603bcbdea0817  /tmp/r32v2-ab-base/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks\n"
+  },
+  "raw_mismatches": [],
+  "raw_comparisons": {
+    "streaming_values": 72,
+    "edit_values": 720,
+    "all_v1_v2_values": 4440
+  }
+}

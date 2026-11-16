@@ -1,0 +1,14 @@
+--- Sources/WorkbenchCore/ConversationPrefixCache.swift
++++ Sources/WorkbenchCore/ConversationPrefixCache.swift
+@@ -201,10 +201,7 @@
+         // storage identity, else value equality plus byte-identical
+         // rendered fields. The count guard rejects turn-boundary moves
+         // before the structural walk.
+-        guard node.source.count == prefix.count,
+-              KimiMessage.sameSearchableWindow(prefix, node.source[...]) else {
+-            return nil
+-        }
++        _ = prefix
+ 
+         lock.lock()
+         if var fresh = table[key], fresh.generation == currentGeneration {

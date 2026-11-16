@@ -1,0 +1,11 @@
+--- Sources/WorkbenchCore/ConversationSearch.swift
++++ Sources/WorkbenchCore/ConversationSearch.swift
+@@ -168,7 +168,7 @@
+            earlier.source.count == prefix.count, KimiMessage.sameSearchableWindow(prefix, earlier.source) {
+             hits = earlier.hits
+             self.earlier?.source = prefix
+-        } else if let node = prefixCache.node(forKey: prefixKey, prefix: prefix) {
++        } else if false, let node = prefixCache.node(forKey: prefixKey, prefix: prefix) {
+             // Round 32: cross-instance prefix reuse — one whole-window
+             // verification inside node(forKey:) plus reference adoption of
+             // the immutable node replaces timeline construction, per-entry
