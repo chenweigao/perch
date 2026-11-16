@@ -1,0 +1,21 @@
+drop-duplicate exit=132 | 
+reverse-lru exit=132 | 
+zero-accounting exit=132 | 
+admit-oversized exit=132 | 
+no-locale-observer exit=132 | 
+string-key exit=132 | 
+
+Kill locations (backtrace symbol, release-optimized; all exit 132 = Swift precondition trap):
+- drop-duplicate: PresentationHistoryTests.swift:353 in checkConversationPresentationPaging
+  (PRE-EXISTING cross-instance equality pin killed it before the round-27 pin ran — defense in
+  depth). The round-27 v3 pin independently kills it: reviewer-measured mutant shape (3 hits vs
+  4) violates the exact count==4 + entryID-order assertions.
+- reverse-lru: RenderedSourceCacheTests.swift:86 (touch-retention / victim-identity assertion)
+- zero-accounting: RenderedSourceCacheTests.swift:65 (exact cost accounting assertion)
+- admit-oversized: RenderedSourceCacheTests.swift:88 (non-empty-table sentinel assertions)
+- no-locale-observer: checkRenderedSourceCache locale-generation assertions (line attribution
+  approximate under -O)
+- string-key: SearchEntryReuseTests.swift:363 in checkSearchCacheHoleProbes (PRE-EXISTING
+  round-12 NFC/NFD hole probe killed it first; the v3 keying assertion kills it independently)
+Mutation sources: mut-*.py in this dir; driver: mutation-kills.sh; build+run logs per mutant.
+Build failures would not count as kills (script distinguishes build_fail; none occurred).
