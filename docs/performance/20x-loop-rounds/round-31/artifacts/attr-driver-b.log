@@ -1,0 +1,24 @@
+=== prepare Tue Nov 17 01:56:22 CST 2026 ===
+HEAD is now at a378a9c5 Merge pull request #352 from chenweigao/perf/20x-loop-30-20261116
+HEAD=a378a9c58b1c58135b9e24d406e44fa56061724e
+porcelain_before=0
+=== apply temporary profile loop modes ===
+porcelain_applied=2
+=== build Tue Nov 17 01:56:26 CST 2026 ===
+build_exit=0
+9789a0a065ad034fa0024eb0827d053898c9e209459134f0952ec59406a30e3c  <worktree>/.build/round31-profile/out/Products/Release/WorkbenchChecks
+=== timing context runs (5s, untraced) Tue Nov 17 01:57:39 CST 2026 ===
+r31_profile shared=false iterations=9
+r31_profile_median_ms=615.164 min_ms=611.729 max_ms=632.247
+r31_profile shared=true iterations=294
+r31_profile_median_ms=15.856 min_ms=15.056 max_ms=17.486
+=== record cold Tue Nov 17 01:57:51 CST 2026 ===
+File does not exist at path: <worktree>/.local/round31b
+record_cold_exit=0
+File does not exist at path: <worktree>/.local/round31b/cold.trace
+=== record reopen Tue Nov 17 01:57:52 CST 2026 ===
+File does not exist at path: <worktree>/.local/round31b
+record_reopen_exit=0
+File does not exist at path: <worktree>/.local/round31b/reopen.trace
+ls: .local/round31b/: No such file or directory
+exit=1

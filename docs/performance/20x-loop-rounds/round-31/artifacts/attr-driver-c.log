@@ -1,0 +1,10 @@
+=== prepare Tue Nov 17 01:59:25 CST 2026 ===
+HEAD is now at a378a9c5 Merge pull request #352 from chenweigao/perf/20x-loop-30-20261116
+M	Tests/WorkbenchCoreTests/ProtocolTests.swift
+M	Tests/WorkbenchCoreTests/StreamingBench.swift
+HEAD=a378a9c58b1c58135b9e24d406e44fa56061724e
+porcelain_before=2
+=== apply temporary profile loop modes ===
+porcelain_applied=2
+=== build Tue Nov 17 01:59:28 CST 2026 ===
+exit=1
