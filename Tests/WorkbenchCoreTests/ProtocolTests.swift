@@ -44,6 +44,7 @@ struct ProtocolTests {
         try checkWindowIdentityReuse()
         try checkSearchEntryReuse()
         try checkSearchCacheHoleProbes()
+        try checkRenderedSourceCache()
         checkCollapsedWhitespace()
         try checkTurnExcerpt()
         checkCompactionSummaryDisplay()

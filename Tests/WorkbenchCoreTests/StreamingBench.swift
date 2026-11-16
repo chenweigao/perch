@@ -94,7 +94,11 @@ func benchStreamingDelta() throws {
 
     let handle = ConversationPresentationHandle()
     let cache = ConversationPresentationCache()
-    let findBar = ConversationSearch()
+    // Round 27: existing find-bar metrics keep their exact pre-cache
+    // semantics — this instance renders everything itself (a fresh
+    // RenderedSourceCache, no cross-instance reuse), so find_bar_query_update
+    // and find_bar_cold_query measure precisely what they measured before.
+    let findBar = ConversationSearch(renderedCache: RenderedSourceCache())
     var findStage: [Double] = []
     let key = "host:kimi:s"
     var stages: [String: [Double]] = [:]
@@ -233,11 +237,29 @@ func benchStreamingDelta() throws {
     let coldWindow = conversation.displayMessages
     var coldFind: [Double] = []
     for _ in 0..<5 {
-        let fresh = ConversationSearch()
+        let fresh = ConversationSearch(renderedCache: RenderedSourceCache())
         let t = benchNow()
         let found = fresh.hits(in: coldWindow, query: "已经处理", running: true)
         coldFind.append(ms(t))
         precondition(found.hits.count >= completedTurns)
+    }
+    // Round 27: the find-bar REOPEN shape — a fresh ConversationSearch over
+    // the process-wide shared rendered-source cache (the find bar re-renders
+    // nothing on reopen; the history worker reuses renders across
+    // keystrokes). Measured after every pre-existing metric so it cannot
+    // disturb them; the shared cache is warmed once, out of timing, by the
+    // first search, and every timed reopen must reproduce the warm search's
+    // hits EXACTLY (bench-level purity check of the cache).
+    let reopenWarmup = ConversationSearch()
+    let reopenExpected = reopenWarmup.hits(in: coldWindow, query: "已经处理", running: true)
+    precondition(reopenExpected.hits.count >= completedTurns)
+    var reopenFind: [Double] = []
+    for _ in 0..<5 {
+        let reopen = ConversationSearch()
+        let t = benchNow()
+        let found = reopen.hits(in: coldWindow, query: "已经处理", running: true)
+        reopenFind.append(ms(t))
+        precondition(found.hits == reopenExpected.hits, "shared rendered-source cache changed search results")
     }
     func median(_ values: [Double]) -> Double { values.sorted()[values.count / 2] }
     func line(_ name: String, _ value: Double, indent: String = "  ") -> String {
@@ -255,6 +277,7 @@ func benchStreamingDelta() throws {
     }
     print(line("find_bar_query_update", median(findStage)))
     print(line("find_bar_cold_query", median(coldFind)))
+    print(line("find_bar_reopen_query", median(reopenFind)))
     print(line("older_page_full_chain", median(paged)))
     for name in ["presentation_update", "presented_rows", "conversation_activity"] {
         print(line(name, median(pageStages[name]!), indent: "    "))
