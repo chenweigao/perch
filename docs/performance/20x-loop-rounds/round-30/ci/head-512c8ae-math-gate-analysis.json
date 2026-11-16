@@ -1,0 +1,29 @@
+{
+ "run": "https://github.com/chenweigao/perch/actions/runs/43892111719",
+ "head": "512c8ae (v3; product bytes IDENTICAL to cf94157 — tests-only delta)",
+ "gate_error": "Typeset/draw regression exceeds 15% at 128",
+ "decisive_evidence": {
+  "failed_run_candidate_source_input_sha256": "8d7cf1c553d7e1fcd2635ae567fdd9072fcb3cf7facb6298364339b1ca48889e",
+  "green_run_cf94157_candidate_source_input_sha256": "8d7cf1c553d7e1fcd2635ae567fdd9072fcb3cf7facb6298364339b1ca48889e",
+  "green_run": "https://github.com/chenweigao/perch/actions/runs/43886346820 (cf94157, 15/15 first-try, math passed on the identical source input hash)",
+  "conclusion": "identical math-gate inputs passed at cf94157 and failed at 512c8ae ⇒ shared-runner variance; stronger than a quiet-machine retest (real CI green on the same bytes). No gate modification; same-head rerun of failed jobs."
+ },
+ "round_signature": {
+  "order": [
+   "baseline",
+   "candidate",
+   "candidate",
+   "baseline",
+   "baseline",
+   "candidate"
+  ],
+  "typeset32_same_binary_swings": "baseline draw_cpu [1.583,1.725,2.154] (+36% within identical binary), candidate [1.918,1.450,1.875] (±30%) — variance family of round-24/27/29",
+  "per_measurement_medians_ratio_typeset32": {
+   "draw_cpu": 1.087,
+   "first_light_dark_draw": 1.0953,
+   "cold_cpu": 1.1743,
+   "cold_attachment": 1.2528
+  }
+ },
+ "disposition": "gh run rerun 43892111719 --failed at same head 512c8ae"
+}
