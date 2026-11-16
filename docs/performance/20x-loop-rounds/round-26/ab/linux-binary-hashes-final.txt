@@ -1,0 +1,2 @@
+bc49c760edcfbd9d3adc0ec7f82f748cb68dd361b79d82c1a49e5df974d7d95f  .local/round26/base-checks26
+6a72cbebab543ab8dee9a1ddea09a9649079a86f25cbbc6118f934a270635086  .local/round26/cand-checks26

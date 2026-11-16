@@ -1,0 +1,63 @@
+#!/bin/bash
+# Round 26 Linux formal A/B: narrative delimiter byte scan (77157a9) vs base 668ec61.
+# Tests-aligned both sides (round-24 lesson); receipts retain porcelain PATH LISTS
+# (round-23 F11 protocol); differential pin passes on both sides by design.
+set -u
+export PATH=$HOME/.local/swift/6.3.3/usr/bin:$PATH
+FINAL=77157a9
+MAIN=<worktree>
+cd "$MAIN"
+out=.local/round26
+mkdir -p "$out/ab26"
+echo "HEAD_main=$(git rev-parse HEAD)"
+echo "porcelain_main=$(git status --porcelain | wc -l | tr -d ' ')"
+git status --porcelain > "$out/ab26/main-porcelain-paths.txt"
+echo "=== build candidate in main worktree ($FINAL) $(date) ==="
+swift build -c release --product WorkbenchChecks > /tmp/r26-cand-build.log 2>&1; echo "candidate_build_exit=$?"
+cp .build/x86_64-unknown-linux-gnu/release/WorkbenchChecks "$out/cand-checks26"
+echo "=== build baseline (668ec61 + $FINAL tests; tree kept alive) $(date) ==="
+rm -rf /tmp/r26-base
+git worktree add --detach /tmp/r26-base 668ec61 >/dev/null 2>&1
+git -C /tmp/r26-base checkout "$FINAL" -- Tests/
+(cd /tmp/r26-base && swift build -c release --product WorkbenchChecks > build.log 2>&1; echo "baseline_build_exit=$?")
+cp /tmp/r26-base/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks "$out/base-checks26"
+echo "=== checks both sides (trees alive) $(date) ==="
+"$out/cand-checks26" > "$out/ab26/checks-cand.log" 2>&1; echo "candidate_checks_exit=$? pass=$(grep -c '^PASS' "$out/ab26/checks-cand.log") skip=$(grep -c '^SKIP' "$out/ab26/checks-cand.log")"
+"$out/base-checks26" > "$out/ab26/checks-base.log" 2>&1; echo "baseline_checks_exit=$? pass=$(grep -c '^PASS' "$out/ab26/checks-base.log") skip=$(grep -c '^SKIP' "$out/ab26/checks-base.log")"
+grep -h 'delimiter scan' "$out/ab26/checks-base.log" "$out/ab26/checks-cand.log"
+sha256sum "$out/base-checks26" "$out/cand-checks26" | tee "$out/ab26/binary-hashes.txt"
+git show "$FINAL":Tests/WorkbenchCoreTests/PresentationBench.swift | sha256sum | sed 's|-|Tests/WorkbenchCoreTests/PresentationBench.swift|' > "$out/ab26/fixture-hashes.txt"
+for f in StreamingBench ActivityBench EditLineBench BenchClock LinkScanMaterializeTests; do
+  git show "$FINAL":Tests/WorkbenchCoreTests/$f.swift | sha256sum | sed "s|-|Tests/WorkbenchCoreTests/$f.swift|" >> "$out/ab26/fixture-hashes.txt"
+done
+echo "=== pairs $(date) ==="
+for pair in 1 2 3 4 5 6; do
+  for variant in baseline candidate; do
+    bin="$out/base-checks26"
+    [ "$variant" = candidate ] && bin="$out/cand-checks26"
+    for mode in 1 streaming activity edit-lines presentation-token; do
+      WORKBENCH_BENCH="$mode" "$bin" > "$out/ab26/pair$pair-$variant-$mode.log" 2>&1
+      echo "pair=$pair variant=$variant mode=$mode exit=$?"
+    done
+  done
+done
+sha256sum "$out/base-checks26" "$out/cand-checks26" | tee "$out/ab26/binary-hashes-final.txt"
+echo "=== rebuild verification (same paths, fresh .build) with retained receipts $(date) ==="
+R="$out/ab26/rebuild-receipt.txt"
+rm -rf "$MAIN/.build/x86_64-unknown-linux-gnu"
+swift build -c release --product WorkbenchChecks > "$out/ab26/candidate-rebuild.log" 2>&1; cand_rebuild_exit=$?
+echo "candidate_rebuild_exit=$cand_rebuild_exit" | tee "$R"
+echo "candidate_rebuild_head=$(git rev-parse HEAD)" >> "$R"
+echo "candidate_rebuild_porcelain=$(git status --porcelain | wc -l | tr -d ' ')" >> "$R"
+git status --porcelain >> "$R"
+sha256sum .build/x86_64-unknown-linux-gnu/release/WorkbenchChecks >> "$R"
+rm -rf /tmp/r26-base/.build
+(cd /tmp/r26-base && swift build -c release --product WorkbenchChecks > rebuild.log 2>&1; echo "baseline_rebuild_exit=$?")
+echo "baseline_rebuild_head=$(git -C /tmp/r26-base rev-parse HEAD)" >> "$R"
+echo "baseline_rebuild_porcelain=$(git -C /tmp/r26-base status --porcelain | wc -l | tr -d ' ')" >> "$R"
+git -C /tmp/r26-base status --porcelain >> "$R"
+sha256sum /tmp/r26-base/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks >> "$R"
+cp /tmp/r26-base/rebuild.log "$out/ab26/baseline-rebuild.log"
+cat "$R"
+git worktree remove --force /tmp/r26-base
+echo "DONE $(date)"

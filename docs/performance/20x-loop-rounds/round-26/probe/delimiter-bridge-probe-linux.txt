@@ -1,0 +1,3 @@
+scalars-checked: 1112064
+canonical-bridges-to-separator-atoms: 0
+RESULT: PASS — byte search for the three atoms is canonically complete
