@@ -1,16 +1,20 @@
 import Foundation
 import WorkbenchCore
 
-/// Pins the round-30 cross-instance entry cache.
+/// Pins the round-30 cross-instance entry cache (v2 = review + Codex P2 fixes).
 ///
-/// Part 1 — mechanism: byte-exact keys (an NFC and an NFD query are distinct
-/// nodes; a canonical key would return the wrong query's hits), the round-12
-/// verification predicate as the ONLY reuse gate (edited or re-encoded
-/// messages must NOT reuse — a skip-verification mutation dies here), exact
-/// payload-inclusive cost accounting, concrete LRU (touch-retention + victim
-/// identity), oversized refusal against a non-empty table, locale-generation
-/// invalidation through the real notification, removeAll, and single-copy
-/// accounting under a concurrent same-key storm.
+/// Part 1 — mechanism: injective length-prefixed byte-exact keys (an NFC and
+/// an NFD query are distinct nodes; a canonical key would return the wrong
+/// query's hits; an embedded-NUL field pair that collides under a plain zero
+/// separator is pinned distinct), the round-12 verification predicate as the
+/// ONLY reuse gate (edited or re-encoded messages must NOT reuse — a
+/// skip-verification mutation dies here), exact retention-inclusive admission
+/// accounting (payload + key + query bytes — Codex P2), generation-guarded
+/// store (a locale notification landing mid-build refuses the stale payload —
+/// review finding), concrete LRU (touch-retention + victim identity),
+/// oversized payload AND oversized key refusal against a non-empty table,
+/// locale-generation invalidation through the real notification, removeAll,
+/// and single-copy accounting under a concurrent same-key storm.
 ///
 /// Part 2 — end-to-end purity through the public find-bar API over the
 /// round-27 corpus (NFC/NFD variants, byte-identical duplicate source in its
@@ -51,10 +55,11 @@ func checkConversationEntryCache() throws {
     // MARK: Part 1 — mechanism
 
     let entryMessages = Array(windowA[1...])  // the a0 entry's messages
-    func payload(_ text: String, hits: [ConversationSearchHit] = []) -> ConversationEntryCache.Payload {
+    func payload(_ text: String, query: String = "q",
+                 hits: [ConversationSearchHit] = []) -> ConversationEntryCache.Payload {
         .init(messages: entryMessages, sources: [text], text: text as NSString,
               sourceEnds: [(text as NSString).length + 1], role: .assistant,
-              isRunning: false, query: "q", options: ConversationFindOptions(), hits: hits)
+              isRunning: false, query: query, options: ConversationFindOptions(), hits: hits)
     }
 
     // byte-exact query keys: NFC vs NFD queries are DISTINCT nodes
@@ -64,22 +69,29 @@ func checkConversationEntryCache() throws {
     let kNFC = ConversationEntryCache.key(entryID: "e0", query: nfcQ, options: opts, isRunning: false)
     let kNFD = ConversationEntryCache.key(entryID: "e0", query: nfdQ, options: opts, isRunning: false)
     precondition(kNFC != kNFD, "NFC and NFD queries must be distinct cache keys")
-    // key field separation: entryID/query boundary and flags are positional
+    // key field separation + injectivity for NUL-containing fields (a plain
+    // zero separator collides on these two pairs — the v1 encoding dies here)
     precondition(ConversationEntryCache.key(entryID: "a", query: "bc", options: opts, isRunning: false)
                  != ConversationEntryCache.key(entryID: "ab", query: "c", options: opts, isRunning: false),
                  "key must separate entryID from query bytes")
+    precondition(ConversationEntryCache.key(entryID: "a\u{0}b", query: "c", options: opts, isRunning: false)
+                 != ConversationEntryCache.key(entryID: "a", query: "b\u{0}c", options: opts, isRunning: false),
+                 "key must be injective for embedded NULs (zero-separator ambiguity)")
     var regexOpts = ConversationFindOptions(); regexOpts.regex = true
     precondition(ConversationEntryCache.key(entryID: "e", query: "q", options: opts, isRunning: false)
                  != ConversationEntryCache.key(entryID: "e", query: "q", options: regexOpts, isRunning: false))
     precondition(ConversationEntryCache.key(entryID: "e", query: "q", options: opts, isRunning: false)
                  != ConversationEntryCache.key(entryID: "e", query: "q", options: opts, isRunning: true))
 
-    // store + verified reuse + exact cost accounting
+    // store + verified reuse + exact RETENTION-INCLUSIVE accounting (Codex P2)
     let basic = ConversationEntryCache()
-    let p0 = payload("渲染文本", hits: [.init(entryID: "e0", occurrence: 0, excerpt: "摘录")])
-    basic.store(payload: p0, forKey: kNFC)
-    precondition(basic.estimatedByteCount == ConversationEntryCache.estimatedCost(of: p0),
-                 "exact cost accounting: \(basic.estimatedByteCount) != \(ConversationEntryCache.estimatedCost(of: p0))")
+    let p0 = payload("渲染文本", query: nfcQ, hits: [.init(entryID: "e0", occurrence: 0, excerpt: "摘录")])
+    basic.store(payload: p0, forKey: kNFC, generation: basic.generationNow)
+    let cost0 = ConversationEntryCache.admissionCost(of: p0, forKey: kNFC)
+    precondition(cost0 == ConversationEntryCache.estimatedCost(of: p0) + kNFC.count + nfcQ.utf8.count,
+                 "admission cost must include key and query bytes")
+    precondition(basic.estimatedByteCount == cost0,
+                 "exact cost accounting: \(basic.estimatedByteCount) != \(cost0)")
     guard let got = basic.payload(forKey: kNFC, messages: windowA[1...]) else {
         fatalError("verified reuse must return the payload")
     }
@@ -93,63 +105,99 @@ func checkConversationEntryCache() throws {
     precondition(basic.payload(forKey: kNFC, messages: windowANFD[1...]) == nil,
                  "a canonically-equal but byte-different rebuild must NOT reuse (rendered-bytes tier)")
 
-    // concrete LRU with payload-inclusive costs
-    let lru = ConversationEntryCache(byteBudget: 0)  // refuses everything
-    lru.store(payload: p0, forKey: kNFC)
-    precondition(lru.estimatedByteCount == 0 && lru.payload(forKey: kNFC, messages: windowA[1...]) == nil,
-                 "budget-0 cache must store nothing (the no-cache oracle regime)")
-    let c1 = ConversationEntryCache.estimatedCost(of: p0)
-    let two = ConversationEntryCache(byteBudget: c1 * 2)
+    // budget-0 stores nothing (the no-cache oracle regime)
+    let zero = ConversationEntryCache(byteBudget: 0)
+    zero.store(payload: p0, forKey: kNFC, generation: zero.generationNow)
+    precondition(zero.estimatedByteCount == 0 && zero.payload(forKey: kNFC, messages: windowA[1...]) == nil,
+                 "budget-0 cache must store nothing")
+
+    // concrete LRU with admission-cost arithmetic (equal-length keys keep it exact)
     let pB = payload("乙文本")
     let pC = payload("丙文本")
     let kB = ConversationEntryCache.key(entryID: "eB", query: "q", options: opts, isRunning: false)
     let kC = ConversationEntryCache.key(entryID: "eC", query: "q", options: opts, isRunning: false)
     let kA2 = ConversationEntryCache.key(entryID: "eA", query: "q", options: opts, isRunning: false)
-    two.store(payload: p0, forKey: kA2)
-    two.store(payload: pB, forKey: kB)
-    precondition(two.estimatedByteCount == c1 + ConversationEntryCache.estimatedCost(of: pB))
+    precondition(kA2.count == kB.count && kB.count == kC.count, "uniform key lengths")
+    let aCost = ConversationEntryCache.admissionCost(of: p0, forKey: kA2)
+    let bCost = ConversationEntryCache.admissionCost(of: pB, forKey: kB)
+    let cCost = ConversationEntryCache.admissionCost(of: pC, forKey: kC)
+    precondition(bCost == cCost, "B and C payloads are the same size")
+    let two = ConversationEntryCache(byteBudget: aCost + bCost)
+    two.store(payload: p0, forKey: kA2, generation: two.generationNow)
+    two.store(payload: pB, forKey: kB, generation: two.generationNow)
+    precondition(two.estimatedByteCount == aCost + bCost)
     _ = two.payload(forKey: kA2, messages: windowA[1...])  // touch A
-    two.store(payload: pC, forKey: kC)  // over budget → evicts B (LRU victim)
+    two.store(payload: pC, forKey: kC, generation: two.generationNow)  // over budget → evicts B
     precondition(two.payload(forKey: kA2, messages: windowA[1...]) != nil, "touched A must survive")
     precondition(two.payload(forKey: kB, messages: windowA[1...]) == nil, "B was the LRU victim (reversed order dies)")
     precondition(two.payload(forKey: kC, messages: windowA[1...]) != nil, "C must stay (evicting the new insert dies)")
-    precondition(two.estimatedByteCount <= c1 * 2)
+    precondition(two.estimatedByteCount <= aCost + bCost)
 
-    // oversized node against a NON-EMPTY table: refused, sentinel untouched
-    let sentinelCache = ConversationEntryCache(byteBudget: c1 + 10)
-    sentinelCache.store(payload: p0, forKey: kA2)
+    // oversized PAYLOAD against a NON-EMPTY table: refused, sentinel untouched
+    let sentinelCache = ConversationEntryCache(byteBudget: aCost + 10)
+    sentinelCache.store(payload: p0, forKey: kA2, generation: sentinelCache.generationNow)
     let huge = payload(String(repeating: "长", count: 5000))
-    precondition(ConversationEntryCache.estimatedCost(of: huge) > c1 + 10)
-    sentinelCache.store(payload: huge, forKey: kB)
-    precondition(sentinelCache.estimatedByteCount == c1, "oversized must not change accounting")
+    precondition(ConversationEntryCache.admissionCost(of: huge, forKey: kB) > aCost + 10)
+    sentinelCache.store(payload: huge, forKey: kB, generation: sentinelCache.generationNow)
+    precondition(sentinelCache.estimatedByteCount == aCost, "oversized must not change accounting")
     precondition(sentinelCache.payload(forKey: kA2, messages: windowA[1...]) != nil, "sentinel must survive")
 
-    // locale generation
+    // oversized KEY (Codex P2 demo shape): the retained key alone exceeds the
+    // whole budget — refused, never admitted-then-evicted
+    let tinyBudget = ConversationEntryCache(byteBudget: 64)
+    let longQuery = String(repeating: "查", count: 200)  // 600 UTF-8 bytes
+    let longKey = ConversationEntryCache.key(entryID: "e0", query: longQuery, options: opts, isRunning: false)
+    let pLong = payload("小载荷", query: longQuery)
+    precondition(ConversationEntryCache.admissionCost(of: pLong, forKey: longKey) > 64)
+    tinyBudget.store(payload: pLong, forKey: longKey, generation: tinyBudget.generationNow)
+    precondition(tinyBudget.estimatedByteCount == 0,
+                 "a key larger than the budget must be refused: \(tinyBudget.estimatedByteCount)")
+
+    // locale generation: notification drops every node
     let locale = ConversationEntryCache()
-    locale.store(payload: p0, forKey: kNFC)
+    locale.store(payload: p0, forKey: kNFC, generation: locale.generationNow)
     precondition(locale.payload(forKey: kNFC, messages: windowA[1...]) != nil)
     NotificationCenter.default.post(name: NSLocale.currentLocaleDidChangeNotification, object: nil)
     precondition(locale.estimatedByteCount == 0 && locale.payload(forKey: kNFC, messages: windowA[1...]) == nil,
                  "the locale notification must drop every node")
 
+    // generation-guarded store: a notification landing DURING an outside-lock
+    // rebuild must make store() refuse the stale payload (review finding; v1
+    // had no generation parameter and a stale-locale build could enter the
+    // fresh generation — the RenderedSourceCache insert-guard contract).
+    let racing = ConversationEntryCache()
+    let capturedGeneration = racing.generationNow
+    NotificationCenter.default.post(name: NSLocale.currentLocaleDidChangeNotification, object: nil)
+    racing.store(payload: p0, forKey: kNFC, generation: capturedGeneration)
+    precondition(racing.estimatedByteCount == 0 && racing.payload(forKey: kNFC, messages: windowA[1...]) == nil,
+                 "store must refuse a payload built under a superseded generation")
+    racing.store(payload: p0, forKey: kNFC, generation: racing.generationNow)
+    precondition(racing.estimatedByteCount == cost0, "store under the current generation must succeed")
+
     // removeAll (diagnostic; no generation bump)
     let removable = ConversationEntryCache()
-    removable.store(payload: p0, forKey: kNFC)
+    removable.store(payload: p0, forKey: kNFC, generation: removable.generationNow)
     removable.removeAll()
     precondition(removable.estimatedByteCount == 0 && removable.payload(forKey: kNFC, messages: windowA[1...]) == nil)
 
-    // concurrency smoke + single-copy accounting
+    // concurrency smoke + single-copy accounting (uniform key lengths)
     let concurrent = ConversationEntryCache()
     let shared = payload("共享文本")
+    // key ids k0…k24 have DIFFERENT byte lengths (k10+ gain a byte), so the
+    // expectation sums each key's own admission cost.
+    let expected = (0..<25).reduce(0) { acc, i in
+        acc + ConversationEntryCache.admissionCost(
+            of: shared,
+            forKey: ConversationEntryCache.key(entryID: "k\(i)", query: "q", options: opts, isRunning: false))
+    }
     DispatchQueue.concurrentPerform(iterations: 8) { worker in
         for i in 0..<100 {
             let key = ConversationEntryCache.key(entryID: "k\((i + worker) % 25)", query: "q",
                                                  options: opts, isRunning: false)
-            concurrent.store(payload: shared, forKey: key)
+            concurrent.store(payload: shared, forKey: key, generation: concurrent.generationNow)
             _ = concurrent.payload(forKey: key, messages: windowA[1...])
         }
     }
-    let expected = 25 * ConversationEntryCache.estimatedCost(of: shared)
     precondition(concurrent.estimatedByteCount == expected,
                  "single-copy accounting under concurrent same-key stores: \(concurrent.estimatedByteCount) != \(expected)")
 
@@ -236,5 +284,5 @@ func checkConversationEntryCache() throws {
     let runOracle = noCache().hits(in: window, query: "结论", running: true)
     precondition(runShared == runOracle && byteShape(runShared) == byteShape(runOracle))
 
-    print("PASS: entry cache — byte-exact (entryID,query,options,running) keys with field separation, round-12 verification as the only reuse gate (same-ID edit and NFD rebuild refused), exact payload-inclusive accounting, budget-0 stores nothing, concrete LRU (touch/victim/new-insert), oversized refusal against a non-empty table, locale-generation invalidation, removeAll, 8x100 concurrency with single-copy accounting, and four-regime (budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 6 queries at canonical AND byte level plus cross-instance staleness and running-flag isolation")
+    print("PASS: entry cache — injective length-prefixed byte-exact keys (NUL-collision pinned), round-12 verification as the only reuse gate (same-ID edit and NFD rebuild refused), exact retention-inclusive admission accounting (payload+key+query bytes — Codex P2), generation-guarded store (stale-locale build refused), budget-0 stores nothing, concrete LRU (touch/victim/new-insert), oversized payload AND oversized key refusal against a non-empty table, locale-generation invalidation, removeAll, 8x100 concurrency with single-copy accounting, and four-regime (budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 6 queries at canonical AND byte level plus cross-instance staleness and running-flag isolation")
 }

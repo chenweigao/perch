@@ -170,6 +170,9 @@ public final class ConversationSearch {
             // mirroring the instance-level reuse above.
             let cacheKey = ConversationEntryCache.key(entryID: entry.id, query: query,
                                                       options: options, isRunning: isRunning)
+            // Captured BEFORE the rebuild: a locale notification landing
+            // mid-build makes store() refuse the stale-locale payload.
+            let cacheGeneration = entryCache.generationNow
             if let payload = entryCache.payload(forKey: cacheKey, messages: entry.messages[...]) {
                 next[entry.id] = Entry(sources: payload.sources, text: payload.text,
                                        sourceEnds: payload.sourceEnds, role: payload.role,
@@ -229,7 +232,7 @@ public final class ConversationSearch {
                                             role: built.role, isRunning: built.isRunning,
                                             query: built.query, options: built.options,
                                             hits: built.hits),
-                             forKey: cacheKey)
+                             forKey: cacheKey, generation: cacheGeneration)
         }
         return hits
     }

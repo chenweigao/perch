@@ -28,26 +28,38 @@ import Foundation
 ///    and isRunning are equal. The stored `messages` are adopted from the
 ///    caller on reuse (round-12 adoption semantics) so the next verification
 ///    reads the freshest payload copy.
-/// 2. **Byte-exact keys.** The key is a byte sequence: entryID, query UTF-8
-///    bytes, option bits and the isRunning flag, zero-separated — hashed in
-///    bulk (round-29 `Hasher.combine(bytes:)` pattern) and compared
-///    byte-wise. A canonical String key would conflate NFC/NFD queries, the
-///    exact defect round 12's `sameQueryKey` and round 27's byte-exact
-///    render keys exist to prevent.
-/// 3. **Bounded, payload-inclusive.** A node retains the verification
-///    messages, so the cost estimate counts them: message metadata and
-///    text/thinking/tool fields, plus sources, joined text (UTF-16 ×2) and
-///    hit excerpts. The estimate is a cost convention (like the native math
-///    cache and RenderedSourceCache), not exact RSS. Batch-LRU eviction;
+/// 2. **Byte-exact, injective keys.** The key is a byte sequence: LENGTH-
+///    PREFIXED (8-byte big-endian) entryID and query UTF-8 bytes, then the
+///    option/running flag byte — hashed in bulk (round-29
+///    `Hasher.combine(bytes:)` pattern) and compared byte-wise. Length
+///    prefixes make the encoding injective for ARBITRARY field contents:
+///    Swift strings may embed U+0000, whose UTF-8 byte is 0x00, so a plain
+///    zero separator would be ambiguous (review finding: entryID "a\0b" +
+///    query "c" and entryID "a" + query "b\0c" would collide). A canonical
+///    String key would conflate NFC/NFD queries, the exact defect round 12's
+///    `sameQueryKey` and round 27's byte-exact render keys exist to prevent.
+/// 3. **Bounded, retention-inclusive.** A node retains the verification
+///    messages, its key bytes and the query string, so the ADMISSION cost
+///    counts all of them: message metadata and text/thinking/tool fields,
+///    sources, joined text (UTF-16 ×2), hit excerpts, key bytes and query
+///    UTF-8 bytes (Codex P2: excluding key/query storage let 100 × 100KB
+///    query keys pass a 1KB budget while reporting 800B). The estimate is a
+///    cost convention (like the native math cache and RenderedSourceCache),
+///    not exact RSS. Batch-LRU eviction;
 ///    honest churn note per round-29 F9: eviction stops AT the budget, so a
 ///    table at budget pays an O(N log N) sort under the lock per insert. A
 ///    single node costing more than the whole budget is built but not
 ///    stored.
-/// 4. **Locale generation.** Hits and excerpts embed locale-sensitive
-///    matching results (diacritic-insensitive search, composed-character
-///    excerpt ranges), so `NSLocale.currentLocaleDidChangeNotification`
+/// 4. **Locale generation, including the build window.** Hits and excerpts
+///    embed locale-sensitive matching results (diacritic-insensitive search,
+///    composed-character excerpt ranges), so `NSLocale.currentLocaleDidChangeNotification`
 ///    bumps the generation and drops the table — same defense-in-depth as
-///    RenderedSourceCache.
+///    RenderedSourceCache. A rebuild runs OUTSIDE the lock, so `store`
+///    carries the generation captured before the build and REFUSES the
+///    payload when a notification landed in between (review finding: without
+///    it, a stale-locale build could enter the fresh generation — the
+///    RenderedSourceCache insert guard, which round-27's supplement pinned,
+///    applies here too).
 /// 5. **Thread safety.** One lock guards the table; the verification walk
 ///    and any rebuild run OUTSIDE the lock (they touch only the caller's
 ///    messages and an immutable copied node). Concurrent misses may rebuild
@@ -135,19 +147,17 @@ public final class ConversationEntryCache: @unchecked Sendable {
         return estimatedBytes
     }
 
-    /// The byte-exact cache key for one entry search. Zero separators cannot
-    /// appear inside the entryID/query UTF-8 streams of distinct inputs
-    /// ambiguously: every field boundary is a 0x00 byte, which is not part of
-    /// any field's encoding here (entryIDs and queries with embedded NULs
-    /// would still be separated positionally — the option bits and running
-    /// flag are fixed-width tail fields).
+    /// The byte-exact cache key for one entry search: 8-byte big-endian
+    /// length prefixes make the (entryID, query) encoding INJECTIVE for
+    /// arbitrary contents — Swift strings may embed U+0000 (UTF-8 byte
+    /// 0x00), so a plain zero separator would be ambiguous (review finding;
+    /// pinned by checkConversationEntryCache's NUL-collision case). The
+    /// option bits and running flag are a fixed-width tail byte.
     public static func key(entryID: String, query: String,
                            options: ConversationFindOptions, isRunning: Bool) -> [UInt8] {
         var bytes: [UInt8] = []
-        bytes.append(contentsOf: entryID.utf8)
-        bytes.append(0)
-        bytes.append(contentsOf: query.utf8)
-        bytes.append(0)
+        appendLengthPrefixed(&bytes, entryID)
+        appendLengthPrefixed(&bytes, query)
         var flags: UInt8 = 0
         if options.caseSensitive { flags |= 1 }
         if options.regex { flags |= 2 }
@@ -160,6 +170,24 @@ public final class ConversationEntryCache: @unchecked Sendable {
         if isRunning { flags |= 64 }
         bytes.append(flags)
         return bytes
+    }
+
+    private static func appendLengthPrefixed(_ bytes: inout [UInt8], _ field: String) {
+        var length = UInt64(field.utf8.count)
+        for shift in stride(from: 56, through: 0, by: -8) {
+            bytes.append(UInt8(truncatingIfNeeded: length >> shift))
+        }
+        bytes.append(contentsOf: field.utf8)
+    }
+
+    /// The current invalidation generation. Callers capture it BEFORE
+    /// rebuilding an entry and pass it to `store`, which refuses payloads
+    /// built under a superseded generation (a locale notification landing
+    /// mid-build must not admit stale-locale results).
+    public var generationNow: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return generation
     }
 
     /// The verified payload for `keyBytes`, or nil. Verification runs OUTSIDE
@@ -194,13 +222,16 @@ public final class ConversationEntryCache: @unchecked Sendable {
         return node.payload
     }
 
-    /// Stores a built entry. Cost is counted payload-inclusively (see the
-    /// type comment); oversized nodes are refused; overflow evicts batch-LRU.
-    public func store(payload: Payload, forKey keyBytes: [UInt8]) {
-        let cost = Self.estimatedCost(of: payload)
+    /// Stores a built entry under the generation captured before the build;
+    /// a generation bump in between (locale notification) refuses the stale
+    /// payload. Admission cost includes the retained key and query bytes
+    /// (Codex P2); oversized nodes are refused; overflow evicts batch-LRU.
+    public func store(payload: Payload, forKey keyBytes: [UInt8], generation builtAt: Int) {
+        let cost = Self.admissionCost(of: payload, forKey: keyBytes)
         let key = Key(bytes: keyBytes)
         lock.lock()
         defer { lock.unlock() }
+        guard generation == builtAt else { return }
         guard cost <= byteBudget else { return }
         if let replaced = table[key] {
             estimatedBytes -= replaced.cost
@@ -213,9 +244,16 @@ public final class ConversationEntryCache: @unchecked Sendable {
         }
     }
 
-    /// The cost convention, exposed for pins: message metadata + text/
-    /// thinking/tool payload fields + sources + joined text (UTF-16 ×2) +
-    /// hit excerpts.
+    /// The ADMISSION cost convention, exposed for pins: payload cost + the
+    /// retained key bytes + the retained query string's UTF-8 bytes. Every
+    /// byte the node retains counts against the budget (Codex P2).
+    public static func admissionCost(of payload: Payload, forKey keyBytes: [UInt8]) -> Int {
+        estimatedCost(of: payload) + keyBytes.count + payload.query.utf8.count
+    }
+
+    /// The payload-only part of the cost convention: message metadata +
+    /// text/thinking/tool payload fields + sources + joined text (UTF-16 ×2)
+    /// + hit excerpts.
     public static func estimatedCost(of payload: Payload) -> Int {
         var cost = payload.text.length * 2
         for source in payload.sources { cost += source.utf8.count }
