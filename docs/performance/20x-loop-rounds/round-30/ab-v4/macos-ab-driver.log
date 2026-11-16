@@ -1,0 +1,83 @@
+=== prepare Mon Nov 16 23:42:49 CST 2026 ===
+From github.com:chenweigao/perch
+   cf94157e..429d476c  perf/20x-loop-30-20261116 -> origin/perf/20x-loop-30-20261116
+HEAD is now at 4f90b889 Merge pull request #351 from chenweigao/perf/20x-loop-29-20261116
+HEAD=4f90b88999a6be3d93fe67dc777556c4907c6062
+porcelain_before=0
+=== base build (pristine) Mon Nov 16 23:42:54 CST 2026 ===
+base_build_exit=0
+=== apply v2 patches + candidate build Mon Nov 16 23:44:07 CST 2026 ===
+tests_patch=ok
+product_patch=ok
+cand_build_exit=0
+3c0ae304d9a1489190475f4889f36c0498678318f21ca180486ecfcb1c0a23d9  <worktree>/.build/round30v4-ab-base/out/Products/Release/WorkbenchChecks
+c5ad98180d709a2ab30fec61b4e4c29f993e9cde3ce4c6003605ed8ff1bc49a4  <worktree>/.build/round30v4-ab-cand/out/Products/Release/WorkbenchChecks
+=== checks both sides (base = old pin set, record; cand = gate) Mon Nov 16 23:45:20 CST 2026 ===
+base_checks_exit=0 pass=107
+cand_checks_exit=0 pass=108
+PASS: rendered-source cache — produce-once, NFC/NFD byte-exact keys, exact cost accounting, concrete LRU (touch-retention + victim identity), oversized refusal against a non-empty sentinel table, 512B/200-source churn, removeAll, 8x200 concurrency with single-copy accounting, locale-generation invalidation via the real notification, and four-regime (budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 6 queries at BOTH canonical and per-hit UTF-8 byte levels (canonical == alone admits NFC-normalization mutants) with exact counts, entry identities, occurrences and byte-exact excerpts for the true duplicate source (own message, coalescing-safe)
+=== pairs Mon Nov 16 23:45:42 CST 2026 ===
+pair=1 variant=baseline mode=1 exit=0
+pair=1 variant=baseline mode=streaming exit=0
+pair=1 variant=baseline mode=activity exit=0
+pair=1 variant=baseline mode=edit-lines exit=0
+pair=1 variant=baseline mode=presentation-token exit=0
+pair=1 variant=candidate mode=1 exit=0
+pair=1 variant=candidate mode=streaming exit=0
+pair=1 variant=candidate mode=activity exit=0
+pair=1 variant=candidate mode=edit-lines exit=0
+pair=1 variant=candidate mode=presentation-token exit=0
+pair=2 variant=baseline mode=1 exit=0
+pair=2 variant=baseline mode=streaming exit=0
+pair=2 variant=baseline mode=activity exit=0
+pair=2 variant=baseline mode=edit-lines exit=0
+pair=2 variant=baseline mode=presentation-token exit=0
+pair=2 variant=candidate mode=1 exit=0
+pair=2 variant=candidate mode=streaming exit=0
+pair=2 variant=candidate mode=activity exit=0
+pair=2 variant=candidate mode=edit-lines exit=0
+pair=2 variant=candidate mode=presentation-token exit=0
+pair=3 variant=baseline mode=1 exit=0
+pair=3 variant=baseline mode=streaming exit=0
+pair=3 variant=baseline mode=activity exit=0
+pair=3 variant=baseline mode=edit-lines exit=0
+pair=3 variant=baseline mode=presentation-token exit=0
+pair=3 variant=candidate mode=1 exit=0
+pair=3 variant=candidate mode=streaming exit=0
+pair=3 variant=candidate mode=activity exit=0
+pair=3 variant=candidate mode=edit-lines exit=0
+pair=3 variant=candidate mode=presentation-token exit=0
+pair=4 variant=baseline mode=1 exit=0
+pair=4 variant=baseline mode=streaming exit=0
+pair=4 variant=baseline mode=activity exit=0
+pair=4 variant=baseline mode=edit-lines exit=0
+pair=4 variant=baseline mode=presentation-token exit=0
+pair=4 variant=candidate mode=1 exit=0
+pair=4 variant=candidate mode=streaming exit=0
+pair=4 variant=candidate mode=activity exit=0
+pair=4 variant=candidate mode=edit-lines exit=0
+pair=4 variant=candidate mode=presentation-token exit=0
+pair=5 variant=baseline mode=1 exit=0
+pair=5 variant=baseline mode=streaming exit=0
+pair=5 variant=baseline mode=activity exit=0
+pair=5 variant=baseline mode=edit-lines exit=0
+pair=5 variant=baseline mode=presentation-token exit=0
+pair=5 variant=candidate mode=1 exit=0
+pair=5 variant=candidate mode=streaming exit=0
+pair=5 variant=candidate mode=activity exit=0
+pair=5 variant=candidate mode=edit-lines exit=0
+pair=5 variant=candidate mode=presentation-token exit=0
+pair=6 variant=baseline mode=1 exit=0
+pair=6 variant=baseline mode=streaming exit=0
+pair=6 variant=baseline mode=activity exit=0
+pair=6 variant=baseline mode=edit-lines exit=0
+pair=6 variant=baseline mode=presentation-token exit=0
+pair=6 variant=candidate mode=1 exit=0
+pair=6 variant=candidate mode=streaming exit=0
+pair=6 variant=candidate mode=activity exit=0
+pair=6 variant=candidate mode=edit-lines exit=0
+pair=6 variant=candidate mode=presentation-token exit=0
+3c0ae304d9a1489190475f4889f36c0498678318f21ca180486ecfcb1c0a23d9  <worktree>/.build/round30v4-ab-base/out/Products/Release/WorkbenchChecks
+c5ad98180d709a2ab30fec61b4e4c29f993e9cde3ce4c6003605ed8ff1bc49a4  <worktree>/.build/round30v4-ab-cand/out/Products/Release/WorkbenchChecks
+porcelain_after=0
+DONE Mon Nov 16 23:47:04 CST 2026

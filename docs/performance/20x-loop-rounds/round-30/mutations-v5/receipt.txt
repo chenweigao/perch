@@ -1,0 +1,10 @@
+skip-verification exit=132 kill_at=SearchEntryReuseTests.swift:120
+canonical-string-key exit=132 kill_at=ConversationEntryCacheTests.swift:104
+zero-accounting exit=132 kill_at=ConversationEntryCacheTests.swift:143
+reverse-lru exit=132 kill_at=ConversationEntryCacheTests.swift:182
+admit-oversized exit=132 kill_at=ConversationEntryCacheTests.swift:192
+no-locale-observer exit=132 kill_at=ConversationEntryCacheTests.swift:237
+nul-collision-key exit=132 kill_at=ConversationEntryCacheTests.swift:77
+key-cost-exclusion exit=132 kill_at=ConversationEntryCacheTests.swift:119
+no-generation-guard exit=132 kill_at=ConversationEntryCacheTests.swift:248
+payload-fields-exclusion exit=132 kill_at=ConversationEntryCacheTests.swift:223

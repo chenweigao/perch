@@ -1,0 +1,18 @@
+=== prepare Tue Nov 17 00:54:41 CST 2026 ===
+Previous HEAD position was 4f90b889 Merge pull request #351 from chenweigao/perf/20x-loop-29-20261116
+HEAD is now at ded76252 fix(core): round-30 v5 — count retained message JSONValue trees in admission cost
+HEAD=ded7625210b7a3163cd0e35f3a766fc8c1b480f0
+porcelain_before=0
+=== math gate Tue Nov 17 00:54:45 CST 2026 ===
+math_exit=0
+  },
+  "scope": "same-runner sequential synthetic A/B; window timings are not hardware input latency or FPS"
+}
+status: passed
+  typeset-32: ratio=0.9479 best_ratio=1.0061
+  typeset-128: ratio=0.9923 best_ratio=0.9989
+  typeset-512: ratio=1.0005 best_ratio=1.0004
+input_comparison: {"baseline": "56bd761897169c8eea767d945ff9d7e28cac8ae5c2af90146b20f9556acf8b0f", "candidate": "c5c03c8b0e620f1e0944cfba12d4d129a522fdf7c6074974c986004ec2bd32f0", "relative_performance_gates": "applied"}
+porcelain_after=0
+DONE Tue Nov 17 00:57:21 CST 2026
+exit=0

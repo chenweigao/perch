@@ -1,0 +1,71 @@
+Fetching https://github.com/apple/swift-asn1.git from cache
+Fetched https://github.com/apple/swift-asn1.git from cache (0.05s)
+Fetching https://github.com/apple/swift-crypto.git from cache
+Fetching https://github.com/Lakr233/MSDisplayLink.git from cache
+Fetching https://github.com/swiftlang/swift-markdown.git from cache
+Fetching https://github.com/swiftlang/swift-cmark.git from cache
+Fetching https://github.com/mgriebling/SwiftMath.git from cache
+Fetching https://github.com/Lakr233/libghostty-spm.git from cache
+Fetched https://github.com/mgriebling/SwiftMath.git from cache (0.06s)
+Fetched https://github.com/Lakr233/libghostty-spm.git from cache (0.07s)
+Fetched https://github.com/apple/swift-crypto.git from cache (0.09s)
+Fetched https://github.com/Lakr233/MSDisplayLink.git from cache (0.09s)
+Fetched https://github.com/swiftlang/swift-cmark.git from cache (0.09s)
+Fetched https://github.com/swiftlang/swift-markdown.git from cache (0.11s)
+Creating working copy for https://github.com/swiftlang/swift-cmark.git
+Creating working copy for https://github.com/Lakr233/MSDisplayLink.git
+Creating working copy for https://github.com/swiftlang/swift-markdown.git
+Creating working copy for https://github.com/Lakr233/libghostty-spm.git
+Creating working copy for https://github.com/apple/swift-crypto.git
+Creating working copy for https://github.com/mgriebling/SwiftMath.git
+Creating working copy for https://github.com/apple/swift-asn1.git
+Working copy of https://github.com/Lakr233/MSDisplayLink.git resolved at 2.2.0
+Working copy of https://github.com/swiftlang/swift-markdown.git resolved at 0.8.0
+Working copy of https://github.com/apple/swift-asn1.git resolved at 1.7.4
+Working copy of https://github.com/swiftlang/swift-cmark.git resolved at 0.8.0
+Working copy of https://github.com/Lakr233/libghostty-spm.git resolved at 121c8e286d24e21ea1a379da3eaa3556d3a1b8f5
+Working copy of https://github.com/mgriebling/SwiftMath.git resolved at 1.7.3
+Working copy of https://github.com/apple/swift-crypto.git resolved at 5.1.1
+Fetching binary artifact https://github.com/Lakr233/libghostty-spm/releases/download/upstream.82938b633ba6/GhosttyKit.xcframework.zip from cache
+Fetched https://github.com/Lakr233/libghostty-spm/releases/download/upstream.82938b633ba6/GhosttyKit.xcframework.zip from cache (2.04s)
+Building for production...
+[Pre-planning 1 / 246]
+[Planning deferred tasks]
+[49 / 148]
+[87 / 162] cmark-gfm
+[102 / 164] CAtomic
+[117 / 164] cmark-gfm
+[127 / 164]
+[139 / 202]
+[146 / 202]
+[151 / 235]
+[160 / 235]
+[166 / 235] cmark-gfm
+[167 / 235]
+[173 / 235]
+[176 / 235]
+[184 / 235]
+[186 / 235]
+[189 / 235]
+[190 / 235]
+[203 / 235]
+[207 / 235]
+[209 / 235]
+[211 / 235] Markdown
+[218 / 236] WorkbenchCore
+[221 / 238] SwiftMath
+<worktree>/Sources/WorkbenchCore/ConversationEntryCache.swift:176:13: [1;33mwarning: [1;39mvariable 'length' was never mutated; consider changing to 'let' constant[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/variable-never-mutated\VariableNeverMutated]8;;\]
+[0;36m174 |[0;0m 
+[0;36m175 |[0;0m     private static func appendLengthPrefixed(_ bytes: inout [UInt8], _ field: String) {
+[0;36m176 |[0;0m         var length = UInt64(field.utf8.count)
+    [0;36m|[0;0m             `- [1;33mwarning: [1;39mvariable 'length' was never mutated; consider changing to 'let' constant[0;0m [#]8;;https://docs.swift.org/compiler/documentation/diagnostics/variable-never-mutated\VariableNeverMutated]8;;\]
+[0;36m177 |[0;0m         for shift in stride(from: 56, through: 0, by: -8) {
+[0;36m178 |[0;0m             bytes.append(UInt8(truncatingIfNeeded: length >> shift))
+
+[#VariableNeverMutated]: <https://docs.swift.org/compiler/documentation/diagnostics/variable-never-mutated>
+[227 / 238] WorkbenchCore
+[234 / 239] WorkbenchChecks-product
+[236 / 240] WorkbenchChecks-product
+[238 / 240] WorkbenchChecks-product
+[239 / 240] WorkbenchChecks-product
+Build complete! (68.92秒)

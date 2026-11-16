@@ -1,0 +1,38 @@
+{
+ "run": "https://github.com/chenweigao/perch/actions/runs/43867217299",
+ "head": "4cfb32c (SUPERSEDED by final head 6e41793 — same product bytes, docs-only delta)",
+ "gate_error": "Typeset/draw regression exceeds 15% at 32",
+ "round_order": [
+  "baseline",
+  "candidate",
+  "candidate",
+  "baseline",
+  "baseline",
+  "candidate"
+ ],
+ "signature": {
+  "classification": "shared-runner variance / build-lottery family (round-24/27 same signature)",
+  "typeset32_draw_cpu": {
+   "baseline_rounds": [
+    1.686000000000007,
+    1.2420000000000044,
+    2.3940000000000055
+   ],
+   "candidate_rounds": [
+    2.010000000000005,
+    1.7609999999999957,
+    1.6280000000000143
+   ],
+   "baseline_same_binary_swing": "1.242→2.394 = +93% within the identical baseline binary",
+   "per_measurement_medians_ratio": {
+    "cold_attachment": 0.916,
+    "cold_cpu": 0.9387,
+    "draw_cpu": 1.0445,
+    "first_light_dark_draw": 1.1521,
+    "warm_attachment": 0.9291
+   }
+  },
+  "note": "mixed directions across measurements (draw 1.04, first_light_dark 1.15, cold_cpu 0.94, cold_attachment 0.92) = not an algorithmic regression shape; execution isolation unchanged from round-27 (math scenarios never execute RenderedSourceCache/ConversationSearch; the SourceKey hash change is not on any math path — changed_inputs=True only because all of Sources/WorkbenchCore compiles into the math preview)."
+ },
+ "disposition": "No same-head rerun needed: 4cfb32c was superseded by 6e41793 (docs-only; identical product bytes) whose own CI run governs the PR. If math fails at 6e41793, the round-27 protocol applies (quiet-machine retest with WORKBENCH_MATH_BASELINE_REF=406b547 + same-head rerun). Gates never modified."
+}

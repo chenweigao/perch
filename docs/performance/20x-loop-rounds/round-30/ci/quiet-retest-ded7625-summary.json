@@ -1,0 +1,194 @@
+{
+  "status": "passed",
+  "binary_sha256": {
+    "baseline": "850f3c67f7d09424e21b008d03c2d114e613d9ce01482ec8ced348abe2025711",
+    "candidate": "eb2af7904997649cd177fc44924f606819bf4f051b836d5bc5f1b589b2971086",
+    "contracts": "4902966325436fe2d8d4e19451f37d1b93bc0cbec2e48ec983c96ec77d0d68ce"
+  },
+  "order": [
+    "baseline",
+    "candidate",
+    "candidate",
+    "baseline",
+    "baseline",
+    "candidate"
+  ],
+  "contracts": {
+    "cpu_count": 10,
+    "dependencies": {
+      "swift-cmark": {
+        "revision": "924936d0427cb25a61169739a7660230bffa6ea6",
+        "version": "0.8.0"
+      },
+      "swift-markdown": {
+        "revision": "3c6f9523da3a1ec2fd829673e472d95b8097a3b8",
+        "version": "0.8.0"
+      },
+      "swiftmath": {
+        "revision": "fa8244ed032f4a1ade4cb0571bf87d2f1a9fd2d7",
+        "version": "1.7.3"
+      }
+    },
+    "fixture": "synthetic; no sessions or network",
+    "measurements": {
+      "cache": {
+        "cache_hits": 128,
+        "cost_estimate_bytes": 17790152,
+        "entries": 1,
+        "failed_bytes": 65508,
+        "failures": 106,
+        "inline_entries": 1,
+        "requests": 1288,
+        "typesets": 1808
+      },
+      "checks": [
+        "nonblank light/dark, font-size geometry, boxed border dimensions and explicit TeX color",
+        "native inks typeset once each; cache hits and appearance revisits do not typeset",
+        "display images generate only requested native ink and reuse appearances",
+        "128-formula inline working set is reused without typesetting",
+        "successful and failed cache entry/byte budgets under churn"
+      ]
+    },
+    "mode": "contracts",
+    "os": "Version 27.0.1 (Build 26A434)",
+    "physical_memory_bytes": 17179869184,
+    "revision": "ded7625210b7a3163cd0e35f3a766fc8c1b480f0",
+    "scope": "isolated synthetic AppKit/SwiftUI work; not hardware input latency or certified FPS",
+    "source_input_sha256": "c5c03c8b0e620f1e0944cfba12d4d129a522fdf7c6074974c986004ec2bd32f0",
+    "status": "passed",
+    "suffix_search": false,
+    "swiftmath_patch_sha256": "68686f9cd8fbe4b1134ace3a22f162828b9d4bd89eb84816f050379aa06bb855",
+    "toolchain": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+    "variant": "candidate"
+  },
+  "checks": [
+    "identical parsed semantics across baseline/candidate",
+    "unclosed input comparison and bounded fourfold growth",
+    "32/128-formula combined typeset/draw has no material regression",
+    "bounded mounted-window memory; initial layout gated only on catastrophic best-case regression"
+  ],
+  "comparison": {
+    "parse_ordinary_backslashes": {
+      "baseline_median_ms": 1.5319166705012321,
+      "candidate_median_ms": 1.4627499040216208,
+      "ratio": 0.9548495242518769
+    },
+    "parse_plain": {
+      "baseline_median_ms": 1.9440000178292394,
+      "candidate_median_ms": 1.822083257138729,
+      "ratio": 0.9372856175039298
+    },
+    "parse_reply": {
+      "baseline_median_ms": 1.630958286114037,
+      "candidate_median_ms": 1.551999943330884,
+      "ratio": 0.9515877607322004
+    },
+    "parse_stream_16": {
+      "baseline_median_ms": 0.573375029489398,
+      "candidate_median_ms": 0.5637499270960689,
+      "ratio": 0.9832132515399206
+    },
+    "parse_stream_64": {
+      "baseline_median_ms": 0.5777917103841901,
+      "candidate_median_ms": 0.5624167388305068,
+      "ratio": 0.9733901139850898
+    },
+    "parse_unclosed_256": {
+      "baseline_median_ms": 0.1744166947901249,
+      "candidate_median_ms": 0.16558333300054073,
+      "ratio": 0.949354837848445
+    },
+    "parse_unclosed_1024": {
+      "baseline_median_ms": 0.6127917440608144,
+      "candidate_median_ms": 0.5917500238865614,
+      "ratio": 0.9656625266606648
+    },
+    "parse_unclosed_4096": {
+      "baseline_median_ms": 2.2777917329221964,
+      "candidate_median_ms": 2.2196666104719043,
+      "ratio": 0.9744818098993964
+    },
+    "typeset-32": {
+      "baseline_cold_and_draw_ms": 40.24183296132833,
+      "candidate_cold_and_draw_ms": 38.144874968566,
+      "baseline_best_ms": 37.81774966046214,
+      "candidate_best_ms": 38.04787574335933,
+      "ratio": 0.9478910914724619,
+      "best_ratio": 1.0060851342283272,
+      "baseline_rss_growth_bytes": 25395200,
+      "candidate_rss_growth_bytes": 25657344,
+      "baseline_warm_median_ms": 0.002666725777089596,
+      "candidate_warm_median_ms": 0.0025833724066615105
+    },
+    "typeset-128": {
+      "baseline_cold_and_draw_ms": 127.95858411118388,
+      "candidate_cold_and_draw_ms": 126.96708331350237,
+      "baseline_best_ms": 125.74874935671687,
+      "candidate_best_ms": 125.61237358022481,
+      "ratio": 0.992251392866148,
+      "best_ratio": 0.998915489997398,
+      "baseline_rss_growth_bytes": 66568192,
+      "candidate_rss_growth_bytes": 66682880,
+      "baseline_warm_median_ms": 0.0028333161026239395,
+      "candidate_warm_median_ms": 0.0028334325179457664
+    },
+    "typeset-512": {
+      "baseline_cold_and_draw_ms": 488.66225010715425,
+      "candidate_cold_and_draw_ms": 488.88479243032634,
+      "baseline_best_ms": 487.64220741577446,
+      "candidate_best_ms": 487.84437542781234,
+      "ratio": 1.000455411325764,
+      "best_ratio": 1.0004145826775521,
+      "baseline_rss_growth_bytes": 70123520,
+      "candidate_rss_growth_bytes": 65945600,
+      "baseline_warm_median_ms": 0.002625049091875553,
+      "candidate_warm_median_ms": 0.002791639417409897
+    },
+    "window-30": {
+      "initial_layout_display_ms": {
+        "baseline": 83.17454170901328,
+        "candidate": 83.92262505367398,
+        "baseline_median_ms": 83.95749994087964,
+        "candidate_median_ms": 86.37899998575449
+      },
+      "scroll_work": {
+        "baseline_p95_ms": 8.14000004902482,
+        "candidate_p95_ms": 8.231875021010637
+      },
+      "scheduled_tick_gap": {
+        "baseline_p95_ms": 37.912083440460265,
+        "candidate_p95_ms": 40.11304164305329
+      },
+      "rss_growth_bytes": {
+        "baseline": 48136192,
+        "candidate": 48103424
+      }
+    },
+    "window-128": {
+      "initial_layout_display_ms": {
+        "baseline": 184.36374992597848,
+        "candidate": 186.05575000401586,
+        "baseline_median_ms": 186.98487500660121,
+        "candidate_median_ms": 187.5266666756943
+      },
+      "scroll_work": {
+        "baseline_p95_ms": 15.343250008299947,
+        "candidate_p95_ms": 14.345833333209157
+      },
+      "scheduled_tick_gap": {
+        "baseline_p95_ms": 43.5764582362026,
+        "candidate_p95_ms": 37.675458239391446
+      },
+      "rss_growth_bytes": {
+        "baseline": 71237632,
+        "candidate": 71204864
+      }
+    }
+  },
+  "input_comparison": {
+    "baseline": "56bd761897169c8eea767d945ff9d7e28cac8ae5c2af90146b20f9556acf8b0f",
+    "candidate": "c5c03c8b0e620f1e0944cfba12d4d129a522fdf7c6074974c986004ec2bd32f0",
+    "relative_performance_gates": "applied"
+  },
+  "scope": "same-runner sequential synthetic A/B; window timings are not hardware input latency or FPS"
+}
