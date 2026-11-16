@@ -1,0 +1,6 @@
+skip-verification exit=132 kill_at=SearchEntryReuseTests.swift:120
+canonical-string-key exit=132 kill_at=SearchEntryReuseTests.swift:363
+zero-accounting exit=132 kill_at=ConversationEntryCacheTests.swift:81
+reverse-lru exit=132 kill_at=ConversationEntryCacheTests.swift:114
+admit-oversized exit=132 kill_at=ConversationEntryCacheTests.swift:124
+no-locale-observer exit=132 kill_at=ConversationEntryCacheTests.swift:132

@@ -1,0 +1,116 @@
+PASS: step reading preserves order, edit identities, historical patches and outcome-aware churn
+PASS: phase reading groups Bash and thoughts, preserves edit receipts, separates historical failures from pending work and uses grounded command labels
+PASS: live public summaries, completed process folding, manual expansion, uniform folding of edits and failures
+PASS: PI steady streaming cadence, Unicode boundaries, replacement and immediate completion
+PASS: parsed-block release retains Unicode, styling, links and complete rich Markdown
+PASS: incremental reply parse matches full parses at every streaming prefix
+PASS: live progress, missing summaries, thinking-only output, tool-only notice and provider model groups
+PASS: process fold groups completed turns, preserves order, keeps the running turn live
+PASS: presentation parity, same-ID edits, pagination, epoch/language/live handoff, scoped LRU, oversized active state and metrics
+PASS: presentation history reuse matches complete recomputation across tokens, paging, crossings, language, epoch and overlays
+PASS: paging and new prompts reuse unchanged earlier turns and match complete recomputation (19/20 pages)
+PASS: window identity reuse ends at any earlier in-place edit, survives a rebuilt window and matches complete recomputation
+PASS: find-bar entry reuse equals a complete search across growth, isolated payload edits, reroutes, rebuilds, pages, running flips and query/option switches
+PROBE PASS: prefix zero-sign flip under an unchanged query
+PROBE PASS: NFD regex query after the canonically equal NFC query, and back
+PROBE PASS: payload NFC to NFD swap under an unchanged regex query
+PROBE PASS: object-key NFC to NFD swap under an unchanged regex query
+PROBE PASS: case-sensitive literal NFD query after the canonically equal NFC query, and back
+PASS: find-bar cache-hole probes (prefix zero sign, regex and literal query encoding round trips, payload encoding, key encoding) equal complete searches
+PASS: rendered-source cache — produce-once, NFC/NFD byte-exact keys, exact cost accounting, concrete LRU (touch-retention + victim identity), oversized refusal against a non-empty sentinel table, 512B/200-source churn, removeAll, 8x200 concurrency with single-copy accounting, locale-generation invalidation via the real notification, and four-regime (budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 6 queries at BOTH canonical and per-hit UTF-8 byte levels (canonical == alone admits NFC-normalization mutants) with exact counts, entry identities, occurrences and byte-exact excerpts for the true duplicate source (own message, coalescing-safe)
+
+*** Signal 4: Backtracing from 0x55659f0bfe67... done ***
+
+*** Swift runtime failure: precondition failure ***
+
+Platform: x86_64 Linux (Alibaba Cloud Linux 3 (Soaring Falcon))
+
+Thread 0 "WorkbenchChecks" crashed:
+
+  0 [inlined] [system] 0x000055659f0bfe67 Swift runtime failure: precondition failure in WorkbenchChecks at //<compiler-generated>
+  1                    0x000055659f0bfe67 checkConversationEntryCache() + 16871 in WorkbenchChecks at /tmp/r30-mut/Tests/WorkbenchCoreTests/ConversationEntryCacheTests.swift:124:5
+  2 [ra]               0x000055659f1715ed specialized static ProtocolTests.main() + 460 in WorkbenchChecks at /tmp/r30-mut/Tests/WorkbenchCoreTests/ProtocolTests.swift:48:13
+  3 [async] [system]   0x000055659f16a8c0 specialized thunk for @escaping @convention(thin) @async () -> () in WorkbenchChecks at //<compiler-generated>
+  4 [async]            0x00007fa086239190 completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*) in libswift_Concurrency.so
+...
+
+Thread 1:
+
+  0  0x00007fa0856cddc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 2:
+
+  0  0x00007fa0856cddc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 3:
+
+  0  0x00007fa0856cddc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 4:
+
+  0  0x00007fa0856cddc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 5:
+
+  0  0x00007fa0856cddc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 6:
+
+  0      0x00007fa08439f89e epoll_wait + 94 in libc-2.32.so
+  1 [ra] 0x00007fa086169022 _dispatch_mgr_invoke + 129 in libdispatch.so
+  2 [ra] 0x00007fa086168f8d _dispatch_mgr_thread + 108 in libdispatch.so
+  3 [ra] 0x00007fa08616c195 _dispatch_worker_thread + 628 in libdispatch.so
+...
+
+Thread 7:
+
+  0  0x00007fa0856cddc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 8:
+
+  0  0x00007fa0856cddc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+
+Registers:
+
+rax 0x0000000000000000  0
+rdx 0x00005565a0cc77d0  17 1a 85 f6 60 55 00 00 10 d0 ca a0 65 55 00 00  ···ö`U···ÐÊ eU··
+rcx 0x0000000000000000  0
+rbx 0x0000000000000000  0
+rsi 0x00005565a0d13950  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ················
+rdi 0x0000000000000000  0
+rbp 0x00007ffd602face0  40 ad 2f 60 fd 7f 00 00 ed 15 17 9f 65 55 00 00  @­/`ý···í···eU··
+rsp 0x00007ffd602fa640  b0 a6 2f 60 fd 7f 00 00 20 b0 de a0 65 55 00 00  °¦/`ý··· °Þ eU··
+ r8 0x0000000000000000  0
+ r9 0x0000000200000000  8589934592
+r10 0x0000000100000003  4294967299
+r11 0x0000000000000000  0
+r12 0x0000000000000000  0
+r13 0x00005565a0cec150  10 13 64 9f 65 55 00 00 30 27 1a b4 ac 0a 00 c0  ··d·eU··0'·´¬··À
+r14 0x00005565a0cec150  10 13 64 9f 65 55 00 00 30 27 1a b4 ac 0a 00 c0  ··d·eU··0'·´¬··À
+r15 0x000055659f641310  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ················
+rip 0x000055659f0bfe67  0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 4c 89  ··············L·
+
+rflags 0x0000000000010293  SF AF CF
+
+cs 0x0033  fs 0x0000  gs 0x0000
+
+
+Images (45 omitted):
+
+0x000055659ee00000–0x000055659f5f40e0 69806f3ec4cee19023200e8d0f350ffde1db9d72 WorkbenchChecks         /tmp/r30-mut/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+0x00007fa08425b000–0x00007fa0843dfc5c 960891d022c59cee678476b8696e9224608859d0 libc-2.32.so            /usr/lib64/libc-2.32.so
+0x00007fa0856bc000–0x00007fa0856d1ce1 ddd6cd0bb97a6a9a3ab90896f32eab60963bdfcb libpthread-2.32.so      /usr/lib64/libpthread-2.32.so
+0x00007fa086137000–0x00007fa08617f218 d08a244d278d89eeb5cfd6afd8bb084f99cd2acd libdispatch.so          /home/<dev>/.local/swift/6.3.3/usr/lib/swift/linux/libdispatch.so
+0x00007fa0861ad000–0x00007fa086240660 ab7a387eca696d31db096d9ebebea096c2cf1bc3 libswift_Concurrency.so /home/<dev>/.local/swift/6.3.3/usr/lib/swift/linux/libswift_Concurrency.so
+
+Backtrace took 0.65s
+
+timeout: the monitored command dumped core
