@@ -3,11 +3,17 @@ import Foundation
 /// Cross-instance cache of rendered find-bar search sources (round 27).
 ///
 /// A fresh `ConversationSearch` instance — the find bar on every open, the
-/// workspace history worker on every keystroke — re-renders every source of
+/// workspace history worker on every EXECUTED search (UnifiedSearchView
+/// cancels in-flight searches when the query changes; each explicit search
+/// builds fresh instances per matching session — review F3 correction, the
+/// product does not re-search per keystroke) — re-renders every source of
 /// the searchable window through `ReplyDocument.parse` + `renderedText`,
 /// which round-16 attribution measured at ~80% of a cold query (link
 /// detection 66.6% + parse 14%). Rendering is shared here across instances
-/// so a reopen or a keystroke re-search pays matching, not rendering.
+/// so a find-bar reopen or a repeated explicit history search pays matching
+/// plus table lookups (key construction, hashing, lock, lastUse — not a
+/// zero-cost hit) instead of rendering, as long as the sources stay
+/// admitted, unevicted and in the same locale generation.
 /// The same sharing dedups repeated sources WITHIN one pass: identical
 /// source strings (a tool output or answer text occurring in several
 /// entries) render once and are served from the table afterwards — the
@@ -17,13 +23,19 @@ import Foundation
 /// Design argument (the queue gate for WorkbenchCore-wide caches, "no
 /// global memo"):
 ///
-/// 1. **Purity.** `renderedText(ReplyDocument.parse(source))` is a function
-///    of the source string's exact UTF-8 bytes within a process: the parse
-///    pipeline is deterministic and link detection runs through the
-///    process-lifetime `static let` NSDataDetector in ReplyDocument, fixed at
-///    first use. A content-addressed lookup therefore returns exactly what
-///    re-rendering would produce — the same purity contract round 12's
-///    per-instance rendered-text reuse already relies on.
+/// 1. **Purity, under a stated environment assumption.**
+///    `renderedText(ReplyDocument.parse(source))` is a function of the
+///    source string's exact UTF-8 bytes within a process: the parse pipeline
+///    is deterministic and link detection runs through the process-lifetime
+///    `static let` NSDataDetector in ReplyDocument. The static proves the
+///    detector is CONSTRUCTED once; that its `matches` never consults
+///    runtime-mutable locale state is a platform-semantics assumption the
+///    static alone does not prove — and link state feeds ReplyMath's
+///    math-split admission, so detector behavior is not irrelevant to the
+///    rendered text. Point 4's locale generation bounds exactly that
+///    assumption (defense-in-depth). Round 12's per-instance rendered-text
+///    reuse relies on the same UTF-8 fidelity contract; the citation is
+///    scoped to that fidelity, not to detector/locale stability (review F7).
 /// 2. **Byte-exact keys, never canonical keys.** Canonically equal but
 ///    encoding-distinct sources (an NFC/NFD payload swap) render DIFFERENT
 ///    search bytes (round 12's `sameRenderedUTF8` reasoning), so a
@@ -152,8 +164,14 @@ public final class RenderedSourceCache: @unchecked Sendable {
     }
 
     /// Batch LRU: evict least-recently-used entries until at or under
-    /// budget. Evicting in batches keeps the sort cost amortized (evictions
-    /// are rare relative to inserts at budget scale).
+    /// budget. Honest cost note (review F9): eviction stops exactly AT the
+    /// budget with no low-water margin, so a table sitting at budget pays a
+    /// full O(N log N) sort under the lock on EVERY subsequent insert
+    /// (probe: 2,048B budget, 9B items, 500 unique inserts → 273 sorts). At
+    /// the default 32 MiB budget that state means tens of thousands of
+    /// resident renders; a low-water margin or an intrusive LRU list would
+    /// remove the churn cost but changes eviction semantics and requires
+    /// re-verification — deliberately out of round-27 scope.
     private func evictLocked() {
         guard estimatedBytes > byteBudget else { return }
         let ordered = table.sorted { $0.value.lastUse < $1.value.lastUse }

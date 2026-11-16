@@ -239,8 +239,10 @@ func benchStreamingDelta() throws {
     // Round 16: the cold full-window first-query cost — a fresh
     // ConversationSearch per iteration, so every run pays the complete
     // render + match pass (the find bar pays it per open; workspace history
-    // search pays it per keystroke per session). Measured last so it cannot
-    // disturb the other metrics' timing.
+    // search pays it per executed explicit search — the product cancels
+    // in-flight searches on query change rather than re-searching per
+    // keystroke, round-27 review F3 wording fix). Measured last so it
+    // cannot disturb the other metrics' timing.
     let coldWindow = conversation.displayMessages
     var coldFind: [Double] = []
     for _ in 0..<5 {
@@ -251,16 +253,23 @@ func benchStreamingDelta() throws {
         precondition(found.hits.count >= completedTurns)
     }
     // Round 27: the find-bar REOPEN shape — a fresh ConversationSearch over
-    // the process-wide shared rendered-source cache (the find bar re-renders
-    // nothing on reopen; the history worker reuses renders across
-    // keystrokes). Measured after every pre-existing metric so it cannot
-    // disturb them; the shared cache is warmed once, out of timing, by the
-    // first search, and every timed reopen must reproduce the warm search's
-    // hits EXACTLY (bench-level purity check of the cache). The reopen-minus-
-    // cold delta inside this one binary isolates the render of the unique
-    // sources; both metrics share the duplicate-dedup effect described at the
-    // findBar declaration, so neither is compared against the pre-cache cold
-    // shape as if semantics were unchanged.
+    // the process-wide shared rendered-source cache. On reopen the find bar
+    // re-renders nothing AS LONG AS the sources stay admitted, unevicted and
+    // in the same locale generation; history workers reuse renders across
+    // repeated explicit searches (not per keystroke — review F3). A hit is
+    // not free: it still pays key construction, hashing, lock and lastUse
+    // work (review F8). Measured after every pre-existing metric so it
+    // cannot disturb them; the shared cache is warmed once, out of timing,
+    // by the first search, and every timed reopen must reproduce the warm
+    // search's hits EXACTLY — a within-candidate warm-shape equality check,
+    // NOT a proof of zero produces and NOT an independent oracle against
+    // the pre-cache product (the pin's byteBudget-0 regime is the
+    // render-every-occurrence oracle). The reopen-minus-cold delta inside
+    // this one binary is the miss-path render of the unique sources plus
+    // the miss/hit overhead difference — not an isolated pure-render
+    // timing; both metrics share the duplicate-dedup effect described at
+    // the findBar declaration, so neither is compared against the pre-cache
+    // cold shape as if semantics were unchanged.
     let reopenWarmup = ConversationSearch()
     let reopenExpected = reopenWarmup.hits(in: coldWindow, query: "已经处理", running: true)
     precondition(reopenExpected.hits.count >= completedTurns)

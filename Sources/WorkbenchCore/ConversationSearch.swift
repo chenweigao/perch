@@ -82,10 +82,13 @@ public final class ConversationSearch {
     private var entries: [String: Entry] = [:]
     private var earlier: Earlier?
     /// Round 27: rendered sources are shared across instances through this
-    /// cache — a reopened find bar or a history-worker keystroke re-search
-    /// pays matching, not rendering. The default keeps every existing call
-    /// site unchanged; benchmarks measuring true cold rendering inject a
-    /// fresh cache (see StreamingBench's cold/reopen metrics).
+    /// cache — a reopened find bar or a repeated explicit history search
+    /// (the product re-searches on explicit requests, not per keystroke —
+    /// review F3) pays matching plus cache lookups instead of rendering, as
+    /// long as the sources stay admitted, unevicted and in the same locale
+    /// generation. The default keeps every existing call site unchanged;
+    /// benchmarks measuring true cold rendering inject a fresh cache (see
+    /// StreamingBench's cold/reopen metrics).
     private let renderedCache: RenderedSourceCache
     public init(renderedCache: RenderedSourceCache = .shared) {
         self.renderedCache = renderedCache

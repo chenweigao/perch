@@ -6,19 +6,32 @@ import WorkbenchCore
 /// Part 1 — cache mechanism: produce-once semantics, BYTE-EXACT keying (an
 /// NFC and an NFD source are distinct entries; a canonical-equality key
 /// would conflate them and return the wrong rendering — round 12's
-/// sameRenderedUTF8 reasoning), bounded eviction correctness under churn,
-/// oversized-source admission refusal, removeAll, and a bounded concurrency
-/// smoke (results must be correct under parallel misses; double-render is
-/// benign by design and not asserted against).
+/// sameRenderedUTF8 reasoning), EXACT cost accounting (the review-F2
+/// mutations that zeroed accounting, reversed the LRU order, or admitted
+/// oversized payloads into a non-empty table all died on these assertions —
+/// red-run receipts in round-27/mutations/), single-copy accounting under a
+/// concurrent same-key storm, locale-generation invalidation through the
+/// real NSLocale notification, and bounded concurrency value correctness
+/// (double-render is benign by design and not asserted against).
 ///
-/// Part 2 — end-to-end purity through the public find-bar API: shared-cache
-/// instances and fresh-cache instances must produce IDENTICAL
-/// ConversationFindResults over a corpus whose sources include NFC and NFD
-/// variants of the same text (so a key-conflation defect would change
-/// results), a byte-identical duplicate source across turns (the within-pass
-/// dedup path — the repeat must add its own occurrence at unchanged offsets),
-/// URLs, code and math (the ReplyDocument.parse paths). This is the cache
-/// analogue of round 12's warm-vs-fresh reuse invariant.
+/// Part 2 — end-to-end purity through the public find-bar API over a corpus
+/// whose sources include NFC and NFD variants of the same text (so a
+/// key-conflation defect would change results), URLs, code, display math
+/// (the ReplyDocument.parse paths) and a TRUE byte-identical duplicate
+/// source in its own message: adjacent text parts inside one assistant
+/// message coalesce into a single source (KimiProtocol's
+/// coalescingAdjacentAssistantParts — review F1: the v2 fixture's duplicate
+/// never became its own source occurrence), so the duplicate lives in a
+/// separate `repeat-a0` message and the pass exercises the within-pass dedup
+/// path for real. FOUR regimes must agree exactly — a byteBudget-0 cache
+/// (nothing is ever stored, so every occurrence renders independently: the
+/// pre-cache product semantics as an in-product oracle), shared cold,
+/// fresh, shared warm — and the duplicate's hit is asserted by exact entry
+/// identity, exact hit counts, occurrence indices and byte-exact excerpts,
+/// so the review-F1 "duplicate renders empty" mutation changes the hit
+/// count and dies. Inline math is NOT searchable by existing product design
+/// (its run text is U+FFFC; only display-math latex renders into search
+/// text) — this pin asserts that shape and does not change it.
 func checkRenderedSourceCache() throws {
     // MARK: Part 1 — mechanism
 
@@ -44,6 +57,54 @@ func checkRenderedSourceCache() throws {
     precondition(a1 == "A" && b1 == "B" && a2 == "A" && b2 == "B" && keyCalls == ["nfc", "nfd"],
                  "NFC and NFD sources must be distinct cache keys (canonical keys would conflate renders)")
 
+    // exact cost accounting: estimated bytes == rendered UTF-16 units * 2 + key UTF-8 bytes.
+    // A mutation that stores cost 0 (or never charges) dies here (review F2).
+    func cost(_ source: String, _ rendered: String) -> Int { rendered.utf16.count * 2 + source.utf8.count }
+    let exact = RenderedSourceCache()
+    _ = exact.rendered("abc") { "XY" }
+    precondition(exact.estimatedByteCount == cost("abc", "XY") && exact.estimatedByteCount == 7,
+                 "exact cost accounting broken: \(exact.estimatedByteCount)")
+
+    // concrete LRU: budget holds exactly two entries; touching A must make B
+    // (least recently used) the eviction victim — not A, not C. A reversed
+    // LRU order dies on the serve/re-produce identities below (review F2).
+    let lru = RenderedSourceCache(byteBudget: 12)  // cost("sA","rA") == 6 each
+    var lruProduces: [String: Int] = [:]
+    func lruRendered(_ source: String, _ value: String) -> String {
+        lru.rendered(source) { lruProduces[source, default: 0] += 1; return value }
+    }
+    precondition(cost("sA", "rA") == 6 && cost("sB", "rB") == 6 && cost("sC", "rC") == 6)
+    precondition(lruRendered("sA", "rA") == "rA" && lru.estimatedByteCount == 6)
+    precondition(lruRendered("sB", "rB") == "rB" && lru.estimatedByteCount == 12)
+    precondition(lruRendered("sA", "MUST-NOT-PRODUCE") == "rA" && lruProduces["sA"] == 1,
+                 "touch must serve A from the table")
+    precondition(lruRendered("sC", "rC") == "rC" && lru.estimatedByteCount == 12,
+                 "inserting C at budget must evict exactly one entry")
+    precondition(lruProduces["sC"] == 1)
+    precondition(lruRendered("sA", "MUST-NOT-PRODUCE") == "rA" && lruProduces["sA"] == 1,
+                 "touched A must survive the eviction (reversed LRU evicts it)")
+    precondition(lruRendered("sB", "rB-AGAIN") == "rB-AGAIN" && lruProduces["sB"] == 2,
+                 "B was the least recently used and must re-produce")
+    precondition(lruRendered("sC", "MUST-NOT-PRODUCE") == "rC" && lruProduces["sC"] == 1,
+                 "C must stay stored (evicting the just-inserted entry breaks the budget loop)")
+
+    // oversized payload against a NON-EMPTY table: it must render correctly,
+    // never enter the table, and never evict the resident entry. An
+    // insert-then-evict mutation drops the sentinel and dies here (review F2).
+    let sentinel = RenderedSourceCache(byteBudget: 10)
+    var sentinelProduces = 0
+    precondition(sentinel.rendered("sS") { sentinelProduces += 1; return "rS" } == "rS"
+                 && sentinel.estimatedByteCount == cost("sS", "rS"))
+    let oversized = String(repeating: "长", count: 100)  // cost 600+300 >> 10
+    precondition(cost(oversized, oversized) > 10)
+    precondition(sentinel.rendered(oversized) { oversized } == oversized,
+                 "oversized source must still render correctly")
+    precondition(sentinel.estimatedByteCount == cost("sS", "rS"),
+                 "oversized source must not change accounting: \(sentinel.estimatedByteCount)")
+    precondition(sentinel.rendered("sS") { sentinelProduces += 1; return "WRONG" } == "rS"
+                 && sentinelProduces == 1,
+                 "the resident sentinel must survive an oversized lookup")
+
     // bounded eviction under churn: every lookup stays correct, budget holds
     let small = RenderedSourceCache(byteBudget: 512)
     for i in 0..<200 {
@@ -59,7 +120,7 @@ func checkRenderedSourceCache() throws {
     }
     precondition(small.estimatedByteCount <= 512)
 
-    // oversized single source: rendered correctly, never stored
+    // oversized single source on an empty table: rendered correctly, never stored
     let tiny = RenderedSourceCache(byteBudget: 64)
     let big = String(repeating: "长", count: 100)
     let before = tiny.estimatedByteCount
@@ -68,7 +129,7 @@ func checkRenderedSourceCache() throws {
     precondition(tiny.rendered(big) { "BIG-AGAIN" } == "BIG-AGAIN",
                  "oversized source must re-produce on every lookup")
 
-    // removeAll
+    // removeAll (diagnostic semantics: drops entries without a generation bump)
     let removable = RenderedSourceCache()
     var removes = 0
     _ = removable.rendered("s") { removes += 1; return "v" }
@@ -79,7 +140,9 @@ func checkRenderedSourceCache() throws {
     precondition(removes == 2, "removeAll must drop entries")
 
     // bounded concurrency smoke: parallel misses on overlapping keys must all
-    // observe the correct pure value (double renders are benign by design).
+    // observe the correct pure value (double renders are benign by design),
+    // and racing same-key replacements must charge ONE copy of the cost, not
+    // accumulate per insert (review F2: exact final accounting).
     let concurrent = RenderedSourceCache()
     DispatchQueue.concurrentPerform(iterations: 8) { worker in
         for i in 0..<200 {
@@ -89,13 +152,32 @@ func checkRenderedSourceCache() throws {
                          "concurrent lookup returned a wrong render")
         }
     }
+    let expectedStormCost = (0..<50).reduce(0) { $0 + cost("src-\($1)", "V\($1)") }
+    precondition(concurrent.estimatedByteCount == expectedStormCost,
+                 "concurrent same-key inserts must account one copy each: \(concurrent.estimatedByteCount) != \(expectedStormCost)")
+
+    // locale generation: the real NSLocale notification must drop the table
+    // (defense-in-depth invalidation); entries from the old generation are
+    // re-produced, accounting restarts. Removing the observer dies here.
+    let locale = RenderedSourceCache()
+    var localeProduces = 0
+    precondition(locale.rendered("loc") { localeProduces += 1; return "v1" } == "v1" && localeProduces == 1)
+    precondition(locale.rendered("loc") { localeProduces += 1; return "vX" } == "v1" && localeProduces == 1)
+    NotificationCenter.default.post(name: NSLocale.currentLocaleDidChangeNotification, object: nil)
+    precondition(locale.estimatedByteCount == 0, "the locale notification must empty the table")
+    precondition(locale.rendered("loc") { localeProduces += 1; return "v2" } == "v2" && localeProduces == 2,
+                 "post-notification lookups must re-produce (generation bumped)")
+    precondition(locale.estimatedByteCount == cost("loc", "v2"))
 
     // MARK: Part 2 — end-to-end purity through the public API
 
     func messages(_ raw: [[String: Any]]) throws -> [KimiMessage] {
         try KimiWire.decoder().decode([KimiMessage].self, from: JSONSerialization.data(withJSONObject: raw))
     }
-    let nfcAnswer = "结论：caf\u{00E9} 已完成，见 https://example.com/alpha 与 `let x = 1` 以及 $x^2$ 推导。"
+    // Display math renders its latex into search text; INLINE math is the
+    // object-replacement char (existing product shape, asserted below, not
+    // changed by this pin).
+    let nfcAnswer = "结论：caf\u{00E9} 已完成，见 https://example.com/alpha 与 `let x = 1` 以及 $x^2$ 推导。\n\n$$x^2 + 1$$"
     let nfdAnswer = nfcAnswer.decomposedStringWithCanonicalMapping
     precondition(Array(nfcAnswer.utf8) != Array(nfdAnswer.utf8))
     let window = try messages([
@@ -107,41 +189,65 @@ func checkRenderedSourceCache() throws {
          "content": [["type": "text", "text": "第 1 轮：继续推进。"]]],
         ["id": "a1", "role": "assistant", "created_at": "000004",
          "content": [["type": "text", "text": nfdAnswer],
-                     // Byte-identical duplicate of a0's answer: building this
-                     // entry's sources must serve the repeat from the cache
-                     // (the within-pass dedup path the bench fixture amplifies)
-                     // with unchanged offsets and its own occurrence.
-                     ["type": "text", "text": nfcAnswer],
                      ["type": "tool_use", "tool_call_id": "w1", "tool_name": "Write",
                       "input": ["file_path": "/fixture/Out.swift", "content": "let caf\u{00E9} = 1\n"]]],
          ],
+        // The duplicate lives in its OWN message: adjacent text parts inside
+        // one assistant message coalesce into a single source (review F1), so
+        // only a separate message makes this a true repeated source occurrence.
+        ["id": "repeat-a0", "role": "assistant", "created_at": "000005",
+         "content": [["type": "text", "text": nfcAnswer]]],
     ])
-    // Three cache regimes must agree exactly: shared (first, cold), fresh
-    // (renders everything itself), shared again (warm reopens).
-    for query in ["caf\u{00E9}", "cafe\u{0301}", "ALPHA", "example.com", "x^2", "结论"] {
+    // Expected rendered search text of one answer copy: paragraph runs joined
+    // (code span keeps its content, inline math is U+FFFC, link text is
+    // unchanged) + "\n" + display-math latex.
+    let renderedNFC = "结论：caf\u{00E9} 已完成，见 https://example.com/alpha 与 let x = 1 以及 \u{FFFC} 推导。\nx^2 + 1"
+    let renderedNFD = renderedNFC.decomposedStringWithCanonicalMapping
+
+    // FOUR regimes must agree exactly on every query: byteBudget-0 (never
+    // stores — every occurrence renders independently, the pre-cache product
+    // semantics), shared cold, fresh, shared warm.
+    for query in ["caf\u{00E9}", "cafe\u{0301}", "ALPHA", "example.com", "x^2 + 1", "结论"] {
+        let viaNoCache = ConversationSearch(renderedCache: RenderedSourceCache(byteBudget: 0))
+            .hits(in: window, query: query, running: false)
         let viaSharedCold = ConversationSearch().hits(in: window, query: query, running: false)
         let viaFresh = ConversationSearch(renderedCache: RenderedSourceCache())
             .hits(in: window, query: query, running: false)
         let viaSharedWarm = ConversationSearch().hits(in: window, query: query, running: false)
-        precondition(viaSharedCold == viaFresh && viaFresh == viaSharedWarm,
+        precondition(viaNoCache == viaSharedCold && viaSharedCold == viaFresh && viaFresh == viaSharedWarm,
                      "rendered-source cache changed find-bar results for query \(query.debugDescription)")
+        precondition(!viaNoCache.hits.isEmpty,
+                     "query \(query.debugDescription) must produce hits (non-vacuous pin)")
     }
-    // Sanity: the corpus actually produces hits (the equality assertions are
-    // vacuous on all-empty results).
-    let sanity = ConversationSearch(renderedCache: RenderedSourceCache())
-        .hits(in: window, query: "caf\u{00E9}", running: false)
-    precondition(!sanity.hits.isEmpty, "fixture must produce hits (non-vacuous pin)")
-    let sanityShared = ConversationSearch().hits(in: window, query: "caf\u{00E9}", running: false)
-    precondition(!sanityShared.hits.isEmpty && sanityShared.hits == sanity.hits)
-    // Within-pass dedup pin: "café" (diacritic-insensitive) matches a0's answer
-    // in the first turn and, in the second, a1's NFD answer, its byte-identical
-    // duplicate and the Write content — so both turns must contribute hits and
-    // the duplicate must add its OWN occurrence. A dedup that corrupted the
-    // joined text's offsets would shift occurrences or excerpts.
-    precondition(Set(sanity.hits.map(\.entryID)).count >= 2,
-                 "both turns must contribute café hits, got \(Set(sanity.hits.map(\.entryID)))")
-    precondition(sanity.hits.count >= 3,
-                 "the duplicated answer must contribute its own occurrence, got \(sanity.hits.count)")
 
-    print("PASS: rendered-source cache — produce-once, NFC/NFD byte-exact keys, bounded eviction (512B budget, 200-source churn), oversized refusal, removeAll, 8x200 concurrency smoke, shared/fresh/warm find-bar results identical on 6 queries (NFC+NFD corpus, non-vacuous), and within-pass duplicate-source dedup keeping its own occurrence with cross-regime parity")
+    // Exact shape of the duplicate-sensitive query: hit count, entry identity
+    // and order, occurrence indices and byte-exact excerpts. The review-F1
+    // mutation (a repeated source rendering empty) drops the repeat-a0 hit
+    // and dies on the count; wrong offsets shift excerpts and die here.
+    let cafe = ConversationSearch(renderedCache: RenderedSourceCache()).hits(in: window, query: "caf\u{00E9}", running: false)
+    precondition(cafe.hits.count == 4, "café must hit 4 entries, got \(cafe.hits.count)")
+    precondition(cafe.hits.map(\.entryID) == ["text:a0:0", "text:a1:0", "activity:tool:w1", "text:repeat-a0:0"],
+                 "unexpected entry identities/order: \(cafe.hits.map(\.entryID))")
+    precondition(cafe.hits.allSatisfy { $0.occurrence == 0 }, "each entry contributes exactly one café hit")
+    precondition(cafe.hits[0].excerpt == renderedNFC, "a0 excerpt bytes: \(cafe.hits[0].excerpt.debugDescription)")
+    precondition(cafe.hits[1].excerpt == renderedNFD, "a1 excerpt bytes: \(cafe.hits[1].excerpt.debugDescription)")
+    precondition(cafe.hits[2].excerpt.contains("let caf\u{00E9} = 1"), "tool excerpt: \(cafe.hits[2].excerpt.debugDescription)")
+    precondition(cafe.hits[3].excerpt == renderedNFC && cafe.hits[3].entryID == "text:repeat-a0:0",
+                 "the duplicate source must keep its own byte-exact hit")
+    // Display math is searchable by its latex; inline math is not (U+FFFC).
+    let math = ConversationSearch().hits(in: window, query: "x^2 + 1", running: false)
+    precondition(math.hits.count == 3 && math.hits.map(\.entryID) == ["text:a0:0", "text:a1:0", "text:repeat-a0:0"],
+                 "display-math latex must be searchable in all three answer copies: \(math.hits.map(\.entryID))")
+    precondition(math.hits.allSatisfy { $0.excerpt.hasSuffix("x^2 + 1") })
+    let inline = ConversationSearch().hits(in: window, query: "x^2", running: false)
+    precondition(inline.hits.map(\.entryID) == math.hits.map(\.entryID) && inline.hits.count == 3,
+                 "bare x^2 matches only through the display-math latex (inline math renders U+FFFC)")
+    // The remaining queries keep their exact counts (u0's ALPHA plus the URL
+    // alpha in three answer copies; example.com and 结论 in the three copies).
+    let alpha = ConversationSearch().hits(in: window, query: "ALPHA", running: false)
+    precondition(alpha.hits.count == 4 && alpha.hits[0].entryID == "text:u0:0")
+    precondition(ConversationSearch().hits(in: window, query: "example.com", running: false).hits.count == 3)
+    precondition(ConversationSearch().hits(in: window, query: "结论", running: false).hits.count == 3)
+
+    print("PASS: rendered-source cache — produce-once, NFC/NFD byte-exact keys, exact cost accounting, concrete LRU (touch-retention + victim identity), oversized refusal against a non-empty sentinel table, 512B/200-source churn, removeAll, 8x200 concurrency with single-copy accounting, locale-generation invalidation via the real notification, and four-regime (budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 6 queries with exact counts, entry identities, occurrences and byte-exact excerpts for the true duplicate source (own message, coalescing-safe)")
 }
