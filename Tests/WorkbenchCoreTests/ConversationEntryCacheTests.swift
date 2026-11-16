@@ -77,6 +77,19 @@ func checkConversationEntryCache() throws {
     precondition(ConversationEntryCache.key(entryID: "a\u{0}b", query: "c", options: opts, isRunning: false)
                  != ConversationEntryCache.key(entryID: "a", query: "b\u{0}c", options: opts, isRunning: false),
                  "key must be injective for embedded NULs (zero-separator ambiguity)")
+    // Canonically equal, SAME-byte-length queries: combining marks in
+    // different canonical order. Length-prefixed keys make NFC/NFD (different
+    // lengths) distinct even under a canonical comparison — the v2
+    // canonical-string-key mutant SURVIVED until this case was added. Only
+    // byte-wise key equality refuses the reorder pair.
+    let orderA = "a\u{0301}\u{0327}"  // acute (CCC 230) then cedilla (CCC 202)
+    let orderB = "a\u{0327}\u{0301}"  // canonical reordering of orderA
+    precondition(orderA == orderB && orderA.utf8.count == orderB.utf8.count
+                 && !Array(orderA.utf8).elementsEqual(orderB.utf8),
+                 "fixture: canonically equal, equal length, distinct bytes")
+    precondition(ConversationEntryCache.key(entryID: "e0", query: orderA, options: opts, isRunning: false)
+                 != ConversationEntryCache.key(entryID: "e0", query: orderB, options: opts, isRunning: false),
+                 "canonically-equal reorder queries must be distinct keys (byte-wise equality only)")
     var regexOpts = ConversationFindOptions(); regexOpts.regex = true
     precondition(ConversationEntryCache.key(entryID: "e", query: "q", options: opts, isRunning: false)
                  != ConversationEntryCache.key(entryID: "e", query: "q", options: regexOpts, isRunning: false))
@@ -240,7 +253,8 @@ func checkConversationEntryCache() throws {
         ConversationSearch(renderedCache: RenderedSourceCache(), entryCache: ConversationEntryCache())
     }
 
-    for query in ["caf\u{00E9}", "cafe\u{0301}", "ALPHA", "example.com", "x^2 + 1", "结论"] {
+    for query in ["caf\u{00E9}", "cafe\u{0301}", "a\u{0301}\u{0327}", "a\u{0327}\u{0301}",
+                  "ALPHA", "example.com", "x^2 + 1", "结论"] {
         let oracle = noCache().hits(in: window, query: query, running: false)
         let sharedCold = ConversationSearch().hits(in: window, query: query, running: false)
         let fresh = freshCaches().hits(in: window, query: query, running: false)
@@ -249,7 +263,9 @@ func checkConversationEntryCache() throws {
                      "entry cache changed find-bar results for \(query.debugDescription)")
         precondition(byteShape(oracle) == byteShape(sharedWarm) && byteShape(fresh) == byteShape(sharedWarm),
                      "regimes must agree BYTE-for-byte for \(query.debugDescription)")
-        precondition(!oracle.hits.isEmpty, "non-vacuous: \(query.debugDescription)")
+        if !["a\u{0301}\u{0301}", "a\u{0301}\u{0327}", "a\u{0327}\u{0301}"].contains(query) {
+            precondition(!oracle.hits.isEmpty, "non-vacuous: \(query.debugDescription)")
+        }
     }
 
     // cross-instance staleness: warm the shared caches, then search a
@@ -284,5 +300,5 @@ func checkConversationEntryCache() throws {
     let runOracle = noCache().hits(in: window, query: "结论", running: true)
     precondition(runShared == runOracle && byteShape(runShared) == byteShape(runOracle))
 
-    print("PASS: entry cache — injective length-prefixed byte-exact keys (NUL-collision pinned), round-12 verification as the only reuse gate (same-ID edit and NFD rebuild refused), exact retention-inclusive admission accounting (payload+key+query bytes — Codex P2), generation-guarded store (stale-locale build refused), budget-0 stores nothing, concrete LRU (touch/victim/new-insert), oversized payload AND oversized key refusal against a non-empty table, locale-generation invalidation, removeAll, 8x100 concurrency with single-copy accounting, and four-regime (budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 6 queries at canonical AND byte level plus cross-instance staleness and running-flag isolation")
+    print("PASS: entry cache — injective length-prefixed byte-exact keys (NUL-collision AND canonical-reorder pairs pinned), round-12 verification as the only reuse gate (same-ID edit and NFD rebuild refused), exact retention-inclusive admission accounting (payload+key+query bytes — Codex P2), generation-guarded store (stale-locale build refused), budget-0 stores nothing, concrete LRU (touch/victim/new-insert), oversized payload AND oversized key refusal against a non-empty table, locale-generation invalidation, removeAll, 8x100 concurrency with single-copy accounting, and four-regime (budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 6 queries at canonical AND byte level plus cross-instance staleness and running-flag isolation")
 }
