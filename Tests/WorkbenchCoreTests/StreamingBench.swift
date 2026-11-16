@@ -268,11 +268,14 @@ func benchStreamingDelta() throws {
     // over ALL THREE process-wide shared caches (rendered sources + verified
     // entry results + verified prefix results). Round 32: the reopen's
     // prefix hits ONE shared prefix node — a single whole-window
-    // verification (round-33 diagnostic, both platforms: the stored node's
-    // MATERIALIZED copy PASSES the bitwise tier — sameWindowBits compares
-    // per-message size bytes and skips stride padding — so a reopen pays
-    // ONE whole-window bitwise comparison (~1.2MB over the 16k-message
-    // bench window), not value-tier or per-entry verification)
+    // verification (round-33 direct probes, both platforms, real bench
+    // shape: the stored node's MATERIALIZED copy passes the per-message
+    // BYTE comparison — sameWindowBits/sameWindow's bitwise tier compares
+    // size bytes and skips stride padding — so a reopen pays ONE
+    // whole-window byte comparison, ~1.2MB over the 16k-message bench
+    // window ≈ 27µs, not per-entry verification; the profile leaf naming
+    // for this bucket is release-inlining dependent and its exact closure
+    // attribution stays open per the round-33 review F3)
     // plus reference adoption of the immutable node, replacing timeline
     // construction, per-entry key builds, lookups, verification copies and
     // the instance dictionary build. Round 33: this fixture's query matches

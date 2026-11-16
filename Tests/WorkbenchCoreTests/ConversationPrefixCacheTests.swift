@@ -551,16 +551,15 @@ func checkConversationPrefixCache() throws {
 
     // round-33 concat-guard consumption pin (perf-only mutant class — the
     // negative-list lesson: existence pins cannot kill bypass mutants).
-    // v2 (review finding): the FIRST call for a query takes the rebuild
-    // path, where the built array is COW-shared with the stored node — so
-    // the identity is asserted on ALL THREE routes that must preserve it:
-    // rebuild (first call), shared-node adoption (a fresh instance), and
-    // adoption under running: true (the streaming re-search shape — kills a
-    // running-conditional bypass variant the v1 pin could not see). A
-    // non-empty suffix must still concatenate into independent storage
-    // (always-skip-concat dies on that identity AND on the byte-level
-    // regime equality above), and a caller mutating a shared-storage result
-    // must copy-on-write, never poisoning the node.
+    // v2 (review F2) asserts the empty-suffix storage identity on the
+    // rebuild, shared-adoption and running:true adoption routes; v4 adds the
+    // instance-earlier route (both running values, after a truly warm first
+    // call) and the advance-rebuild route — covering every path that must
+    // preserve the shared storage, so any route-conditional bypass variant
+    // dies. A non-empty suffix must still concatenate into independent
+    // storage (always-skip-concat dies on that identity AND on the
+    // byte-level regime equality above), and a caller mutating a
+    // shared-storage result must copy-on-write, never poisoning the node.
     do {
         func bufferAddress(_ hits: [ConversationSearchHit]) -> UInt {
             hits.withUnsafeBufferPointer { UInt(bitPattern: $0.baseAddress!) }
@@ -608,6 +607,37 @@ func checkConversationPrefixCache() throws {
         }
         precondition(bufferAddress(suffixResult.hits) != bufferAddress(suffixNode.hits),
                      "a non-empty suffix must concatenate into storage independent of the node")
+        // v4 (review F2): route 4 — the INSTANCE-EARLIER hit route must keep
+        // the shared storage too, under both running values (a truly warm
+        // reopen: first call rebuilds, second call hits earlier).
+        let sameInstance = ConversationSearch()
+        _ = sameInstance.hits(in: window, query: prefixOnlyQuery, running: false)  // rebuild route
+        let earlierRoute = sameInstance.hits(in: window, query: prefixOnlyQuery, running: false)
+        precondition(bufferAddress(earlierRoute.hits) == bufferAddress(prefixOnlyNode.hits),
+                     "the instance-earlier route must keep the shared storage")
+        let earlierRouteRunning = sameInstance.hits(in: window, query: prefixOnlyQuery, running: true)
+        precondition(earlierRouteRunning.hits == prefixOnlyResult.hits,
+                     "fixture: this query has no running-turn hits")
+        precondition(bufferAddress(earlierRouteRunning.hits) == bufferAddress(prefixOnlyNode.hits),
+                     "the instance-earlier route under running=true must keep the shared storage")
+        // route 5 — ADVANCE: rebuilding the extended prefix stores a new node
+        // whose hits the result shares (replaces this key's node; runs last).
+        let advancedWindow = window + (try messages([
+            ["id": "u2", "role": "user", "created_at": "000006",
+             "content": [["type": "text", "text": "第 2 轮：收尾。"]]],
+            ["id": "a2", "role": "assistant", "created_at": "000007",
+             "content": [["type": "text", "text": "收尾完成。"]]],
+        ]))
+        let advancedResult = ConversationSearch().hits(in: advancedWindow, query: prefixOnlyQuery, running: false)
+        let advancedSplit = advancedWindow.lastIndex(where: \.isUserPrompt)!
+        guard let advancedNode = ConversationPrefixCache.shared.node(forKey: prefixOnlyKey,
+                                                                     prefix: advancedWindow[..<advancedSplit]) else {
+            fatalError("the advanced-window node must be stored")
+        }
+        precondition(advancedResult.hits == prefixOnlyResult.hits,
+                     "advancing the window must not change this query's hits")
+        precondition(bufferAddress(advancedResult.hits) == bufferAddress(advancedNode.hits),
+                     "the advance-rebuild route must return the new node's hits WITHOUT COW materialization")
     }
 
     // staleness matrix against the budget-0 oracle — every reuse gate the
@@ -712,5 +742,5 @@ func checkConversationPrefixCache() throws {
                       noCache().hits(in: advanced, query: "结论", running: false),
                       "the advanced prefix must serve the next instance identically")
 
-    print("PASS: prefix cache — round-30 key encoding at prefix-table level (canonical-reorder DICTIONARY-LEVEL retrieval refusal), round-12 window predicate as the only reuse gate (same-count edit / NFD rebuild / count change refused), reference adoption (=== node), exact retention-inclusive accounting (INDEPENDENTLY hand-computed window walk + node excerpts + expanded payload costs incl. fileId/offsets/element-stride storage + entry-ID dictionary keys + node key + query bytes), replace accounting, generation-guarded store, budget-0 oracle, concrete LRU, oversized node AND key refusal, heavy window+payload JSONValue retention (24KB-budget refusal), REVIEW-shape refusals (fileId window / 2000-empty-part window / 4096-offset payload), query-storage normalization over a turn-advance chain of independently decoded queries (single shared buffer), mechanism SENTINELS (hits() must consume the shared node; turn advance must convert Entries.shared payloads — perf-only bypass mutants die), locale invalidation, removeAll, 8x100 concurrency single-copy accounting, four-regime (all-three-tiers budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 8 queries at canonical AND byte level, shared-warm non-vacuity, round-33 concat-guard consumption (empty-suffix result SHARES the node's hits storage; non-empty suffix concatenates independently), and the staleness matrix (prefix edit/options/running/turn-boundary across instances + within-instance advance over an adopted shared node) against the budget-0 oracle")
+    print("PASS: prefix cache — round-30 key encoding at prefix-table level (canonical-reorder DICTIONARY-LEVEL retrieval refusal), round-12 window predicate as the only reuse gate (same-count edit / NFD rebuild / count change refused), reference adoption (=== node), exact retention-inclusive accounting (INDEPENDENTLY hand-computed window walk + node excerpts + expanded payload costs incl. fileId/offsets/element-stride storage + entry-ID dictionary keys + node key + query bytes), replace accounting, generation-guarded store, budget-0 oracle, concrete LRU, oversized node AND key refusal, heavy window+payload JSONValue retention (24KB-budget refusal), REVIEW-shape refusals (fileId window / 2000-empty-part window / 4096-offset payload), query-storage normalization over a turn-advance chain of independently decoded queries (single shared buffer), mechanism SENTINELS (hits() must consume the shared node; turn advance must convert Entries.shared payloads — perf-only bypass mutants die), locale invalidation, removeAll, 8x100 concurrency single-copy accounting, four-regime (all-three-tiers budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 8 queries at canonical AND byte level, shared-warm non-vacuity, round-33 concat-guard consumption on ALL FIVE routes (rebuild/shared-adoption/running-true-adoption/instance-earlier/advance SHARE the node's hits storage; non-empty suffix concatenates independently; caller mutation COWs), and the staleness matrix (prefix edit/options/running/turn-boundary across instances + within-instance advance over an adopted shared node) against the budget-0 oracle")
 }
