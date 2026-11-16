@@ -1,50 +1,5 @@
 import Foundation
 
-extension String {
-    /// Round-28 screening candidate: UTF-16 unit count computed over the UTF-8
-    /// bytes (SWAR, 8 bytes per word) instead of the stdlib `utf16.count` walk.
-    /// Identity for well-formed UTF-8 (what String storage guarantees):
-    /// units = #(non-continuation bytes) + #(four-byte leads) — every scalar
-    /// contributes one unit, astral scalars (4-byte leads) a second.
-    /// Round-25 probe evidence (archived): this beats stdlib ONLY on first
-    /// counts of freshly materialized buffers (3.4-3.6x on fresh UTF8/
-    /// JSONDecoder/CoW-appended shapes) and LOSES on cache-hot recounts
-    /// (stdlib ~300x faster second-pass; ASCII fast path ~20x; CJK-mixed
-    /// ~2.2x) — the Mac in-context screening decides whether the product's
-    /// mixed shape nets a gain (queue item ②, round-10 lesson: Mac screening
-    /// before committing the round). Pinned byte-exact against utf16.count by
-    /// checkSwarUTF16Count (exhaustive scalar sweep + seeded fuzz).
-    var utf16CountViaUTF8: Int {
-        var contiguous = self
-        return contiguous.withUTF8 { bytes -> Int in
-            let n = bytes.count
-            guard let base = bytes.baseAddress else { return 0 }
-            let p = UnsafeRawPointer(base)
-            var leads = 0, fourByte = 0, i = 0
-            let m7 = 0x7F7F7F7F7F7F7F7F as UInt64
-            while i + 8 <= n {
-                let word = p.loadUnaligned(fromByteOffset: i, as: UInt64.self)
-                // continuation bytes: (b & 0xC0) == 0x80 — zero byte in masked
-                let masked = (word & 0xC0C0C0C0C0C0C0C0) ^ 0x8080808080808080
-                let contMarks = ~(((masked & m7) &+ m7) | masked | m7)
-                // four-byte leads: high nibble == 0xF
-                let hi = (word & 0xF0F0F0F0F0F0F0F0) ^ 0xF0F0F0F0F0F0F0F0
-                let fMarks = ~(((hi & m7) &+ m7) | hi | m7)
-                leads += 8 - contMarks.nonzeroBitCount
-                fourByte += fMarks.nonzeroBitCount
-                i += 8
-            }
-            while i < n {
-                let b = bytes[i]
-                if b & 0xC0 != 0x80 { leads += 1 }
-                if b >= 0xF0 { fourByte += 1 }
-                i += 1
-            }
-            return leads + fourByte
-        }
-    }
-}
-
 /// A summary of the current user turn, using the same result precedence as the transcript.
 public struct ConversationActivity {
     public let tools: [VisibleTool]
@@ -98,21 +53,21 @@ public struct ConversationActivity {
             progress.combine(last.id)
             progress.combine(last.content.count)
             if let part = last.content.last {
-                progress.combine(part.text?.utf16CountViaUTF8 ?? 0)
-                progress.combine(part.thinking?.utf16CountViaUTF8 ?? 0)
+                progress.combine(part.text?.utf16.count ?? 0)
+                progress.combine(part.thinking?.utf16.count ?? 0)
             }
         }
         for tool in tools {
             progress.combine(tool.id)
             progress.combine(tool.status)
-            if tool.status == .running { progress.combine(tool.progress?.display.utf16CountViaUTF8 ?? -1) }
+            if tool.status == .running { progress.combine(tool.progress?.display.utf16.count ?? -1) }
         }
         progressSignature = progress.finalize()
         var written = 0
         for message in current where message.role == "assistant" {
             for part in message.content {
-                if part.type == "text" { written += part.text?.utf16CountViaUTF8 ?? 0 }
-                else if part.type == "thinking" { written += part.thinking?.utf16CountViaUTF8 ?? 0 }
+                if part.type == "text" { written += part.text?.utf16.count ?? 0 }
+                else if part.type == "thinking" { written += part.thinking?.utf16.count ?? 0 }
             }
         }
         outputCharacters = written

@@ -45,7 +45,6 @@ struct ProtocolTests {
         try checkSearchEntryReuse()
         try checkSearchCacheHoleProbes()
         try checkRenderedSourceCache()
-        try checkSwarUTF16Count()
         checkCollapsedWhitespace()
         try checkTurnExcerpt()
         checkCompactionSummaryDisplay()
