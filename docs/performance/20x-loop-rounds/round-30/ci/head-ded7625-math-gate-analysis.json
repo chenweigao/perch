@@ -1,0 +1,38 @@
+{
+ "run": "https://github.com/chenweigao/perch/actions/runs/43908333878",
+ "head": "ded7625 (round-30 v5: JSONValue retention cost)",
+ "gate_error": "Typeset/draw regression exceeds 15% at 32",
+ "signature": {
+  "classification": "shared-runner single-round candidate spike (variance family of round-24/27/29, direction inverted)",
+  "candidate_round2_spike": "typeset-32 cand r2 = 2.2-2.9ms vs its own r1/r3 = 1.1-1.3ms (~2.3x self-swing in one round); baseline also swings 1.7->1.1 across rounds",
+  "median_ratios_actually_favor_candidate": {
+   "typeset32_draw": 0.8815,
+   "typeset32_cold": 0.8197,
+   "typeset128_draw": 0.8409,
+   "typeset512_draw": 1.0225
+  }
+ },
+ "execution_isolation": "v5 product delta = ConversationEntryCache admission-cost arithmetic (executed only from ConversationSearch.store); math scenarios (SwiftMath/ReplyDocument typeset/draw/parse/window) never execute it. changed_inputs=True only because all of Sources/WorkbenchCore compiles into the preview (layout channel = HYPOTHESIS, round-24 F4 wording).",
+ "quiet_retest": {
+  "head": "ded7625",
+  "baseline_ref": "4f90b88 (PR base)",
+  "status": "passed",
+  "gates": "relative_performance_gates=applied",
+  "candidate_source_input": "c5c03c8b0e620f1e0944cfba12d4d129a522fdf7c6074974c986004ec2bd32f0 (identical to the failed CI run candidate hash — same bytes)",
+  "typeset_32": {
+   "ratio": 0.9479,
+   "best_ratio": 1.0061
+  },
+  "typeset_128": {
+   "ratio": 0.9923,
+   "best_ratio": 0.9989
+  },
+  "typeset_512": {
+   "ratio": 1.0005,
+   "best_ratio": 1.0004
+  },
+  "logs": "round-30/ci/quiet-retest-ded7625{.log,-summary.json}"
+ },
+ "disposition": "quiet retest PASSED on the identical candidate source hash; same-head rerun of failed jobs (navigation GUI jitter + math) issued; gates never modified.",
+ "companion_failure_same_run": "navigation-disclosure-full GUI height assertion (see ded7625-navigation-failure-analysis.md) — same rerun covers it."
+}

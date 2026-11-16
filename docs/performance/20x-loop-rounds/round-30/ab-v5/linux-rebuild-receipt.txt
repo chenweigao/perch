@@ -1,0 +1,9 @@
+candidate_rebuild_exit=0
+candidate_rebuild_head=ded7625210b7a3163cd0e35f3a766fc8c1b480f0
+candidate_rebuild_porcelain=0
+687d4dd5038c3a241cdf0d79ca9e1ac0b36ff8390b033dfbb704d0d34cd1734d  .build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+baseline_rebuild_head=4f90b88999a6be3d93fe67dc777556c4907c6062
+baseline_rebuild_porcelain=2
+?? build.log
+?? rebuild.log
+7439f77f900883f1b15771d3e53c1d772d3ab591b1472c3523ee5fec557c690c  /tmp/r30v5-ab-base/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks

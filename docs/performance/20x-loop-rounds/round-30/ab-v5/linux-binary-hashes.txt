@@ -1,0 +1,2 @@
+15a38c44eb44e84a45d4a98a98657e0b00b94297134dad9cac8ef5e7349ad876  .local/round30/base-checks30v5
+687d4dd5038c3a241cdf0d79ca9e1ac0b36ff8390b033dfbb704d0d34cd1734d  .local/round30/cand-checks30v5
