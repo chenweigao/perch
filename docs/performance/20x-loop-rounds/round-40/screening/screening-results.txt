@@ -1,0 +1,36 @@
+Round-40 screening (粗筛) results — live-turn incremental derivation
+====================================================================
+Base: 6d00124 (round-39 merged). Linux dev machine, WORKBENCH_BENCH=streaming,
+same-session alternating runs. Probes are timing-only hacks (wrong output),
+never committed; patches preserved below.
+
+CONTROL (unmodified v38 binary, 3 runs):
+  chain_total median_ms: 1.16 / 1.17 / 1.17  (median 1.17)
+
+PROBE 1 — make() prefix reuse (entries for tail messages[0..n-2] cached,
+suffix(1) re-made; gate: prefixCount + prefix-lastID; NO validation cost):
+  chain_total median_ms: 1.14 / 1.11 / 1.12  (median 1.12)
+  ceiling gain: (1.17-1.12)/1.17 = 4.3% of chain_total
+  vs Mac chain_total historical spread band 4.35-8.62% (reviewer F1
+  per-sample recomputation, round-39) => ceiling BELOW the band floor.
+
+PROBE 3 — whole tail-side stale reuse (entries+nav+narrative+projected+
+latest rows cached; gate count+lastID): CRASHES benchStreamingDelta at
+StreamingBench.swift:215 — the bench carries a BUILT-IN warm-vs-fresh
+reference oracle per prepend ("a prepended page must present like a full
+projection"). Methodological finding: stale-output ceiling probes are
+impossible on this bench; a full-pipeline ceiling would require the fully
+correct implementation (i.e., the design itself).
+
+PROBE 3b — same with deep-equal gate (messages ==): chain_total 1.16/
+1.14/1.14 — gate never hits on text deltas (last message content grows),
+probe degenerates to no-op; measures the deep== validation cost only
+(~0-2.6%, inconclusive).
+
+VERDICT: reject without formal round (round-15/21 screening discipline).
+- make-alone ceiling 4.3% < spread floor 4.35%: classifier pass improbable.
+- full-pipeline (make+rows+narrative+nav incremental) estimate 8-10% is
+  UNVALIDATED (unprobeable), requires multi-cache design + coalescing
+  locality proof + entry-presentation retroactivity analysis + full
+  equivalence pins — risk/benefit fails the single-hypothesis minimal-change bar.
+Stop counter -> 2/3.

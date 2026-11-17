@@ -1,0 +1,49 @@
+
+*** Signal 4: Backtracing from 0x559cd6021718... done ***
+
+*** Swift runtime failure: precondition failure ***
+
+Platform: x86_64 Linux (Alibaba Cloud Linux 3 (Soaring Falcon))
+
+Thread 0 "WorkbenchChecks" crashed:
+
+  0 [inlined] [system] 0x0000559cd6021718 Swift runtime failure: precondition failure in WorkbenchChecks at //<compiler-generated>
+  1                    0x0000559cd6021718 benchStreamingDelta() + 30712 in WorkbenchChecks at /home/<dev>/.t3/worktrees/perch/t3-b3eb4bba-c5db753ed6879e15/Tests/WorkbenchCoreTests/StreamingBench.swift:215:9
+  2 [ra]               0x0000559cd5f9190a specialized static ProtocolTests.main() + 1753 in WorkbenchChecks at /home/<dev>/.t3/worktrees/perch/t3-b3eb4bba-c5db753ed6879e15/Tests/WorkbenchCoreTests/ProtocolTests.swift:22:17
+  3 [async] [system]   0x0000559cd5f8a6d0 specialized thunk for @escaping @convention(thin) @async () -> () in WorkbenchChecks at //<compiler-generated>
+  4 [async]            0x00007f1d766ae190 completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*) in libswift_Concurrency.so
+...
+
+
+Registers:
+
+rax 0x0000000000000001  1
+rdx 0x0000559ce358a9c0  08 79 50 76 1d 7f 00 00 03 00 00 00 01 00 00 00  ·yPv············
+rcx 0x00007f1d748eaa60  d0 50 58 e3 9c 55 00 00 10 8b 58 e3 9c 55 00 00  ÐPXã·U····Xã·U··
+rbx 0x0000000559ce30c4  22981521604
+rsi 0x0000000000000201  513
+rdi 0x0000000000000000  0
+rbp 0x00007fffae7f4090  f0 40 7f ae ff 7f 00 00 0a 19 f9 d5 9c 55 00 00  ð@·®ÿ·····ùÕ·U··
+rsp 0x00007fffae7f26b0  00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00  ················
+ r8 0x0000000000000000  0
+ r9 0x00000000000299e0  170464
+r10 0x0000000100000003  4294967299
+r11 0x42269221b89c0d00  4766657929147059456
+r12 0x0000000000000000  0
+r13 0x0000559ce35c19f0  60 f2 4f 76 1d 7f 00 00 03 00 00 00 01 00 00 00  `òOv············
+r14 0x0000559ce1be59b0  f0 f7 cd e1 9c 55 00 00 10 c5 d8 de 9c 55 00 00  ð÷Íá·U···ÅØÞ·U··
+r15 0x0000559cdd83e870  08 79 50 76 1d 7f 00 00 03 00 00 00 01 00 00 00  ·yPv············
+rip 0x0000559cd6021718  0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b 0f 0b  ················
+
+rflags 0x0000000000010246  ZF PF
+
+cs 0x0033  fs 0x0000  gs 0x0000
+
+
+Images (48 omitted):
+
+0x0000559cd5c00000–0x0000559cd6424710 f27602d9d906513b27a4dfd5d88e2a7434e3e919 WorkbenchChecks         /home/<dev>/.t3/worktrees/perch/t3-b3eb4bba-c5db753ed6879e15/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+0x00007f1d76622000–0x00007f1d766b5660 ab7a387eca696d31db096d9ebebea096c2cf1bc3 libswift_Concurrency.so /home/<dev>/.local/swift/6.3.3/usr/lib/swift/linux/libswift_Concurrency.so
+
+Backtrace took 0.66s
+
