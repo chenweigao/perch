@@ -346,4 +346,81 @@ func benchStreamingDelta() throws {
         print(line(name, median(pageStages[name]!), indent: "      "))
     }
     print(line("release_model_state", median(released)))
+
+    // Round 41: commentary-shape measurement, placed after ALL existing
+    // metrics (round-16 non-disturbance rule; fixture change identical on
+    // both A/B ends, hashes on record). The chain above streams
+    // thinking-only deltas, whose entries derive placeholder steps; the
+    // product also streams assistant TEXT (commentary), whose .progress
+    // entries re-run clean/narrativeText/phase over the growing joined
+    // text every delta and key the shared static tables by full text
+    // (round-39 F2's separate-workload hypothesis, never measured). The
+    // same conversation continues: assistant.delta events grow
+    // in_flight_turn.assistant_text.
+    func commentaryDelta(_ text: String, offset: Int) throws -> KimiEvent {
+        try decoder.decode(KimiEvent.self, from: JSONSerialization.data(withJSONObject: [
+            "type": "assistant.delta", "session_id": "s", "epoch": "bench", "volatile": true, "offset": offset,
+            "payload": ["agentId": "main", "turnId": 1, "delta": text]] as [String: Any]))
+    }
+    var commentaryStages: [String: [Double]] = [:]
+    for update in 0..<(measured + 5) {
+        let event = try commentaryDelta("第 \(update) 段结论:实现满足约束,继续推进验证与收尾工作。",
+                                        offset: conversation.live?.assistantText.utf16.count ?? 0)
+        var t = benchNow()
+        _ = conversation.apply(event)
+        let applyMs = ms(t)
+        t = benchNow()
+        let commentaryWorkspaceMessages = conversation.displayMessages
+        let display1 = ms(t)
+        t = benchNow()
+        let commentaryActivity = ConversationActivity(messages: commentaryWorkspaceMessages, isRunning: true, liveTools: [], online: true,
+                                                      isThinking: false, isResponding: true)
+        let activityMs = ms(t)
+        t = benchNow()
+        let commentaryTimelineMessages = conversation.displayMessages
+        let display2 = ms(t)
+        let commentaryInput = ConversationPresentationModel.Input(messages: commentaryTimelineMessages, live: [], running: [], isRunning: true,
+                                                                  online: true, epoch: "bench", language: "zh")
+        t = benchNow()
+        let snapshot = handle.update(key: key, input: commentaryInput, cache: cache)
+        let presentation = ms(t)
+        metrics = nil
+        _ = model.update(commentaryInput)
+        t = benchNow()
+        let presented = snapshot.presented(activity: [:], foldsProcess: true, isRunning: true)
+        let presentedMs = ms(t)
+        t = benchNow()
+        let commentaryKeys = presented.rows.map { key + ":" + $0.entry.id }
+        let contentsMs = ms(t)
+        t = benchNow()
+        let found = findBar.hits(in: commentaryTimelineMessages, query: "已经处理", running: true)
+        let findMs = ms(t)
+        precondition(found.hits.count >= completedTurns)
+        _ = commentaryActivity; _ = presented; _ = commentaryKeys
+        guard update >= 5 else { continue }
+        for (name, value) in [("commentary_apply", applyMs), ("commentary_display_workspace", display1),
+                              ("commentary_activity", activityMs), ("commentary_display_timeline", display2),
+                              ("commentary_presentation_update", presentation), ("commentary_presented_rows", presentedMs),
+                              ("commentary_memory_keys", contentsMs), ("commentary_find_query_update", findMs)] {
+            commentaryStages[name, default: []].append(value)
+        }
+        if let metrics {
+            for (name, value) in [("commentary_narrative", metrics.narrativeNanoseconds),
+                                  ("commentary_turn_projection", metrics.turnProjectionNanoseconds),
+                                  ("commentary_tool_projection", metrics.toolProjectionNanoseconds),
+                                  ("commentary_input_comparison", metrics.inputComparisonNanoseconds)] {
+                commentaryStages[name, default: []].append(nanos(value))
+            }
+        }
+    }
+    let commentaryChainOrder = ["commentary_apply", "commentary_display_workspace", "commentary_activity",
+                                "commentary_display_timeline", "commentary_presentation_update",
+                                "commentary_presented_rows", "commentary_memory_keys"]
+    let commentaryTotal = commentaryChainOrder.reduce(0) { $0 + median(commentaryStages[$1]!) }
+    print(line4("commentary_chain_total", commentaryTotal))
+    for name in commentaryChainOrder + ["commentary_find_query_update", "commentary_narrative",
+                                        "commentary_turn_projection", "commentary_tool_projection",
+                                        "commentary_input_comparison"] {
+        print(line4(name, median(commentaryStages[name]!)))
+    }
 }
