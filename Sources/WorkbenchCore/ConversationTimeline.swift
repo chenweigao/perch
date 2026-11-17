@@ -205,19 +205,74 @@ public enum ConversationProcessFold {
     }
 }
 
+/// Round 42: bounded lazy memo for `displayMessages`, one box per VALUE
+/// LINEAGE. The getter is public non-mutating API (a red line to change)
+/// and KimiConversation is a Sendable struct, so the memo lives in a
+/// reference box held by the struct. Soundness rests on one invariant:
+/// every mutator that writes `messages` or `live` REPLACES the box
+/// (`displayMemo = DisplayMemoBox()` — a plain field reassignment inside
+/// the mutating func). A box is therefore shared only by copies whose
+/// fields never diverged (a struct copy shares the box; any mutation forks
+/// it), so a cached array is always the pure function of exactly the
+/// fields of every copy still holding that box — staleness is impossible,
+/// and non-mutating copies keep serving warm hits. An earlier
+/// revision-counter design (bump-in-place on a permanently shared box)
+/// was killed by the differential pin: diverged copies at equal revision
+/// served each other's cached arrays — confirming the round-38 "shared
+/// box breaks copy semantics" concern for that shape.
+/// Bounded: one cached array per box; old boxes die with their copies
+/// (round-30/38 five-point doctrine: pure function; single-slot key
+/// domain; replacement eviction; one-window retention; invalidation =
+/// box identity per lineage). Locking: NSLock under the box, mirroring
+/// NarrativeTextCache; the compute closure runs OUTSIDE the lock (it
+/// reads only the calling copy's immutable fields and never re-enters).
+final class DisplayMemoBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var cached: [KimiMessage]?
+    private var hits = 0
+    private var misses = 0
+
+    func value(compute: () -> [KimiMessage]) -> [KimiMessage] {
+        lock.lock()
+        if let cached {
+            hits += 1
+            let result = cached
+            lock.unlock()
+            return result
+        }
+        misses += 1
+        lock.unlock()
+        let computed = compute()
+        lock.lock()
+        // First store wins; concurrent computes of the same pure function
+        // are equal, so either value is correct.
+        if cached == nil { cached = computed }
+        lock.unlock()
+        return computed
+    }
+
+    var stats: (hits: Int, misses: Int) {
+        lock.lock()
+        defer { lock.unlock() }
+        return (hits, misses)
+    }
+}
+
 extension KimiConversation {
     /// Include volatile output in the same folding policy as persisted messages.
     public var displayMessages: [KimiMessage] {
-        guard let live else { return messages }
-        let start = messages.lastIndex { $0.isUserPrompt }.map { $0 + 1 } ?? 0
-        let last = messages[start...].last { $0.role == "assistant" }
-        var parts: [KimiPart] = []
-        for (type, value) in [("thinking", live.thinkingText), ("text", live.assistantText)] where !value.isEmpty {
-            if last?.content.contains(where: { type == "text" ? $0.text == value : $0.thinking == value }) == true { continue }
-            parts.append(KimiPart(type: type, text: type == "text" ? value : nil, thinking: type == "thinking" ? value : nil,
-                                  toolCallId: nil, toolName: nil, input: nil, output: nil, isError: nil, source: nil, fileId: nil, name: nil))
+        displayMemo.value {
+            guard let live else { return messages }
+            let start = messages.lastIndex { $0.isUserPrompt }.map { $0 + 1 } ?? 0
+            let last = messages[start...].last { $0.role == "assistant" }
+            var parts: [KimiPart] = []
+            for (type, value) in [("thinking", live.thinkingText), ("text", live.assistantText)] where !value.isEmpty {
+                if last?.content.contains(where: { type == "text" ? $0.text == value : $0.thinking == value }) == true { continue }
+                parts.append(KimiPart(type: type, text: type == "text" ? value : nil, thinking: type == "thinking" ? value : nil,
+                                      toolCallId: nil, toolName: nil, input: nil, output: nil, isError: nil, source: nil, fileId: nil, name: nil))
+            }
+            guard !parts.isEmpty else { return messages }
+            return messages + [KimiMessage(id: "live:\(live.turnId)", role: "assistant", content: parts, createdAt: "", metadata: nil)]
         }
-        guard !parts.isEmpty else { return messages }
-        return messages + [KimiMessage(id: "live:\(live.turnId)", role: "assistant", content: parts, createdAt: "", metadata: nil)]
     }
 }
