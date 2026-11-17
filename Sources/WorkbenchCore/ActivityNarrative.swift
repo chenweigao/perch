@@ -820,9 +820,9 @@ final class CommentaryDerivation {
         [0x23, 0x20],              // "# "
         [0x2A, 0x2A],              // "**" — global replacement, never incremental
     ]
-    /// markerBytes as Strings — kept in sync by the byte re-derivation in
-    /// checkCommentaryDerivation's sibling pins; markerMatches decides with
-    /// these via the product's own String.hasPrefix.
+    /// markerBytes as Strings. No encoding-assertion pin exists; sync is
+    /// enforced behaviorally — the fuzz corpus's marker shapes diverge from
+    /// the oracle on any desync. markerMatches decides via String.hasPrefix.
     private static let markerStrings: [String] = ["### ", "## ", "# ", "**"]
     private static let phaseHoldback = NarrativePhaseScan.maxKeywordBytes + 3
     private static let delimPatterns: [[UInt8]] = [[0xEF, 0xBC, 0x9A], [0x3A, 0x20]]
