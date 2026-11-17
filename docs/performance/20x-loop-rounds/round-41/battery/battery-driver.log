@@ -1,0 +1,19 @@
+=== battery start Wed Nov 18 03:48:45 CST 2026 ===
+m0-pristine exit=0 (must be 0)
+.local/round41/run-battery.sh: line 14: 3636896 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m1-headtrim-drop DIED exit=132 killer=WorkbenchChecks/CommentaryDerivationTests.swift:46: Precondition failed: commentary derivator diverged [colon-flood] at parts ["：："]
+.local/round41/run-battery.sh: line 14: 3637899 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m2-zone-drop-ascii DIED exit=132 killer=WorkbenchChecks/CommentaryDerivationTests.swift:46: Precondition failed: commentary derivator diverged [bench-shape] at parts ["第 1 段结论:"]
+.local/round41/run-battery.sh: line 14: 3639900 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m3-phase-tail-drop DIED exit=132 killer=WorkbenchChecks/CommentaryDerivationTests.swift:46: Precondition failed: commentary derivator diverged [bench-shape] at parts ["第 1 段结论:实现"]
+m4-gate-freeze SURVIVED (exit=0) — PIN GAP
+.local/round41/run-battery.sh: line 14: 3643878 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m5-validation-drop DIED exit=132 killer=WorkbenchChecks/CommentaryDerivationTests.swift:46: Precondition failed: commentary derivator diverged [edit-reseed] at parts ["完全不同的正文：验证"]
+.local/round41/run-battery.sh: line 14: 3644906 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m6-headskip2-drop DIED exit=132 killer=WorkbenchChecks/CommentaryDerivationTests.swift:46: Precondition failed: commentary derivator diverged [marker-hash-flip] at parts ["# # x"]
+.local/round41/run-battery.sh: line 14: 3645872 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m7-kind-order-swap DIED exit=132 killer=WorkbenchChecks/CommentaryDerivationTests.swift:46: Precondition failed: commentary derivator diverged [kind-priority-flip] at parts ["a: b：c"]
+m8-marker-premature BUILD-FAIL (mutant does not compile — fix patch)
+m9-zone-drop-fullwidth BUILD-FAIL (mutant does not compile — fix patch)
+m10-ws-holdback-drop BUILD-FAIL (mutant does not compile — fix patch)
+=== battery done Wed Nov 18 03:49:54 CST 2026 ===

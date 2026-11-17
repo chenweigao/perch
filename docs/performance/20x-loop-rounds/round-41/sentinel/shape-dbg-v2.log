@@ -1,0 +1,156 @@
+R41SHAPE entry=a-t230-s0 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s4 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s8 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s12 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s16 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s0 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s4 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s8 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s12 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s16 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s0 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s4 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s8 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s12 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s16 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s0 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s4 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s8 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s12 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s16 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s0 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s4 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s8 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s12 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s16 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s0 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s4 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s8 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s12 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s16 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s0 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s4 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s8 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s12 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s16 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s0 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s4 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s8 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s12 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=a-t230-s16 shape=reseed reseed=1 joined=0 parts=1
+streaming_bench messages=16142 entries=8993 rows=692 measured=30
+  apply                       median_ms=    0.01
+  display_messages_workspace  median_ms=    0.30
+  conversation_activity       median_ms=    0.24
+  display_messages_timeline   median_ms=    0.30
+  presentation_update         median_ms=    1.88
+  presented_rows              median_ms=    0.25
+  memory_keys                 median_ms=    0.32
+  chain_total                 median_ms=    3.30
+  presentation_update breakdown (separate warm model with metrics):
+    input_comparison            median_ms=    0.00
+    tool_projection             median_ms=    1.23
+    turn_projection             median_ms=    0.24
+    narrative                   median_ms=    0.23
+    row_projection              median_ms=    0.06
+    summary                     median_ms=    0.00
+    retained_cost               median_ms=    0.03
+    total                       median_ms=    1.81
+  find_bar_query_update       median_ms=    1.91
+  find_bar_cold_query         median_ms=  783.94
+  find_bar_reopen_query       median_ms=    1.5804
+  older_page_full_chain       median_ms=   14.82
+    presentation_update         median_ms=   13.91
+    presented_rows              median_ms=    0.81
+    conversation_activity       median_ms=    0.27
+    presentation_update breakdown (separate warm model with metrics):
+      tool_projection             median_ms=    5.92
+      turn_projection             median_ms=    2.48
+      narrative                   median_ms=    0.29
+      row_projection              median_ms=    0.07
+      retained_cost               median_ms=    6.16
+      model_total                 median_ms=   15.27
+  release_model_state         median_ms=   12.73
+R41SHAPE entry=live:1 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=live:1 shape=reseed reseed=1 joined=0 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=71 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=71 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=142 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=142 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=213 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=213 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=284 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=284 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=355 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=355 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=426 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=426 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=497 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=497 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=568 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=568 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=639 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=639 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=710 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=710 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=782 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=782 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=854 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=854 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=926 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=926 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=998 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=998 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=1070 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=1070 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=1142 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=1142 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=1214 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=1214 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=1286 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=1286 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=1358 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=1358 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=1430 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=1430 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=1502 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=1502 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=1574 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=1574 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=1646 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=1646 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=1718 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=1718 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=1790 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=1790 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=1862 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=1862 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=1934 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=1934 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=2006 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=2006 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=2078 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=2078 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=2150 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=2150 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=2222 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=2222 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=2294 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=2294 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=2366 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=2366 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=2438 parts=1
+R41SHAPE entry=live:1 shape=growth reseed=1 joined=2438 parts=1
+  commentary_chain_total      median_ms=    3.6860
+  commentary_apply            median_ms=    0.0400
+  commentary_display_workspacemedian_ms=    0.3252
+  commentary_activity         median_ms=    0.2487
+  commentary_display_timeline median_ms=    0.3103
+  commentary_presentation_updamedian_ms=    2.1511
+  commentary_presented_rows   median_ms=    0.2635
+  commentary_memory_keys      median_ms=    0.3471
+  commentary_find_query_updatemedian_ms=    2.0113
+  commentary_narrative        median_ms=    0.4306
+  commentary_turn_projection  median_ms=    0.3041
+  commentary_tool_projection  median_ms=    1.2312
+  commentary_input_comparison median_ms=    0.0029

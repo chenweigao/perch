@@ -1,0 +1,13 @@
+Building for debugging...
+[0/2] Write swift-version--2C0D084D88D86C41.txt
+[1/3] Write sources
+[3/5] Compiling WorkbenchCore ActivityNarrative.swift
+/home/<dev>/.t3/worktrees/perch/t3-b3eb4bba-c5db753ed6879e15/Sources/WorkbenchCore/ActivityNarrative.swift:1305:25: warning: immutable value 'nonEmpty' was never used; consider replacing with '_' or removing it [#no-usage]
+1303 |             guard let position = delimFound[kind], let headline = delimHeadline[kind],
+... [3 lines elided] ...
+1306 |                                                    lenTrimmed: lenTrimmed)
+1307 |             if strict { return .fallback }
+[4/5] Emitting module WorkbenchCore
+[5/7] Write Objects.LinkFileList
+[6/7] Linking WorkbenchChecks
+Build of product 'WorkbenchChecks' complete! (2.35s)

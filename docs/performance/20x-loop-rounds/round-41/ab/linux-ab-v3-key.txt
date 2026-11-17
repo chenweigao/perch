@@ -1,0 +1,7 @@
+
+== linux-ab-v3 key metrics ==
+chain_total                               1.1400 ->    1.1600 ( +1.75%) band= 4.46% sep=1/6f 4/6s within-noise
+commentary_chain_total                    1.7979 ->    1.6806 ( -6.52%) band= 4.68% sep=6/6f 0/6s SEPARATED
+commentary_narrative                      0.0930 ->    0.0777 (-16.50%) band= 7.33% sep=6/6f 0/6s SEPARATED
+commentary_presentation_upda              0.4678 ->    0.3480 (-25.60%) band= 6.24% sep=6/6f 0/6s SEPARATED
+older_page_full_chain                     5.1350 ->    4.9150 ( -4.28%) band=16.87% sep=4/6f 2/6s within-noise

@@ -1,0 +1,79 @@
+=== prepare Wed Nov 18 04:49:36 CST 2026 ===
+011b2f36af2326fc52d590ac9e2a1b6c  /tmp/r41-v1-rel
+51a9bc681767ad8e1ae29b5d4dcca3ce  /tmp/r41-v6-rel
+=== checks both sides Wed Nov 18 04:49:37 CST 2026 ===
+base_checks_exit=0
+cand_checks_exit=0
+.local/round41/ab41v2-linux/checks-base.log:110
+.local/round41/ab41v2-linux/checks-cand.log:111
+PASS: commentary derivator — 684 differential observations (engaged 31, strict-retired 10, reseeds 4) equal to the from-scratch path (byte-level except canonical-table re-encodings)
+=== pairs Wed Nov 18 04:49:52 CST 2026 ===
+pair=1 variant=baseline mode=streaming exit=0
+pair=1 variant=baseline mode=1 exit=0
+pair=1 variant=baseline mode=activity exit=0
+pair=1 variant=baseline mode=edit-lines exit=0
+pair=1 variant=baseline mode=presentation-token exit=0
+pair=1 variant=candidate mode=streaming exit=0
+pair=1 variant=candidate mode=1 exit=0
+pair=1 variant=candidate mode=activity exit=0
+pair=1 variant=candidate mode=edit-lines exit=0
+pair=1 variant=candidate mode=presentation-token exit=0
+pair1 done Wed Nov 18 04:50:09 CST 2026
+pair=2 variant=baseline mode=streaming exit=0
+pair=2 variant=baseline mode=1 exit=0
+pair=2 variant=baseline mode=activity exit=0
+pair=2 variant=baseline mode=edit-lines exit=0
+pair=2 variant=baseline mode=presentation-token exit=0
+pair=2 variant=candidate mode=streaming exit=0
+pair=2 variant=candidate mode=1 exit=0
+pair=2 variant=candidate mode=activity exit=0
+pair=2 variant=candidate mode=edit-lines exit=0
+pair=2 variant=candidate mode=presentation-token exit=0
+pair2 done Wed Nov 18 04:50:26 CST 2026
+pair=3 variant=baseline mode=streaming exit=0
+pair=3 variant=baseline mode=1 exit=0
+pair=3 variant=baseline mode=activity exit=0
+pair=3 variant=baseline mode=edit-lines exit=0
+pair=3 variant=baseline mode=presentation-token exit=0
+pair=3 variant=candidate mode=streaming exit=0
+pair=3 variant=candidate mode=1 exit=0
+pair=3 variant=candidate mode=activity exit=0
+pair=3 variant=candidate mode=edit-lines exit=0
+pair=3 variant=candidate mode=presentation-token exit=0
+pair3 done Wed Nov 18 04:50:43 CST 2026
+pair=4 variant=baseline mode=streaming exit=0
+pair=4 variant=baseline mode=1 exit=0
+pair=4 variant=baseline mode=activity exit=0
+pair=4 variant=baseline mode=edit-lines exit=0
+pair=4 variant=baseline mode=presentation-token exit=0
+pair=4 variant=candidate mode=streaming exit=0
+pair=4 variant=candidate mode=1 exit=0
+pair=4 variant=candidate mode=activity exit=0
+pair=4 variant=candidate mode=edit-lines exit=0
+pair=4 variant=candidate mode=presentation-token exit=0
+pair4 done Wed Nov 18 04:51:00 CST 2026
+pair=5 variant=baseline mode=streaming exit=0
+pair=5 variant=baseline mode=1 exit=0
+pair=5 variant=baseline mode=activity exit=0
+pair=5 variant=baseline mode=edit-lines exit=0
+pair=5 variant=baseline mode=presentation-token exit=0
+pair=5 variant=candidate mode=streaming exit=0
+pair=5 variant=candidate mode=1 exit=0
+pair=5 variant=candidate mode=activity exit=0
+pair=5 variant=candidate mode=edit-lines exit=0
+pair=5 variant=candidate mode=presentation-token exit=0
+pair5 done Wed Nov 18 04:51:17 CST 2026
+pair=6 variant=baseline mode=streaming exit=0
+pair=6 variant=baseline mode=1 exit=0
+pair=6 variant=baseline mode=activity exit=0
+pair=6 variant=baseline mode=edit-lines exit=0
+pair=6 variant=baseline mode=presentation-token exit=0
+pair=6 variant=candidate mode=streaming exit=0
+pair=6 variant=candidate mode=1 exit=0
+pair=6 variant=candidate mode=activity exit=0
+pair=6 variant=candidate mode=edit-lines exit=0
+pair=6 variant=candidate mode=presentation-token exit=0
+pair6 done Wed Nov 18 04:51:34 CST 2026
+011b2f36af2326fc52d590ac9e2a1b6c  /tmp/r41-v1-rel
+51a9bc681767ad8e1ae29b5d4dcca3ce  /tmp/r41-v6-rel
+DONE Wed Nov 18 04:51:34 CST 2026

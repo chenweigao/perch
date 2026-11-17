@@ -1,0 +1,34 @@
+=== battery-v2 start Wed Nov 18 04:52:02 CST 2026 ===
+m0-pristine exit=0 (must be 0)
+.local/round41/run-battery-v2.sh: line 15: 4041304 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m1-headtrim-drop DIED exit=132 killer=WorkbenchChecks/CommentaryDerivationTests.swift:91: Precondition failed: commentary derivator diverged [colon-flood] at parts ["：："]
+.local/round41/run-battery-v2.sh: line 15: 4042395 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m2-zone-drop-ascii DIED exit=132 killer=WorkbenchChecks/CommentaryDerivationTests.swift:91: Precondition failed: commentary derivator diverged [bench-shape] at parts ["第 1 段结论:"]
+.local/round41/run-battery-v2.sh: line 15: 4043510 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m3-phase-tail-drop DIED exit=132 killer=WorkbenchChecks/CommentaryDerivationTests.swift:91: Precondition failed: commentary derivator diverged [bench-shape] at parts ["第 1 段结论:实现"]
+m4-gate-freeze SURVIVED (expected — documented equivalent mutant)
+.local/round41/run-battery-v2.sh: line 15: 4046936 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m4b-headline-gate-drop DIED exit=132 killer=WorkbenchChecks/CommentaryDerivationTests.swift:91: Precondition failed: commentary derivator diverged [long-headline] at parts ["长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长：d"]
+.local/round41/run-battery-v2.sh: line 15: 4047948 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m5-validation-drop DIED exit=132 killer=WorkbenchChecks/CommentaryDerivationTests.swift:91: Precondition failed: commentary derivator diverged [review-F2-canonical-reencode] at parts ["éxy"]
+.local/round41/run-battery-v2.sh: line 15: 4049169 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m6-headskip2-drop DIED exit=132 killer=WorkbenchChecks/CommentaryDerivationTests.swift:91: Precondition failed: commentary derivator diverged [marker-hash-flip] at parts ["# # x"]
+.local/round41/run-battery-v2.sh: line 15: 4050174 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m7-kind-order-swap DIED exit=132 killer=WorkbenchChecks/CommentaryDerivationTests.swift:91: Precondition failed: commentary derivator diverged [kind-priority-flip] at parts ["a: b：c"]
+.local/round41/run-battery-v2.sh: line 15: 4051350 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m8-marker-premature DIED exit=132 killer=WorkbenchChecks/CommentaryDerivationTests.swift:91: Precondition failed: commentary derivator diverged [marker-hash-flip] at parts ["# # x"]
+.local/round41/run-battery-v2.sh: line 15: 4052383 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m9-zone-drop-fullwidth DIED exit=132 killer=WorkbenchChecks/CommentaryDerivationTests.swift:91: Precondition failed: commentary derivator diverged [cjk-separator] at parts ["标题："]
+.local/round41/run-battery-v2.sh: line 15: 4053551 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m10-ws-holdback-drop DIED exit=132 killer=WorkbenchChecks/CommentaryDerivationTests.swift:188: Precondition failed: non-strict corpus item retired the derivator [nbsp-trailing]
+.local/round41/run-battery-v2.sh: line 15: 4054513 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m11-revert-F1-delim-scan-from-zero DIED exit=132 killer=Swift/Range.swift:761: Fatal error: Range requires lowerBound <= upperBound
+.local/round41/run-battery-v2.sh: line 15: 4055527 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m12-revert-F2-canonical-eq DIED exit=132 killer=WorkbenchChecks/CommentaryDerivationTests.swift:91: Precondition failed: commentary derivator diverged [review-F2-canonical-reencode] at parts ["éxy"]
+.local/round41/run-battery-v2.sh: line 15: 4056641 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m13-revert-F3-marker-binding-blind DIED exit=132 killer=WorkbenchChecks/CommentaryDerivationTests.swift:91: Precondition failed: commentary derivator diverged [marker-binding-mark] at parts ["# ́x"]
+.local/round41/run-battery-v2.sh: line 15: 4057663 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m14-revert-F4-zwsp DIED exit=132 killer=WorkbenchChecks/CommentaryDerivationTests.swift:91: Precondition failed: commentary derivator diverged [zwsp-trailing] at parts ["a​"]
+ .../20x-loop-rounds/2026-11-18-round-41.md         | 72 ++++++++++++++++++++--
+ 1 file changed, 67 insertions(+), 5 deletions(-)
+=== battery-v2 done Wed Nov 18 04:54:36 CST 2026 ===

@@ -1,0 +1,14 @@
+# U+200B whitespace-set sweep (round-41 review F4)
+Linux Swift 6.3.3 full sweep (1,112,064 scalars): exactly ONE difference —
+  DIFF U+200B foundation=1 mirror=0 stdlibIsWS=0
+  foundationOnly=1 mirrorOnly=0; trim200B=[a]
+Mac (targeted probe, full sweep SIGKILLed by the host): same single DIFF line —
+  DIFF U+200B foundation=1 mirror=0 stdlib=0
+  trim200B=[a] trimFEFF=[a﻿]  (FEFF NOT in the set — probe confirms boundary)
+=> Linux: EXHAUSTIVE sweep establishes U+200B as the ONLY difference.
+   Mac: targeted probe only (full sweep SIGKILLed by the host) — it
+   confirms U+200B inclusion but does NOT independently establish
+   uniqueness on macOS; the Mac-side commentary pin (112 PASS incl. all
+   zwsp corpus items, behaviorally differential against real Foundation
+   trimmingCharacters) is the Mac-side evidence. Reviewer independently
+   reproduced the exhaustive Linux sweep (re-review verification).

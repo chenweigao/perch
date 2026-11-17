@@ -72,14 +72,16 @@ extension String {
     }
 
     /// The Unicode White_Space set outside ASCII, exactly.
-    private static func isNonASCIIWhitespace(_ scalar: UInt32) -> Bool {
+    /// Internal since round 41: the incremental commentary collapse
+    /// (ActivityNarrative derivator) mirrors the fast path's strict triggers.
+    static func isNonASCIIWhitespace(_ scalar: UInt32) -> Bool {
         switch scalar {
         case 0x85, 0xA0, 0x1680, 0x2000...0x200A, 0x2028, 0x2029, 0x202F, 0x205F, 0x3000: return true
         default: return false
         }
     }
 
-    private static func utf8Scalar(in bytes: UnsafeBufferPointer<UInt8>, at i: Int) -> (UInt32, Int)? {
+    static func utf8Scalar(in bytes: UnsafeBufferPointer<UInt8>, at i: Int) -> (UInt32, Int)? {  // internal since round 41 (derivator)
         func continuation(_ j: Int) -> Bool { j < bytes.count && bytes[j] & 0xC0 == 0x80 }
         switch bytes[i] {
         case 0xC2...0xDF:

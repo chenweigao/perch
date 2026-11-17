@@ -1,0 +1,49 @@
+profile=streaming total_samples=20687
+
+== phase [chain] n=20687 (100.0% of trace) ==
+    4643  22.44%  setup-wire-decode
+    3235  15.64%  string-compare
+    3084  14.91%  arc-copy
+    2361  11.41%  utf16-bridge
+    1745   8.44%  teardown
+    1291   6.24%  cf-match
+     868   4.20%  alloc
+     813   3.93%  input-compare
+     721   3.49%  string-hash
+     517   2.50%  dict-find
+     391   1.89%  timeline-make
+     248   1.20%  narrative
+     175   0.85%  tool-visibility
+     161   0.78%  turn-summary
+     107   0.52%  model-update
+      74   0.36%  outside
+      65   0.31%  setup-json
+      62   0.30%  find-verify
+      61   0.29%  find-search
+      26   0.13%  activity-init
+      13   0.06%  presented-fold
+      11   0.05%  history-join
+  -- top leaves --
+    1126   5.44%  swift_release
+     901   4.36%  swift_retain
+     796   3.85%  swift_bridgeObjectRelease
+     789   3.81%  closure #1 in closure #1 in static KimiMessage.sameWindow(_:_:)
+     584   2.82%  swift_bridgeObjectRetain
+     508   2.46%  Hasher._combine(_:)
+     484   2.34%  _stringCompareFastUTF8Abnormal(_:_:expecting:)
+     431   2.08%  DYLD-STUB$$swift_bridgeObjectRelease
+     427   2.06%  DYLD-STUB$$swift_bridgeObjectRetain
+     413   2.00%  __CFStringFoldCharacterClusterAtIndex
+     363   1.75%  _StringGuts.append(_:)
+     360   1.74%  _platform_memmove
+     334   1.61%  specialized static JSONScanner._slowpath_stringValue(from:appendingTo:fullSource:)
+     332   1.60%  Hasher.combine(bytes:)
+  -- hash/dict consumers --
+     476   2.30%  specialized _StringGutsSlice.withFastUTF8<A, B>(_:)
+     247   1.19%  String.hash(into:)
+     104   0.50%  JSONDecoderImpl.KeyedContainer.decodeIfPresent(_:forKey:)
+     100   0.48%  specialized RenderedSourceCache.rendered(_:produce:)
+      66   0.32%  _StringGuts.createAndLoadBreadcrumbs_time_here_is_String_to_NSString_bridging_overhead(_:)
+      63   0.30%  ToolVisibilityProjection.Pass.collect(_:)
+      51   0.25%  static JSONDecoderImpl.KeyedContainer.stringify(objectRegion:using:codingPathNode:keyDecod
+      49   0.24%  JSONDecoderImpl.KeyedContainer.decodeIfPresent<A>(_:forKey:)

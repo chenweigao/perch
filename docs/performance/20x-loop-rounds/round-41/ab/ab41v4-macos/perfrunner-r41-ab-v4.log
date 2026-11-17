@@ -1,0 +1,92 @@
+=== prepare Wed Nov 18 05:22:26 CST 2026 ===
+From github.com:chenweigao/perch
+   f69883a3..1f0213d9  perf/20x-loop-41-20261117 -> origin/perf/20x-loop-41-20261117
+porcelain_preclean=0
+Previous HEAD position was f69883a3 fix(narrative): round-41 v6 — review F1-F4: four derivator equivalence defects
+HEAD is now at dade949f test(bench): round-41 v1 — commentary-shape streaming measurement (assistant.delta phase after all existing metrics)
+HEAD_base=dade949f0bfc1c9587c52831dc3e69b08c9401ad
+=== base build (dade949f) Wed Nov 18 05:22:30 CST 2026 ===
+base_build_exit=0
+=== candidate checkout + build (e1b7c29e) Wed Nov 18 05:23:47 CST 2026 ===
+Previous HEAD position was dade949f test(bench): round-41 v1 — commentary-shape streaming measurement (assistant.delta phase after all existing metrics)
+HEAD is now at 1f0213d9 fix(narrative): round-41 v7 — re-review F3': marker decision by the product's own hasPrefix on a bounded window
+HEAD_cand=1f0213d91782e90b13db4587ed3243d4f2f91904
+cand_build_exit=0
+a7af56e60ddd125eae3a2ca4817d8f8595f0414c4fe7bb5ce3408ad20a73a391  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round41v4-ab-base/out/Products/Release/WorkbenchChecks
+3fb753b6fd653367d9c64339659b8d15a1c391bd34bca10b277a18c06f8c0ad8  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round41v4-ab-cand/out/Products/Release/WorkbenchChecks
+=== checks both sides (base = v1 pin set, record; cand = gate) Wed Nov 18 05:25:04 CST 2026 ===
+base_checks_exit=0 pass=111
+cand_checks_exit=0 pass=112
+PASS: commentary derivator — 690 differential observations (engaged 31, strict-retired 10, reseeds 4) equal to the from-scratch path (byte-level except canonical-table re-encodings)
+=== pairs Wed Nov 18 05:25:29 CST 2026 ===
+pair=1 variant=baseline mode=streaming exit=0
+pair=1 variant=baseline mode=1 exit=0
+pair=1 variant=baseline mode=activity exit=0
+pair=1 variant=baseline mode=edit-lines exit=0
+pair=1 variant=baseline mode=presentation-token exit=0
+pair=1 variant=candidate mode=streaming exit=0
+pair=1 variant=candidate mode=1 exit=0
+pair=1 variant=candidate mode=activity exit=0
+pair=1 variant=candidate mode=edit-lines exit=0
+pair=1 variant=candidate mode=presentation-token exit=0
+pair1 done Wed Nov 18 05:25:42 CST 2026
+pair=2 variant=baseline mode=streaming exit=0
+pair=2 variant=baseline mode=1 exit=0
+pair=2 variant=baseline mode=activity exit=0
+pair=2 variant=baseline mode=edit-lines exit=0
+pair=2 variant=baseline mode=presentation-token exit=0
+pair=2 variant=candidate mode=streaming exit=0
+pair=2 variant=candidate mode=1 exit=0
+pair=2 variant=candidate mode=activity exit=0
+pair=2 variant=candidate mode=edit-lines exit=0
+pair=2 variant=candidate mode=presentation-token exit=0
+pair2 done Wed Nov 18 05:25:55 CST 2026
+pair=3 variant=baseline mode=streaming exit=0
+pair=3 variant=baseline mode=1 exit=0
+pair=3 variant=baseline mode=activity exit=0
+pair=3 variant=baseline mode=edit-lines exit=0
+pair=3 variant=baseline mode=presentation-token exit=0
+pair=3 variant=candidate mode=streaming exit=0
+pair=3 variant=candidate mode=1 exit=0
+pair=3 variant=candidate mode=activity exit=0
+pair=3 variant=candidate mode=edit-lines exit=0
+pair=3 variant=candidate mode=presentation-token exit=0
+pair3 done Wed Nov 18 05:26:07 CST 2026
+pair=4 variant=baseline mode=streaming exit=0
+pair=4 variant=baseline mode=1 exit=0
+pair=4 variant=baseline mode=activity exit=0
+pair=4 variant=baseline mode=edit-lines exit=0
+pair=4 variant=baseline mode=presentation-token exit=0
+pair=4 variant=candidate mode=streaming exit=0
+pair=4 variant=candidate mode=1 exit=0
+pair=4 variant=candidate mode=activity exit=0
+pair=4 variant=candidate mode=edit-lines exit=0
+pair=4 variant=candidate mode=presentation-token exit=0
+pair4 done Wed Nov 18 05:26:20 CST 2026
+pair=5 variant=baseline mode=streaming exit=0
+pair=5 variant=baseline mode=1 exit=0
+pair=5 variant=baseline mode=activity exit=0
+pair=5 variant=baseline mode=edit-lines exit=0
+pair=5 variant=baseline mode=presentation-token exit=0
+pair=5 variant=candidate mode=streaming exit=0
+pair=5 variant=candidate mode=1 exit=0
+pair=5 variant=candidate mode=activity exit=0
+pair=5 variant=candidate mode=edit-lines exit=0
+pair=5 variant=candidate mode=presentation-token exit=0
+pair5 done Wed Nov 18 05:26:33 CST 2026
+pair=6 variant=baseline mode=streaming exit=0
+pair=6 variant=baseline mode=1 exit=0
+pair=6 variant=baseline mode=activity exit=0
+pair=6 variant=baseline mode=edit-lines exit=0
+pair=6 variant=baseline mode=presentation-token exit=0
+pair=6 variant=candidate mode=streaming exit=0
+pair=6 variant=candidate mode=1 exit=0
+pair=6 variant=candidate mode=activity exit=0
+pair=6 variant=candidate mode=edit-lines exit=0
+pair=6 variant=candidate mode=presentation-token exit=0
+pair6 done Wed Nov 18 05:26:46 CST 2026
+a7af56e60ddd125eae3a2ca4817d8f8595f0414c4fe7bb5ce3408ad20a73a391  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round41v4-ab-base/out/Products/Release/WorkbenchChecks
+3fb753b6fd653367d9c64339659b8d15a1c391bd34bca10b277a18c06f8c0ad8  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round41v4-ab-cand/out/Products/Release/WorkbenchChecks
+porcelain_after=0
+DONE Wed Nov 18 05:26:47 CST 2026
+exit=0

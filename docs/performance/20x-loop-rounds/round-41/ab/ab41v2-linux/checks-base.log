@@ -1,0 +1,13 @@
+PASS: step reading preserves order, edit identities, historical patches and outcome-aware churn
+PASS: phase reading groups Bash and thoughts, preserves edit receipts, separates historical failures from pending work and uses grounded command labels
+PASS: live public summaries, completed process folding, manual expansion, uniform folding of edits and failures
+PASS: PI steady streaming cadence, Unicode boundaries, replacement and immediate completion
+PASS: parsed-block release retains Unicode, styling, links and complete rich Markdown
+PASS: incremental reply parse matches full parses at every streaming prefix
+... [107 lines elided] ...
+PASS: committed branch review uses merge-base and pinned commits; preserves worktree, renames, deletions, binary, literal paths and bounded diffs
+PASS: remote git write — quoting, stage/unstage/commit/switch, branches, log, show
+PASS: project file references preserve Unicode drafts; catalog searches the whole repository, prioritizes filenames, caps output and propagates Git errors
+PASS: preview replacement, pinning, existing tabs, explicit new tabs, close, overview
+PASS: task groups, cross-host identity, pinned scene persistence, corrupt-file preservation
+PASS: protocol decoding, shell argument isolation, SSH destination validation

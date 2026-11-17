@@ -1,0 +1,5 @@
+# Microbenchmarks (Linux dev host, release -O, 2.8KB CJK fixture, 2000-3000 iters)
+hasPrefix=32.13us/32.02us  bytePrefix=1.66us/1.65us   (v4 validation fix)
+String(decoding:): array=1.34/1.28us slice=1.26/1.24us buffer=1.27/1.27us
+  -> decoding is NOT the bottleneck; debug-build sentinel exaggeration +
+     hasPrefix + inconclusive-phase lowercased/contains were (see report).

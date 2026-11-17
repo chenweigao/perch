@@ -1,0 +1,11 @@
+Running version
+Running bridge
+Running codex-schema
+Running installer
+Running model-metadata
+Running localization
+Running localization-tests
+Running radius
+Running preview-sources
+Running acceptance-supervisor
+Passed: /home/<dev>/.t3/worktrees/perch/t3-b3eb4bba-c5db753ed6879e15/.local/round41/portable-f69883a3/results.json

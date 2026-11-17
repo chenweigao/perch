@@ -1,0 +1,5 @@
+# round-41 commentary harness fidelity dry-run (Linux, dade949f tree + temp harness, Wed Nov 18 00:16:00 CST 2026)
+r41_profile shape=streaming cycles=5 updates=1025
+r41_chain_median_ms=2.868 min_ms=1.800 max_ms=435.331 find_median_ms=0.789
+  commentary_chain_total      median_ms=    1.7728
+  commentary_find_query_updatemedian_ms=    0.5217
