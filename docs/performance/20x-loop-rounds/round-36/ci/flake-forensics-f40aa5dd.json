@@ -1,0 +1,109 @@
+{
+ "head": "f40aa5dd (docs-only forensics commit; product bytes identical to 1226a2f8/4f6999e8/84b0d8c8/8c748acd \u2014 four consecutive greens on the math gate)",
+ "run": 44051270267,
+ "failed_jobs": [
+  "Native session regression (session)",
+  "Native math performance regression",
+  "Native build and interaction regression (aggregator)"
+ ],
+ "session_failure": {
+  "check": "native-subagents exit 1",
+  "signature": "recording or fixture timed out; incomplete trace is not acceptance (elapsed 136.7s)",
+  "family": "GUI recording timeout on shared runner (#25 TaskContextReading / #31 NativeSubagentChecks settle family)"
+ },
+ "math_failure": {
+  "signature": "Typeset/draw regression exceeds 15% at 128 (DIFFERENT size than the 4f6999e8 failure at 32 \u2014 non-systematic)",
+  "typeset_128": {
+   "baseline_totals": [
+    419.6,
+    536.0,
+    558.1
+   ],
+   "candidate_totals": [
+    505.7,
+    587.6,
+    723.2
+   ],
+   "best_ratio": 1.2054,
+   "limit": 1.15,
+   "median_ratio": 1.0964,
+   "baseline_span_x": 1.33,
+   "candidate_span_x": 1.43
+  },
+  "typeset_32_this_run": {
+   "baseline_totals": [
+    110.9,
+    158.9,
+    247.8
+   ],
+   "candidate_totals": [
+    114.3,
+    136.5,
+    192.1
+   ],
+   "best_ratio": 1.0304,
+   "limit": 1.15,
+   "median_ratio": 0.8593,
+   "baseline_span_x": 2.23,
+   "candidate_span_x": 1.68
+  },
+  "classification": "variance family: failing size hopped 32->128 between runs on identical product bytes; candidate median ratio 1.0964 inside limit at 128; round-36 change touches ConversationPresentation only \u2014 no call path from SwiftMath typesetting; four consecutive prior heads green on this gate. Same-head attempt-2 rerun triggered for session+math+aggregator; quiet-machine retest reserved if rerun fails again (round-35 protocol)."
+ },
+ "math_attempt2": {
+  "gate_error": "Typeset/draw regression exceeds 15% at 32 (SIZE HOPPED from 128 at attempt-1)",
+  "typeset_32": {
+   "best_ratio": 1.1858,
+   "median_ratio": 1.3497,
+   "baseline_totals": [
+    114,
+    129,
+    311
+   ],
+   "baseline_span_x": 2.71,
+   "candidate_totals": [
+    136,
+    174,
+    186
+   ],
+   "candidate_span_x": 1.37
+  },
+  "typeset_128": {
+   "best_ratio": 1.1763,
+   "median_ratio": 1.0757,
+   "baseline_totals": [
+    401,
+    465,
+    530
+   ],
+   "candidate_totals": [
+    471,
+    501,
+    526
+   ]
+  },
+  "variance_evidence": "same-size (32) median ratio swung 0.8593 (attempt-1) -> 1.3497 (attempt-2) on IDENTICAL product bytes; failing size hopped 128 -> 32; attempt-2 baseline span 2.71x with warm-up spike 311 vs best 114; four prior heads/attempts with same product bytes green (8c748acd, 84b0d8c8, 1226a2f8, 4f6999e8-attempt2)"
+ },
+ "session_attempt2": "PASSED on attempt-2 (GUI recording timeout flake closed, instance #38)",
+ "protocol": "quiet retest PASSED (second evidence); attempt-3 same-head rerun pending \u2014 merge requires a green CI attempt (round-35 double-green closure precedent); zero gate changes.",
+ "quiet_retest": {
+  "machine": "Mac mini, quiet Aqua session, PerfRunner job r36-math-retest",
+  "head": "f40aa5dd",
+  "baseline_ref": "fd79884 (PR base)",
+  "math_exit": 0,
+  "status": "passed",
+  "porcelain": "0/0",
+  "typeset_32": {
+   "ratio": 1.0114,
+   "best_ratio": 1.0084
+  },
+  "typeset_128": {
+   "ratio": 0.9819,
+   "best_ratio": 0.9979
+  },
+  "typeset_512": {
+   "ratio": 1.0009,
+   "best_ratio": 1.002
+  },
+  "conclusion": "candidate neutral-to-faster on all three sizes on a quiet machine vs CI shared-runner best_ratios of 1.1858/1.2054 \u2014 contention/warm-up variance confirmed; log archived as ci/quiet-retest-f40aa5dd.log"
+ }
+}

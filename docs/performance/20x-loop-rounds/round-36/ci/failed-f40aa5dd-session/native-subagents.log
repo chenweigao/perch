@@ -1,0 +1,29 @@
+{
+  "commit": "fd0748f1707a12e61ba21e7779801d156f200ea1",
+  "source_sha256": "c48b18d39ce6363bcfdadc9a217478ee0f5ff850d08fc1ebd2d345ff02391173",
+  "configuration": "release -O",
+  "defines": [
+    "PERCH_ACCEPTANCE",
+    "TRANSCRIPT_CHECKS"
+  ],
+  "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+  "window_points": [
+    1280,
+    820
+  ],
+  "history_turns": 200,
+  "catalog_sessions": 500,
+  "resident_snapshot_count": 8,
+  "binary_sha256": "7ec3dff68396aea4c44b73ae88d3ddff5d4b07b8805897e85fb223914bc0a207",
+  "capture": "none",
+  "mode": "subagents",
+  "sidebar_variant": "flat",
+  "responsiveness_control": false,
+  "input_positive_control": false,
+  "positive_control": false,
+  "joint_seconds": null,
+  "supervisor_pid": 10902,
+  "failure": "recording or fixture timed out; incomplete trace is not acceptance",
+  "elapsed_s": 136.71486245799997,
+  "behavior_passed": false
+}

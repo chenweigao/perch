@@ -1,0 +1,232 @@
+{
+  "suite": "macos",
+  "group": "native-session",
+  "scope": "offline synthetic checks; no SSH, real models or frame-rate certification",
+  "commit": "39c9b7aa6cad2999ecdc9663b88f5ccb4f23cf22",
+  "dirty": false,
+  "checks": [
+    {
+      "name": "native-detail-lifecycle",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/run-native-acceptance.py",
+        "--mode",
+        "detail-lifecycle",
+        "--seconds",
+        "60",
+        "--output",
+        "/Users/<runner>/work/perch/perch/.local/functional-native-session/native-detail-lifecycle"
+      ],
+      "log": "native-detail-lifecycle.log",
+      "exit_code": 0,
+      "seconds": 18.1,
+      "passed": true
+    },
+    {
+      "name": "native-inspector",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/run-native-acceptance.py",
+        "--mode",
+        "inspector",
+        "--seconds",
+        "60",
+        "--output",
+        "/Users/<runner>/work/perch/perch/.local/functional-native-session/native-inspector"
+      ],
+      "log": "native-inspector.log",
+      "exit_code": 0,
+      "seconds": 21.86,
+      "passed": true
+    },
+    {
+      "name": "native-sidebar-invalidation",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/run-native-acceptance.py",
+        "--mode",
+        "sidebar-invalidation",
+        "--seconds",
+        "60",
+        "--output",
+        "/Users/<runner>/work/perch/perch/.local/functional-native-session/native-sidebar-invalidation"
+      ],
+      "log": "native-sidebar-invalidation.log",
+      "exit_code": 0,
+      "seconds": 12.52,
+      "passed": true
+    },
+    {
+      "name": "native-sidebar-structure",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/run-native-acceptance.py",
+        "--mode",
+        "sidebar-structure",
+        "--seconds",
+        "60",
+        "--output",
+        "/Users/<runner>/work/perch/perch/.local/functional-native-session/native-sidebar-structure"
+      ],
+      "log": "native-sidebar-structure.log",
+      "exit_code": 0,
+      "seconds": 11.08,
+      "passed": true
+    },
+    {
+      "name": "native-sidebar-layout-order",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/run-native-acceptance.py",
+        "--mode",
+        "sidebar-layout-order",
+        "--seconds",
+        "60",
+        "--output",
+        "/Users/<runner>/work/perch/perch/.local/functional-native-session/native-sidebar-layout-order"
+      ],
+      "log": "native-sidebar-layout-order.log",
+      "exit_code": 0,
+      "seconds": 14.35,
+      "passed": true
+    },
+    {
+      "name": "native-sidebar-layout-pins",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/run-native-acceptance.py",
+        "--mode",
+        "sidebar-layout-pins",
+        "--seconds",
+        "60",
+        "--output",
+        "/Users/<runner>/work/perch/perch/.local/functional-native-session/native-sidebar-layout-pins"
+      ],
+      "log": "native-sidebar-layout-pins.log",
+      "exit_code": 0,
+      "seconds": 16.28,
+      "passed": true
+    },
+    {
+      "name": "native-sidebar-layout-height",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/run-native-acceptance.py",
+        "--mode",
+        "sidebar-layout-height",
+        "--seconds",
+        "60",
+        "--output",
+        "/Users/<runner>/work/perch/perch/.local/functional-native-session/native-sidebar-layout-height"
+      ],
+      "log": "native-sidebar-layout-height.log",
+      "exit_code": 0,
+      "seconds": 18.68,
+      "passed": true
+    },
+    {
+      "name": "native-workspace",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/run-native-acceptance.py",
+        "--mode",
+        "workspace",
+        "--seconds",
+        "60",
+        "--output",
+        "/Users/<runner>/work/perch/perch/.local/functional-native-session/native-workspace"
+      ],
+      "log": "native-workspace.log",
+      "exit_code": 0,
+      "seconds": 6.67,
+      "passed": true
+    },
+    {
+      "name": "native-review",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/run-native-acceptance.py",
+        "--mode",
+        "review",
+        "--seconds",
+        "60",
+        "--output",
+        "/Users/<runner>/work/perch/perch/.local/functional-native-session/native-review"
+      ],
+      "log": "native-review.log",
+      "exit_code": 0,
+      "seconds": 8.07,
+      "passed": true
+    },
+    {
+      "name": "native-branch-review",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/run-native-acceptance.py",
+        "--mode",
+        "branch-review",
+        "--seconds",
+        "60",
+        "--output",
+        "/Users/<runner>/work/perch/perch/.local/functional-native-session/native-branch-review"
+      ],
+      "log": "native-branch-review.log",
+      "exit_code": 0,
+      "seconds": 12.33,
+      "passed": true
+    },
+    {
+      "name": "native-paging",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/run-native-acceptance.py",
+        "--mode",
+        "paging",
+        "--seconds",
+        "60",
+        "--output",
+        "/Users/<runner>/work/perch/perch/.local/functional-native-session/native-paging"
+      ],
+      "log": "native-paging.log",
+      "exit_code": 0,
+      "seconds": 13.27,
+      "passed": true
+    },
+    {
+      "name": "native-invalidation",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/run-native-acceptance.py",
+        "--mode",
+        "invalidation",
+        "--seconds",
+        "60",
+        "--output",
+        "/Users/<runner>/work/perch/perch/.local/functional-native-session/native-invalidation"
+      ],
+      "log": "native-invalidation.log",
+      "exit_code": 0,
+      "seconds": 12.08,
+      "passed": true
+    },
+    {
+      "name": "native-subagents",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/run-native-acceptance.py",
+        "--mode",
+        "subagents",
+        "--seconds",
+        "60",
+        "--output",
+        "/Users/<runner>/work/perch/perch/.local/functional-native-session/native-subagents"
+      ],
+      "log": "native-subagents.log",
+      "exit_code": 1,
+      "seconds": 136.92,
+      "passed": false
+    }
+  ],
+  "status": "failed",
+  "seconds": 302.26
+}
