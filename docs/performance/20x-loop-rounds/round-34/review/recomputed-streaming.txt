@@ -1,0 +1,48 @@
+profile=streaming total_samples=20591
+
+== phase [chain] n=20591 (100.0% of trace) ==
+    4523  21.97%  setup-wire-decode
+    3160  15.35%  arc-copy
+    2360  11.46%  utf16-bridge
+    1784   8.66%  teardown
+    1712   8.31%  string-compare
+    1496   7.27%  narrative
+    1369   6.65%  cf-match
+     899   4.37%  alloc
+     842   4.09%  input-compare
+     737   3.58%  string-hash
+     483   2.35%  dict-find
+     373   1.81%  timeline-make
+     188   0.91%  tool-visibility
+     154   0.75%  find-search
+     139   0.68%  model-update
+     112   0.54%  turn-summary
+      74   0.36%  find-verify
+      61   0.30%  setup-json
+      45   0.22%  bench-harness
+      41   0.20%  activity-init
+      13   0.06%  presented-fold
+  -- top leaves --
+    1162   5.64%  swift_release
+     880   4.27%  swift_retain
+     857   4.16%  swift_bridgeObjectRelease
+     823   4.00%  closure #1 in closure #1 in static KimiMessage.sameWindow(_:_:)
+     538   2.61%  swift_bridgeObjectRetain
+     480   2.33%  DYLD-STUB$$swift_bridgeObjectRelease
+     391   1.90%  __CFStringFoldCharacterClusterAtIndex
+     379   1.84%  DYLD-STUB$$swift_bridgeObjectRetain
+     349   1.69%  _platform_memmove
+     334   1.62%  Hasher.combine(bytes:)
+     331   1.61%  _StringGuts.append(_:)
+     321   1.56%  specialized static JSONScanner._slowpath_stringValue(from:appendingTo:fullSource:)
+     313   1.52%  _xzm_free_tc
+     307   1.49%  validateUTF8(_:)
+  -- hash/dict consumers --
+     294   1.43%  String.hash(into:)
+      86   0.42%  JSONDecoderImpl.KeyedContainer.decodeIfPresent(_:forKey:)
+      66   0.32%  JSONDecoderImpl.KeyedContainer.decodeIfPresent<A>(_:forKey:)
+      63   0.31%  ToolVisibilityProjection.Pass.collect(_:)
+      54   0.26%  ToolVisibilityProjection.Pass.normalize(_:)
+      53   0.26%  AppLanguage.localization.getter
+      49   0.24%  static JSONDecoderImpl.KeyedContainer.stringify(objectRegion:using:codingPathNode:keyDecod
+      35   0.17%  JSONDecoderImpl.KeyedContainer.decode(_:forKey:)

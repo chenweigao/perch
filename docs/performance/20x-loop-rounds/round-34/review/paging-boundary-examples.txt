@@ -1,0 +1,303 @@
+index=384 time=1318550958.0 prev=J next=P
+DYLD-STUB$$swift_bridgeObjectRetain
+swift_arrayInitWithCopy
+specialized _ContiguousArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)
+specialized Array._createNewBuffer(bufferIsUnique:minimumCapacity:growForAppend:)
+specialized Array._reserveCapacityImpl(minimumCapacity:growForAppend:)
+specialized Array.append<A>(contentsOf:)
+specialized static Array.+ infix(_:_:)
+KimiConversation.displayMessages.getter
+benchR34PagingProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)
+
+index=385 time=1319553291.0 prev=J next=P
+swift_bridgeObjectRetain
+swift_arrayInitWithCopy
+specialized _ContiguousArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend:)
+specialized Array._createNewBuffer(bufferIsUnique:minimumCapacity:growForAppend:)
+specialized Array._reserveCapacityImpl(minimumCapacity:growForAppend:)
+specialized Array.append<A>(contentsOf:)
+specialized static Array.+ infix(_:_:)
+KimiConversation.displayMessages.getter
+benchR34PagingProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)
+
+index=386 time=1320550875.0 prev=J next=P
+closure #1 in closure #1 in static KimiMessage.sameWindow(_:_:)
+ToolVisibilityProjection.canReuse(_:messages:split:sessionID:activeIDs:online:)
+ToolVisibilityProjection.update(_:splittingAt:sessionID:live:running:online:)
+closure #2 in ConversationPresentationModel.update(_:)
+specialized Optional.map<A, B>(_:)
+ConversationPresentationModel.update(_:)
+ConversationPresentationHandle.update(key:input:cache:)
+benchR34PagingProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)
+
+index=387 time=1321552916.0 prev=J next=P
+_platform_memmove
+specialized Array._createNewBuffer(bufferIsUnique:minimumCapacity:growForAppend:)
+specialized Array._reserveCapacityAssumingUniqueBuffer(oldCount:)
+specialized Array.append(_:)
+ToolVisibilityProjection.Pass.normalize(_:)
+ToolVisibilityProjection.normalize(_:activeIDs:online:anchor:)
+ToolVisibilityProjection.update(_:splittingAt:sessionID:live:running:online:)
+closure #2 in ConversationPresentationModel.update(_:)
+specialized Optional.map<A, B>(_:)
+ConversationPresentationModel.update(_:)
+ConversationPresentationHandle.update(key:input:cache:)
+benchR34PagingProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)
+
+index=388 time=1322550958.0 prev=J next=P
+_CFRelease
+_bridgeCocoaString(_:)
+String.init(_cocoaString:)
+static String._unconditionallyBridgeFromObjectiveC(_:)
+protocol witness for static _ObjectiveCBridgeable._forceBridgeFromObjectiveC(_:result:) in conformance String
+_tryCastFromClassToObjCBridgeable(swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*, swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*, void*, swift::TargetMetadata<swift::InProcess> const*&, swift::TargetMetadata<swift::InProcess> const*&, bool, bool, _ObjectiveCBridgeableWitnessTable const*, swift::TargetMetadata<swift::InProcess> const*)
+ObjCBridgeMemo::tryBridge(swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*, swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*, swift::TargetMetadata<swift::InProcess> const*&, swift::TargetMetadata<swift::InProcess> const*&, bool, bool)
+tryCast(swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*, swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*, swift::TargetMetadata<swift::InProcess> const*&, swift::TargetMetadata<swift::InProcess> const*&, bool, bool, bool)
+tryCast(swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*, swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*, swift::TargetMetadata<swift::InProcess> const*&, swift::TargetMetadata<swift::InProcess> const*&, bool, bool, bool)
+swift_dynamicCast
+specialized closure #2 in static Dictionary._forceBridgeFromObjectiveC(_:result:)
+static Dictionary._unconditionallyBridgeFromObjectiveC(_:)
+AppLanguage.localization.getter
+AppLanguage.resolvedLocale.getter
+default argument 1 of L(_:locale:)
+specialized static ActivityNarrativeProjection.make(entries:tools:isRunning:external:cache:)
+static ActivityNarrativeProjection.make(entries:tools:isRunning:external:cache:)
+ConversationPresentationModel.update(_:)
+ConversationPresentationHandle.update(key:input:cache:)
+benchR34PagingProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)
+
+index=389 time=1323550833.0 prev=J next=P
+_platform_memcmp
+closure #1 in ShellActivity.category.getter
+specialized Sequence.first(where:)
+ShellActivity.category.getter
+specialized static ActivityNarrativeProjection.make(entries:tools:isRunning:external:cache:)
+static ActivityNarrativeProjection.make(entries:tools:isRunning:external:cache:)
+ConversationPresentationModel.update(_:)
+ConversationPresentationHandle.update(key:input:cache:)
+benchR34PagingProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)
+
+index=390 time=1324553500.0 prev=J next=P
+_xzm_free_tc
+_CFBundleCopyLocalizedStringForLocalizationTableURLAndMarkdownOption
+-[NSBundle _localizedStringForKey:value:table:localizations:]
+String.init(localized:table:bundle:locale:comment:)
+L(_:locale:)
+ActivityNarrativePhase.label.getter
+localHeadline #1 (_:target:) in static ActivityNarrativeProjection.make(entries:tools:isRunning:external:cache:)
+specialized static ActivityNarrativeProjection.make(entries:tools:isRunning:external:cache:)
+static ActivityNarrativeProjection.make(entries:tools:isRunning:external:cache:)
+ConversationPresentationModel.update(_:)
+ConversationPresentationHandle.update(key:input:cache:)
+benchR34PagingProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)
+
+index=391 time=1325550750.0 prev=J next=P
+Hasher.combine(bytes:)
+String.hash(into:)
+protocol witness for Hashable._rawHashValue(seed:) in conformance String
+specialized _NativeDictionary._unsafeInsertNew(key:value:)
+specialized _NativeDictionary._copyOrMoveAndResize(capacity:moveElements:)
+specialized _NativeDictionary.ensureUnique(isUnique:capacity:)
+specialized _NativeDictionary.mutatingFind(_:isUnique:)
+specialized _NativeDictionary.updateValue(_:forKey:isUnique:)
+specialized Dictionary._Variant.updateValue(_:forKey:)
+specialized Dictionary.updateValue(_:forKey:)
+ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+ToolVisibilityProjection.update(_:splittingAt:sessionID:live:running:online:)
+closure #2 in ConversationPresentationModel.update(_:)
+specialized Optional.map<A, B>(_:)
+ConversationPresentationModel.update(_:)
+ConversationPresentationHandle.update(key:input:cache:)
+benchR34PagingProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)
+
+index=392 time=1326553500.0 prev=J next=P
+DefaultStringInterpolation.appendLiteral(_:)
+specialized DefaultStringInterpolation.appendInterpolation<A>(_:)
+ConversationTimelineEntry.id.getter
+specialized ConversationPresentationModel.History.init(turns:turnCount:source:)
+ConversationPresentationModel.History.init(turns:turnCount:source:)
+ConversationPresentationModel.History.__allocating_init(turns:turnCount:source:)
+ConversationPresentationModel.update(_:)
+ConversationPresentationHandle.update(key:input:cache:)
+benchR34PagingProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)
+
+index=393 time=1327553333.0 prev=J next=P
+_DictionaryStorage.deinit
+_DictionaryStorage.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+ConversationPresentationModel.History.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+ConversationPresentationModel.Snapshot.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+ConversationPresentationModel.update(_:)
+ConversationPresentationHandle.update(key:input:cache:)
+benchR34PagingProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)
+
+index=1128 time=2062553375.0 prev=P next=J
+_DictionaryStorage.deinit
+_DictionaryStorage.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+ConversationPresentationModel.HistoryTurn.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+_DictionaryStorage.deinit
+_DictionaryStorage.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+ConversationPresentationModel.deinit
+ConversationPresentationModel.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+ConversationPresentationHandle.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+benchR34PagingProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)
+
+index=1129 time=2063553166.0 prev=P next=J
+swift_bridgeObjectRelease
+_ContiguousArrayStorage.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+destroy for KimiMessage
+swift_arrayDestroy
+_ContiguousArrayStorage.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+ToolVisibilityProjection.Chunk.deinit
+ToolVisibilityProjection.Chunk.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+ConversationPresentationModel.HistoryTurn.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+_DictionaryStorage.deinit
+_DictionaryStorage.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+ConversationPresentationModel.deinit
+ConversationPresentationModel.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+ConversationPresentationHandle.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+benchR34PagingProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)
+
+index=1130 time=2064555375.0 prev=P next=J
+swift_release
+swift_arrayDestroy
+_ContiguousArrayStorage.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+destroy for ConversationPresentationModel.Row
+swift_arrayDestroy
+_ContiguousArrayStorage.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+swift_arrayDestroy
+_ContiguousArrayStorage.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+outlined consume of (activity: [String : ActivityNarrativeRow], foldsProcess: Bool, value: ConversationPresentationModel.Presentation)?
+ConversationPresentationModel.HistoryTurn.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+_DictionaryStorage.deinit
+_DictionaryStorage.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+ConversationPresentationModel.deinit
+ConversationPresentationModel.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+ConversationPresentationHandle.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+benchR34PagingProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)
+
+index=1131 time=2065553416.0 prev=P next=J
+_swift_release_dealloc
+destroy for KimiMessage
+swift_arrayDestroy
+_ContiguousArrayStorage.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+ToolVisibilityProjection.Chunk.deinit
+ToolVisibilityProjection.Chunk.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+ConversationPresentationModel.HistoryTurn.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+_DictionaryStorage.deinit
+_DictionaryStorage.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+ConversationPresentationModel.deinit
+ConversationPresentationModel.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+ConversationPresentationHandle.__deallocating_deinit
+_swift_release_dealloc
+bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swift::RefCountBitsT<(swift::RefCountInlinedness)1>, unsigned int)
+benchR34PagingProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)
+
+index=1132 time=2066553333.0 prev=P next=J
+DYLD-STUB$$swift_bridgeObjectRelease
+static ToolVisibilityProjection.identities(in:)
+ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+ToolVisibilityProjection.update(_:splittingAt:sessionID:live:running:online:)
+closure #2 in ConversationPresentationModel.update(_:)
+specialized Optional.map<A, B>(_:)
+ConversationPresentationModel.update(_:)
+ConversationPresentationHandle.update(key:input:cache:)
+benchR34PagingProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)

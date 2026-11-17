@@ -1,0 +1,104 @@
+{
+  "paging": {
+    "xml_sha256": "89320845297aeaca7f250c1810167fcc445b88428547fe5dd51ed3d0f2b136f3",
+    "xml_bytes": 7256330,
+    "samples": 20409,
+    "archived_output_exact_match": true,
+    "first_time": 933551916.0,
+    "last_time": 21344553291.0,
+    "monotonic_sample_times": true,
+    "marker_counts": {
+      ".": 17219,
+      "J": 386,
+      "P": 2804
+    },
+    "phase_counts": {
+      "J": 2548,
+      "P": 17861
+    },
+    "lookahead_previous_marker_disagreement": 2953,
+    "disagreement_percent_of_all": 14.469107,
+    "prepend_inclusive": {
+      "ActivityNarrativeProjection": {
+        "samples": 1322,
+        "percent": 7.401601
+      },
+      "ConversationTimelineEntry.make": {
+        "samples": 743,
+        "percent": 4.159901
+      },
+      "ConversationPresentationModel.update": {
+        "samples": 13262,
+        "percent": 74.251162
+      },
+      "ToolVisibilityProjection.projectTurns": {
+        "samples": 3258,
+        "percent": 18.24086
+      },
+      "History.joined": {
+        "samples": 2398,
+        "percent": 13.4259
+      },
+      "History.init": {
+        "samples": 2811,
+        "percent": 15.738201
+      }
+    }
+  },
+  "streaming": {
+    "xml_sha256": "65cdba00c27560f4644c5e2f5f4b7696bd0d5af2a149ce455a57dc6ae5fb1cd0",
+    "xml_bytes": 13384853,
+    "samples": 20591,
+    "archived_output_exact_match": true,
+    "first_time": 709712250.0,
+    "last_time": 21310711791.0,
+    "monotonic_sample_times": true,
+    "inclusive_decode_samples": 8319,
+    "inclusive_decode_percent": 40.401146,
+    "decode_samples_outside_setup": 3735,
+    "decode_outside_setup_regions": {
+      "arc-copy": 965,
+      "string-compare": 880,
+      "teardown": 751,
+      "alloc": 533,
+      "dict-find": 211,
+      "utf16-bridge": 196,
+      "string-hash": 187,
+      "cf-match": 12
+    },
+    "decode_free_samples": 12272,
+    "decode_free_regions": {
+      "arc-copy": 2195,
+      "utf16-bridge": 2164,
+      "narrative": 1496,
+      "cf-match": 1357,
+      "teardown": 1033,
+      "input-compare": 842,
+      "string-compare": 832,
+      "string-hash": 550,
+      "timeline-make": 373,
+      "alloc": 366,
+      "dict-find": 272,
+      "tool-visibility": 188,
+      "find-search": 154,
+      "model-update": 139,
+      "turn-summary": 112,
+      "find-verify": 74,
+      "bench-harness": 45,
+      "activity-init": 41,
+      "presented-fold": 13,
+      "history-join": 8,
+      "outside": 7,
+      "apply-event": 6,
+      "find-entry-cache": 3,
+      "display-messages": 2
+    },
+    "find_inclusive_samples": 3350,
+    "find_inclusive_percent_all": 16.269244,
+    "find_inclusive_percent_decode_free": 27.297914,
+    "cf_bucket_samples": 1369,
+    "cf_with_real_match_frames": 1036,
+    "narrative_inclusive_all": 2695,
+    "narrative_inclusive_decode_free": 2695
+  }
+}

@@ -1,0 +1,373 @@
+swift_release
+_ContiguousArrayStorage._getNonVerbatimBridgingBuffer()
+__SwiftDeferredNSArray.withUnsafeBufferOfObjects<A>(_:)
+@objc __SwiftNativeNSArrayWithContiguousStorage.countByEnumerating(with:objects:count:)
+__NSArrayEnumerate
+_writeJSONArray
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+-[_NSJSONWriter dataWithRootObject:options:]
++[NSJSONSerialization dataWithJSONObject:options:error:]
+benchR34StreamProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)
+
+swift_retain
+_ContiguousArrayStorage._getNonVerbatimBridgingBuffer()
+__SwiftDeferredNSArray.withUnsafeBufferOfObjects<A>(_:)
+@objc __SwiftNativeNSArrayWithContiguousStorage.countByEnumerating(with:objects:count:)
+__NSArrayEnumerate
+_writeJSONArray
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+-[_NSJSONWriter dataWithRootObject:options:]
++[NSJSONSerialization dataWithJSONObject:options:error:]
+benchR34StreamProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)
+
+_xzm_xzone_malloc_tiny
+__copy_helper_block_e8_32o40r48r
+_call_copy_helpers_excp
+_Block_copy
+_Block_object_assign
+_call_copy_helpers_excp
+_Block_copy
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONArray_block_invoke
+__NSARRAY_IS_CALLING_OUT_TO_A_BLOCK__
+__NSArrayEnumerate
+_writeJSONArray
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+-[_NSJSONWriter dataWithRootObject:options:]
++[NSJSONSerialization dataWithJSONObject:options:error:]
+benchR34StreamProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)
+
+object_getMethodImplementation
+_NSIsNSString
+_writeJSONValue
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONArray_block_invoke
+__NSARRAY_IS_CALLING_OUT_TO_A_BLOCK__
+__NSArrayEnumerate
+_writeJSONArray
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+-[_NSJSONWriter dataWithRootObject:options:]
++[NSJSONSerialization dataWithJSONObject:options:error:]
+benchR34StreamProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)
+
+_CFStringCreateTaggedPointerString$lazyLoadStub
+bridgeAnythingNonVerbatimToObjectiveC(swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*, bool)
+_SwiftDeferredNSDictionary.bridgeKeys()
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONArray_block_invoke
+__NSARRAY_IS_CALLING_OUT_TO_A_BLOCK__
+__NSArrayEnumerate
+_writeJSONArray
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONArray_block_invoke
+__NSARRAY_IS_CALLING_OUT_TO_A_BLOCK__
+__NSArrayEnumerate
+_writeJSONArray
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+-[_NSJSONWriter dataWithRootObject:options:]
++[NSJSONSerialization dataWithJSONObject:options:error:]
+benchR34StreamProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)
+
+String.UTF16View._nativeCopy(into:alignedRange:)
+__StringStorage.getCharacters(_:range:)
+@objc __StringStorage.getCharacters(_:range:)
+__CFStringEncodeByteStream
+-[NSString(NSStringOtherEncodings) getBytes:maxLength:usedLength:encoding:options:range:remainingRange:]
+CFStringGetBytes
+_convertJSONString
+_writeJSONString
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONArray_block_invoke
+__NSARRAY_IS_CALLING_OUT_TO_A_BLOCK__
+__NSArrayEnumerate
+_writeJSONArray
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONArray_block_invoke
+__NSARRAY_IS_CALLING_OUT_TO_A_BLOCK__
+__NSArrayEnumerate
+_writeJSONArray
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+-[_NSJSONWriter dataWithRootObject:options:]
++[NSJSONSerialization dataWithJSONObject:options:error:]
+benchR34StreamProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)
+
+CFStringGetBytes
+_convertJSONString
+_writeJSONString
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONArray_block_invoke
+__NSARRAY_IS_CALLING_OUT_TO_A_BLOCK__
+__NSArrayEnumerate
+_writeJSONArray
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONArray_block_invoke
+__NSARRAY_IS_CALLING_OUT_TO_A_BLOCK__
+__NSArrayEnumerate
+_writeJSONArray
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+-[_NSJSONWriter dataWithRootObject:options:]
++[NSJSONSerialization dataWithJSONObject:options:error:]
+benchR34StreamProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)
+
+_CFStringCreateTaggedPointerString
+String._bridgeToObjectiveCImpl()
+bridgeAnythingNonVerbatimToObjectiveC(swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*, bool)
+bridgeAnythingNonVerbatimToObjectiveC(swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*, bool)
+_SwiftDeferredNSDictionary.bridgeValues()
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONArray_block_invoke
+__NSARRAY_IS_CALLING_OUT_TO_A_BLOCK__
+__NSArrayEnumerate
+_writeJSONArray
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+-[_NSJSONWriter dataWithRootObject:options:]
++[NSJSONSerialization dataWithJSONObject:options:error:]
+benchR34StreamProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)
+
+_xzm_xzone_malloc_tiny
+swift_allocObject
+_SwiftDeferredNSDictionary.bridgeValues()
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONArray_block_invoke
+__NSARRAY_IS_CALLING_OUT_TO_A_BLOCK__
+__NSArrayEnumerate
+_writeJSONArray
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONArray_block_invoke
+__NSARRAY_IS_CALLING_OUT_TO_A_BLOCK__
+__NSArrayEnumerate
+_writeJSONArray
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+-[_NSJSONWriter dataWithRootObject:options:]
++[NSJSONSerialization dataWithJSONObject:options:error:]
+benchR34StreamProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)
+
+String.UTF16View._nativeCopy(into:alignedRange:)
+__StringStorage.getCharacters(_:range:)
+@objc __StringStorage.getCharacters(_:range:)
+__CFStringEncodeByteStream
+-[NSString(NSStringOtherEncodings) getBytes:maxLength:usedLength:encoding:options:range:remainingRange:]
+CFStringGetBytes
+_convertJSONString
+_writeJSONString
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONArray_block_invoke
+__NSARRAY_IS_CALLING_OUT_TO_A_BLOCK__
+__NSArrayEnumerate
+_writeJSONArray
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONArray_block_invoke
+__NSARRAY_IS_CALLING_OUT_TO_A_BLOCK__
+__NSArrayEnumerate
+_writeJSONArray
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+-[_NSJSONWriter dataWithRootObject:options:]
++[NSJSONSerialization dataWithJSONObject:options:error:]
+benchR34StreamProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)
+
+String.UTF16View._nativeCopy(into:alignedRange:)
+__StringStorage.getCharacters(_:range:)
+@objc __StringStorage.getCharacters(_:range:)
+__CFStringEncodeByteStream
+-[NSString(NSStringOtherEncodings) getBytes:maxLength:usedLength:encoding:options:range:remainingRange:]
+CFStringGetBytes
+_convertJSONString
+_writeJSONString
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONArray_block_invoke
+__NSARRAY_IS_CALLING_OUT_TO_A_BLOCK__
+__NSArrayEnumerate
+_writeJSONArray
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONArray_block_invoke
+__NSARRAY_IS_CALLING_OUT_TO_A_BLOCK__
+__NSArrayEnumerate
+_writeJSONArray
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+-[_NSJSONWriter dataWithRootObject:options:]
++[NSJSONSerialization dataWithJSONObject:options:error:]
+benchR34StreamProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)
+
+swift_release
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONArray_block_invoke
+__NSARRAY_IS_CALLING_OUT_TO_A_BLOCK__
+__NSArrayEnumerate
+_writeJSONArray
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONArray_block_invoke
+__NSARRAY_IS_CALLING_OUT_TO_A_BLOCK__
+__NSArrayEnumerate
+_writeJSONArray
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+___writeJSONObject_block_invoke
+specialized _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+@objc _SwiftDeferredNSDictionary.enumerateKeysAndObjects(options:using:)
+_writeJSONObject
+-[_NSJSONWriter dataWithRootObject:options:]
++[NSJSONSerialization dataWithJSONObject:options:error:]
+benchR34StreamProfile()
+specialized static ProtocolTests.main()
+specialized thunk for @escaping @convention(thin) @async () -> ()
+completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*)
