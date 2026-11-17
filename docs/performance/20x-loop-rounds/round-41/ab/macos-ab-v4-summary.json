@@ -1,0 +1,951 @@
+{
+ "label": "macos-ab-v4",
+ "pairs": 6,
+ "metrics": {
+  "apply": {
+   "base_median": 0.0,
+   "cand_median": 0.0,
+   "change_pct": 0.0,
+   "base_spread_pct": 0.0,
+   "cand_spread_pct": 0.0,
+   "noise_band_pct": 0.0,
+   "pairs_cand_faster": 0,
+   "pairs_cand_slower": 0,
+   "separated": false,
+   "base_values": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "cand_values": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  "chain_total": {
+   "base_median": 0.455,
+   "cand_median": 0.46,
+   "change_pct": 1.1,
+   "base_spread_pct": 6.82,
+   "cand_spread_pct": 9.09,
+   "noise_band_pct": 9.09,
+   "pairs_cand_faster": 1,
+   "pairs_cand_slower": 3,
+   "separated": false,
+   "base_values": [
+    0.44,
+    0.44,
+    0.45,
+    0.47,
+    0.47,
+    0.46
+   ],
+   "cand_values": [
+    0.44,
+    0.46,
+    0.45,
+    0.48,
+    0.46,
+    0.47
+   ]
+  },
+  "commentary_activity": {
+   "base_median": 0.1285,
+   "cand_median": 0.1329,
+   "change_pct": 3.42,
+   "base_spread_pct": 10.2,
+   "cand_spread_pct": 8.02,
+   "noise_band_pct": 10.2,
+   "pairs_cand_faster": 2,
+   "pairs_cand_slower": 4,
+   "separated": false,
+   "base_values": [
+    0.1265,
+    0.1266,
+    0.1394,
+    0.1297,
+    0.134,
+    0.1273
+   ],
+   "cand_values": [
+    0.1313,
+    0.1309,
+    0.1374,
+    0.1414,
+    0.1318,
+    0.134
+   ]
+  },
+  "commentary_apply": {
+   "base_median": 0.0017,
+   "cand_median": 0.0017,
+   "change_pct": 0.0,
+   "base_spread_pct": 5.88,
+   "cand_spread_pct": 6.25,
+   "noise_band_pct": 6.25,
+   "pairs_cand_faster": 3,
+   "pairs_cand_slower": 0,
+   "separated": false,
+   "base_values": [
+    0.0017,
+    0.0017,
+    0.0018,
+    0.0017,
+    0.0017,
+    0.0018
+   ],
+   "cand_values": [
+    0.0017,
+    0.0016,
+    0.0017,
+    0.0017,
+    0.0017,
+    0.0017
+   ]
+  },
+  "commentary_chain_total": {
+   "base_median": 0.7009,
+   "cand_median": 0.643,
+   "change_pct": -8.26,
+   "base_spread_pct": 7.59,
+   "cand_spread_pct": 6.07,
+   "noise_band_pct": 7.59,
+   "pairs_cand_faster": 6,
+   "pairs_cand_slower": 0,
+   "separated": true,
+   "base_values": [
+    0.6813,
+    0.6875,
+    0.733,
+    0.709,
+    0.6989,
+    0.703
+   ],
+   "cand_values": [
+    0.6383,
+    0.638,
+    0.65,
+    0.6767,
+    0.6435,
+    0.6426
+   ]
+  },
+  "commentary_display_timeline": {
+   "base_median": 0.0969,
+   "cand_median": 0.096,
+   "change_pct": -0.93,
+   "base_spread_pct": 8.03,
+   "cand_spread_pct": 6.68,
+   "noise_band_pct": 8.03,
+   "pairs_cand_faster": 3,
+   "pairs_cand_slower": 3,
+   "separated": false,
+   "base_values": [
+    0.0938,
+    0.0934,
+    0.1009,
+    0.0984,
+    0.098,
+    0.0958
+   ],
+   "cand_values": [
+    0.0943,
+    0.0961,
+    0.096,
+    0.1006,
+    0.096,
+    0.0956
+   ]
+  },
+  "commentary_display_workspace": {
+   "base_median": 0.0971,
+   "cand_median": 0.0974,
+   "change_pct": 0.31,
+   "base_spread_pct": 8.04,
+   "cand_spread_pct": 8.12,
+   "noise_band_pct": 8.12,
+   "pairs_cand_faster": 2,
+   "pairs_cand_slower": 3,
+   "separated": false,
+   "base_values": [
+    0.0948,
+    0.0945,
+    0.1021,
+    0.1005,
+    0.0952,
+    0.099
+   ],
+   "cand_values": [
+    0.0948,
+    0.0965,
+    0.0993,
+    0.1025,
+    0.0973,
+    0.0975
+   ]
+  },
+  "commentary_find_query_update": {
+   "base_median": 0.4301,
+   "cand_median": 0.4447,
+   "change_pct": 3.42,
+   "base_spread_pct": 6.47,
+   "cand_spread_pct": 6.98,
+   "noise_band_pct": 6.98,
+   "pairs_cand_faster": 0,
+   "pairs_cand_slower": 6,
+   "separated": false,
+   "base_values": [
+    0.428,
+    0.416,
+    0.4429,
+    0.439,
+    0.4283,
+    0.4318
+   ],
+   "cand_values": [
+    0.4293,
+    0.4268,
+    0.4566,
+    0.4457,
+    0.4438,
+    0.45
+   ]
+  },
+  "commentary_input_comparison": {
+   "base_median": 0.0004,
+   "cand_median": 0.0004,
+   "change_pct": -11.11,
+   "base_spread_pct": 25.0,
+   "cand_spread_pct": 25.0,
+   "noise_band_pct": 25.0,
+   "pairs_cand_faster": 2,
+   "pairs_cand_slower": 1,
+   "separated": false,
+   "base_values": [
+    0.0004,
+    0.0005,
+    0.0004,
+    0.0004,
+    0.0005,
+    0.0005
+   ],
+   "cand_values": [
+    0.0005,
+    0.0004,
+    0.0004,
+    0.0004,
+    0.0005,
+    0.0004
+   ]
+  },
+  "commentary_memory_keys": {
+   "base_median": 0.1147,
+   "cand_median": 0.1171,
+   "change_pct": 2.0,
+   "base_spread_pct": 7.37,
+   "cand_spread_pct": 8.2,
+   "noise_band_pct": 8.2,
+   "pairs_cand_faster": 2,
+   "pairs_cand_slower": 4,
+   "separated": false,
+   "base_values": [
+    0.1148,
+    0.1145,
+    0.1223,
+    0.1166,
+    0.1139,
+    0.1147
+   ],
+   "cand_values": [
+    0.118,
+    0.115,
+    0.1177,
+    0.124,
+    0.1164,
+    0.1146
+   ]
+  },
+  "commentary_narrative": {
+   "base_median": 0.0543,
+   "cand_median": 0.0399,
+   "change_pct": -26.52,
+   "base_spread_pct": 5.11,
+   "cand_spread_pct": 7.11,
+   "noise_band_pct": 7.11,
+   "pairs_cand_faster": 6,
+   "pairs_cand_slower": 0,
+   "separated": true,
+   "base_values": [
+    0.053,
+    0.0535,
+    0.0551,
+    0.0555,
+    0.0554,
+    0.0528
+   ],
+   "cand_values": [
+    0.0403,
+    0.0395,
+    0.0395,
+    0.0422,
+    0.0394,
+    0.0408
+   ]
+  },
+  "commentary_presentation_upda": {
+   "base_median": 0.2037,
+   "cand_median": 0.144,
+   "change_pct": -29.31,
+   "base_spread_pct": 7.74,
+   "cand_spread_pct": 3.52,
+   "noise_band_pct": 7.74,
+   "pairs_cand_faster": 6,
+   "pairs_cand_slower": 0,
+   "separated": true,
+   "base_values": [
+    0.1937,
+    0.2022,
+    0.2087,
+    0.2052,
+    0.2013,
+    0.2086
+   ],
+   "cand_values": [
+    0.1434,
+    0.142,
+    0.1436,
+    0.147,
+    0.1457,
+    0.1444
+   ]
+  },
+  "commentary_presented_rows": {
+   "base_median": 0.0559,
+   "cand_median": 0.0548,
+   "change_pct": -1.97,
+   "base_spread_pct": 6.04,
+   "cand_spread_pct": 9.19,
+   "noise_band_pct": 9.19,
+   "pairs_cand_faster": 4,
+   "pairs_cand_slower": 2,
+   "separated": false,
+   "base_values": [
+    0.056,
+    0.0546,
+    0.0579,
+    0.057,
+    0.0548,
+    0.0558
+   ],
+   "cand_values": [
+    0.0548,
+    0.0558,
+    0.0544,
+    0.0594,
+    0.0546,
+    0.0548
+   ]
+  },
+  "commentary_tool_projection": {
+   "base_median": 0.0494,
+   "cand_median": 0.0498,
+   "change_pct": 0.91,
+   "base_spread_pct": 3.07,
+   "cand_spread_pct": 8.59,
+   "noise_band_pct": 8.59,
+   "pairs_cand_faster": 2,
+   "pairs_cand_slower": 4,
+   "separated": false,
+   "base_values": [
+    0.0492,
+    0.049,
+    0.0504,
+    0.0489,
+    0.0495,
+    0.0502
+   ],
+   "cand_values": [
+    0.0498,
+    0.0491,
+    0.0489,
+    0.0531,
+    0.0509,
+    0.0498
+   ]
+  },
+  "commentary_turn_projection": {
+   "base_median": 0.0243,
+   "cand_median": 0.0244,
+   "change_pct": 0.82,
+   "base_spread_pct": 13.33,
+   "cand_spread_pct": 7.53,
+   "noise_band_pct": 13.33,
+   "pairs_cand_faster": 3,
+   "pairs_cand_slower": 3,
+   "separated": false,
+   "base_values": [
+    0.0242,
+    0.024,
+    0.0272,
+    0.0243,
+    0.024,
+    0.0263
+   ],
+   "cand_values": [
+    0.0245,
+    0.025,
+    0.0244,
+    0.0257,
+    0.0239,
+    0.0244
+   ]
+  },
+  "conversation_activity": {
+   "base_median": 0.03,
+   "cand_median": 0.03,
+   "change_pct": 0.0,
+   "base_spread_pct": 0.0,
+   "cand_spread_pct": 0.0,
+   "noise_band_pct": 0.0,
+   "pairs_cand_faster": 0,
+   "pairs_cand_slower": 0,
+   "separated": false,
+   "base_values": [
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03
+   ],
+   "cand_values": [
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03
+   ]
+  },
+  "display_messages_timeline": {
+   "base_median": 0.1,
+   "cand_median": 0.1,
+   "change_pct": 0.0,
+   "base_spread_pct": 11.11,
+   "cand_spread_pct": 11.11,
+   "noise_band_pct": 11.11,
+   "pairs_cand_faster": 0,
+   "pairs_cand_slower": 1,
+   "separated": false,
+   "base_values": [
+    0.09,
+    0.09,
+    0.1,
+    0.1,
+    0.1,
+    0.1
+   ],
+   "cand_values": [
+    0.09,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1
+   ]
+  },
+  "display_messages_workspace": {
+   "base_median": 0.1,
+   "cand_median": 0.1,
+   "change_pct": 0.0,
+   "base_spread_pct": 11.11,
+   "cand_spread_pct": 11.11,
+   "noise_band_pct": 11.11,
+   "pairs_cand_faster": 0,
+   "pairs_cand_slower": 1,
+   "separated": false,
+   "base_values": [
+    0.09,
+    0.09,
+    0.1,
+    0.1,
+    0.1,
+    0.1
+   ],
+   "cand_values": [
+    0.09,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1
+   ]
+  },
+  "find_bar_cold_query": {
+   "base_median": 625.04,
+   "cand_median": 628.13,
+   "change_pct": 0.49,
+   "base_spread_pct": 1.3,
+   "cand_spread_pct": 1.14,
+   "noise_band_pct": 1.3,
+   "pairs_cand_faster": 1,
+   "pairs_cand_slower": 5,
+   "separated": false,
+   "base_values": [
+    625.74,
+    621.11,
+    622.97,
+    628.4,
+    624.34,
+    629.16
+   ],
+   "cand_values": [
+    628.18,
+    630.66,
+    626.1,
+    623.54,
+    628.08,
+    630.5
+   ]
+  },
+  "find_bar_query_update": {
+   "base_median": 0.255,
+   "cand_median": 0.255,
+   "change_pct": 0.0,
+   "base_spread_pct": 8.0,
+   "cand_spread_pct": 8.0,
+   "noise_band_pct": 8.0,
+   "pairs_cand_faster": 2,
+   "pairs_cand_slower": 2,
+   "separated": false,
+   "base_values": [
+    0.25,
+    0.25,
+    0.25,
+    0.27,
+    0.27,
+    0.26
+   ],
+   "cand_values": [
+    0.26,
+    0.25,
+    0.25,
+    0.26,
+    0.25,
+    0.27
+   ]
+  },
+  "find_bar_reopen_query": {
+   "base_median": 0.0773,
+   "cand_median": 0.0791,
+   "change_pct": 2.39,
+   "base_spread_pct": 9.21,
+   "cand_spread_pct": 10.43,
+   "noise_band_pct": 10.43,
+   "pairs_cand_faster": 2,
+   "pairs_cand_slower": 4,
+   "separated": false,
+   "base_values": [
+    0.076,
+    0.0781,
+    0.083,
+    0.0765,
+    0.0792,
+    0.0765
+   ],
+   "cand_values": [
+    0.0767,
+    0.0794,
+    0.0789,
+    0.0833,
+    0.0787,
+    0.0847
+   ]
+  },
+  "input_comparison": {
+   "base_median": 0.0,
+   "cand_median": 0.0,
+   "change_pct": 0.0,
+   "base_spread_pct": 0.0,
+   "cand_spread_pct": 0.0,
+   "noise_band_pct": 0.0,
+   "pairs_cand_faster": 0,
+   "pairs_cand_slower": 0,
+   "separated": false,
+   "base_values": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "cand_values": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  "memory_keys": {
+   "base_median": 0.05,
+   "cand_median": 0.05,
+   "change_pct": 0.0,
+   "base_spread_pct": 0.0,
+   "cand_spread_pct": 0.0,
+   "noise_band_pct": 0.0,
+   "pairs_cand_faster": 0,
+   "pairs_cand_slower": 0,
+   "separated": false,
+   "base_values": [
+    0.05,
+    0.05,
+    0.05,
+    0.05,
+    0.05,
+    0.05
+   ],
+   "cand_values": [
+    0.05,
+    0.05,
+    0.05,
+    0.05,
+    0.05,
+    0.05
+   ]
+  },
+  "model_total": {
+   "base_median": 1.785,
+   "cand_median": 1.8,
+   "change_pct": 0.84,
+   "base_spread_pct": 6.78,
+   "cand_spread_pct": 9.71,
+   "noise_band_pct": 9.71,
+   "pairs_cand_faster": 3,
+   "pairs_cand_slower": 3,
+   "separated": false,
+   "base_values": [
+    1.89,
+    1.78,
+    1.79,
+    1.77,
+    1.78,
+    1.81
+   ],
+   "cand_values": [
+    1.76,
+    1.76,
+    1.75,
+    1.92,
+    1.91,
+    1.84
+   ]
+  },
+  "narrative": {
+   "base_median": 0.05,
+   "cand_median": 0.04,
+   "change_pct": -20.0,
+   "base_spread_pct": 25.0,
+   "cand_spread_pct": 25.0,
+   "noise_band_pct": 25.0,
+   "pairs_cand_faster": 3,
+   "pairs_cand_slower": 0,
+   "separated": false,
+   "base_values": [
+    0.05,
+    0.05,
+    0.04,
+    0.05,
+    0.05,
+    0.05
+   ],
+   "cand_values": [
+    0.04,
+    0.04,
+    0.04,
+    0.05,
+    0.05,
+    0.04
+   ]
+  },
+  "older_page_full_chain": {
+   "base_median": 1.84,
+   "cand_median": 1.845,
+   "change_pct": 0.27,
+   "base_spread_pct": 8.43,
+   "cand_spread_pct": 7.3,
+   "noise_band_pct": 8.43,
+   "pairs_cand_faster": 3,
+   "pairs_cand_slower": 3,
+   "separated": false,
+   "base_values": [
+    1.84,
+    1.78,
+    1.85,
+    1.93,
+    1.84,
+    1.78
+   ],
+   "cand_values": [
+    1.8,
+    1.79,
+    1.78,
+    1.9,
+    1.91,
+    1.89
+   ]
+  },
+  "presentation_update": {
+   "base_median": 1.67,
+   "cand_median": 1.66,
+   "change_pct": -0.6,
+   "base_spread_pct": 9.49,
+   "cand_spread_pct": 8.18,
+   "noise_band_pct": 9.49,
+   "pairs_cand_faster": 3,
+   "pairs_cand_slower": 3,
+   "separated": false,
+   "base_values": [
+    1.67,
+    1.58,
+    1.67,
+    1.73,
+    1.68,
+    1.6
+   ],
+   "cand_values": [
+    1.61,
+    1.6,
+    1.59,
+    1.71,
+    1.72,
+    1.71
+   ]
+  },
+  "presented_rows": {
+   "base_median": 0.15,
+   "cand_median": 0.16,
+   "change_pct": 6.67,
+   "base_spread_pct": 0.0,
+   "cand_spread_pct": 13.33,
+   "noise_band_pct": 13.33,
+   "pairs_cand_faster": 0,
+   "pairs_cand_slower": 4,
+   "separated": false,
+   "base_values": [
+    0.15,
+    0.15,
+    0.15,
+    0.15,
+    0.15,
+    0.15
+   ],
+   "cand_values": [
+    0.15,
+    0.17,
+    0.16,
+    0.16,
+    0.15,
+    0.16
+   ]
+  },
+  "release_model_state": {
+   "base_median": 5.3,
+   "cand_median": 5.21,
+   "change_pct": -1.7,
+   "base_spread_pct": 14.62,
+   "cand_spread_pct": 14.34,
+   "noise_band_pct": 14.62,
+   "pairs_cand_faster": 3,
+   "pairs_cand_slower": 3,
+   "separated": false,
+   "base_values": [
+    5.24,
+    5.13,
+    5.36,
+    5.17,
+    5.88,
+    5.52
+   ],
+   "cand_values": [
+    5.82,
+    5.19,
+    5.09,
+    5.23,
+    5.11,
+    5.34
+   ]
+  },
+  "retained_cost": {
+   "base_median": 0.75,
+   "cand_median": 0.79,
+   "change_pct": 5.33,
+   "base_spread_pct": 9.33,
+   "cand_spread_pct": 15.07,
+   "noise_band_pct": 15.07,
+   "pairs_cand_faster": 2,
+   "pairs_cand_slower": 4,
+   "separated": false,
+   "base_values": [
+    0.82,
+    0.75,
+    0.75,
+    0.75,
+    0.77,
+    0.75
+   ],
+   "cand_values": [
+    0.73,
+    0.76,
+    0.74,
+    0.84,
+    0.82,
+    0.82
+   ]
+  },
+  "row_projection": {
+   "base_median": 0.01,
+   "cand_median": 0.01,
+   "change_pct": 0.0,
+   "base_spread_pct": 0.0,
+   "cand_spread_pct": 0.0,
+   "noise_band_pct": 0.0,
+   "pairs_cand_faster": 0,
+   "pairs_cand_slower": 0,
+   "separated": false,
+   "base_values": [
+    0.01,
+    0.01,
+    0.01,
+    0.01,
+    0.01,
+    0.01
+   ],
+   "cand_values": [
+    0.01,
+    0.01,
+    0.01,
+    0.01,
+    0.01,
+    0.01
+   ]
+  },
+  "summary": {
+   "base_median": 0.0,
+   "cand_median": 0.0,
+   "change_pct": 0.0,
+   "base_spread_pct": 0.0,
+   "cand_spread_pct": 0.0,
+   "noise_band_pct": 0.0,
+   "pairs_cand_faster": 0,
+   "pairs_cand_slower": 0,
+   "separated": false,
+   "base_values": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "cand_values": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  "tool_projection": {
+   "base_median": 0.325,
+   "cand_median": 0.335,
+   "change_pct": 3.08,
+   "base_spread_pct": 19.35,
+   "cand_spread_pct": 18.75,
+   "noise_band_pct": 19.35,
+   "pairs_cand_faster": 2,
+   "pairs_cand_slower": 4,
+   "separated": false,
+   "base_values": [
+    0.37,
+    0.34,
+    0.31,
+    0.32,
+    0.32,
+    0.33
+   ],
+   "cand_values": [
+    0.33,
+    0.32,
+    0.33,
+    0.38,
+    0.38,
+    0.34
+   ]
+  },
+  "total": {
+   "base_median": 0.125,
+   "cand_median": 0.13,
+   "change_pct": 4.0,
+   "base_spread_pct": 8.33,
+   "cand_spread_pct": 16.67,
+   "noise_band_pct": 16.67,
+   "pairs_cand_faster": 0,
+   "pairs_cand_slower": 3,
+   "separated": false,
+   "base_values": [
+    0.12,
+    0.12,
+    0.12,
+    0.13,
+    0.13,
+    0.13
+   ],
+   "cand_values": [
+    0.12,
+    0.13,
+    0.12,
+    0.14,
+    0.13,
+    0.14
+   ]
+  },
+  "turn_projection": {
+   "base_median": 0.44,
+   "cand_median": 0.44,
+   "change_pct": 0.0,
+   "base_spread_pct": 9.3,
+   "cand_spread_pct": 4.65,
+   "noise_band_pct": 9.3,
+   "pairs_cand_faster": 3,
+   "pairs_cand_slower": 3,
+   "separated": false,
+   "base_values": [
+    0.47,
+    0.45,
+    0.44,
+    0.44,
+    0.44,
+    0.43
+   ],
+   "cand_values": [
+    0.44,
+    0.44,
+    0.43,
+    0.45,
+    0.45,
+    0.44
+   ]
+  }
+ }
+}
