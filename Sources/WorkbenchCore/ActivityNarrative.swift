@@ -90,8 +90,9 @@ public final class NarrativeTextCache: @unchecked Sendable {
     /// exactly when status, input, output or progress moved. Unlike steps,
     /// the resolution embeds LOCALIZED strings (phase.label, shell headlines,
     /// L() fallbacks read AppLanguage.current at derive time), so the entry
-    /// also records the resolved language and misses when it moved — a
-    /// language switch re-derives every resolution (review F1).
+    /// also records the language token and misses when it moved — a
+    /// language switch re-derives every resolution (review F1; token
+    /// semantics: see the capture site in make()).
     func resolution(for tool: VisibleTool, language: String, derive: () -> ToolResolution) -> ToolResolution {
         lock.lock()
         if let hit = toolResolutions[tool.id], hit.tool == tool, hit.language == language {
@@ -108,9 +109,11 @@ public final class NarrativeTextCache: @unchecked Sendable {
 
     /// Drop every tool resolution (localized strings) while keeping the
     /// language-neutral steps and text tables. Called on the model's
-    /// language/epoch reset as hygiene; correctness rides on the per-entry
-    /// language validation above, which also covers a UserDefaults language
-    /// change that never surfaces as an input.language change.
+    /// language/epoch reset. Load-bearing layer 2 of the F1 guard: a
+    /// system-language change under the .system setting does not move the
+    /// raw-value token, but it does move Input.language (locale + resolved
+    /// localization), which fires the reset that calls this. Layer 1 is the
+    /// per-entry token in resolution(for:language:).
     func invalidateToolResolutions() {
         lock.lock()
         toolResolutions.removeAll()
@@ -623,7 +626,15 @@ public enum ActivityNarrativeProjection {
         var entryStageIDs: [String: String] = [:]
         // Captured once per call: the resolution memo validates against this
         // token because its headlines embed L() output (AppLanguage.current).
-        let resolutionLanguage = AppLanguage.current.localization
+        // The token is the cheap raw setting, not the resolved localization:
+        // resolving reads the global defaults domain + Bundle localization
+        // preferences (~20µs measured on the append benches). Two layers keep
+        // this sound: (1) a settings change (en/zh-Hans/system) flips the raw
+        // value and misses every entry; (2) a system-language change under
+        // the .system setting flips Input.language (callers compose it from
+        // the locale identifier + resolved localization), which fires the
+        // model's language reset → invalidateToolResolutions() below.
+        let resolutionLanguage = AppLanguage.current.rawValue
 
         // Keywords matched against agent text in either language, not UI labels.
         // Only unresolved tool states (missingResult / disconnected) mark a stage
