@@ -234,5 +234,86 @@ func checkPrependIncremental() throws {
     precondition(w3.rows == f3.rows && w3.navigation == f3.navigation,
                  "poison step (anchored-live): diverged")
 
-    print("PASS: prepend incremental indexes — warm-vs-fresh differential equality over 9 scenario groups with narrative-overlay comparisons (pure prepends, page-split partial turn, the merge that consumes the cached leading turn, remembered live tool whose observedByTurn placement reads owner+base, interior edit rebuild, turn-boundary growth, connection flips, language reset, trailing streaming deltas) plus the poisoning phase (duplicate tool identity, duplicate page message ids, anchored-live separates rejection) against the full-rebuild reference")
+    // 10. CONSUMED-TERM differential (review finding), at the PROJECTION
+    // level with a discardPrefix-based reference: both projections receive
+    // the identical update sequence (identical observed history — a
+    // fresh-instance reference would be blind because it first-observes the
+    // live tool under the current anchor), and the reference calls
+    // discardPrefix() before each compared update, forcing the full rebuild
+    // while keeping observed/order.
+    //
+    // Kill sequence: (A) tool call-T is observed while its own turn is the
+    // split (anchor = u-T). (B) The window grows to three prefix turns —
+    // call-T is owned by turn T and joins the observed term (anchor u-T ≠
+    // current split). (C) Compaction REPLACES the leading turn T with a
+    // summary turn: alignment consumes cached turn T, and the incremental
+    // identity set subtracts T's identities (call-T). The full build's
+    // set is Set(owner.keys) ∪ observed-term — the term still holds call-T
+    // (its anchor u-T ≠ current anchor), so subtracting WITHOUT restoring
+    // the term shrinks the set below the full build's. (D) call-T's result
+    // lands in the tail: the full build's separates() sees the result id in
+    // prefixIdentities and rejects the split projection (separable=false,
+    // whole-window route); the shrunken set wrongly accepts (separable=true)
+    // — the precondition below kills it.
+    let liveT = try liveTool("call-T")
+    let projWarm = ToolVisibilityProjection()
+    let projRef = ToolVisibilityProjection()
+    func projCompare(_ label: String, _ msgs: [KimiMessage], splitAt: Int) {
+        let w = projWarm.update(msgs, splittingAt: splitAt, sessionID: "s3",
+                                live: [liveT], running: ["call-T"], online: true)
+        projRef.discardPrefix()  // keeps observed/order, forces full rebuild
+        let r = projRef.update(msgs, splittingAt: splitAt, sessionID: "s3",
+                               live: [liveT], running: ["call-T"], online: true)
+        precondition(w.separable == r.separable,
+                     "proj (\(label)): separable diverged — incremental identity set lost the observed term")
+        precondition(w.prefix.messages == r.prefix.messages,
+                     "proj (\(label)): prefix messages diverged")
+        precondition(w.prefix.tools == r.prefix.tools,
+                     "proj (\(label)): prefix tools diverged")
+        precondition(w.tail.messages == r.tail.messages && w.tail.tools == r.tail.tools,
+                     "proj (\(label)): tail diverged")
+    }
+    // (A) observe call-T under its own turn as the split
+    let rawA: [[String: Any]] = [
+        ["id": "u-T", "role": "user", "created_at": "1",
+         "content": [["type": "text", "text": "第 T 轮：请推进。"]]],
+        ["id": "a-T", "role": "assistant", "created_at": "2",
+         "content": [["type": "tool_use", "tool_call_id": "call-T", "tool_name": "Read",
+                      "input": ["file_path": "/repo/T.swift"]]]],
+    ]
+    projCompare("A-observe-under-own-split", try decode(rawA), splitAt: 0)
+    // (B) grow to three prefix turns; call-T stays owned by turn T, anchor u-T
+    var rawB = rawA + [
+        ["id": "u-M", "role": "user", "created_at": "3",
+         "content": [["type": "text", "text": "第 M 轮：继续。"]]],
+        ["id": "a-M", "role": "assistant", "created_at": "4",
+         "content": [["type": "text", "text": "M 轮回复。"]]],
+        ["id": "u-L", "role": "user", "created_at": "5",
+         "content": [["type": "text", "text": "第 L 轮：进行。"]]],
+        ["id": "a-L", "role": "assistant", "created_at": "6",
+         "content": [["type": "thinking", "thinking": "思考……"]]],
+    ]
+    projCompare("B-grow", try decode(rawB), splitAt: 4)
+    // (C) compaction replaces the leading turn T with a summary turn
+    var rawC: [[String: Any]] = [
+        ["id": "u-S", "role": "user", "created_at": "7",
+         "content": [["type": "text", "text": "（早期历史已压缩摘要）"]]],
+        ["id": "a-S", "role": "assistant", "created_at": "8",
+         "content": [["type": "text", "text": "摘要回复。"]]],
+    ]
+    rawC += Array(rawB[2...])
+    projCompare("C-compact-replaces-consumed-turn", try decode(rawC), splitAt: 4)
+    // (D) call-T's result lands in the tail: separates() must reject the
+    // split projection because the full-build identity set still holds call-T
+    var rawD = rawC
+    if let lIndex = rawD.lastIndex(where: { $0["id"] as? String == "a-L" }) {
+        rawD.insert(["id": "r-T", "role": "tool", "created_at": "9",
+                     "content": [["type": "tool_result", "tool_call_id": "call-T",
+                                  "is_error": false, "output": "done"]]], at: lIndex + 1)
+    } else {
+        fatalError("fixture: a-L must be present")
+    }
+    projCompare("D-tail-result-flips-separable", try decode(rawD), splitAt: 4)
+
+    print("PASS: prepend incremental indexes — warm-vs-fresh differential equality over 9 scenario groups with narrative-overlay comparisons (pure prepends, page-split partial turn, the merge that consumes the cached leading turn, remembered live tool whose observedByTurn placement reads owner+base, interior edit rebuild, turn-boundary growth, connection flips, language reset, trailing streaming deltas) plus the poisoning phase (duplicate tool identity, duplicate page message ids, anchored-live separates rejection) and the projection-level consumed-term differential (observe-under-own-split → grow → compaction consumes the tool's turn → tail result flips separable) against a discardPrefix-based full-rebuild reference with identical observed history")
 }

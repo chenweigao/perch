@@ -329,11 +329,25 @@ public final class ToolVisibilityProjection {
             // unchanged (observed equal, anchor equal by the alignment guard),
             // so drop the consumed turn's identities and union in only the
             // new turns' (a merged turn re-adds whatever it still holds).
+            // Drop the consumed turn's identities, union in the new turns'
+            // (a merged turn re-adds whatever it still holds), then RESTORE
+            // the observed term (review finding: a consumed turn's tool id
+            // may also be a remembered live tool's id — subtracting without
+            // restoring would shrink the set below the full build's, which
+            // always unions the observed term). The term is O(observed) —
+            // the live tool set — and observed/anchor equality is guarded
+            // above, so the result is exactly Set(owner.keys) ∪ term as in
+            // the full build.
             var set = cached
             if let consumedIdentities { set.subtract(consumedIdentities) }
             for index in 0..<bounds.count where !alignment.contains(index) {
                 set.formUnion(identities[index])
             }
+            // Restore the observed term: subtracting a consumed turn's chunk
+            // identities can drop ids that the full build re-derives from
+            // observed entries whose anchor differs from the current split
+            // (review finding, round-35 v3).
+            set.formUnion(observed.compactMap { $0.value.anchor != anchor ? $0.key : nil })
             prefixIdentities = set
         } else {
             prefixIdentities = Set(owner.keys).union(observed.compactMap { $0.value.anchor != anchor ? $0.key : nil })
