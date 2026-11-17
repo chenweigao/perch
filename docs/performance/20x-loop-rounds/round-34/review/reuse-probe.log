@@ -1,0 +1,21 @@
+page=1 messages=16242 chunks_reused=230 history_turn_refs_reused=230 existing_memos_before=230 existing_memos_after=230 metrics_reused=230 metrics_rebuilt=3 history_container_same=false
+page=2 messages=16342 chunks_reused=231 history_turn_refs_reused=231 existing_memos_before=231 existing_memos_after=231 metrics_reused=231 metrics_rebuilt=3 history_container_same=false
+page=3 messages=16442 chunks_reused=232 history_turn_refs_reused=232 existing_memos_before=232 existing_memos_after=232 metrics_reused=232 metrics_rebuilt=4 history_container_same=false
+page=4 messages=16542 chunks_reused=234 history_turn_refs_reused=234 existing_memos_before=234 existing_memos_after=234 metrics_reused=234 metrics_rebuilt=3 history_container_same=false
+page=5 messages=16642 chunks_reused=235 history_turn_refs_reused=235 existing_memos_before=235 existing_memos_after=235 metrics_reused=235 metrics_rebuilt=4 history_container_same=false
+page=6 messages=16742 chunks_reused=237 history_turn_refs_reused=237 existing_memos_before=237 existing_memos_after=237 metrics_reused=237 metrics_rebuilt=3 history_container_same=false
+page=7 messages=16842 chunks_reused=238 history_turn_refs_reused=238 existing_memos_before=238 existing_memos_after=238 metrics_reused=238 metrics_rebuilt=3 history_container_same=false
+page=8 messages=16942 chunks_reused=240 history_turn_refs_reused=240 existing_memos_before=240 existing_memos_after=240 metrics_reused=240 metrics_rebuilt=3 history_container_same=false
+page=9 messages=17042 chunks_reused=241 history_turn_refs_reused=241 existing_memos_before=241 existing_memos_after=241 metrics_reused=241 metrics_rebuilt=3 history_container_same=false
+page=10 messages=17142 chunks_reused=242 history_turn_refs_reused=242 existing_memos_before=242 existing_memos_after=242 metrics_reused=242 metrics_rebuilt=4 history_container_same=false
+page=11 messages=17242 chunks_reused=244 history_turn_refs_reused=244 existing_memos_before=244 existing_memos_after=244 metrics_reused=244 metrics_rebuilt=3 history_container_same=false
+page=12 messages=17342 chunks_reused=245 history_turn_refs_reused=245 existing_memos_before=245 existing_memos_after=245 metrics_reused=245 metrics_rebuilt=4 history_container_same=false
+page=13 messages=17442 chunks_reused=247 history_turn_refs_reused=247 existing_memos_before=247 existing_memos_after=247 metrics_reused=247 metrics_rebuilt=3 history_container_same=false
+page=14 messages=17542 chunks_reused=248 history_turn_refs_reused=248 existing_memos_before=248 existing_memos_after=248 metrics_reused=248 metrics_rebuilt=3 history_container_same=false
+page=15 messages=17642 chunks_reused=250 history_turn_refs_reused=250 existing_memos_before=250 existing_memos_after=250 metrics_reused=250 metrics_rebuilt=3 history_container_same=false
+page=16 messages=17742 chunks_reused=251 history_turn_refs_reused=251 existing_memos_before=251 existing_memos_after=251 metrics_reused=251 metrics_rebuilt=3 history_container_same=false
+page=17 messages=17842 chunks_reused=252 history_turn_refs_reused=252 existing_memos_before=252 existing_memos_after=252 metrics_reused=252 metrics_rebuilt=4 history_container_same=false
+page=18 messages=17942 chunks_reused=254 history_turn_refs_reused=254 existing_memos_before=254 existing_memos_after=254 metrics_reused=254 metrics_rebuilt=3 history_container_same=false
+page=19 messages=18042 chunks_reused=255 history_turn_refs_reused=255 existing_memos_before=255 existing_memos_after=255 metrics_reused=255 metrics_rebuilt=4 history_container_same=false
+page=20 messages=18142 chunks_reused=257 history_turn_refs_reused=257 existing_memos_before=257 existing_memos_after=257 metrics_reused=257 metrics_rebuilt=3 history_container_same=false
+PASS: existing turn, chunk and presentation memo identities survive ordinal shifts; only History/global assembly is rebuilt

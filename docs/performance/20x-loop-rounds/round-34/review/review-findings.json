@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "review_status": "complete",
+  "verdict": "BLOCKING 4",
+  "blocking_count": 4,
+  "nonblocking_count": 2,
+  "base": "146d4fd508912600f78710bd9eab1c93cb824e3d",
+  "head": "ffd03c3b580d6aa23ed7a04d54af7f8bff865eb2",
+  "scope": "docs/performance/20x-loop-rounds/",
+  "findings": [
+    {
+      "id": "F1", "severity": "BLOCKING/P1",
+      "file": "docs/performance/20x-loop-rounds/2026-11-17-round-34.md", "line": 63,
+      "also_affects": ["docs/performance/20x-loop-rounds/2026-11-17-round-34.md:93-108", "docs/performance/20x-loop-rounds/INDEX.md:95", "docs/performance/20x-loop-rounds/INDEX.md:316-324"],
+      "description": "Turn ordinal shift is not the invalidation condition of either HistoryTurn or its presentation memo. Existing chunks are reused by first-message ID, sameWindow, anchor/online/active/observed; existing HistoryTurns by chunk identity. A new Prefix causes new History/global entryTurns and joined assembly, not blanket loss of per-turn projection. Empty activity in the harness stays empty. Direct unchanged-source probe across 20 pages retained 230-257 existing chunk, HistoryTurn and memo row-buffer identities, rebuilding only 3-4 turns per page including the tail. History container identity changed on every page.",
+      "recommendation": "Correct report and INDEX to distinguish O(window) validation/global dictionaries and output assembly from actual turn projection. Reframe round-35 around measured remaining global work, not proposing already-existing turn-granular memoization. Withdraw the ordinal=>memo invalidation causal claim and treat -40~60% as an unvalidated hypothesis until a new remaining-work mechanism is isolated.",
+      "source_evidence": ["Sources/WorkbenchCore/ConversationPresentation.swift:88-98", "Sources/WorkbenchCore/ConversationPresentation.swift:136-160", "Sources/WorkbenchCore/ConversationPresentation.swift:365-388", "Sources/WorkbenchCore/ToolVisibilityProjection.swift:208-259"],
+      "artifacts": ["review-artifacts/reuse-probe.swift", "review-artifacts/reuse-probe.log"]
+    },
+    {
+      "id": "F2", "severity": "BLOCKING/P1",
+      "file": "docs/performance/20x-loop-rounds/2026-11-17-round-34.md", "line": 69,
+      "also_affects": ["docs/performance/20x-loop-rounds/2026-11-17-round-34.md:29-34", "docs/performance/20x-loop-rounds/2026-11-17-round-34.md:86-89", "docs/performance/20x-loop-rounds/INDEX.md:95"],
+      "description": "Non-setup normalization excludes only named setup regions rather than complete timing-excluded decode stacks. Independent XML replay: 8,319/20,591 samples (40.401146%) have JSON/event/snapshot decoding frames, versus 4,584 samples in setup buckets; 3,735 decode samples remain in ARC/compare/teardown/alloc/hash buckets. Decode-free samples are 12,272, not 15,882. Narrative inclusive 2,695/20,591=13.088242% is a whole-trace share, not non-setup; on the stack-excluded denominator it is 21.960561%, and after t>2s 23.311547%. These corrected numbers still include the harness's second model update and must not themselves be called bench-timed shares.",
+      "recommendation": "Identify setup by outer decoding ancestry before generic innermost classification, separate timing-excluded model/fixture/warmup work, and regenerate tables, denominator labels and INDEX. Reassess the no-single-mechanism rationale. Round-20/21 reject specific byte-key/localization designs, not every new narrative mechanism; keep those rejections without using 13.1% as the benchmark-normalized bound.",
+      "source_evidence": ["docs/performance/20x-loop-rounds/round-34/attr/analyze_r34.py:20-66", "docs/performance/20x-loop-rounds/round-34/attr/analyze_r34.py:83-89", "Tests/WorkbenchCoreTests/StreamingBench.swift:127-131", "Tests/WorkbenchCoreTests/StreamingBench.swift:149-158"],
+      "artifacts": ["review-artifacts/attribution-audit.json", "review-artifacts/followup-audit.json", "review-artifacts/streaming-decode-residual-examples.txt"]
+    },
+    {
+      "id": "F3", "severity": "BLOCKING/P2",
+      "file": "docs/performance/20x-loop-rounds/2026-11-17-round-34.md", "line": 79,
+      "also_affects": ["docs/performance/20x-loop-rounds/2026-11-17-round-34.md:84", "docs/performance/20x-loop-rounds/INDEX.md:95", "docs/performance/20x-loop-rounds/INDEX.md:320-322"],
+      "description": "About 2% is only the exclusive named find-* buckets, not total find-bar machinery. Complete find/cache ancestry appears in 3,350 samples: 16.269244% of all trace, 27.297914% of decode-free trace. After initial warmup (t>2s), inclusive find still occupies 23.363834% of decode-free samples, stable at t>3/5/10s. Generic ARC/bridge/hash/teardown leaves within find calls are omitted by the inference that machinery has nearly disappeared. The initial trace also contains 454 inclusive DataDetector/link-scan samples in find calls, all absent after t>2s; hence the whole cf-match bucket is not solely live-turn matching. Another 333/1,369 cf-match samples lack the named actual CFStringFind/Fold/DD frames and include fixture formatting or locale plumbing.",
+      "recommendation": "Qualify 2% as named exclusive buckets; report steady-state inclusive consumers and separate matching from mechanical costs. Apply round-33 runtime/ARC classification and round-31 warmup separation lessons. Withdraw the whole-chain near-zero/final-certification inference, without disputing the historical A/B gains.",
+      "artifacts": ["review-artifacts/attribution-audit.json", "review-artifacts/followup-audit.json", "review-artifacts/streaming-cf-examples.txt"]
+    },
+    {
+      "id": "F4", "severity": "BLOCKING/P2",
+      "file": "docs/performance/20x-loop-rounds/round-34/attr/r34-attr.job", "line": 127,
+      "also_affects": ["docs/performance/20x-loop-rounds/round-34/attr/r34-attr.job:139-155", "docs/performance/20x-loop-rounds/round-34/attr/r34-attr.job:272-294", "docs/performance/20x-loop-rounds/2026-11-17-round-34.md:22-28", "docs/performance/20x-loop-rounds/round-34/attr/harness-fidelity-record.md:16-29"],
+      "description": "Distinct-ID repair does not establish benchmark-homogeneous load. Paging conversation is initialized outside the cycle loop and never reset; each cycle appends 35 more deltas, whereas bench paging follows only 35 deltas. The trace has 62 prepend phase runs: from the source, final tail is expected to reach about 53,645 UTF-8 bytes versus benchmark's 880 bytes (60.96x; source-derived inference, not XML payload extraction). This live-text drift is not the disclosed 16k->18k message-window drift. Streaming uses 205 updates per reset versus bench 35, increasing final tail to 5,235 vs 880 bytes. Input length, cache state and narrative work are consequently not proven homogeneous by a nearby Linux median.",
+      "recommendation": "Reset paging conversation per cycle before the 35-update warmup and use benchmark-length streaming update cycles, or explicitly separate and validate the changed distributions with same-shape before/after attribution. Disclose the live-text drift, downgrade current fidelity assertions, and avoid transferring current shares to benchmark candidate estimates until controlled re-profiling. Preserve original XML as historical evidence.",
+      "source_evidence": ["Tests/WorkbenchCoreTests/StreamingBench.swift:15", "Tests/WorkbenchCoreTests/StreamingBench.swift:127-128", "Tests/WorkbenchCoreTests/StreamingBench.swift:192-211", "Sources/WorkbenchCore/KimiProtocol.swift:508-520"],
+      "artifacts": ["review-artifacts/harness-tail-drift.json", "review-artifacts/attribution-audit.json"]
+    },
+    {
+      "id": "N1", "severity": "NONBLOCKING/P2",
+      "file": "docs/performance/20x-loop-rounds/round-34/attr/analyze_r34.py", "line": 128,
+      "description": "Next-marker attribution is a heuristic, not an independently measured prepend-only boundary. It assigns at least 159 samples from canReuse+sameWindow to prepend even though prepend changes prefix count and fails that guard before sameWindow. Previous-vs-next marker choices differ for 2,953/20,409 samples (14.469107%); previous-marker sensitivity assigns 18,970 instead of 17,861 prepend samples. Neither alternative is asserted ground truth. The 39 cycles/780 prepends receipt belongs to an untraced 5s run, not the traced run, and cannot validate its 87.5% phase ratio.",
+      "recommendation": "Describe inferred phases and boundary uncertainty, show sensitivity and trace-local cycle context, remove the confident warm-cost inference, and use explicit timed phase spans or markers on a controlled future profile.",
+      "artifacts": ["review-artifacts/paging-boundary-examples.txt", "review-artifacts/paging-proven-warm-misclassification.txt", "review-artifacts/followup-audit.json"]
+    },
+    {
+      "id": "N2", "severity": "NONBLOCKING/P2",
+      "file": "docs/performance/20x-loop-rounds/round-34/attr/analyze_r34.py", "line": 164,
+      "description": "Consumer lookup is partial: only frames 1:10 are visited; String.hash and breadcrumb bridge helpers can be reported as consumers rather than skipped to business frames. The three prominent History/join/projectTurns callers are independently confirmed, but current percentages are not an exhaustive nearest-business partition. The ~36% value reproduces 6,449/17,861=36.106601% as disjoint hash+find+string-compare buckets; compare includes message/input comparisons and breadcrumbs are already included in hash, so this is not a precise dictionary-only removable fraction. consumers-paging.txt is whole-trace data (e.g. Hasher leaf n=1499), unlike the segmented table (1433). Archived script/job headers also retain superseded 3-page/~3%-restart/dominant-warm/R33 wording; diff --check reports a trailing blank line.",
+      "recommendation": "Use a full-stack product-frame allowlist with unresolved attribution retained; state generic-mechanical versus dictionary-only scope, label whole-trace versus phase consumers, and update stale comments while preserving original raw evidence.",
+      "artifacts": ["review-artifacts/followup-audit.json", "review-artifacts/diff-check.txt"]
+    }
+  ],
+  "coverage": {
+    "scope": "All 11 changed files remain under the specified docs subtree; Sources and Tests diff is empty; tracked files were not modified by the review.",
+    "cache_semantics": "ConversationPresentationHandle retains the active model across updates. ConversationPresentationCache is a conversation-model LRU (8 models, default <=1000 messages and <=1MiB payload admission), not a per-input snapshot/turn memo; the 16k benchmark is not retained by this LRU but is retained by the active handle. History reconstruction is conditional on changed Prefix identity, not every update.",
+    "entryTurns": "The private [entryID: turnOrdinal] map is position-dependent and globally rebuilt. Its consumers are history membership and external-activity grouping. Updating values of the current per-row dictionary is O(entries), not O(turns), absent a redesigned indirection.",
+    "round35_direction": "Potential remaining global index/identity validation/assembly work is plausible, but new per-turn memoization is already present. Preserve leading partial-turn merge/rebuild, cross-turn tool identity fallback, duplicate prompt/entry IDs, remembered live anchoring, online/active/epoch/language invalidation, activity overlays, whole-fold fallback when overlays remove a prompt, tail/live reply rules and preservingEntries semantics. Design any lazy ordinal indirection explicitly. Full cost accounting must include retained source slices/backing storage, normalized messages, rows/foldedRows/parents/navigation/activity/chunks and ownership lifetime; do not assume search-cache predicates transfer unchanged. Perf-only consumer sentinels and bounded cost/eviction/invalidations must be pinned in round-35.",
+    "round20_negative_list": "No-go this evaluation round can remain a prioritization choice. Round-20 byte-key and localization microoptimizations, and round-21 extended byte-key retry, remain rejected. The list does not close all narrative work; rounds 22 and 26 later adopted other narrative mechanisms. Current erroneous normalized bound cannot be used to close that direction.",
+    "stop_rule": "1/3 is correct after round-33 performance acceptance reset the count. A docs-only evaluation without accepted performance benefit increments it once.",
+    "gates": "Docs-only portable+CI and no separate Mac product re-gate is consistent with rounds 25/28/31. Math identical-input ratio gates are inapplicable, but semantic and unconditional fourfold input-growth checks remain applicable. Review is not a merge authorization; unfinished CI must still complete."
+  },
+  "verification": {
+    "workbench_checks": {"command": "PATH=/home/<dev>/.local/swift/6.3.3/usr/bin:$PATH swift run --scratch-path review-artifacts/swift-build --jobs 8 WorkbenchChecks", "exit_code": 0, "pass_lines": 108, "skip_lines": 1, "log": "review-artifacts/workbench-checks.log"},
+    "portable": {"command": "PYTHONDONTWRITEBYTECODE=1 python3 scripts/check-functional.py portable --output review-artifacts/portable", "exit_code": 0, "checks_passed": 10, "dirty": true, "dirty_scope": "Only review-artifacts/ was untracked; no product/test/tracked source modifications", "receipt": "review-artifacts/portable/results.json"},
+    "xml": {"paging_bytes": 7256330, "streaming_bytes": 13384853, "official_replay_exact_match": true, "sample_order_monotonic": true, "raw_xml_read_only": true},
+    "direct_reuse_probe": {"exit_code": 0, "pages": 20, "unchanged_product_objects": true, "method": "Original benchmark-shape fixture from archived job; active model and independent tool projection; reflection reads private History/turn/memo identities without source mutation. The probe deliberately primes memo before prepend to test retention; it does not claim to reproduce timing or the harness's 35-update warmup.", "log": "review-artifacts/reuse-probe.log"},
+    "diff_check": {"status": "warning", "issue": "One new blank line at consumers-paging.txt EOF"},
+    "ci_snapshot": "review-artifacts/pr-status-final.json", "ci": {"candidate_head_matches": true, "completed_successfully": 15, "pending_or_failed": 0, "merge_state": "CLEAN", "review_blockers_remain": true}
+  },
+  "unresolved": [
+    "Author must correct reports and INDEX and decide whether to re-profile controlled benchmark-homogeneous harnesses; no author files changed here",
+    "No macOS profile or product UI re-run was requested or performed; raw Mac XML was independently parsed read-only",
+    "Tail final byte count is source-derived from inferred trace cycle count, not direct extraction of payload bytes from XML",
+    "Final CI snapshot is 15/15 SUCCESS and CLEAN at candidate HEAD; documentation review blockers still prohibit approval",
+    "Portable codex-schema ran against installed codex-cli 0.169.0 and confirmed all 36 bridge methods; no no-codex skip occurred"
+  ],
+  "artifact_manifest": "review-artifacts/artifact-manifest.json"
+}

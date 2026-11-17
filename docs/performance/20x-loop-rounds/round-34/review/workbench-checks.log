@@ -1,0 +1,1034 @@
+Fetching https://github.com/apple/swift-crypto.git from cache
+Fetching https://github.com/mgriebling/SwiftMath.git from cache
+Fetching https://github.com/swiftlang/swift-cmark.git from cache
+Fetching https://github.com/Lakr233/MSDisplayLink.git from cache
+Fetching https://github.com/swiftlang/swift-markdown.git from cache
+Fetching https://github.com/apple/swift-asn1.git from cache
+Fetching https://github.com/Lakr233/libghostty-spm.git from cache
+Fetched https://github.com/Lakr233/MSDisplayLink.git from cache (0.00s)
+Fetched https://github.com/apple/swift-asn1.git from cache (0.00s)
+Fetched https://github.com/mgriebling/SwiftMath.git from cache (0.01s)
+Fetched https://github.com/swiftlang/swift-markdown.git from cache (0.01s)
+Fetched https://github.com/Lakr233/libghostty-spm.git from cache (0.01s)
+Fetched https://github.com/swiftlang/swift-cmark.git from cache (0.01s)
+Fetched https://github.com/apple/swift-crypto.git from cache (0.01s)
+Creating working copy for https://github.com/swiftlang/swift-cmark.git
+Creating working copy for https://github.com/mgriebling/SwiftMath.git
+Creating working copy for https://github.com/apple/swift-asn1.git
+Creating working copy for https://github.com/swiftlang/swift-markdown.git
+Creating working copy for https://github.com/apple/swift-crypto.git
+Creating working copy for https://github.com/Lakr233/MSDisplayLink.git
+Creating working copy for https://github.com/Lakr233/libghostty-spm.git
+Working copy of https://github.com/Lakr233/MSDisplayLink.git resolved at 2.2.0
+Working copy of https://github.com/mgriebling/SwiftMath.git resolved at 1.7.3
+Working copy of https://github.com/swiftlang/swift-cmark.git resolved at 0.8.0
+Working copy of https://github.com/swiftlang/swift-markdown.git resolved at 0.8.0
+Working copy of https://github.com/apple/swift-asn1.git resolved at 1.7.4
+Working copy of https://github.com/Lakr233/libghostty-spm.git resolved at 121c8e286d24e21ea1a379da3eaa3556d3a1b8f5
+Working copy of https://github.com/apple/swift-crypto.git resolved at 5.1.1
+Fetching binary artifact https://github.com/Lakr233/libghostty-spm/releases/download/upstream.82938b633ba6/GhosttyKit.xcframework.zip from cache
+Fetched https://github.com/Lakr233/libghostty-spm/releases/download/upstream.82938b633ba6/GhosttyKit.xcframework.zip from cache (3.08s)
+Building for debugging...
+[0/419] Compiling asn_pack.cc
+[1/419] Compiling a_octet.cc
+[2/419] Compiling a_dup.cc
+[3/419] Compiling a_gentm.cc
+[4/419] Compiling cmark-gfm-extensions tagfilter.c
+[5/419] Compiling cmark-gfm-extensions tasklist.c
+[6/419] Write swift-version--2C0D084D88D86C41.txt
+[7/419] Compiling a_bitstr.cc
+[8/419] Compiling a_strex.cc
+[9/419] Compiling cmark-gfm-extensions strikethrough.c
+[10/419] Compiling cmark-gfm-extensions ext_scanners.c
+[11/419] Compiling a_object.cc
+[12/419] Compiling cmark-gfm-extensions core-extensions.c
+[13/419] Compiling cmark-gfm-extensions table.c
+[14/419] Compiling cmark-gfm xml.c
+[15/419] Compiling cmark-gfm-extensions autolink.c
+[16/419] Compiling cmark-gfm syntax_extension.c
+[17/419] Compiling cmark-gfm render.c
+[18/419] Compiling cmark-gfm registry.c
+[19/419] Compiling cmark-gfm plugin.c
+[20/419] Compiling cmark-gfm references.c
+[21/419] Compiling a_strnid.cc
+[22/419] Compiling cmark-gfm plaintext.c
+[23/419] Compiling cmark-gfm linked_list.c
+[24/419] Compiling cmark-gfm map.c
+[25/419] Compiling cmark-gfm man.c
+[26/419] Compiling cmark-gfm utf8.c
+[27/419] Compiling cmark-gfm latex.c
+[28/419] Compiling cmark-gfm iterator.c
+[29/419] Compiling cmark-gfm node.c
+[30/419] Compiling cmark-gfm houdini_html_e.c
+[31/419] Compiling cmark-gfm html.c
+[32/419] Compiling cmark-gfm houdini_href_e.c
+[33/419] Compiling cmark-gfm footnotes.c
+[34/419] Compiling cmark-gfm cmark_ctype.c
+[35/419] Compiling cmark-gfm houdini_html_u.c
+[36/419] Write sources
+[38/419] Compiling cmark-gfm cmark.c
+[39/419] Write sources
+[42/419] Compiling cmark-gfm commonmark.c
+[43/419] Compiling cmark-gfm inlines.c
+[44/419] Compiling cmark-gfm buffer.c
+[45/419] Compiling cmark-gfm arena.c
+[46/419] Compiling SimpleFIPS202.c
+[47/419] Compiling CXKCPShims shims.c
+[48/419] Compiling KeccakSponge.c
+[49/419] Compiling KeccakHash.c
+[50/419] Compiling cmark-gfm scanners.c
+[51/419] Compiling fiat_p256_adx_sqr.S
+[52/419] Compiling fiat_p256_adx_mul.S
+[53/419] Compiling fiat_curve25519_adx_square.S
+[54/419] Compiling cmark-gfm blocks.c
+[55/419] Compiling fiat_curve25519_adx_mul.S
+[56/419] Compiling md5-x86_64-linux.S
+[57/419] Compiling md5-x86_64-apple.S
+[58/419] Compiling md5-586-linux.S
+[59/419] Compiling md5-586-apple.S
+[60/419] Compiling chacha20_poly1305_x86_64-apple.S
+[61/419] Compiling chacha20_poly1305_armv8-win.S
+[62/419] Compiling chacha20_poly1305_armv8-linux.S
+[63/419] Compiling chacha20_poly1305_x86_64-linux.S
+[64/419] Compiling chacha20_poly1305_armv8-apple.S
+[65/419] Compiling chacha-x86_64-linux.S
+[66/419] Compiling chacha-x86_64-apple.S
+[67/419] Compiling chacha-x86-linux.S
+[68/419] Compiling chacha-x86-apple.S
+[69/419] Compiling chacha-armv8-win.S
+[70/419] Compiling chacha-armv8-linux.S
+[71/419] Compiling chacha-armv8-apple.S
+[72/419] Compiling chacha-armv4-linux.S
+[73/419] Compiling aes128gcmsiv-x86_64-apple.S
+[74/419] Compiling aes128gcmsiv-x86_64-linux.S
+[75/419] Compiling x86_64-mont5-apple.S
+[76/419] Compiling x86_64-mont5-linux.S
+[77/419] Compiling x86_64-mont-linux.S
+[78/419] Compiling x86_64-mont-apple.S
+[79/419] Compiling x86-mont-linux.S
+[80/419] Compiling x86-mont-apple.S
+[81/419] Compiling vpaes-x86_64-linux.S
+[82/419] Compiling vpaes-x86_64-apple.S
+[83/419] Compiling err_data.cc
+[84/419] Compiling vpaes-x86-linux.S
+[85/419] Compiling vpaes-x86-apple.S
+[86/419] Compiling vpaes-armv8-win.S
+[87/419] Compiling vpaes-armv8-linux.S
+[88/419] Compiling vpaes-armv7-linux.S
+[89/419] Compiling vpaes-armv8-apple.S
+[90/419] Compiling KeccakP-1600-opt64.c
+[91/419] Compiling sha512-x86_64-apple.S
+[92/419] Compiling sha512-armv8-win.S
+[93/419] Compiling sha512-x86_64-linux.S
+[94/419] Compiling sha512-armv8-linux.S
+[95/419] Compiling sha512-armv8-apple.S
+[96/419] Compiling sha512-armv4-linux.S
+[97/419] Compiling sha512-586-linux.S
+[98/419] Compiling sha512-586-apple.S
+[99/419] Compiling sha256-x86_64-apple.S
+[100/419] Compiling sha256-armv8-win.S
+[101/419] Compiling sha256-armv8-linux.S
+[102/419] Compiling sha256-x86_64-linux.S
+[103/419] Compiling sha256-armv8-apple.S
+[104/419] Compiling sha256-armv4-linux.S
+[105/419] Compiling sha256-586-linux.S
+[106/419] Compiling sha256-586-apple.S
+[107/419] Compiling sha1-x86_64-apple.S
+[108/419] Compiling sha1-armv8-win.S
+[109/419] Compiling sha1-armv8-linux.S
+[110/419] Compiling sha1-armv8-apple.S
+[111/419] Compiling sha1-x86_64-linux.S
+[112/419] Compiling sha1-armv4-large-linux.S
+[113/419] Compiling sha1-586-linux.S
+[114/419] Compiling sha1-586-apple.S
+[115/419] Compiling rsaz-avx2-apple.S
+[116/419] Compiling rsaz-avx2-linux.S
+[117/419] Compiling rdrand-x86_64-linux.S
+[118/419] Compiling rdrand-x86_64-apple.S
+[119/419] Compiling p256_beeu-x86_64-asm-linux.S
+[120/419] Compiling p256_beeu-armv8-asm-win.S
+[121/419] Compiling p256_beeu-x86_64-asm-apple.S
+[122/419] Compiling p256_beeu-armv8-asm-linux.S
+[123/419] Compiling p256_beeu-armv8-asm-apple.S
+[124/419] Compiling p256-x86_64-asm-apple.S
+[125/419] Compiling p256-armv8-asm-win.S
+[126/419] Compiling p256-armv8-asm-linux.S
+[127/419] Compiling p256-x86_64-asm-linux.S
+[128/419] Compiling ghashv8-armv8-win.S
+[129/419] Compiling p256-armv8-asm-apple.S
+[130/419] Compiling ghashv8-armv8-linux.S
+[131/419] Compiling ghashv8-armv8-apple.S
+[132/419] Compiling ghashv8-armv7-linux.S
+[133/419] Compiling ghash-x86_64-linux.S
+[134/419] Compiling ghash-x86_64-apple.S
+[135/419] Compiling ghash-x86-linux.S
+[136/419] Compiling ghash-x86-apple.S
+[137/419] Compiling ghash-ssse3-x86_64-apple.S
+[138/419] Compiling ghash-ssse3-x86_64-linux.S
+[139/419] Compiling ghash-ssse3-x86-linux.S
+[140/419] Compiling ghash-ssse3-x86-apple.S
+[141/419] Compiling ghash-neon-armv8-win.S
+[142/419] Compiling ghash-neon-armv8-linux.S
+[143/419] Compiling ghash-neon-armv8-apple.S
+[144/419] Compiling ghash-armv4-linux.S
+[145/419] Compiling co-586-linux.S
+[146/419] Compiling co-586-apple.S
+[147/419] Compiling bsaes-armv7-linux.S
+[148/419] Compiling bn-armv8-win.S
+[149/419] Compiling bn-armv8-linux.S
+[150/419] Compiling bn-armv8-apple.S
+[151/419] Compiling bn-586-linux.S
+[152/419] Compiling bn-586-apple.S
+[153/419] Compiling armv8-mont-win.S
+[154/419] Compiling armv8-mont-linux.S
+[155/419] Compiling armv8-mont-apple.S
+[156/419] Compiling armv4-mont-linux.S
+[157/419] Compiling aesv8-gcm-armv8-win.S
+[158/419] Compiling aesv8-gcm-armv8-linux.S
+[159/419] Compiling aesv8-gcm-armv8-apple.S
+[160/419] Compiling aesv8-armv8-linux.S
+[161/419] Compiling aesv8-armv8-win.S
+[162/419] Compiling aesv8-armv8-apple.S
+[163/419] Compiling aesv8-armv7-linux.S
+[164/419] Compiling aesni-x86_64-apple.S
+[165/419] Compiling aesni-x86_64-linux.S
+[166/419] Compiling aesni-x86-linux.S
+[167/419] Compiling aesni-x86-apple.S
+[168/419] Compiling aesni-gcm-x86_64-apple.S
+[169/419] Compiling aesni-gcm-x86_64-linux.S
+[170/419] Compiling aes-gcm-avx512-x86_64-linux.S
+[171/419] Compiling aes-gcm-avx512-x86_64-apple.S
+[172/419] Compiling aes-gcm-avx2-x86_64-apple.S
+[173/419] Compiling aes-gcm-avx2-x86_64-linux.S
+[174/419] Compiling xwing.cc
+[175/419] Compiling x_sig.cc
+[176/419] Compiling x_spki.cc
+[177/419] Compiling x_req.cc
+[178/419] Compiling x_x509a.cc
+[179/419] Compiling x_name.cc
+[180/419] Compiling x_x509.cc
+[181/419] Compiling x_pubkey.cc
+[182/419] Compiling x_exten.cc
+[183/419] Compiling x_crl.cc
+[184/419] Compiling x509spki.cc
+[185/419] Compiling x_attrib.cc
+[186/419] Compiling x_all.cc
+[187/419] Compiling x509rset.cc
+[188/419] Compiling x_algor.cc
+[189/419] Compiling x509name.cc
+[190/419] Compiling x509cset.cc
+[191/419] Compiling x509_txt.cc
+[192/419] Compiling x509_vpm.cc
+[193/419] Compiling x509_v3.cc
+[194/419] Compiling x509_vfy.cc
+[195/419] Compiling x509_trs.cc
+[196/419] Compiling x509_set.cc
+[197/419] Compiling x509_req.cc
+[198/419] Compiling x509_obj.cc
+[199/419] Compiling x509_def.cc
+[200/419] Compiling x509_d2.cc
+[201/419] Compiling x509_ext.cc
+[202/419] Compiling x509_lu.cc
+[203/419] Compiling x509.cc
+[204/419] Compiling x509_cmp.cc
+[205/419] Compiling x509_att.cc
+[206/419] Compiling v3_utl.cc
+[207/419] Compiling v3_prn.cc
+[208/419] Compiling v3_skey.cc
+[209/419] Compiling v3_purp.cc
+[210/419] Compiling v3_pmaps.cc
+[211/419] Compiling v3_pcons.cc
+[212/419] Compiling v3_ocsp.cc
+[213/419] Compiling v3_ncons.cc
+[214/419] Compiling v3_lib.cc
+[215/419] Compiling v3_int.cc
+[216/419] Compiling v3_info.cc
+[217/419] Compiling v3_ia5.cc
+[218/419] Compiling v3_genn.cc
+[219/419] Compiling v3_extku.cc
+[220/419] Compiling v3_enum.cc
+[221/419] Compiling v3_crld.cc
+[222/419] Compiling v3_cpols.cc
+[223/419] Compiling v3_conf.cc
+[224/419] Compiling v3_bitst.cc
+[225/419] Compiling v3_bcons.cc
+[226/419] Compiling v3_akeya.cc
+[227/419] Compiling v3_alt.cc
+[228/419] Compiling v3_akey.cc
+[229/419] Compiling t_x509a.cc
+[230/419] Compiling t_x509.cc
+[231/419] Compiling i2d_pr.cc
+[232/419] Compiling t_crl.cc
+[233/419] Compiling t_req.cc
+[234/419] Compiling name_print.cc
+[235/419] Compiling rsa_pss.cc
+[236/419] Compiling policy.cc
+[237/419] Compiling by_file.cc
+[238/419] Compiling by_dir.cc
+[239/419] Compiling asn1_gen.cc
+[240/419] Compiling voprf.cc
+[241/419] Compiling algorithm.cc
+[242/419] Compiling a_digest.cc
+[243/419] Compiling a_verify.cc
+[244/419] Compiling a_sign.cc
+[245/419] Compiling trust_token.cc
+[246/419] Compiling thread_win.cc
+[247/419] Compiling thread.cc
+[248/419] Compiling thread_none.cc
+[249/419] Compiling thread_pthread.cc
+[250/419] Compiling pmbtoken.cc
+[251/419] Compiling stack.cc
+[252/419] Compiling slhdsa.cc
+[253/419] Compiling siphash.cc
+[254/419] Compiling sha512.cc
+[255/419] Compiling sha1.cc
+[256/419] Compiling sha256.cc
+[257/419] Compiling spake2plus.cc
+[258/419] Compiling rsa_extra.cc
+[259/419] Compiling rsa_print.cc
+[260/419] Compiling rc4.cc
+[261/419] Compiling refcount.cc
+[262/419] Compiling windows.cc
+[263/419] Compiling trusty.cc
+[264/419] Compiling urandom.cc
+[265/419] Compiling rsa_crypt.cc
+[266/419] Compiling rand.cc
+[267/419] Compiling ios.cc
+[268/419] Compiling getentropy.cc
+[269/419] Compiling passive.cc
+[270/419] Compiling poly1305_arm_asm.S
+[271/419] Compiling deterministic.cc
+[272/419] Compiling rsa_asn1.cc
+[273/419] Compiling forkunsafe.cc
+[274/419] Compiling fork_detect.cc
+[275/419] Compiling pool.cc
+[276/419] Compiling poly1305_arm.cc
+[277/419] Compiling poly1305.cc
+[278/419] Compiling poly1305_vec.cc
+[279/419] Compiling pkcs7.cc
+[280/419] Compiling pkcs8.cc
+[281/419] Compiling p5_pbev2.cc
+[282/419] Compiling pkcs8_x509.cc
+[283/419] Compiling pkcs7_x509.cc
+[284/419] Compiling pem_xaux.cc
+[285/419] Compiling pem_x509.cc
+[286/419] Compiling pem_pkey.cc
+[287/419] Compiling obj_xref.cc
+[288/419] Compiling pem_pk8.cc
+[289/419] Compiling mlkem.cc
+[290/419] Compiling pem_oth.cc
+[291/419] Compiling pem_info.cc
+[292/419] Compiling pem_lib.cc
+[293/419] Compiling pem_all.cc
+[294/419] Compiling mldsa.cc
+[295/419] Compiling obj.cc
+[296/419] Compiling mem.cc
+[297/419] Compiling poly_rq_mul.S
+[298/419] Compiling md5.cc
+[299/419] Compiling fips_shared_support.cc
+[300/419] Compiling lhash.cc
+[301/419] Compiling md4.cc
+[302/419] Compiling kyber.cc
+[303/419] Compiling fuzzer_mode.cc
+[304/419] Compiling ex_data.cc
+[305/419] Compiling scrypt.cc
+[306/419] Compiling hpke.cc
+[307/419] Compiling hrss.cc
+[308/419] Compiling sign.cc
+[309/419] Compiling pbkdf.cc
+[310/419] Compiling print.cc
+[311/419] Compiling p_x25519_asn1.cc
+[312/419] Compiling p_x25519.cc
+[313/419] Compiling p_hkdf.cc
+[314/419] Compiling p_rsa_asn1.cc
+[315/419] Compiling p_rsa.cc
+[316/419] Compiling p_ed25519_asn1.cc
+[317/419] Compiling p_ed25519.cc
+[318/419] Compiling p_ec_asn1.cc
+[319/419] Compiling p_ec.cc
+[320/419] Compiling p_dh_asn1.cc
+[321/419] Compiling p_dsa_asn1.cc
+[322/419] Compiling p_dh.cc
+[323/419] Compiling evp_ctx.cc
+[324/419] Compiling err.cc
+[325/419] Compiling evp_asn1.cc
+[326/419] Compiling engine.cc
+[327/419] Compiling evp.cc
+[328/419] Compiling ecdsa_p1363.cc
+[329/419] Compiling ecdh.cc
+[330/419] Compiling ecdsa_asn1.cc
+[331/419] Compiling ec_derive.cc
+[332/419] Compiling hash_to_curve.cc
+[333/419] Compiling dsa_asn1.cc
+[334/419] Compiling dsa.cc
+[335/419] Compiling ec_asn1.cc
+[336/419] Compiling digest_extra.cc
+[337/419] Compiling x25519-asm-arm.S
+[338/419] Compiling params.cc
+[339/419] Compiling des.cc
+[340/419] Compiling dh_asn1.cc
+[341/419] Compiling crypto.cc
+[342/419] Compiling cpu_intel.cc
+[343/419] Compiling spake25519.cc
+[344/419] Compiling cpu_arm_linux.cc
+[345/419] Compiling curve25519.cc
+[346/419] Compiling cpu_arm_freebsd.cc
+[347/419] Compiling cpu_aarch64_win.cc
+[348/419] Compiling curve25519_64_adx.cc
+[349/419] Compiling cpu_aarch64_sysreg.cc
+[350/419] Compiling cpu_aarch64_openbsd.cc
+[351/419] Compiling cpu_aarch64_linux.cc
+[352/419] Compiling cpu_aarch64_fuchsia.cc
+[353/419] Compiling cpu_aarch64_apple.cc
+[354/419] Compiling get_cipher.cc
+[355/419] Compiling tls_cbc.cc
+[356/419] Compiling conf.cc
+[357/419] Compiling e_rc4.cc
+[358/419] Compiling e_tls.cc
+[359/419] Compiling e_rc2.cc
+[360/419] Compiling cms.cc
+[361/419] Compiling e_null.cc
+[362/419] Compiling e_des.cc
+[363/419] Compiling e_chacha20poly1305.cc
+[364/419] Compiling e_aesgcmsiv.cc
+[365/419] Compiling e_aeseax.cc
+[366/419] Compiling e_aesctrhmac.cc
+[367/419] Compiling derive_key.cc
+[368/419] Compiling chacha.cc
+[369/419] Compiling unicode.cc
+[370/419] Compiling cbs.cc
+[371/419] Compiling ber.cc
+[372/419] Compiling cbb.cc
+[373/419] Compiling buf.cc
+[374/419] Compiling asn1_compat.cc
+[375/419] Compiling sqrt.cc
+[376/419] Compiling exponentiation.cc
+[377/419] Compiling div.cc
+[378/419] Compiling printf.cc
+[379/419] Compiling bn_asn1.cc
+[380/419] Compiling pair.cc
+[381/419] Compiling convert.cc
+[382/419] Compiling blake2.cc
+[383/419] Compiling hexdump.cc
+[384/419] Compiling file.cc
+[385/419] Compiling errno.cc
+[386/419] Compiling fd.cc
+[387/419] Compiling bio_mem.cc
+[388/419] Compiling bio.cc
+[389/419] Compiling base64.cc
+[390/419] Compiling tasn_fre.cc
+[391/419] Compiling tasn_typ.cc
+[392/419] Compiling tasn_utl.cc
+[393/419] Compiling tasn_new.cc
+[394/419] Compiling tasn_enc.cc
+[395/419] Compiling posix_time.cc
+[396/419] Compiling f_string.cc
+[397/419] Compiling f_int.cc
+[398/419] Compiling tasn_dec.cc
+[399/419] Compiling asn1_par.cc
+[400/419] Compiling a_utctm.cc
+[401/419] Compiling asn1_lib.cc
+[402/419] Compiling a_type.cc
+[403/419] Compiling a_i2d_fp.cc
+[404/419] Compiling CAtomic CAtomic.c
+[405/419] Compiling a_time.cc
+[406/419] Compiling a_mbstr.cc
+[407/452] Compiling a_int.cc
+[408/482] Compiling a_d2i_fp.cc
+[409/482] Compiling aes.cc
+[410/482] Compiling a_bool.cc
+[412/482] Emitting module Markdown
+[412/490] Compiling bcm.cc
+[414/498] Compiling Markdown Link.swift
+[415/498] Compiling Markdown Strikethrough.swift
+[416/498] Compiling Markdown Strong.swift
+[417/498] Compiling Markdown CustomInline.swift
+[418/498] Compiling Markdown InlineCode.swift
+[419/498] Compiling Markdown InlineHTML.swift
+[420/498] Compiling Markdown LineBreak.swift
+[421/498] Compiling Markdown SoftBreak.swift
+[422/498] Compiling Markdown SymbolLink.swift
+[423/498] Compiling Markdown BlockDirective.swift
+[424/498] Compiling Markdown BlockQuote.swift
+[425/498] Compiling Markdown CustomBlock.swift
+[426/498] Compiling Markdown DoxygenAbstract.swift
+[427/498] Compiling Markdown DoxygenDiscussion.swift
+[428/498] Compiling Markdown DoxygenNote.swift
+[429/498] Compiling Markdown DoxygenParameter.swift
+[430/498] Compiling Markdown DoxygenReturns.swift
+[431/498] Compiling Markdown ListItem.swift
+[432/498] Compiling CryptoBoringWrapper FiniteFieldArithmeticContext.swift
+[433/499] Compiling Markdown ChildIndexPath.swift
+[434/499] Compiling Markdown DirectiveArgument.swift
+[435/499] Compiling Markdown Document.swift
+[436/499] Compiling Markdown LiteralMarkup.swift
+[437/499] Compiling Markdown Markup.swift
+[438/499] Compiling Markdown MarkupChildren.swift
+[439/499] Compiling Markdown MarkupData.swift
+[440/499] Compiling Markdown PlainTextConvertibleMarkup.swift
+[441/499] Compiling Markdown RawMarkup.swift
+[442/499] Compiling Markdown CharacterExtensions.swift
+[443/499] Compiling Markdown CollectionExtensions.swift
+[444/499] Compiling Markdown StringExtensions.swift
+[445/499] Compiling Markdown MarkupVisitor.swift
+[446/499] Compiling Markdown MarkupWalker.swift
+[447/499] Compiling Markdown HTMLFormatter.swift
+[448/499] Compiling Markdown MarkupFormatter.swift
+[449/499] Compiling Markdown MarkupTreeDumper.swift
+[450/499] Compiling CryptoBoringWrapper Data+Span.swift
+[451/499] Compiling CryptoBoringWrapper EllipticCurvePoint.swift
+[452/499] Compiling CryptoBoringWrapper EllipticCurve.swift
+[453/499] Compiling CryptoBoringWrapper BoringSSLAEAD.swift
+[454/499] Compiling CryptoBoringWrapper ArbitraryPrecisionInteger.swift
+[455/499] Compiling CryptoBoringWrapper CryptoKitErrors_boring.swift
+[456/499] Emitting module CryptoBoringWrapper
+[457/499] Compiling CryptoBoringWrapper RandomBytes.swift
+[458/500] Wrapping AST for CryptoBoringWrapper for debugging
+[460/500] Compiling Markdown BasicBlockContainer.swift
+[461/500] Compiling Markdown BasicInlineContainer.swift
+[462/500] Compiling Markdown BlockContainer.swift
+[463/500] Compiling Markdown BlockMarkup.swift
+[464/500] Compiling Markdown InlineContainer.swift
+[465/500] Compiling Markdown InlineMarkup.swift
+[466/500] Compiling Markdown ListItemContainer.swift
+[467/500] Compiling Markdown AtomicCounter.swift
+[468/500] Compiling Markdown OrderedList.swift
+[469/500] Compiling Markdown UnorderedList.swift
+[470/500] Compiling Markdown Paragraph.swift
+[471/500] Compiling Markdown CodeBlock.swift
+[472/500] Compiling Markdown HTMLBlock.swift
+[473/500] Compiling Markdown Heading.swift
+[474/500] Compiling Markdown ThematicBreak.swift
+[475/500] Compiling Markdown Table.swift
+[476/500] Compiling Markdown TableBody.swift
+[477/500] Compiling Markdown Text.swift
+[478/500] Compiling Markdown Aside.swift
+[479/500] Compiling Markdown BlockDirectiveParser.swift
+[480/500] Compiling Markdown CommonMarkConverter.swift
+[481/500] Compiling Markdown LazySplitLines.swift
+[482/500] Compiling Markdown ParseOptions.swift
+[483/500] Compiling Markdown RangeAdjuster.swift
+[484/500] Compiling Markdown RangerTracker.swift
+[485/500] Compiling Markdown MarkupRewriter.swift
+[486/500] Compiling Markdown TableCell.swift
+[487/500] Compiling Markdown TableCellContainer.swift
+[488/500] Compiling Markdown TableHead.swift
+[489/500] Compiling Markdown TableRow.swift
+[490/500] Compiling Markdown Replacement.swift
+[491/500] Compiling Markdown SourceLocation.swift
+[492/500] Compiling Markdown Emphasis.swift
+[493/500] Compiling Markdown Image.swift
+[494/500] Compiling Markdown InlineAttributes.swift
+[495/588] Wrapping AST for Markdown for debugging
+[497/588] Emitting module Crypto
+[498/600] Compiling Crypto Digest.swift
+[499/600] Compiling Crypto Digests.swift
+[500/600] Compiling Crypto HashFunctions.swift
+[501/600] Compiling Crypto HashFunctions_SHA2.swift
+[502/600] Compiling Crypto HashFunctions_SHA3.swift
+[503/600] Compiling Crypto Digest_xkcp.swift
+[504/600] Compiling Crypto HPKE-AEAD.swift
+[505/600] Compiling Crypto HPKE-Ciphersuite.swift
+[506/600] Compiling Crypto HPKE-KDF.swift
+[507/600] Compiling Crypto HPKE-KexKeyDerivation.swift
+[508/600] Compiling Crypto HPKE-LabeledExtract.swift
+[509/600] Compiling Crypto HPKE-Utils.swift
+[510/600] Compiling Crypto DHKEM.swift
+[511/600] Compiling Crypto HPKE-KEM-Curve25519.swift
+[512/600] Compiling Crypto HPKE-NIST-EC-KEMs.swift
+[513/600] Compiling Crypto HPKE-KEM.swift
+[514/600] Compiling Crypto HPKE-Errors.swift
+[515/600] Compiling Crypto HPKE.swift
+[516/600] Compiling Crypto HPKE-Context.swift
+[517/600] Compiling Crypto HPKE-KeySchedule.swift
+[518/600] Compiling Crypto HPKE-Modes.swift
+[519/600] Compiling Crypto Insecure.swift
+[520/600] Compiling Crypto Insecure_HashFunctions.swift
+[521/600] Compiling Crypto MLKEM_boring.swift
+[522/600] Compiling Crypto AES-GCM.swift
+[523/600] Compiling Crypto AES-GCM_boring.swift
+[524/600] Compiling Crypto ChaChaPoly_boring.swift
+[525/600] Compiling Crypto ChaChaPoly.swift
+[526/600] Compiling Crypto Cipher.swift
+[527/600] Compiling Crypto Nonces.swift
+[528/600] Compiling Crypto ASN1.swift
+[529/600] Compiling Crypto ASN1Any.swift
+[530/600] Compiling Crypto ASN1BitString.swift
+[531/600] Compiling Crypto ASN1Boolean.swift
+[532/600] Compiling Crypto ASN1Identifier.swift
+[533/600] Compiling Crypto ASN1Integer.swift
+[534/600] Compiling Crypto ASN1Null.swift
+[535/600] Compiling Crypto ASN1OctetString.swift
+[536/600] Compiling Crypto ASN1Strings.swift
+[537/600] Compiling Crypto ArraySliceBigint.swift
+[538/600] Compiling Crypto GeneralizedTime.swift
+[539/600] Compiling Crypto ObjectIdentifier.swift
+[540/600] Compiling Crypto ECDSASignature.swift
+[541/600] Compiling Crypto PEMDocument.swift
+[542/600] Compiling Crypto PKCS8PrivateKey.swift
+[543/600] Compiling Crypto SEC1PrivateKey.swift
+[544/600] Compiling Crypto SubjectPublicKeyInfo.swift
+[545/600] Compiling Crypto CryptoError_boring.swift
+[546/600] Compiling Crypto CryptoKitErrors.swift
+[547/600] Compiling Crypto Digest_boring.swift
+[548/600] Compiling Crypto MLKEM_wrapper.swift
+[549/600] Compiling Crypto XWing_boring.swift
+[550/600] Compiling Crypto KEM-Errors.swift
+[551/600] Compiling Crypto KEM.swift
+[552/600] Compiling Crypto MLKEM.swift
+[553/600] Compiling Crypto XWing.swift
+[554/600] Compiling Crypto ECDH_boring.swift
+[555/600] Compiling Crypto DH.swift
+[556/600] Compiling Crypto ECDH.swift
+[557/600] Compiling Crypto ANSIx963.swift
+[558/600] Compiling Crypto HKDF.swift
+[559/600] Compiling Crypto AESWrap.swift
+[560/600] Compiling Crypto AESWrap_boring.swift
+[561/600] Compiling Crypto Ed25519_boring.swift
+[562/600] Compiling Crypto NISTCurvesKeys_boring.swift
+[563/600] Compiling Crypto X25519Keys_boring.swift
+[564/600] Compiling Crypto Curve25519.swift
+[565/600] Compiling Crypto Ed25519Keys.swift
+[566/600] Compiling Crypto NISTCurvesKeys.swift
+[567/600] Compiling Crypto X25519Keys.swift
+[568/600] Compiling Crypto SymmetricKeys.swift
+[569/600] Compiling Crypto HMAC.swift
+[570/600] Compiling Crypto MACFunctions.swift
+[571/600] Compiling Crypto MessageAuthenticationCode.swift
+[572/600] Compiling Crypto AES.swift
+[573/600] Compiling Crypto ECDSASignature_boring.swift
+[574/600] Compiling Crypto ECDSA_boring.swift
+[575/600] Compiling Crypto EdDSA_boring.swift
+[576/600] Compiling Crypto MLDSA_boring.swift
+[577/600] Compiling Crypto MLDSA_wrapper.swift
+[578/600] Compiling Crypto ECDSA.swift
+[579/600] Compiling Crypto Ed25519.swift
+[580/600] Compiling Crypto MLDSA.swift
+[581/600] Compiling Crypto Signature.swift
+[582/600] Compiling Crypto ArraySpanHelpers.swift
+[583/600] Compiling Crypto Backports.swift
+[584/600] Compiling Crypto CryptoKitErrors_boring.swift
+[585/600] Compiling Crypto InlineArray+withBytes_boring.swift
+[586/600] Compiling Crypto Optional+withUnsafeBytes_boring.swift
+[587/600] Compiling Crypto RNG_boring.swift
+[588/600] Compiling Crypto SafeCompare_boring.swift
+[589/600] Compiling Crypto Zeroization_boring.swift
+[590/600] Compiling Crypto _CryptoModuleAnchor.swift
+[591/600] Compiling Crypto Data+ArraySpan.swift
+[592/600] Compiling Crypto PrettyBytes.swift
+[593/600] Compiling Crypto SafeCompare.swift
+[594/600] Compiling Crypto SecureBytes.swift
+[595/600] Compiling Crypto Zeroization.swift
+[596/601] Wrapping AST for Crypto for debugging
+[598/693] Compiling WorkbenchCore ProjectFileReference.swift
+[599/693] Compiling WorkbenchCore RemoteFile.swift
+[600/693] Compiling WorkbenchCore RemoteGit.swift
+[601/693] Compiling WorkbenchCore RemoteGitComparison.swift
+[602/693] Compiling WorkbenchCore RemoteSetup.swift
+[603/693] Compiling WorkbenchCore RenderedSourceCache.swift
+[604/693] Compiling WorkbenchCore ReplyDocument.swift
+[605/693] Compiling WorkbenchCore ReplyMath.swift
+[606/693] Compiling WorkbenchCore ReplyPlainText.swift
+[607/693] Compiling WorkbenchCore ReplyStreamParser.swift
+[608/693] Compiling WorkbenchCore ReplyStreamSnapshot.swift
+[609/693] Compiling WorkbenchCore ReplyTableGeometry.swift
+[610/693] Compiling WorkbenchCore RestoreReport.swift
+[611/693] Compiling WorkbenchCore ReviewContext.swift
+[612/693] Compiling WorkbenchCore RunControl.swift
+[613/693] Compiling WorkbenchCore RuntimeFreshness.swift
+[614/693] Compiling WorkbenchCore SSHCommand.swift
+[615/693] Compiling WorkbenchCore SafeLink.swift
+[616/693] Compiling WorkbenchCore SessionArchive.swift
+[617/693] Compiling WorkbenchCore SessionCatalog.swift
+[618/693] Compiling WorkbenchCore SessionDirectorySearch.swift
+[619/693] Compiling WorkbenchCore SessionEditStats.swift
+[620/693] Compiling WorkbenchCore SessionGroupIndex.swift
+[621/693] Compiling WorkbenchCore SessionNaming.swift
+[622/693] Compiling WorkbenchCore SessionTime.swift
+[623/693] Compiling WorkbenchCore SessionTurn.swift
+[624/706] Emitting module WorkbenchCore
+[625/706] Compiling WorkbenchCore ConversationPrefixCache.swift
+[626/706] Compiling WorkbenchCore ConversationPresentation.swift
+[627/706] Compiling WorkbenchCore ConversationProjection.swift
+[628/706] Compiling WorkbenchCore ConversationRowGeometry.swift
+[629/706] Compiling WorkbenchCore ConversationRunPhase.swift
+[630/706] Compiling WorkbenchCore ConversationSearch.swift
+[631/706] Compiling WorkbenchCore ConversationThinkingSummary.swift
+[632/706] Compiling WorkbenchCore ConversationTimeline.swift
+[633/706] Compiling WorkbenchCore ConversationTiming.swift
+[634/706] Compiling WorkbenchCore ConversationTodo.swift
+[635/706] Compiling WorkbenchCore ConversationTurnRailGeometry.swift
+[636/706] Compiling WorkbenchCore CronFireEnvelope.swift
+[637/706] Compiling WorkbenchCore DashboardProjection.swift
+[638/706] Compiling WorkbenchCore ActivityNarrative.swift
+<worktree>/Sources/WorkbenchCore/ConversationEntryCache.swift:181:13: warning: variable 'length' was never mutated; consider changing to 'let' constant
+179 | 
+180 |     private static func appendLengthPrefixed(_ bytes: inout [UInt8], _ field: String) {
+181 |         var length = UInt64(field.utf8.count)
+    |             `- warning: variable 'length' was never mutated; consider changing to 'let' constant
+182 |         for shift in stride(from: 56, through: 0, by: -8) {
+183 |             bytes.append(UInt8(truncatingIfNeeded: length >> shift))
+[639/706] Compiling WorkbenchCore ActivitySummary.swift
+<worktree>/Sources/WorkbenchCore/ConversationEntryCache.swift:181:13: warning: variable 'length' was never mutated; consider changing to 'let' constant
+179 | 
+180 |     private static func appendLengthPrefixed(_ bytes: inout [UInt8], _ field: String) {
+181 |         var length = UInt64(field.utf8.count)
+    |             `- warning: variable 'length' was never mutated; consider changing to 'let' constant
+182 |         for shift in stride(from: 56, through: 0, by: -8) {
+183 |             bytes.append(UInt8(truncatingIfNeeded: length >> shift))
+[640/706] Compiling WorkbenchCore AgentConnectivity.swift
+<worktree>/Sources/WorkbenchCore/ConversationEntryCache.swift:181:13: warning: variable 'length' was never mutated; consider changing to 'let' constant
+179 | 
+180 |     private static func appendLengthPrefixed(_ bytes: inout [UInt8], _ field: String) {
+181 |         var length = UInt64(field.utf8.count)
+    |             `- warning: variable 'length' was never mutated; consider changing to 'let' constant
+182 |         for shift in stride(from: 56, through: 0, by: -8) {
+183 |             bytes.append(UInt8(truncatingIfNeeded: length >> shift))
+[641/706] Compiling WorkbenchCore AppVersionCheck.swift
+<worktree>/Sources/WorkbenchCore/ConversationEntryCache.swift:181:13: warning: variable 'length' was never mutated; consider changing to 'let' constant
+179 | 
+180 |     private static func appendLengthPrefixed(_ bytes: inout [UInt8], _ field: String) {
+181 |         var length = UInt64(field.utf8.count)
+    |             `- warning: variable 'length' was never mutated; consider changing to 'let' constant
+182 |         for shift in stride(from: 56, through: 0, by: -8) {
+183 |             bytes.append(UInt8(truncatingIfNeeded: length >> shift))
+[642/706] Compiling WorkbenchCore AttentionRouting.swift
+<worktree>/Sources/WorkbenchCore/ConversationEntryCache.swift:181:13: warning: variable 'length' was never mutated; consider changing to 'let' constant
+179 | 
+180 |     private static func appendLengthPrefixed(_ bytes: inout [UInt8], _ field: String) {
+181 |         var length = UInt64(field.utf8.count)
+    |             `- warning: variable 'length' was never mutated; consider changing to 'let' constant
+182 |         for shift in stride(from: 56, through: 0, by: -8) {
+183 |             bytes.append(UInt8(truncatingIfNeeded: length >> shift))
+[643/706] Compiling WorkbenchCore AutoCompact.swift
+<worktree>/Sources/WorkbenchCore/ConversationEntryCache.swift:181:13: warning: variable 'length' was never mutated; consider changing to 'let' constant
+179 | 
+180 |     private static func appendLengthPrefixed(_ bytes: inout [UInt8], _ field: String) {
+181 |         var length = UInt64(field.utf8.count)
+    |             `- warning: variable 'length' was never mutated; consider changing to 'let' constant
+182 |         for shift in stride(from: 56, through: 0, by: -8) {
+183 |             bytes.append(UInt8(truncatingIfNeeded: length >> shift))
+[644/706] Compiling WorkbenchCore CompactionSummaryDisplay.swift
+<worktree>/Sources/WorkbenchCore/ConversationEntryCache.swift:181:13: warning: variable 'length' was never mutated; consider changing to 'let' constant
+179 | 
+180 |     private static func appendLengthPrefixed(_ bytes: inout [UInt8], _ field: String) {
+181 |         var length = UInt64(field.utf8.count)
+    |             `- warning: variable 'length' was never mutated; consider changing to 'let' constant
+182 |         for shift in stride(from: 56, through: 0, by: -8) {
+183 |             bytes.append(UInt8(truncatingIfNeeded: length >> shift))
+[645/706] Compiling WorkbenchCore ConversationActivity.swift
+<worktree>/Sources/WorkbenchCore/ConversationEntryCache.swift:181:13: warning: variable 'length' was never mutated; consider changing to 'let' constant
+179 | 
+180 |     private static func appendLengthPrefixed(_ bytes: inout [UInt8], _ field: String) {
+181 |         var length = UInt64(field.utf8.count)
+    |             `- warning: variable 'length' was never mutated; consider changing to 'let' constant
+182 |         for shift in stride(from: 56, through: 0, by: -8) {
+183 |             bytes.append(UInt8(truncatingIfNeeded: length >> shift))
+[646/706] Compiling WorkbenchCore ConversationBookmarks.swift
+<worktree>/Sources/WorkbenchCore/ConversationEntryCache.swift:181:13: warning: variable 'length' was never mutated; consider changing to 'let' constant
+179 | 
+180 |     private static func appendLengthPrefixed(_ bytes: inout [UInt8], _ field: String) {
+181 |         var length = UInt64(field.utf8.count)
+    |             `- warning: variable 'length' was never mutated; consider changing to 'let' constant
+182 |         for shift in stride(from: 56, through: 0, by: -8) {
+183 |             bytes.append(UInt8(truncatingIfNeeded: length >> shift))
+[647/706] Compiling WorkbenchCore ConversationEditRecord.swift
+<worktree>/Sources/WorkbenchCore/ConversationEntryCache.swift:181:13: warning: variable 'length' was never mutated; consider changing to 'let' constant
+179 | 
+180 |     private static func appendLengthPrefixed(_ bytes: inout [UInt8], _ field: String) {
+181 |         var length = UInt64(field.utf8.count)
+    |             `- warning: variable 'length' was never mutated; consider changing to 'let' constant
+182 |         for shift in stride(from: 56, through: 0, by: -8) {
+183 |             bytes.append(UInt8(truncatingIfNeeded: length >> shift))
+[648/706] Compiling WorkbenchCore ConversationEntryCache.swift
+<worktree>/Sources/WorkbenchCore/ConversationEntryCache.swift:181:13: warning: variable 'length' was never mutated; consider changing to 'let' constant
+179 | 
+180 |     private static func appendLengthPrefixed(_ bytes: inout [UInt8], _ field: String) {
+181 |         var length = UInt64(field.utf8.count)
+    |             `- warning: variable 'length' was never mutated; consider changing to 'let' constant
+182 |         for shift in stride(from: 56, through: 0, by: -8) {
+183 |             bytes.append(UInt8(truncatingIfNeeded: length >> shift))
+[649/706] Compiling WorkbenchCore ConversationExport.swift
+<worktree>/Sources/WorkbenchCore/ConversationEntryCache.swift:181:13: warning: variable 'length' was never mutated; consider changing to 'let' constant
+179 | 
+180 |     private static func appendLengthPrefixed(_ bytes: inout [UInt8], _ field: String) {
+181 |         var length = UInt64(field.utf8.count)
+    |             `- warning: variable 'length' was never mutated; consider changing to 'let' constant
+182 |         for shift in stride(from: 56, through: 0, by: -8) {
+183 |             bytes.append(UInt8(truncatingIfNeeded: length >> shift))
+[650/706] Compiling WorkbenchCore ConversationFileReference.swift
+<worktree>/Sources/WorkbenchCore/ConversationEntryCache.swift:181:13: warning: variable 'length' was never mutated; consider changing to 'let' constant
+179 | 
+180 |     private static func appendLengthPrefixed(_ bytes: inout [UInt8], _ field: String) {
+181 |         var length = UInt64(field.utf8.count)
+    |             `- warning: variable 'length' was never mutated; consider changing to 'let' constant
+182 |         for shift in stride(from: 56, through: 0, by: -8) {
+183 |             bytes.append(UInt8(truncatingIfNeeded: length >> shift))
+[651/706] Compiling WorkbenchCore KimiTranscript.swift
+[652/706] Compiling WorkbenchCore LocalAgentRuntime.swift
+[653/706] Compiling WorkbenchCore Localization.swift
+[654/706] Compiling WorkbenchCore LocalizationCompat.swift
+[655/706] Compiling WorkbenchCore ModelCatalog.swift
+[656/706] Compiling WorkbenchCore ModelSelection.swift
+[657/706] Compiling WorkbenchCore Models.swift
+[658/706] Compiling WorkbenchCore NativeAgentProtocol.swift
+[659/706] Compiling WorkbenchCore NativePlanReview.swift
+[660/706] Compiling WorkbenchCore NativeSubagents.swift
+[661/706] Compiling WorkbenchCore PermissionControl.swift
+[662/706] Compiling WorkbenchCore ProcessRunner.swift
+[663/706] Compiling WorkbenchCore ProjectCommandCatalog.swift
+[664/706] Compiling WorkbenchCore SetupCommandRunner.swift
+[665/706] Compiling WorkbenchCore ShellActivity.swift
+[666/706] Compiling WorkbenchCore SidebarProjectEvidence.swift
+[667/706] Compiling WorkbenchCore SidebarProjection.swift
+[668/706] Compiling WorkbenchCore SidebarRepositoryCommand.swift
+[669/706] Compiling WorkbenchCore SlashCommands.swift
+[670/706] Compiling WorkbenchCore StreamingTextReveal.swift
+[671/706] Compiling WorkbenchCore TableSerialization.swift
+[672/706] Compiling WorkbenchCore TaskContextDetail.swift
+[673/706] Compiling WorkbenchCore TaskContextFiles.swift
+[674/706] Compiling WorkbenchCore TaskEvents.swift
+[675/706] Compiling WorkbenchCore TaskGroupProjection.swift
+[676/706] Compiling WorkbenchCore TaskGroupSummary.swift
+[677/706] Compiling WorkbenchCore DocumentReading.swift
+[678/706] Compiling WorkbenchCore DraftFile.swift
+[679/706] Compiling WorkbenchCore DraftPaste.swift
+[680/706] Compiling WorkbenchCore FilePreview.swift
+[681/706] Compiling WorkbenchCore FrameHitchRecorder.swift
+[682/706] Compiling WorkbenchCore GitReviewProgress.swift
+[683/706] Compiling WorkbenchCore GroupSuggestions.swift
+[684/706] Compiling WorkbenchCore KimiAPI.swift
+[685/706] Compiling WorkbenchCore KimiCommands.swift
+[686/706] Compiling WorkbenchCore KimiConversationCache.swift
+[687/706] Compiling WorkbenchCore KimiPrompt.swift
+[688/706] Compiling WorkbenchCore KimiProtocol.swift
+[689/706] Compiling WorkbenchCore KimiTasks.swift
+[690/706] Compiling WorkbenchCore TaskLaunchDefaults.swift
+[691/706] Compiling WorkbenchCore TaskRecap.swift
+[692/706] Compiling WorkbenchCore TerminalTabs.swift
+[693/706] Compiling WorkbenchCore TextSelectionSpan.swift
+[694/706] Compiling WorkbenchCore ToolPresentation.swift
+[695/706] Compiling WorkbenchCore ToolVisibilityProjection.swift
+[696/706] Compiling WorkbenchCore TurnStatus.swift
+[697/706] Compiling WorkbenchCore WebSocketHeartbeat.swift
+[698/706] Compiling WorkbenchCore Workspace.swift
+[699/706] Compiling WorkbenchCore WorkspaceProgress.swift
+[700/706] Compiling WorkbenchCore WorkspaceSearch.swift
+[701/706] Compiling WorkbenchCore WorkspaceWorkflow.swift
+[702/706] Compiling WorkbenchCore WorkspaceWriter.swift
+[703/707] Wrapping AST for WorkbenchCore for debugging
+[705/790] Emitting module WorkbenchChecks
+[706/801] Compiling WorkbenchChecks ReplyStreamParserTests.swift
+[707/801] Compiling WorkbenchChecks ReplyTableGeometryTests.swift
+[708/801] Compiling WorkbenchChecks RestoreReportTests.swift
+[709/801] Compiling WorkbenchChecks ReviewContextTests.swift
+[710/801] Compiling WorkbenchChecks RunControlTests.swift
+[711/801] Compiling WorkbenchChecks RuntimeFreshnessTests.swift
+[712/801] Compiling WorkbenchChecks SafeLinkTests.swift
+[713/801] Compiling WorkbenchChecks SearchEntryReuseTests.swift
+[714/801] Compiling WorkbenchChecks SessionEditStatsTests.swift
+[715/801] Compiling WorkbenchChecks SessionManagementTests.swift
+[716/801] Compiling WorkbenchChecks SessionNamingTests.swift
+[717/801] Compiling WorkbenchChecks SessionTurnTests.swift
+[718/801] Compiling WorkbenchChecks SidebarPerformanceTests.swift
+[719/801] Compiling WorkbenchChecks SidebarTests.swift
+[720/801] Compiling WorkbenchChecks SlashCommandTests.swift
+[721/801] Compiling WorkbenchChecks SplitInlineGuardTests.swift
+[722/801] Compiling WorkbenchChecks StepAwareReadingTests.swift
+[723/801] Compiling WorkbenchChecks StreamingBench.swift
+[724/801] Compiling WorkbenchChecks StreamingTextRevealTests.swift
+[725/801] Compiling WorkbenchChecks TableSerializationTests.swift
+[726/801] Compiling WorkbenchChecks TaskContextTests.swift
+[727/801] Compiling WorkbenchChecks TaskGroupTests.swift
+[728/801] Compiling WorkbenchChecks ActivityBench.swift
+[729/801] Compiling WorkbenchChecks ActivitySummaryTests.swift
+[730/801] Compiling WorkbenchChecks ActivityToolsProjectionTests.swift
+[731/801] Compiling WorkbenchChecks AppVersionCheckTests.swift
+[732/801] Compiling WorkbenchChecks AttentionRoutingTests.swift
+[733/801] Compiling WorkbenchChecks AutoCompactTests.swift
+[734/801] Compiling WorkbenchChecks BatchArchiveTests.swift
+[735/801] Compiling WorkbenchChecks BenchClock.swift
+[736/801] Compiling WorkbenchChecks CollapsedWhitespaceTests.swift
+[737/801] Compiling WorkbenchChecks ConnectivityTests.swift
+[738/801] Compiling WorkbenchChecks ConversationActivityTests.swift
+[739/801] Compiling WorkbenchChecks ConversationEntryCacheTests.swift
+[740/801] Compiling WorkbenchChecks ConversationPrefixCacheTests.swift
+[741/801] Compiling WorkbenchChecks ConversationPresentationModelTests.swift
+[742/801] Compiling WorkbenchChecks ConversationPresentationTests.swift
+[743/801] Compiling WorkbenchChecks ConversationRowGeometryTests.swift
+[744/801] Compiling WorkbenchChecks ConversationTimingTests.swift
+[745/801] Compiling WorkbenchChecks ConversationTodoTests.swift
+[746/801] Compiling WorkbenchChecks CronFireEnvelopeTests.swift
+[747/801] Compiling WorkbenchChecks DashboardTests.swift
+[748/801] Compiling WorkbenchChecks DocumentReadingTests.swift
+[749/801] Compiling WorkbenchChecks EditLineBench.swift
+[750/801] Compiling WorkbenchChecks EditLineByteRangeTests.swift
+[751/801] Compiling WorkbenchChecks EditLineDiffBoundaryTests.swift
+[752/801] Compiling WorkbenchChecks TaskRecapTests.swift
+[753/801] Compiling WorkbenchChecks ToolVisibilityTests.swift
+[754/801] Compiling WorkbenchChecks TurnExcerptTests.swift
+[755/801] Compiling WorkbenchChecks TurnStatusTests.swift
+[756/801] Compiling WorkbenchChecks UnifiedWorkbenchTests.swift
+[757/801] Compiling WorkbenchChecks UnifiedWorkspaceTests.swift
+[758/801] Compiling WorkbenchChecks WebSocketHeartbeatTests.swift
+[759/801] Compiling WorkbenchChecks WindowIdentityTests.swift
+[760/801] Compiling WorkbenchChecks WorkflowTests.swift
+[761/801] Compiling WorkbenchChecks WorkspaceProgressTests.swift
+[762/801] Compiling WorkbenchChecks WorkspaceUpgradeTests.swift
+[763/801] Compiling WorkbenchChecks ModelSelectionTests.swift
+[764/801] Compiling WorkbenchChecks NarrativeByteKeyTests.swift
+[765/801] Compiling WorkbenchChecks NarrativeDelimiterScanTests.swift
+[766/801] Compiling WorkbenchChecks NarrativePhaseScanTests.swift
+[767/801] Compiling WorkbenchChecks NativeAgentTests.swift
+[768/801] Compiling WorkbenchChecks NativeSubagentTests.swift
+[769/801] Compiling WorkbenchChecks NormalizeDelimitersGuardTests.swift
+[770/801] Compiling WorkbenchChecks PresentationBench.swift
+[771/801] Compiling WorkbenchChecks PresentationHistoryTests.swift
+[772/801] Compiling WorkbenchChecks ProjectCommandTests.swift
+[773/801] Compiling WorkbenchChecks ProjectFileReferenceTests.swift
+[774/801] Compiling WorkbenchChecks ProtocolTests.swift
+[775/801] Compiling WorkbenchChecks EditLineScanTests.swift
+[776/801] Compiling WorkbenchChecks EditToolClassificationTests.swift
+[777/801] Compiling WorkbenchChecks FrameHitchRecorderTests.swift
+[778/801] Compiling WorkbenchChecks IncrementalLoadingTests.swift
+[779/801] Compiling WorkbenchChecks KimiAPILifecycleTests.swift
+[780/801] Compiling WorkbenchChecks KimiPromptTests.swift
+[781/801] Compiling WorkbenchChecks KimiTaskTests.swift
+[782/801] Compiling WorkbenchChecks KimiTests.swift
+[783/801] Compiling WorkbenchChecks KimiTranscriptTests.swift
+[784/801] Compiling WorkbenchChecks LineCountScanTests.swift
+[785/801] Compiling WorkbenchChecks LinkScanMaterializeTests.swift
+[786/801] Compiling WorkbenchChecks LocalizationChainTests.swift
+[787/801] Compiling WorkbenchChecks ReadingLifecycleTests.swift
+[788/801] Compiling WorkbenchChecks RemoteFileTests.swift
+[789/801] Compiling WorkbenchChecks RemoteGitComparisonTests.swift
+[790/801] Compiling WorkbenchChecks RemoteGitTests.swift
+[791/801] Compiling WorkbenchChecks RemoteGitWriteTests.swift
+[792/801] Compiling WorkbenchChecks RemoteSetupTests.swift
+[793/801] Compiling WorkbenchChecks RenderedSourceCacheTests.swift
+[794/801] Compiling WorkbenchChecks ReplyAlertTests.swift
+[795/801] Compiling WorkbenchChecks ReplyDocumentTests.swift
+[796/801] Compiling WorkbenchChecks ReplyMathRenderTests.swift
+[797/801] Compiling WorkbenchChecks ReplyMathTests.swift
+[798/801] Compiling WorkbenchChecks ReplySelectionTests.swift
+[799/802] Wrapping AST for WorkbenchChecks for debugging
+[800/802] Write Objects.LinkFileList
+[801/802] Linking WorkbenchChecks
+Build of product 'WorkbenchChecks' complete! (29.10s)
+PASS: step reading preserves order, edit identities, historical patches and outcome-aware churn
+PASS: phase reading groups Bash and thoughts, preserves edit receipts, separates historical failures from pending work and uses grounded command labels
+PASS: live public summaries, completed process folding, manual expansion, uniform folding of edits and failures
+PASS: PI steady streaming cadence, Unicode boundaries, replacement and immediate completion
+PASS: parsed-block release retains Unicode, styling, links and complete rich Markdown
+PASS: incremental reply parse matches full parses at every streaming prefix
+PASS: live progress, missing summaries, thinking-only output, tool-only notice and provider model groups
+PASS: process fold groups completed turns, preserves order, keeps the running turn live
+PASS: presentation parity, same-ID edits, pagination, epoch/language/live handoff, scoped LRU, oversized active state and metrics
+PASS: presentation history reuse matches complete recomputation across tokens, paging, crossings, language, epoch and overlays
+PASS: paging and new prompts reuse unchanged earlier turns and match complete recomputation (19/20 pages)
+PASS: window identity reuse ends at any earlier in-place edit, survives a rebuilt window and matches complete recomputation
+PASS: find-bar entry reuse equals a complete search across growth, isolated payload edits, reroutes, rebuilds, pages, running flips and query/option switches
+PROBE PASS: prefix zero-sign flip under an unchanged query
+PROBE PASS: NFD regex query after the canonically equal NFC query, and back
+PROBE PASS: payload NFC to NFD swap under an unchanged regex query
+PROBE PASS: object-key NFC to NFD swap under an unchanged regex query
+PROBE PASS: case-sensitive literal NFD query after the canonically equal NFC query, and back
+PASS: find-bar cache-hole probes (prefix zero sign, regex and literal query encoding round trips, payload encoding, key encoding) equal complete searches
+PASS: rendered-source cache — produce-once, NFC/NFD byte-exact keys, exact cost accounting, concrete LRU (touch-retention + victim identity), oversized refusal against a non-empty sentinel table, 512B/200-source churn, removeAll, 8x200 concurrency with single-copy accounting, locale-generation invalidation via the real notification, and four-regime (budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 6 queries at BOTH canonical and per-hit UTF-8 byte levels (canonical == alone admits NFC-normalization mutants) with exact counts, entry identities, occurrences and byte-exact excerpts for the true duplicate source (own message, coalescing-safe)
+PASS: entry cache — injective length-prefixed byte-exact keys (NUL-collision pair, canonical-reorder pair AND dictionary-level reorder-retrieval refusal pinned), round-12 verification as the only reuse gate (same-ID edit and NFD rebuild refused), exact retention-inclusive admission accounting (payload incl. recursive message JSONValue trees + fileId + offset/element-stride storage + key + query bytes — Codex P2 + closure-review + round-32 v3 closure, hand-computed formula pinned; REVIEW_FILE_ID/REVIEW_OFFSETS shapes refused), generation-guarded store (stale-locale build refused), budget-0 stores nothing, concrete LRU (touch/victim/new-insert), oversized payload AND oversized key refusal against a non-empty table, locale-generation invalidation, removeAll, 8x100 concurrency with single-copy accounting, and four-regime (budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 6 queries at canonical AND byte level plus cross-instance staleness and running-flag isolation
+PASS: prefix cache — round-30 key encoding at prefix-table level (canonical-reorder DICTIONARY-LEVEL retrieval refusal), round-12 window predicate as the only reuse gate (same-count edit / NFD rebuild / count change refused), reference adoption (=== node), exact retention-inclusive accounting (INDEPENDENTLY hand-computed window walk + node excerpts + expanded payload costs incl. fileId/offsets/element-stride storage + entry-ID dictionary keys + node key + query bytes), replace accounting, generation-guarded store, budget-0 oracle, concrete LRU, oversized node AND key refusal, heavy window+payload JSONValue retention (24KB-budget refusal), REVIEW-shape refusals (fileId window / 2000-empty-part window / 4096-offset payload), query-storage normalization over a turn-advance chain of independently decoded queries (single shared buffer), mechanism SENTINELS (hits() must consume the shared node; turn advance must convert Entries.shared payloads — perf-only bypass mutants die), locale invalidation, removeAll, 8x100 concurrency single-copy accounting, four-regime (all-three-tiers budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 8 queries at canonical AND byte level, shared-warm non-vacuity, round-33 concat-guard consumption on ALL FIVE routes (rebuild/shared-adoption/running-true-adoption/instance-earlier/advance SHARE the node's hits storage; non-empty suffix concatenates independently; caller mutation COWs), and the staleness matrix (prefix edit/options/running/turn-boundary across instances + within-instance advance over an adopted shared node) against the budget-0 oracle
+PASS: collapsedWhitespace whitespace-adjacent walk (2669 strict-path, 1109267 fast-path, 0 fusion gaps — pinned set U+0E33/U+0EB3/U+1F3FB-U+1F3FF complete on this toolchain)
+PASS: collapsedWhitespace prepend set matches stdlib fusion (27 fusing scalars)
+PASS: collapsedWhitespace fast-path fuzz (500 texts; 259 contain no potential strict-trigger scalar, 241 contain at least one; corpus classification, not execution counts)
+PASS: collapsedWhitespace equals Character-accurate split/join on adversarial whitespace
+PASS: single-part excerpt fast path equals original Character budgets across Unicode boundaries and mixed parts
+PASS: compaction summary display strips harness scaffolding
+PASS: unified activity narratives, source priority, bounded external refinement and Codex metadata
+GOLDEN_CAPTURE narrative-byte-key digest: 4e46d66eff016205 (staged 1382/1500, keyword-phased 883)
+PASS: narrative byte-keyed tables preserve snapshots across canonical pairs and 1500 fuzz texts (digest 4e46d66eff016205, 1382 staged, 883 keyword-phased)
+PASS: phase single-pass scan — scalar bridge sweep (only U+212A) + canonical-equivalence sweep (3 compatibility bridges, all in detected ranges), 32 keywords verified k-free, differential fuzz zero mismatches (1130 adversarial texts, categories editing:318 exploring:193 integrating:452 mixed:220 validating:817)
+PASS: narrative delimiter scan — exhaustive sweep 0 canonical bridges to separator atoms; 29 structural cases + 2000 fuzz texts zero mismatches vs the previous range(of:) chain (corpus classification: fullwidth 568, colon-space 684, boundary-hazard 181, reference split 920 / whole 1080)
+PASS: localization resolution chain — per-platform resolution semantics, locale derivation, global-read agreement (Darwin)
+PASS: bounded task Recap input, privacy boundary, request/response contract, stable cache, and session overview
+PASS: file references preserve Unicode line selection; diff feedback distinguishes old/new lines and exact snapshot
+PASS: workspace progress migration, independent checkpoints, safe outcome links, stable action order
+PASS: grouping rejects unknown/duplicate memberships, preserves manual changes, undo conflicts and bounded metadata
+PASS: session naming config migration, placeholder detection, excerpt bounds, request shape, sanitization
+PASS: cron-fire envelope parsing, turn anchoring, naming excerpt
+PASS: tool visibility handoff, deduplication, late/orphan results, failure, approval, disconnection and native turn scope
+PASS: status-line tools equal the full projection walk across scenarios and 2000 seeded differential cases
+PASS: TodoList writes, queries, failure, turn boundaries and floating-list lifecycle
+Conversation activity: live/history dedup, result precedence, disconnect, approval, stop and turn isolation passed
+PASS: turn status headlines, requests, ended results, turn-scoped edits, stall thresholds, the minute clock and turn edit paths
+PASS: session turn facts for Kimi and native rows and snapshots, shared precedence, sections and notification edges
+PASS: task panel document links, host-relative paths, deduplication and write evidence
+PASS: task detail routes, row detail lines, output and stop capabilities, output tail truncation
+PASS: request/observed timing, session switching, wait accounting, completion freeze and turn isolation
+PASS: frame hitch recorder — steady frames, long gap, nested/partial attribution, scroll flag, histogram, worst-60 cap, ring overwrite, chain breaks, JSON report
+PASS: auto-compact decisions — gates, threshold edge, anti-spin, resume guards
+PASS: safe link allowlist — http/https/mailto/perch-file, scheme and case rejection
+PASS: session edit stats — diff middle, write lines, patch headers, accumulation, URL/unknown rejection, Character line boundaries
+PASS: edit-stat line counting matches the Character-split oracle across 27885 cases (22302 containing VT/FF, 16811 with an LF→VT or CR→FF adjacency)
+PASS: edit/write/patch line scans equal the Character oracle on CRLF, canonical Unicode, boundary and seeded mixed corpora
+PASS: line fast paths preserve prefix/suffix overlap, final empty lines, CRLF and canonical Unicode boundaries
+PASS: edit-line byte-range diff — 773 pairs zero mismatches vs the previous array algorithm (byte-identical confirmations 14507, canonical fallbacks equal 310 / unequal 12880; paths small 265, probeFull 218, probeCount 281, early 9)
+PASS: edit tool classification preserves known/unknown aliases, Unicode folding, path precedence, URL rejection and normalized changes
+PASS: project slash commands — script, parse, frontmatter, dedup, expansion
+PASS: app version check — tag picking, suffix stripping, numeric compare
+PASS: 1000 text edits coalesce; queue saves are immediate; flush cancels stale writes
+PASS: durable drafts and attachments, safe outbox recovery, file references, search, navigation and task events
+PASS: attention routing by event, level and reader context; Dock badge counts
+Document reading contracts passed
+PASS: transcript geometry boundaries, reading anchors and bounded retention across 10,000 rows in both directions
+PASS: reply paragraphs, nested lists, tables, safe links, bare URLs and partial streaming Markdown
+PASS: link detection corpus digest matches the unmodified-product golden (5dd61f867727616a, 3000 fuzz texts + structural cases)
+PASS: normalizeDelimiters byte guard preserves parse output across structural corners and 3000 fuzz texts (digest d90ac2cad4b58020, 412 converting)
+PASS: splitInline byte guard preserves parse output across structural rules and 3000 fuzz texts (digest 5d1506ed4a822a53, 999 extracting)
+PASS: reply math — dollar/backslash delimiters, display blocks, currency guard, code isolation, Unicode and unmatched boundaries
+SKIP: math rendering smoke check requires AppKit
+PASS: reply alerts — typed block, marker consumed, case-insensitive, unknown stays quote
+PASS: reply plain text, cross-view selection spans
+PASS: reply table column widths, narrow-column floors, capped surplus, deterministic rounding
+PASS: table serialization keeps Chinese, quotes, commas, line breaks and empty cells
+PASS: Claude user-role tool results, skill context, four navigation turns and 104 linked results
+PASS: chronological tool summaries, native identity, permission catalogs, wire decoding and default migration
+PASS: subagent entries decode every protocol 7 key, tolerate missing, mistyped and unknown values, and label interactions
+PASS: snapshot roster decodes; deltas and full windows replace it only when they carry it; pages and other sessions keep their own
+PASS: subagent transcript decoding, full reset, index deltas, stale revisions, epoch reset, resync and older pages
+PASS: native subagents project onto roster rows with Kimi's status, phase, clock, output and stop vocabulary
+PASS: Agent, Task and agent/spawnAgent read as subagent calls with the subagent action label
+PASS: shared subagent transcript rows for native messages and Kimi turns, matching the Kimi sheet's flattening
+PASS: transcript delta append/edit/truncate, prepend race, history epoch reset, gap and stale-base rejection
+PASS: cached directory search matches prior Unicode/token semantics, catalog changes and locale invalidation
+PASS: Kimi UTF-16 streaming, overlap, gaps, epochs, business errors, interactions
+PASS: subagent roster decoding, lifecycle events, background task list, deduplication and snapshot boundaries
+PASS: subagent transcript page, operation folding, reset watermarks, older pages and tool frame mapping
+PASS: Kimi API closes with a pending request and rejects late polling
+PASS: WebSocket heartbeat duplicate, concurrent and late callbacks; first result preserved
+PASS: Kimi pending queue recovery, identity reconciliation, no duplicate bubble
+PASS: legacy workspace migration, mixed provider identity, ordered scene restoration, group resume, Kimi queue semantics and review version
+PASS: favorites, local archive persistence, deletion reference cleanup, ordered background saves, bounded recent conversation cache
+PASS: completion semantics, batch planning, cross-host identity, revalidation, bounded concurrency, retry and undo sets
+PASS: verified-capability delivery modes, stop state machine with turn binding and unknown results, queue ownership, idempotent retry, stop-paused drafts and actionable queue recovery
+PASS: local/SSH environment identity, GUI-safe discovery paths, version gating, explicit approval launch and probe-derived capabilities
+PASS: version parsing, installed/serving comparison, stale and managed notices, start timestamps and meta decoding
+PASS: remote setup migration, managed Kimi Web settings and command, Kimi runtime discovery, bridge version probe, aliases, path quoting, timeout and cancellation
+PASS: dashboard priority sections, offline and archived scoping, explained archive count, metadata-only progress, first-run and filtered empty states, single inbox narrowing, restore context, active scope and queue row times
+PASS: task group membership, recency, priority, search, resume, missing-session visibility, row group badges and combined group/machine scoping
+PASS: unified workbench multi-host goals, non-duplicated actions, offline evidence, stable shortcuts, manual completion and legacy migration
+PASS: batched navigation matches original ordering, counts, host scope, missing and duplicate references
+PASS: full project catalog, host/path identity, stable headers, pins, manual membership, persistence and project search
+PASS: project evidence uses real tool paths and literal navigation, rejects prose/quoted commands/heredocs/dynamic paths, and favors sustained repository work
+PASS: stable sidebar pins, bounded recents, independent filters and actionable attention count
+PASS: OMP, Qoder and Kimi model catalogs, provider/id separation, regional runtime filtering, effort validation and fallback, context budget with unknown and over-limit states
+PASS: runtime command parsing, palette open rules, subcommand completion, alias resolution and slash invocation
+PASS: bounded file previews/search, workflow persistence, follow-up gates and revision-bound acceptance
+PASS: remote path resolution, conversation filename lookup and ambiguity, multi-root ordering, argument isolation, directory listing, truncation, binary/denied/missing states
+PASS: Git worktrees and task claims share their owning project; non-Git and missing directories retain identity without exposing claim credentials
+PASS: remote git worktree discovery and selection, status states, directory hints, staged/unstaged diffs, quoting, external-diff refusal, binary and truncation
+PASS: committed branch review uses merge-base and pinned commits; preserves worktree, renames, deletions, binary, literal paths and bounded diffs
+PASS: remote git write — quoting, stage/unstage/commit/switch, branches, log, show
+PASS: project file references preserve Unicode drafts; catalog searches the whole repository, prioritizes filenames, caps output and propagates Git errors
+PASS: preview replacement, pinning, existing tabs, explicit new tabs, close, overview
+PASS: task groups, cross-host identity, pinned scene persistence, corrupt-file preservation
+PASS: protocol decoding, shell argument isolation, SSH destination validation

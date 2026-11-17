@@ -1,0 +1,90 @@
+profile=paging total_samples=20409
+
+== phase [prepend] n=17861 (87.5% of trace) ==
+    3255  18.22%  arc-copy
+    3132  17.54%  string-hash
+    2907  16.28%  utf16-bridge
+    1670   9.35%  string-compare
+    1647   9.22%  dict-find
+    1396   7.82%  teardown
+     703   3.94%  narrative
+     679   3.80%  timeline-make
+     592   3.31%  tool-visibility
+     554   3.10%  alloc
+     511   2.86%  model-update
+     407   2.28%  input-compare
+     147   0.82%  cf-match
+     114   0.64%  history-join
+     101   0.57%  turn-summary
+      22   0.12%  activity-init
+      20   0.11%  presented-fold
+  -- top leaves --
+    1433   8.02%  Hasher.combine(bytes:)
+    1255   7.03%  specialized __RawDictionaryStorage.find<A>(_:hashValue:)
+    1238   6.93%  swift_release
+    1052   5.89%  swift_retain
+     966   5.41%  swift_bridgeObjectRelease
+     685   3.84%  swift_bridgeObjectRetain
+     663   3.71%  DYLD-STUB$$swift_bridgeObjectRelease
+     576   3.22%  DYLD-STUB$$swift_bridgeObjectRetain
+     457   2.56%  Hasher._finalize()
+     307   1.72%  _StringBreadcrumbs.init(_:)
+     295   1.65%  closure #1 in closure #1 in static KimiMessage.sameWindow(_:_:)
+     261   1.46%  specialized Hasher.init(_seed:)
+     245   1.37%  _platform_memmove
+     242   1.35%  String.hash(into:)
+  -- hash/dict consumers --
+    1341   7.51%  String.hash(into:)
+     928   5.20%  ConversationPresentationModel.History.joined(_:foldsProcess:)
+     910   5.09%  ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+     477   2.67%  specialized ConversationPresentationModel.History.init(turns:turnCount:source:)
+     307   1.72%  _StringGuts.createAndLoadBreadcrumbs_time_here_is_String_to_NSString_bridging_overhead(_:)
+      76   0.43%  ToolVisibilityProjection.Pass.collect(_:)
+      54   0.30%  ToolVisibilityProjection.Pass.normalize(_:)
+      48   0.27%  ToolVisibilityProjection.Pass.present(id:call:result:)
+
+== phase [warm] n=2548 (12.5% of trace) ==
+     453  17.78%  utf16-bridge
+     445  17.46%  arc-copy
+     290  11.38%  teardown
+     189   7.42%  string-hash
+     182   7.14%  string-compare
+     149   5.85%  alloc
+     145   5.69%  setup-wire-decode
+     124   4.87%  timeline-make
+     118   4.63%  tool-visibility
+     109   4.28%  dict-find
+      88   3.45%  narrative
+      71   2.79%  model-update
+      59   2.32%  setup-json
+      58   2.28%  turn-summary
+      35   1.37%  cf-match
+      23   0.90%  input-compare
+       3   0.12%  outside
+       3   0.12%  apply-event
+       2   0.08%  bench-harness
+       2   0.08%  history-join
+  -- top leaves --
+     177   6.95%  swift_bridgeObjectRelease
+     162   6.36%  swift_release
+     116   4.55%  swift_retain
+      97   3.81%  DYLD-STUB$$swift_bridgeObjectRelease
+      92   3.61%  swift_bridgeObjectRetain
+      66   2.59%  Hasher.combine(bytes:)
+      64   2.51%  DYLD-STUB$$swift_bridgeObjectRetain
+      61   2.39%  specialized __RawDictionaryStorage.find<A>(_:hashValue:)
+      44   1.73%  swift_arrayDestroy
+      41   1.61%  _stringCompareFastUTF8Abnormal(_:_:expecting:)
+      39   1.53%  _xzm_malloc_tc
+      37   1.45%  bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(swift::PerformDeinit)1>(swi
+      36   1.41%  _platform_memmove
+      36   1.41%  __xzm_xzone_free_to_freelist_chunk
+  -- hash/dict consumers --
+      63   2.47%  String.hash(into:)
+      36   1.41%  ToolVisibilityProjection.Pass.collect(_:)
+      35   1.37%  _StringGuts.createAndLoadBreadcrumbs_time_here_is_String_to_NSString_bridging_overhead(_:)
+      29   1.14%  ToolVisibilityProjection.Pass.normalize(_:)
+      26   1.02%  ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+      15   0.59%  specialized static ConversationPresentationModel.row(_:tools:activity:)
+      12   0.47%  ToolVisibilityProjection.Pass.present(id:call:result:)
+      12   0.47%  specialized static ToolVisibilityProjection.identities(in:)

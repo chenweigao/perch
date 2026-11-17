@@ -1,0 +1,206 @@
+{
+  "verdict": "BLOCKING 4",
+  "root": "<worktree>/review-artifacts",
+  "files": [
+    {
+      "path": "<worktree>/review-artifacts/attribution-audit-summary.txt",
+      "bytes": 2806,
+      "sha256": "f466e3cab6a383f5aee24d0a28ad4355fd95eb347d51154952c3968215259b2c"
+    },
+    {
+      "path": "<worktree>/review-artifacts/attribution-audit.json",
+      "bytes": 25103,
+      "sha256": "9d68538228bac1796d826dc74c5966cd9705c46fc3dae7a86694df1b74d646fe"
+    },
+    {
+      "path": "<worktree>/review-artifacts/audit_attribution.py",
+      "bytes": 5932,
+      "sha256": "0cff8c6f14d56832883cd1a2299c759a2f0a192d96eaf8fa8fa7000e291a12ef"
+    },
+    {
+      "path": "<worktree>/review-artifacts/audit_followup.py",
+      "bytes": 3860,
+      "sha256": "28b91081d3587d41559ccd920a9aad94fcf21f46679d92e55fed0bc0c997e601"
+    },
+    {
+      "path": "<worktree>/review-artifacts/diff-check.txt",
+      "bytes": 95,
+      "sha256": "93beaab8f8be71c2bf11931beee09e7aaead2dd346ea6c30eb051b2b43864f87"
+    },
+    {
+      "path": "<worktree>/review-artifacts/followup-audit-summary.txt",
+      "bytes": 12371,
+      "sha256": "7e4e3d3aecb0ac9e5bae0aab3a3fd3214d0044543f1020cf0f4854cbb6dd829f"
+    },
+    {
+      "path": "<worktree>/review-artifacts/followup-audit.json",
+      "bytes": 12371,
+      "sha256": "7e4e3d3aecb0ac9e5bae0aab3a3fd3214d0044543f1020cf0f4854cbb6dd829f"
+    },
+    {
+      "path": "<worktree>/review-artifacts/generate_reuse_probe.py",
+      "bytes": 3645,
+      "sha256": "542c28aa5539c8cf5b677ccdcdc9ffac50e0c547175c743a0c6e9677803b8f93"
+    },
+    {
+      "path": "<worktree>/review-artifacts/harness-tail-drift.json",
+      "bytes": 289,
+      "sha256": "1543a1f4fb4b69b5d1b0ff1685844df97e4eb74aeedccbab1c197103a91cea0c"
+    },
+    {
+      "path": "<worktree>/review-artifacts/make_artifact_manifest.py",
+      "bytes": 1249,
+      "sha256": "49a8acdacfc5d629c9cedc82107d56da82575abcc194d08205bdd7c40f8a133e"
+    },
+    {
+      "path": "<worktree>/review-artifacts/paging-boundary-examples.txt",
+      "bytes": 18225,
+      "sha256": "ac17e7e171964931d45eb1f5ce1ea3ed5ff30dc0091f62c6df42c17a55c0375d"
+    },
+    {
+      "path": "<worktree>/review-artifacts/paging-proven-warm-misclassification.txt",
+      "bytes": 6048,
+      "sha256": "39516d5b1eda4b72c55449f88d201dcfe7fea128750a29b49462cbb65ce06eb0"
+    },
+    {
+      "path": "<worktree>/review-artifacts/portable/acceptance-supervisor.log",
+      "bytes": 815,
+      "sha256": "c17a4770024f67e0464ff834d9ad235404eadd3903d8d1f65836f1332cecbabf"
+    },
+    {
+      "path": "<worktree>/review-artifacts/portable/bridge.log",
+      "bytes": 642,
+      "sha256": "194d41e0db5a0fa89561a0aa9eac0b54e53322a2c926fa3533c895ff6df8681f"
+    },
+    {
+      "path": "<worktree>/review-artifacts/portable/codex-schema.log",
+      "bytes": 5333,
+      "sha256": "5190c9cf4004b96d6b7a0c12d34aa660ae84269127d3af08441db74937e0ecee"
+    },
+    {
+      "path": "<worktree>/review-artifacts/portable/installer.log",
+      "bytes": 105,
+      "sha256": "9f1a72f4de73e17b2b1e5d0f139c03a0972402e549f3fd5f0b29b07c16f15888"
+    },
+    {
+      "path": "<worktree>/review-artifacts/portable/localization-tests.log",
+      "bytes": 102,
+      "sha256": "3b0dbb90387b342ccecc50446a0fb5e4385d86a3f467e5b97d63f8924fc08aff"
+    },
+    {
+      "path": "<worktree>/review-artifacts/portable/localization.log",
+      "bytes": 89,
+      "sha256": "15053579b8b58a44a8e65381d240fa4fcab6705f63135b51b4117a190f704338"
+    },
+    {
+      "path": "<worktree>/review-artifacts/portable/model-metadata.log",
+      "bytes": 102,
+      "sha256": "e6ec182765cd965f2837d8eeaef5a64af48a104f245cd1a0b7281559194c57c1"
+    },
+    {
+      "path": "<worktree>/review-artifacts/portable/preview-sources.log",
+      "bytes": 78,
+      "sha256": "ed2a2e6130b78e683ae1579906c9810a6227b547721033a0b930c276d7960e7e"
+    },
+    {
+      "path": "<worktree>/review-artifacts/portable/radius.log",
+      "bytes": 29,
+      "sha256": "14bc9968c97ea0b5f67a901a694728079f748579b8d72d9b50c87c2ab69c714f"
+    },
+    {
+      "path": "<worktree>/review-artifacts/portable/results.json",
+      "bytes": 3141,
+      "sha256": "caaeebfcc01a9d08e5f80f2a3e928d0c15ea57189647d6144bbee712bff826f2"
+    },
+    {
+      "path": "<worktree>/review-artifacts/portable/version.log",
+      "bytes": 106,
+      "sha256": "6e1343779f7f086c9756cb5d425daae3b9d57f4304e35360598687e84f4151f1"
+    },
+    {
+      "path": "<worktree>/review-artifacts/portable-driver.log",
+      "bytes": 323,
+      "sha256": "7f47fde05429db23845397903dba2f693f8685f0583e540baf29c6f5ca109e6c"
+    },
+    {
+      "path": "<worktree>/review-artifacts/pr-status-final.json",
+      "bytes": 4879,
+      "sha256": "73ebb1d5f5cc43d541eb2e74bb90b497544e56804a231226df6f1f0f46f6bd6e"
+    },
+    {
+      "path": "<worktree>/review-artifacts/pr-status-latest.json",
+      "bytes": 4528,
+      "sha256": "bbd3d8beaf761186e7ef44aa37d4d15e102086761bed7ae43a466b6b88d51baf"
+    },
+    {
+      "path": "<worktree>/review-artifacts/pr-status.json",
+      "bytes": 2020,
+      "sha256": "2b6b664cb9568229852a768a9907018b8fbac1f17f8a7a713fb72a5d07ad8fe5"
+    },
+    {
+      "path": "<worktree>/review-artifacts/product-test-diff.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "<worktree>/review-artifacts/recomputed-paging.txt",
+      "bytes": 3946,
+      "sha256": "56d5ddeff8ddc9a18834d70185c6790653db017ca99a518bd47d584bb24cc210"
+    },
+    {
+      "path": "<worktree>/review-artifacts/recomputed-streaming.txt",
+      "bytes": 1991,
+      "sha256": "08a742898053f28648701040e5c77d406bc390d66f9104ffe6fbf5a31be39157"
+    },
+    {
+      "path": "<worktree>/review-artifacts/reuse-probe-build.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "<worktree>/review-artifacts/reuse-probe.log",
+      "bytes": 3855,
+      "sha256": "7c78e9eae96bce527061131a466decac40ca8bd187eee7e76b32767e0d71700c"
+    },
+    {
+      "path": "<worktree>/review-artifacts/reuse-probe.swift",
+      "bytes": 8522,
+      "sha256": "0dadace85c9fabce23c44e7abbe16a4d8ef6d42bf474344412b8d74b0f717cf4"
+    },
+    {
+      "path": "<worktree>/review-artifacts/review-findings.json",
+      "bytes": 15022,
+      "sha256": "18983803795513f8cd7c1bb00f01b99815061b3c0b68045e7a6bd7cc476799a8"
+    },
+    {
+      "path": "<worktree>/review-artifacts/status-after-checks.txt",
+      "bytes": 21,
+      "sha256": "e34d9e669ee74fc702a4c8f2af368bc6d641487d2d6bc682cae9586abd36dc65"
+    },
+    {
+      "path": "<worktree>/review-artifacts/status-final.txt",
+      "bytes": 21,
+      "sha256": "e34d9e669ee74fc702a4c8f2af368bc6d641487d2d6bc682cae9586abd36dc65"
+    },
+    {
+      "path": "<worktree>/review-artifacts/streaming-cf-examples.txt",
+      "bytes": 18000,
+      "sha256": "449502bc49a5fb4b6802df0566f5d593294962c54f433da0e056727e35d74299"
+    },
+    {
+      "path": "<worktree>/review-artifacts/streaming-decode-residual-examples.txt",
+      "bytes": 15820,
+      "sha256": "19e8bb297b0d6fa97ea84d9efb4f0ea525487d525da301cd74dd95bc7e2168f2"
+    },
+    {
+      "path": "<worktree>/review-artifacts/workbench-checks.log",
+      "bytes": 61944,
+      "sha256": "d7cbbe268c7efb17ac99f2d75bed6555e4ab2022612d7c712fad9049f1b29531"
+    }
+  ],
+  "cleanup": [
+    "Temporary SwiftPM scratch dependency/build tree removed",
+    "Temporary compiled probe and object list removed"
+  ],
+  "preserved": "Review scripts, source probe, raw logs, independent XML calculations and CI/portable receipts; original XML remains read-only in author worktree"
+}
