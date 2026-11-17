@@ -1,0 +1,46 @@
+total=20639 decode-ancestry=8354 (40.48%) decode-free=12285
+
+== decode-free innermost-region composition (n=12285) ==
+    2262  18.41%  utf16-bridge
+    2166  17.63%  arc-copy
+    1489  12.12%  narrative
+    1372  11.17%  cf-match
+     952   7.75%  teardown
+     875   7.12%  string-compare
+     780   6.35%  input-compare
+     539   4.39%  string-hash
+     393   3.20%  alloc
+     386   3.14%  timeline-make
+     299   2.43%  dict-find
+     176   1.43%  tool-visibility
+     148   1.20%  find-search
+     137   1.12%  model-update
+     101   0.82%  turn-summary
+      74   0.60%  find-verify
+      69   0.56%  outside
+      39   0.32%  activity-init
+
+== product-function inclusive shares (decode-free denominator) ==
+     834   6.79%  displayMessages.getter (inclusive)
+    1072   8.73%  KimiMessage.sameWindow (inclusive)
+     537   4.37%  TV.canReuse (inclusive)
+     680   5.54%  TV.projectTurns (inclusive)
+     503   4.09%  TV.Pass.normalize (inclusive)
+     115   0.94%  History.presented (inclusive)
+     112   0.91%  History.joined (inclusive)
+       0   0.00%  joinedIncremental (inclusive)
+      77   0.63%  History.init (inclusive)
+       9   0.07%  Input.equal (inclusive)
+    6030  49.08%  model.update (inclusive)
+       0   0.00%  cost loop (retained-cost, inclusive)
+     593   4.83%  Snapshot.presented (inclusive)
+     192   1.56%  ConversationActivity.init (inclusive)
+     834   6.79%  TimelineEntry.make (inclusive)
+    2731  22.23%  ActivityNarrative (inclusive)
+    1448  11.79%  ConversationSearch.search (inclusive)
+       7   0.06%  KimiConversation.apply (inclusive)
+
+== displayMessages inclusive: caller contexts (all samples incl decode-phase) ==
+displayMessages-stack samples: 834 (4.04% of all 20639)
+     832  benchR38StreamProfile()
+       2  KimiConversation.displayMessages.getter

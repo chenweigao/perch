@@ -1,0 +1,25 @@
+=== prepare Tue Nov 17 18:48:31 CST 2026 ===
+From github.com:chenweigao/perch
+   b8e2d7a7..6ac65f97  main       -> origin/main
+ * [new branch]        perf/20x-loop-38-20261117 -> origin/perf/20x-loop-38-20261117
+Previous HEAD position was b8e2d7a7 Merge pull request #358 from chenweigao/perf/20x-loop-36-20261117
+HEAD is now at 6ac65f97 Merge pull request #359 from chenweigao/perf/20x-loop-37-20261117
+HEAD=6ac65f9736b5d90867c026dbecf512ce685c092e
+porcelain_before=0
+porcelain_preclean=0
+=== apply temporary profile loop modes ===
+=== build Tue Nov 17 18:48:36 CST 2026 ===
+build_exit=0
+9b80ae8939bad8261727fe7b25c22fcde9beecc972fd42ae1449eb00213a0eb4  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round38-profile/out/Products/Release/WorkbenchChecks
+=== timing context runs (5s, untraced) Tue Nov 17 18:49:53 CST 2026 ===
+r38_profile shape=streaming cycles=9 updates=1845
+r38_chain_median_ms=1.069 min_ms=1.012 max_ms=666.922 find_median_ms=0.254
+=== record streaming Tue Nov 17 18:49:59 CST 2026 ===
+record_streaming_exit=0
+Recording completed. Saving output file...
+Output file saved as: streaming.trace
+Finished export to the file: /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/round38/streaming-time-profile.xml
+=== revert Tue Nov 17 18:50:29 CST 2026 ===
+porcelain_after=0
+DONE Tue Nov 17 18:50:29 CST 2026
+exit=0

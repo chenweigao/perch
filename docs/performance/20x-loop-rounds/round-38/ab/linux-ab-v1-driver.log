@@ -1,0 +1,99 @@
+HEAD_main=80969b9dbae372ed714718a69edc0e09d7215837
+porcelain_main=1
+=== build candidate in main worktree (80969b9d) Tue Nov 17 19:16:39 CST 2026 ===
+candidate_build_exit=0
+=== build baseline (PRISTINE 6ac65f9; tree kept alive) Tue Nov 17 19:16:41 CST 2026 ===
+baseline_build_exit=0
+=== checks both sides (trees alive) Tue Nov 17 19:19:40 CST 2026 ===
+candidate_checks_exit=0 pass=110 skip=1
+baseline_checks_exit=0 pass=109 skip=1
+PASS: prefix cache — round-30 key encoding at prefix-table level (canonical-reorder DICTIONARY-LEVEL retrieval refusal), round-12 window predicate as the only reuse gate (same-count edit / NFD rebuild / count change refused), reference adoption (=== node), exact retention-inclusive accounting (INDEPENDENTLY hand-computed window walk + node excerpts + expanded payload costs incl. fileId/offsets/element-stride storage + entry-ID dictionary keys + node key + query bytes), replace accounting, generation-guarded store, budget-0 oracle, concrete LRU, oversized node AND key refusal, heavy window+payload JSONValue retention (24KB-budget refusal), REVIEW-shape refusals (fileId window / 2000-empty-part window / 4096-offset payload), query-storage normalization over a turn-advance chain of independently decoded queries (single shared buffer), mechanism SENTINELS (hits() must consume the shared node; turn advance must convert Entries.shared payloads — perf-only bypass mutants die), locale invalidation, removeAll, 8x100 concurrency single-copy accounting, four-regime (all-three-tiers budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 8 queries at canonical AND byte level, shared-warm non-vacuity, round-33 concat-guard consumption on ALL FIVE routes (rebuild/shared-adoption/running-true-adoption/instance-earlier/advance SHARE the node's hits storage; non-empty suffix concatenates independently; caller mutation COWs), and the staleness matrix (prefix edit/options/running/turn-boundary across instances + within-instance advance over an adopted shared node) against the budget-0 oracle
+0eda570b6803d8d3e2d76e0595a1109b2029639cac61dafb6571654f472e523a  .local/round38/base-checks38v1
+762f1570e04e40acccd1789c81f55f503e0e40ae5dcae60e49b0c428e71cd998  .local/round38/cand-checks38v1
+eff350d79df246866545e45aacc9e2e1bd579e23ad8f933700c7f475c43fd8f2  base:Tests/WorkbenchCoreTests/StreamingBench.swift
+eff350d79df246866545e45aacc9e2e1bd579e23ad8f933700c7f475c43fd8f2  cand:Tests/WorkbenchCoreTests/StreamingBench.swift
+38fcb58430e95097a3da735f62c1da769d25729725d4c07553fa21014fb97c4e  base:Tests/WorkbenchCoreTests/ActivityBench.swift
+38fcb58430e95097a3da735f62c1da769d25729725d4c07553fa21014fb97c4e  cand:Tests/WorkbenchCoreTests/ActivityBench.swift
+eebe68e23b14788dd4fbe5712a663144d1f746fbcf4d1e51fe608d5880ff8bc8  base:Tests/WorkbenchCoreTests/EditLineBench.swift
+eebe68e23b14788dd4fbe5712a663144d1f746fbcf4d1e51fe608d5880ff8bc8  cand:Tests/WorkbenchCoreTests/EditLineBench.swift
+f8f8723875b18eebffdbdbd42c1b07c9247f90328d1fd64f3d695687cfb816e3  base:Tests/WorkbenchCoreTests/BenchClock.swift
+f8f8723875b18eebffdbdbd42c1b07c9247f90328d1fd64f3d695687cfb816e3  cand:Tests/WorkbenchCoreTests/BenchClock.swift
+865439a8ad81716b8bb71ebcdebcbfb2ad617f1ffa2f4eb6a31586ff978d45ed  base:Tests/WorkbenchCoreTests/PresentationBench.swift
+865439a8ad81716b8bb71ebcdebcbfb2ad617f1ffa2f4eb6a31586ff978d45ed  cand:Tests/WorkbenchCoreTests/PresentationBench.swift
+=== pairs Tue Nov 17 19:19:55 CST 2026 ===
+pair=1 variant=baseline mode=1 exit=0
+pair=1 variant=baseline mode=streaming exit=0
+pair=1 variant=baseline mode=activity exit=0
+pair=1 variant=baseline mode=edit-lines exit=0
+pair=1 variant=baseline mode=presentation-token exit=0
+pair=1 variant=candidate mode=1 exit=0
+pair=1 variant=candidate mode=streaming exit=0
+pair=1 variant=candidate mode=activity exit=0
+pair=1 variant=candidate mode=edit-lines exit=0
+pair=1 variant=candidate mode=presentation-token exit=0
+pair=2 variant=baseline mode=1 exit=0
+pair=2 variant=baseline mode=streaming exit=0
+pair=2 variant=baseline mode=activity exit=0
+pair=2 variant=baseline mode=edit-lines exit=0
+pair=2 variant=baseline mode=presentation-token exit=0
+pair=2 variant=candidate mode=1 exit=0
+pair=2 variant=candidate mode=streaming exit=0
+pair=2 variant=candidate mode=activity exit=0
+pair=2 variant=candidate mode=edit-lines exit=0
+pair=2 variant=candidate mode=presentation-token exit=0
+pair=3 variant=baseline mode=1 exit=0
+pair=3 variant=baseline mode=streaming exit=0
+pair=3 variant=baseline mode=activity exit=0
+pair=3 variant=baseline mode=edit-lines exit=0
+pair=3 variant=baseline mode=presentation-token exit=0
+pair=3 variant=candidate mode=1 exit=0
+pair=3 variant=candidate mode=streaming exit=0
+pair=3 variant=candidate mode=activity exit=0
+pair=3 variant=candidate mode=edit-lines exit=0
+pair=3 variant=candidate mode=presentation-token exit=0
+pair=4 variant=baseline mode=1 exit=0
+pair=4 variant=baseline mode=streaming exit=0
+pair=4 variant=baseline mode=activity exit=0
+pair=4 variant=baseline mode=edit-lines exit=0
+pair=4 variant=baseline mode=presentation-token exit=0
+pair=4 variant=candidate mode=1 exit=0
+pair=4 variant=candidate mode=streaming exit=0
+pair=4 variant=candidate mode=activity exit=0
+pair=4 variant=candidate mode=edit-lines exit=0
+pair=4 variant=candidate mode=presentation-token exit=0
+pair=5 variant=baseline mode=1 exit=0
+pair=5 variant=baseline mode=streaming exit=0
+pair=5 variant=baseline mode=activity exit=0
+pair=5 variant=baseline mode=edit-lines exit=0
+pair=5 variant=baseline mode=presentation-token exit=0
+pair=5 variant=candidate mode=1 exit=0
+pair=5 variant=candidate mode=streaming exit=0
+pair=5 variant=candidate mode=activity exit=0
+pair=5 variant=candidate mode=edit-lines exit=0
+pair=5 variant=candidate mode=presentation-token exit=0
+pair=6 variant=baseline mode=1 exit=0
+pair=6 variant=baseline mode=streaming exit=0
+pair=6 variant=baseline mode=activity exit=0
+pair=6 variant=baseline mode=edit-lines exit=0
+pair=6 variant=baseline mode=presentation-token exit=0
+pair=6 variant=candidate mode=1 exit=0
+pair=6 variant=candidate mode=streaming exit=0
+pair=6 variant=candidate mode=activity exit=0
+pair=6 variant=candidate mode=edit-lines exit=0
+pair=6 variant=candidate mode=presentation-token exit=0
+0eda570b6803d8d3e2d76e0595a1109b2029639cac61dafb6571654f472e523a  .local/round38/base-checks38v1
+762f1570e04e40acccd1789c81f55f503e0e40ae5dcae60e49b0c428e71cd998  .local/round38/cand-checks38v1
+=== rebuild verification (same paths, fresh .build) with retained receipts Tue Nov 17 19:21:35 CST 2026 ===
+candidate_rebuild_exit=0
+baseline_rebuild_exit=0
+candidate_rebuild_exit=0
+candidate_rebuild_head=80969b9dbae372ed714718a69edc0e09d7215837
+candidate_rebuild_porcelain=1
+?? docs/performance/20x-loop-rounds/2026-11-17-round-38.md
+762f1570e04e40acccd1789c81f55f503e0e40ae5dcae60e49b0c428e71cd998  .build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+baseline_rebuild_head=6ac65f9736b5d90867c026dbecf512ce685c092e
+baseline_rebuild_porcelain=2
+?? build.log
+?? rebuild.log
+6b652e3db39c4bee5f493e1a7c778b9a65df634a93d773153425c5c0b57b9ba9  /tmp/r38v1-ab-base/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+DONE Tue Nov 17 19:27:28 CST 2026

@@ -1,0 +1,129 @@
+PASS: step reading preserves order, edit identities, historical patches and outcome-aware churn
+PASS: phase reading groups Bash and thoughts, preserves edit receipts, separates historical failures from pending work and uses grounded command labels
+PASS: live public summaries, completed process folding, manual expansion, uniform folding of edits and failures
+PASS: PI steady streaming cadence, Unicode boundaries, replacement and immediate completion
+PASS: parsed-block release retains Unicode, styling, links and complete rich Markdown
+PASS: incremental reply parse matches full parses at every streaming prefix
+PASS: live progress, missing summaries, thinking-only output, tool-only notice and provider model groups
+PASS: process fold groups completed turns, preserves order, keeps the running turn live
+PASS: presentation parity, same-ID edits, pagination, epoch/language/live handoff, scoped LRU, oversized active state and metrics
+PASS: presentation history reuse matches complete recomputation across tokens, paging, crossings, language, epoch and overlays
+PASS: paging and new prompts reuse unchanged earlier turns and match complete recomputation (19/20 pages)
+PASS: window identity reuse ends at any earlier in-place edit, survives a rebuilt window and matches complete recomputation
+PASS: find-bar entry reuse equals a complete search across growth, isolated payload edits, reroutes, rebuilds, pages, running flips and query/option switches
+PROBE PASS: prefix zero-sign flip under an unchanged query
+PROBE PASS: NFD regex query after the canonically equal NFC query, and back
+PROBE PASS: payload NFC to NFD swap under an unchanged regex query
+PROBE PASS: object-key NFC to NFD swap under an unchanged regex query
+PROBE PASS: case-sensitive literal NFD query after the canonically equal NFC query, and back
+PASS: find-bar cache-hole probes (prefix zero sign, regex and literal query encoding round trips, payload encoding, key encoding) equal complete searches
+PASS: rendered-source cache — produce-once, NFC/NFD byte-exact keys, exact cost accounting, concrete LRU (touch-retention + victim identity), oversized refusal against a non-empty sentinel table, 512B/200-source churn, removeAll, 8x200 concurrency with single-copy accounting, locale-generation invalidation via the real notification, and four-regime (budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 6 queries at BOTH canonical and per-hit UTF-8 byte levels (canonical == alone admits NFC-normalization mutants) with exact counts, entry identities, occurrences and byte-exact excerpts for the true duplicate source (own message, coalescing-safe)
+PASS: entry cache — injective length-prefixed byte-exact keys (NUL-collision pair, canonical-reorder pair AND dictionary-level reorder-retrieval refusal pinned), round-12 verification as the only reuse gate (same-ID edit and NFD rebuild refused), exact retention-inclusive admission accounting (payload incl. recursive message JSONValue trees + fileId + offset/element-stride storage + key + query bytes — Codex P2 + closure-review + round-32 v3 closure, hand-computed formula pinned; REVIEW_FILE_ID/REVIEW_OFFSETS shapes refused), generation-guarded store (stale-locale build refused), budget-0 stores nothing, concrete LRU (touch/victim/new-insert), oversized payload AND oversized key refusal against a non-empty table, locale-generation invalidation, removeAll, 8x100 concurrency with single-copy accounting, and four-regime (budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 6 queries at canonical AND byte level plus cross-instance staleness and running-flag isolation
+PASS: prefix cache — round-30 key encoding at prefix-table level (canonical-reorder DICTIONARY-LEVEL retrieval refusal), round-12 window predicate as the only reuse gate (same-count edit / NFD rebuild / count change refused), reference adoption (=== node), exact retention-inclusive accounting (INDEPENDENTLY hand-computed window walk + node excerpts + expanded payload costs incl. fileId/offsets/element-stride storage + entry-ID dictionary keys + node key + query bytes), replace accounting, generation-guarded store, budget-0 oracle, concrete LRU, oversized node AND key refusal, heavy window+payload JSONValue retention (24KB-budget refusal), REVIEW-shape refusals (fileId window / 2000-empty-part window / 4096-offset payload), query-storage normalization over a turn-advance chain of independently decoded queries (single shared buffer), mechanism SENTINELS (hits() must consume the shared node; turn advance must convert Entries.shared payloads — perf-only bypass mutants die), locale invalidation, removeAll, 8x100 concurrency single-copy accounting, four-regime (all-three-tiers budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 8 queries at canonical AND byte level, shared-warm non-vacuity, round-33 concat-guard consumption on ALL FIVE routes (rebuild/shared-adoption/running-true-adoption/instance-earlier/advance SHARE the node's hits storage; non-empty suffix concatenates independently; caller mutation COWs), and the staleness matrix (prefix edit/options/running/turn-boundary across instances + within-instance advance over an adopted shared node) against the budget-0 oracle
+PASS: prepend incremental indexes — warm-vs-fresh differential equality over 9 scenario groups with narrative-overlay comparisons (pure prepends, page-split partial turn, the merge that consumes the cached leading turn, remembered live tool whose observedByTurn placement reads owner+base, interior edit rebuild, turn-boundary growth, connection flips, language reset, trailing streaming deltas) plus the poisoning phase (duplicate tool identity, duplicate page message ids, anchored-live separates rejection) and the projection-level consumed-term differential (observe-under-own-split → grow → compaction consumes the tool's turn → tail result flips separable) against a discardPrefix-based full-rebuild reference with identical observed history, and the overlay-last memo capture-gate differential (an overlay-built prior memo must never feed the joined adoption)
+
+*** Signal 4: Backtracing from 0x559d61643b71... done ***
+
+*** Swift runtime failure: precondition failure ***
+
+Platform: x86_64 Linux (Alibaba Cloud Linux 3 (Soaring Falcon))
+
+Thread 0 "WorkbenchChecks" crashed:
+
+  0 [inlined] [system] 0x0000559d61643b71 Swift runtime failure: precondition failure in WorkbenchChecks at //<compiler-generated>
+  1                    0x0000559d61643b71 checkToolResolutionMemo() + 5585 in WorkbenchChecks at /tmp/r38-mut/Tests/WorkbenchCoreTests/ToolResolutionMemoTests.swift:47:9
+  2 [ra]               0x0000559d61591427 specialized static ProtocolTests.main() + 502 in WorkbenchChecks at /tmp/r38-mut/Tests/WorkbenchCoreTests/ProtocolTests.swift:51:13
+  3 [async] [system]   0x0000559d6158a6d0 specialized thunk for @escaping @convention(thin) @async () -> () in WorkbenchChecks at //<compiler-generated>
+  4 [async]            0x00007f65ab28c190 completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*) in libswift_Concurrency.so
+...
+
+Thread 1:
+
+  0  0x00007f65aa0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 2:
+
+  0  0x00007f65aa0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 3:
+
+  0  0x00007f65aa0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 4:
+
+  0  0x00007f65aa0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 5:
+
+  0  0x00007f65aa0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 6:
+
+  0      0x00007f65a945989e epoll_wait + 94 in libc-2.32.so
+  1 [ra] 0x00007f65aa8bc022 _dispatch_mgr_invoke + 129 in libdispatch.so
+  2 [ra] 0x00007f65aa8bbf8d _dispatch_mgr_thread + 108 in libdispatch.so
+  3 [ra] 0x00007f65aa8bf195 _dispatch_worker_thread + 628 in libdispatch.so
+...
+
+Thread 7:
+
+  0  0x00007f65aa0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 8:
+
+  0  0x00007f65aa0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 9:
+
+  0  0x00007f65aa0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+Thread 10:
+
+  0  0x00007f65aa0d0dc8 do_futex_wait.constprop.0 + 72 in libpthread-2.32.so
+...
+
+
+Registers:
+
+rax 0x0000000000000000  0
+rdx 0x0000559d63a22730  c2 03 76 3a 98 55 00 00 10 70 97 63 9d 55 00 00  Â·v:·U···p·c·U··
+rcx 0x0000559d63977010  07 00 07 00 05 00 07 00 06 00 07 00 05 00 06 00  ················
+rbx 0x0000000000000006  6
+rsi 0x8000000000000000  9223372036854775808
+rdi 0x0000559d63a79470  29 9f 4c 3a 98 55 00 00 10 70 97 63 9d 55 00 00  )·L:·U···p·c·U··
+rbp 0x00007fff6ca33cc0  20 3d a3 6c ff 7f 00 00 27 14 59 61 9d 55 00 00   =£lÿ···'·Ya·U··
+rsp 0x00007fff6ca336f0  20 27 ab 63 9d 55 00 00 73 68 65 6c 6c 31 00 00   '«c·U··shell1··
+ r8 0x0000000000000000  0
+ r9 0x0000000200000000  8589934592
+r10 0x0000000100000003  4294967299
+r11 0x002b40b1432e1c00  12174554079042560
+r12 0x0000000000000000  0
+r13 0x0000559d63a9d6a0  60 f2 0f ab 65 7f 00 00 03 00 00 00 00 00 00 00  `ò·«e···········
+r14 0x0000559d63a921f0  08 68 10 ab 65 7f 00 00 03 00 00 00 00 00 00 00  ·h·«e···········
+r15 0x0000559d63a79470  29 9f 4c 3a 98 55 00 00 10 70 97 63 9d 55 00 00  )·L:·U···p·c·U··
+rip 0x0000559d61643b71  0f 0b 0f 0b 0f 0b 66 0f 1f 84 00 00 00 00 00 55  ······f········U
+
+rflags 0x0000000000010246  ZF PF
+
+cs 0x0033  fs 0x0000  gs 0x0000
+
+
+Images (45 omitted):
+
+0x0000559d61200000–0x0000559d61a23058 36a7c122d3e129bc3962ba47ded97a2462b602b8 WorkbenchChecks         /tmp/r38-mut/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+0x00007f65a9315000–0x00007f65a9499c5c 960891d022c59cee678476b8696e9224608859d0 libc-2.32.so            /usr/lib64/libc-2.32.so
+0x00007f65aa0bf000–0x00007f65aa0d4ce1 ddd6cd0bb97a6a9a3ab90896f32eab60963bdfcb libpthread-2.32.so      /usr/lib64/libpthread-2.32.so
+0x00007f65aa88a000–0x00007f65aa8d2218 d08a244d278d89eeb5cfd6afd8bb084f99cd2acd libdispatch.so          /home/<dev>/.local/swift/6.3.3/usr/lib/swift/linux/libdispatch.so
+0x00007f65ab200000–0x00007f65ab293660 ab7a387eca696d31db096d9ebebea096c2cf1bc3 libswift_Concurrency.so /home/<dev>/.local/swift/6.3.3/usr/lib/swift/linux/libswift_Concurrency.so
+
+Backtrace took 0.66s
+
+timeout: the monitored command dumped core
