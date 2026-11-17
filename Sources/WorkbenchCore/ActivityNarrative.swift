@@ -864,12 +864,20 @@ final class CommentaryDerivation {
             if !headResolved || freshMachine { pendingMachineStart = head }
         }
 
-        // 3. Apply the classified shape. `resolvedStart` survives resetMachine.
+        // 3. Apply the classified shape. `resolvedStart` survives the reset.
         let resolvedStart = pendingMachineStart
         pendingMachineStart = nil
         if shape == .reseed {
             reseedCount += 1
             clearState()
+            parts = currentParts
+            // Window-shuffled entries (paging splits whose messages re-form
+            // non-monotonically) change without ever growing: seeding the
+            // machine for them costs more than the table-backed from-scratch
+            // path they fall back to. Store the parts only — a following
+            // prefix-growth observation classifies .growth and seeds then,
+            // so genuinely streaming entries lose at most one observation.
+            return .fallback
         }
         if let start = resolvedStart { machineStart = start; machinePos = start; headResolved = true }
         parts = currentParts

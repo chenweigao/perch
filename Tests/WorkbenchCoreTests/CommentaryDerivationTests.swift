@@ -158,10 +158,13 @@ func checkCommentaryDerivation() throws {
         }
         if case .step(nil) = derivation.observe(parts: [], firstMessageID: "m") {}
         else { preconditionFailure("empty parts must yield the empty-text step") }
-        // After the defensive clear, a single part reseeds and engages.
-        if case .step(let step) = derivation.observe(parts: ["验证：细节"], firstMessageID: "m"), step == nil {
-            preconditionFailure("nonempty text must produce a stage step")
-        }
+        // After the defensive clear, the first single-part observation
+        // classifies reseed and defers to from-scratch; the NEXT observation
+        // seeds via .growth/.unchanged and engages.
+        if case .fallback = derivation.observe(parts: ["验证：细节"], firstMessageID: "m") {}
+        else { preconditionFailure("a reseed observation must fall back, not seed") }
+        if case .step(let step) = derivation.observe(parts: ["验证：细节"], firstMessageID: "m"), step != nil {}
+        else { preconditionFailure("the seeded observation must produce a stage step") }
     }
     do {
         // Mid-stream EDIT of the growing part (non-prefix) → reseed.
