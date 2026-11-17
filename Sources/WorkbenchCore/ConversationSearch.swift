@@ -214,9 +214,23 @@ public final class ConversationSearch {
         }
         var next: [String: Entry] = [:]
         let held = earlier?.entries
-        hits += search(ConversationTimelineEntry.make(Array(messages[split...]), isRunning: running), query: query, regex: regex,
-                       options: options, isRunning: running, cached: { self.entries[$0] ?? held?.entry($0) }, into: &next)
+        let suffixHits = search(ConversationTimelineEntry.make(Array(messages[split...]), isRunning: running), query: query, regex: regex,
+                                options: options, isRunning: running, cached: { self.entries[$0] ?? held?.entry($0) }, into: &next)
         entries = next
+        // Round 33: `hits += []` on an adopted array still triggers its COW
+        // materialization (measured: append(contentsOf:) copies even when the
+        // appended sequence is empty), so when the suffix contributes nothing
+        // the adopted prefix hits — which on the reuse paths share storage
+        // with the instance earlier or the shared prefix node — are returned
+        // as-is. Value semantics are preserved by COW: the caller mutating
+        // the result copies at that point, never into the cache. When the
+        // suffix DOES contribute, the concatenation copy is the result's own
+        // storage exactly as before. The common empty-suffix shapes (a query
+        // matching only history while the live turn streams) skip copying
+        // and later destroying the whole hit array.
+        if !suffixHits.isEmpty {
+            hits += suffixHits
+        }
         return ConversationFindResult(hits: hits, queryError: nil)
     }
 

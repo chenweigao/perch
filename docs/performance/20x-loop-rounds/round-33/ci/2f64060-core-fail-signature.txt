@@ -1,0 +1,6 @@
+--
+2026-11-16T23:17:31.4153880Z PASS: native subagent late replies after selection change, A-B-A reopen, close and disconnect are dropped; nothing stops the agent
+2026-11-16T23:17:31.4159390Z PASS: native subagent older pages are serialized with follow reads, skip the pause and prepend once
+2026-11-16T23:17:31.4160280Z Connection did not settle within 5s at /Users/<runner>/work/perch/perch/Tests/ConnectionChecks/NativeSubagentChecks.swift:397
+2026-11-16T23:17:31.4160810Z 
+2026-11-16T23:17:31.4284170Z ##[error]Process completed with exit code 1.

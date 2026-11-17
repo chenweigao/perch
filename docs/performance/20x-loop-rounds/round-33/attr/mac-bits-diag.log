@@ -1,0 +1,26 @@
+=== prepare Tue Nov 17 07:02:44 CST 2026 ===
+From github.com:chenweigao/perch
+   afd99aa3..cb4d4a14  perf/20x-loop-33-20261117 -> origin/perf/20x-loop-33-20261117
+Previous HEAD position was afd99aa3 perf(core): round-33 v1 — empty-suffix concat guard + reopen µs print + attribution harness
+HEAD is now at 4c184e57 Merge pull request #354 from chenweigao/perf/20x-loop-32-20261117
+HEAD=4c184e577b7fc0feb254dac4caa91b2e0c38bd08
+porcelain_before=0
+diagnostic patch applied
+porcelain_applied=2
+=== build Tue Nov 17 07:02:49 CST 2026 ===
+build_exit=0
+=== run streaming (diagnostic lines) Tue Nov 17 07:04:03 CST 2026 ===
+run_exit=0
+REVIEW_BITS node_entries=8970 source_count=16100 prefix_count=16100 bitwise=true value=true
+REVIEW_BYTES size_diffs=0 pad_diffs=51031 msg_size=73 msg_stride=80
+REVIEW_BITS node_entries=8970 source_count=16100 prefix_count=16100 bitwise=true value=true
+REVIEW_BYTES size_diffs=0 pad_diffs=51031 msg_size=73 msg_stride=80
+REVIEW_BITS node_entries=8970 source_count=16100 prefix_count=16100 bitwise=true value=true
+REVIEW_BYTES size_diffs=0 pad_diffs=51031 msg_size=73 msg_stride=80
+  find_bar_query_update       median_ms=    0.28
+  find_bar_cold_query         median_ms=  618.40
+  find_bar_reopen_query       median_ms=    0.10
+=== revert Tue Nov 17 07:04:09 CST 2026 ===
+porcelain_after=0
+DONE Tue Nov 17 07:04:10 CST 2026
+exit=0

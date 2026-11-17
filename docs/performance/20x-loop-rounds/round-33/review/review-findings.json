@@ -1,0 +1,62 @@
+{
+  "verdict": "BLOCKING",
+  "blocking_count": 3,
+  "candidate": "afd99aa3bd1754a3e4310e2396ed5a923c455a09",
+  "base": "4c184e577b7fc0feb254dac4caa91b2e0c38bd08",
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "P1 BLOCKING",
+      "file": "Tests/WorkbenchCoreTests/StreamingBench.swift",
+      "line": 315,
+      "description": "Mac 仲裁侧基线原始样本为 [0.10,0.10,0.10,0.10,0.10,0.11]，不是全部 0.10。混合精度会隐藏基线离散，max(两侧 spread) 不保证保守。存在与原收据打印完全一致的基线真值 [0.0951,0.0951,0.0951,0.0951,0.0951,0.1149]，其 reopen 改善 -17.8233%、spread 20.8202%、worst -11.1462%，六对仍全分离但未通过 |change|>spread 门。原打印统计复算吻合，不等于量化鲁棒的分类器通过。",
+      "recommendation": "基线与候选使用相同 4 位小数测量面，重新进行 Mac 六对仲裁并重算门槛；撤回本批最保守端仍超 spread 与基线 spread 约 0 的论断。现有收据仍能证明六对同向且量化区间分离，不能证明约定的超 spread 门。",
+      "evidence": ["quantization-witness.json", "evidence-audit.json"]
+    },
+    {
+      "id": "F2",
+      "severity": "P2 BLOCKING",
+      "file": "Tests/WorkbenchCoreTests/ConversationPrefixCacheTests.swift",
+      "line": 565,
+      "description": "concat-guard 消费钉死仅 running=false，且 prefixOnlyQuery 首次调用走前缀重建而非注释声称的 warm reopen。条件变异为 !suffixHits.isEmpty || running 会恢复所有 running=true 路径的空追加 COW，仍通过原样完整 checks（108 PASS+1 SKIP）；新增消费探针在 running=true 的 rebuild/earlier/shared/advance 四路全部观察到存储不再共享并以 SIGILL 击杀。",
+      "recommendation": "在 false/true 两种 running 形态下，先真实预热再用新实例重开，并分别钉死实例 earlier 命中、共享节点命中和前缀重建/推进；保持非空后缀的字段级 oracle 断言。将 running-bypass 纳入 delta 变异电池。",
+      "evidence": ["running-bypass/ConversationSearch.swift", "running-bypass/checks.log", "running-bypass/probe-unbuffered.log", "probe-receipts.json"]
+    },
+    {
+      "id": "F3",
+      "severity": "P2 BLOCKING",
+      "file": "Tests/WorkbenchCoreTests/StreamingBench.swift",
+      "line": 271,
+      "description": "新注释将 prefix verification 断言为物化副本的 padding 导致 bitwise 层失败后的值比较，证据不成立。sameWindowBits 在 size=73/stride=80 时逐元素只比较前 73 字节，排除了末尾 7 字节 padding；Linux 五种真实物化数组副本调用未修改的 actual sameWindowBits 均 true。Mac 最大桶 5,362 个样本的叶为 closure #1 in closure #1 in sameWindow，对应源中的字节比较闭包，不是值比较闭包；符号合并也不能把这个字节闭包变成值比较。不能断言拷贝后永不相等或由该桶推出值层成本。",
+      "recommendation": "删除绝对化 padding/value-tier 解释，保留已证实的 whole-window verification 份额。若要确定 Mac 原因，需定位比较的具体字节/分支或符号映射；不得修改本轮未动的红线谓词。",
+      "evidence": ["control/probe.log", "evidence-audit.json"]
+    },
+    {
+      "id": "N1",
+      "severity": "P2 NONBLOCKING",
+      "file": "<worktree>/.local/round33/analyze_r33.py",
+      "line": 102,
+      "description": "rule A 修正了 207 个带 ConversationSearchHit 拷贝帧的 NSString retain 样本，但没覆盖 generic swift_arrayDestroy 路径的 NSString release。t>2s 的 cf-match 桶 195/19,750=0.98734% 全是此类 release，仍非匹配成本，违背脚本 matching-only 声明。rule B 本批的 prefix bucket 均有实际字节验证栈支持，其未来默认分类仍应谨慎。",
+      "recommendation": "将无法证明命中类型的 array-destroy ARC 独立标为 teardown/ARC，不要一律吸收入 hits-copy。按原栈重算、修正文案；不要把 ARC 桶作为 CF 匹配成本。",
+      "evidence": ["evidence-audit.json"]
+    }
+  ],
+  "verified": {
+    "release_checks": {"exit": 0, "pass": 108, "skip": 1},
+    "candidate_streaming_functional_exit": 0,
+    "byte_shape_and_caller_mutation_comparisons": 8392,
+    "all_three_cache_routes_plus_advance_storage_identity": "PASS for both running=false and true on candidate",
+    "materialized_arrays_sameWindowBits": "5/5 true on Linux Swift 6.3.3",
+    "shared_empty_append": "1M Int array actually copied, 2.389077ms on this reviewer machine; not A/B",
+    "raw_ab_audit": {"logs": 120, "metrics_macos": 90, "metrics_linux": 96, "numeric_fields": 3162, "mismatches": 0, "positives_macos": [], "positives_linux": []},
+    "linux_query_update": "-10.00%, six separated pairs, max spread 4.081632653061228%",
+    "threshold_sensitivity": "t>2/3/5/10s retains stable largest prefix-verification region; setup matching excluded by t>2s",
+    "delta_battery_read_only_receipts": {"remove-concat-guard": "132 at ConversationPrefixCacheTests.swift:573", "always-skip-concat": "132 at StepAwareReadingTests.swift:142", "control": "0,108 PASS"},
+    "identity_pin_assessment": "合理的当前工具链性能合同，但不是 stdlib 保证；当前双向能阻止全局 remove/skip 形态，不覆盖 running/path 条件旁路。"
+  },
+  "limitations": [
+    "没有在 Mac 真机重新录制或执行新的等精度 A/B；Mac 证据审查为原始日志/XML独立重算。",
+    "Linux 物化副本探针反驳普遍的永不相等断言，但不证明 Mac 具体字节为何出现差异。",
+    "相等范围指 result 字段和 UTF-8 内容；缓冲区地址/容量表示不要求与 round-32 相同，存储共享正是此优化的可观测机制。"
+  ]
+}

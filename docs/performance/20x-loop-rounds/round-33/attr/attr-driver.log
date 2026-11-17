@@ -1,0 +1,40 @@
+=== prepare Tue Nov 17 05:48:35 CST 2026 ===
+From github.com:chenweigao/perch
+   5eb726ae..4c184e57  main       -> origin/main
+ * [new branch]        perf/20x-loop-33-20261117 -> origin/perf/20x-loop-33-20261117
+Previous HEAD position was ec3111e3 perf(core): round-32 v3 — review closure: retention accounting + normalization + mechanism sentinels
+HEAD is now at 4c184e57 Merge pull request #354 from chenweigao/perf/20x-loop-32-20261117
+HEAD=4c184e577b7fc0feb254dac4caa91b2e0c38bd08
+porcelain_before=0
+porcelain_preclean=0
+=== apply temporary profile loop modes ===
+porcelain_applied=2
+=== build Tue Nov 17 05:48:39 CST 2026 ===
+build_exit=0
+ffb838181778c65b2f62e312f5d60abf7e7cb7b2583451a08e78d085be822799  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round33-profile/out/Products/Release/WorkbenchChecks
+=== timing context runs (5s, untraced) Tue Nov 17 05:49:53 CST 2026 ===
+r33_profile shared=false iterations=8
+r33_profile_median_ms=620.677 min_ms=614.631 max_ms=640.304
+r33_profile shared=true iterations=40751
+r33_profile_median_ms=0.099 min_ms=0.093 max_ms=0.150
+=== record cold Tue Nov 17 05:50:05 CST 2026 ===
+record_cold_exit=0
+Recording completed. Saving output file...
+Output file saved as: cold.trace
+Finished export to the file: /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/round33/cold-time-profile.xml
+=== record reopen Tue Nov 17 05:50:34 CST 2026 ===
+record_reopen_exit=0
+Recording completed. Saving output file...
+Output file saved as: reopen.trace
+Finished export to the file: /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/round33/reopen-time-profile.xml
+total 28688
+drwxr-xr-x   6 <mini>  staff      192 Nov 17 05:50 .
+drwxr-xr-x  31 <mini>  staff      992 Nov 17 05:49 ..
+-rw-r--r--   1 <mini>  staff  7672604 Nov 17 05:50 cold-time-profile.xml
+drwxr-xr-x  10 <mini>  staff      320 Nov 17 05:50 cold.trace
+-rw-r--r--   1 <mini>  staff  6154323 Nov 17 05:51 reopen-time-profile.xml
+drwxr-xr-x  10 <mini>  staff      320 Nov 17 05:50 reopen.trace
+=== revert Tue Nov 17 05:51:01 CST 2026 ===
+porcelain_after=0
+DONE Tue Nov 17 05:51:02 CST 2026
+exit=0

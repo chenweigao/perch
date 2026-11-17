@@ -1,0 +1,331 @@
+import Foundation
+public final class Round32ReviewSearch {
+    private struct Entry {
+        let sources: [String]
+        let text: NSString
+        let sourceEnds: [Int]
+        let role: ConversationFindOptions.Role
+        /// The entry's hits with every input they were made from. An entry's hits
+        /// are a pure function of (messages, isRunning, query, options), so when
+        /// the query keys are encoding-exactly equal and the searchable window
+        /// identity — bitwise equal storage, else value equality plus
+        /// byte-identical rendered fields — says the messages are unchanged, the
+        /// cached hits are exactly what re-searching would produce, and the
+        /// update skips source rendering, locale matching and excerpt building.
+        /// `messages` is adopted on reuse so the next comparison reads the
+        /// freshest payload copy.
+        var messages: [KimiMessage]
+        let isRunning: Bool
+        let query: String
+        let options: ConversationFindOptions
+        let hits: [ConversationSearchHit]
+    }
+    private struct Earlier {
+        /// The window these hits were made from, or an equal window a later update
+        /// brought. Messages rebuilt from the same wire data compare equal by value
+        /// while carrying different payloads; adopting the newest copy keeps the
+        /// next comparison on the bytes a copy carries.
+        var source: ArraySlice<KimiMessage>
+        let query: String
+        let options: ConversationFindOptions
+        let hits: [ConversationSearchHit]
+        let entries: Entries
+    }
+    /// Round 32: the prefix's per-entry results are either instance-owned
+    /// (rebuilt here) or adopted BY REFERENCE from a shared prefix node.
+    /// Reference adoption keeps a reopen O(1) in the number of prefix
+    /// entries: the dictionary is not rebuilt, and a stored payload converts
+    /// to an Entry only when a later search actually looks one up (a
+    /// turn-boundary prefix rebuild, or the suffix fallback). The converted
+    /// Entry carries the STORED messages copy; the reuse predicate in
+    /// search() verifies it against the caller's entry exactly as the
+    /// round-30 payload path does, and adoption then refreshes the messages
+    /// to the caller's copy.
+    private enum Entries {
+        case owned([String: Entry])
+        case shared(ConversationPrefixCache.Node)
+        func entry(_ id: String) -> Entry? {
+            switch self {
+            case .owned(let entries): return entries[id]
+            case .shared(let node):
+                guard let payload = node.payload(entryID: id) else { return nil }
+                return Entry(sources: payload.sources, text: payload.text,
+                             sourceEnds: payload.sourceEnds, role: payload.role,
+                             messages: payload.messages, isRunning: payload.isRunning,
+                             query: payload.query, options: payload.options,
+                             hits: payload.hits)
+            }
+        }
+    }
+    private var entries: [String: Entry] = [:]
+    private var earlier: Earlier?
+    /// Round 27: rendered sources are shared across instances through this
+    /// cache — a reopened find bar or a repeated explicit history search
+    /// (the product re-searches on explicit requests, not per keystroke —
+    /// review F3) pays matching plus cache lookups instead of rendering, as
+    /// long as the sources stay admitted, unevicted and in the same locale
+    /// generation. The default keeps every existing call site unchanged;
+    /// benchmarks measuring true cold rendering inject a fresh cache (see
+    /// StreamingBench's cold/reopen metrics).
+    private let renderedCache: RenderedSourceCache
+    /// Round 30: verified entry results are shared across instances through
+    /// this cache — a reopened find bar or a repeated explicit history search
+    /// pays round-12's verification predicate and copies instead of sources
+    /// building, display serialization, render lookups, joining and matching.
+    /// Same injection discipline as renderedCache: default keeps every
+    /// existing call site unchanged; benchmarks measuring true per-instance
+    /// rebuilds inject fresh caches (or byteBudget-0 for the no-cache oracle).
+    private let entryCache: ConversationEntryCache
+    /// Round 32: verified PREFIX results (the whole earlier-turns range) are
+    /// shared across instances through this cache — a reopened find bar pays
+    /// one window verification plus reference adoption instead of timeline
+    /// construction and any per-prefix-entry work. Same injection discipline
+    /// as the other two caches: default keeps every existing call site
+    /// unchanged; benchmarks measuring true per-instance rebuilds inject
+    /// fresh caches (or byteBudget-0 for the no-cache oracle).
+    private let prefixCache: ConversationPrefixCache
+    public init(renderedCache: RenderedSourceCache = .shared,
+                entryCache: ConversationEntryCache = .shared,
+                prefixCache: ConversationPrefixCache = .shared) {
+        self.renderedCache = renderedCache
+        self.entryCache = entryCache
+        self.prefixCache = prefixCache
+    }
+
+    public func hits(in messages: [KimiMessage], query: String, running: Bool,
+                     options: ConversationFindOptions = ConversationFindOptions()) -> ConversationFindResult {
+        guard !query.isEmpty else { return .empty }
+        var regex: NSRegularExpression?
+        if options.regex {
+            do {
+                regex = try NSRegularExpression(pattern: query, options: options.caseSensitive ? [] : [.caseInsensitive])
+            } catch {
+                entries = [:]; earlier = nil
+                return ConversationFindResult(hits: [], queryError: L("无效正则表达式"))
+            }
+        }
+        // Timeline entries are made per turn, so the earlier turns' entries are
+        // exactly those of the messages before the latest prompt.
+        let split = messages.lastIndex(where: \.isUserPrompt) ?? 0
+        let prefix = messages[..<split]
+        var hits: [ConversationSearchHit]
+        // Round 32: the shared prefix key — round-30's injective encoding
+        // with an empty entryID and isRunning false (the prefix always
+        // searches with isRunning false and has no entry identity, so the
+        // key is exactly (query bytes, options); its injectivity is pinned
+        // at the byte level since round 30).
+        let prefixKey = ConversationEntryCache.key(entryID: "", query: query,
+                                                   options: options, isRunning: false)
+        if let earlier, Self.sameQueryKey(earlier.query, query), earlier.options == options,
+           earlier.source.count == prefix.count, KimiMessage.sameSearchableWindow(prefix, earlier.source) {
+            hits = earlier.hits
+            self.earlier?.source = prefix
+        } else if let node = prefixCache.node(forKey: prefixKey, prefix: prefix) {
+            // Round 32: cross-instance prefix reuse — one whole-window
+            // verification inside node(forKey:) plus reference adoption of
+            // the immutable node replaces timeline construction, per-entry
+            // key builds, lookups, verification copies and the instance
+            // dictionary build with its teardown.
+            hits = node.hits
+            earlier = Earlier(source: prefix, query: query, options: options,
+                              hits: node.hits, entries: .shared(node))
+        } else {
+            // Captured BEFORE the rebuild: a locale notification landing
+            // mid-build makes store() refuse the stale-locale node
+            // (round-30 discipline).
+            let prefixGeneration = prefixCache.generationNow
+            var found: [String: Entry] = [:]
+            let previous = earlier?.entries
+            hits = search(ConversationTimelineEntry.make(Array(prefix), isRunning: false), query: query, regex: regex,
+                          options: options, isRunning: false, cached: { previous?.entry($0) ?? self.entries[$0] }, into: &found)
+            earlier = Earlier(source: prefix, query: query, options: options, hits: hits, entries: .owned(found))
+            var payloads: [String: ConversationEntryCache.Payload] = [:]
+            payloads.reserveCapacity(found.count)
+            for (id, entry) in found {
+                // query normalization (round-32 v3, review finding): every
+                // entry in `found` passed sameQueryKey against THIS call's
+                // query (or was built from it), so the values are
+                // byte-identical; storing the current parameter's storage
+                // keeps the node's payloads on ONE query buffer, making the
+                // cost convention's single-count claim true by construction
+                // (a turn-advance chain of independently decoded equal
+                // queries would otherwise retain a distinct buffer per
+                // generation inside the node).
+                payloads[id] = ConversationEntryCache.Payload(messages: entry.messages, sources: entry.sources,
+                                                              text: entry.text, sourceEnds: entry.sourceEnds,
+                                                              role: entry.role, isRunning: entry.isRunning,
+                                                              query: query, options: entry.options,
+                                                              hits: entry.hits)
+            }
+            // MATERIALIZED window (Array(prefix), never the slice: a stored
+            // slice retains the caller's whole backing storage including
+            // the live-turn suffix — review replay measurement, design
+            // point 3 of ConversationPrefixCache).
+            prefixCache.store(source: Array(prefix), query: query, options: options, hits: hits,
+                              entries: payloads, forKey: prefixKey, generation: prefixGeneration)
+        }
+        var next: [String: Entry] = [:]
+        let held = earlier?.entries
+        hits += search(ConversationTimelineEntry.make(Array(messages[split...]), isRunning: running), query: query, regex: regex,
+                       options: options, isRunning: running, cached: { self.entries[$0] ?? held?.entry($0) }, into: &next)
+        entries = next
+        return ConversationFindResult(hits: hits, queryError: nil)
+    }
+
+    private func search(_ timeline: [ConversationTimelineEntry], query: String, regex: NSRegularExpression?,
+                        options: ConversationFindOptions, isRunning: Bool, cached lookup: (String) -> Entry?,
+                        into next: inout [String: Entry]) -> [ConversationSearchHit] {
+        var hits: [ConversationSearchHit] = []
+        for entry in timeline {
+            // Unchanged entries reuse their whole hit list. The role filter needs
+            // no re-derivation here: equal messages under an equal build flag give
+            // an equal role, and an entry the filter skipped earlier is absent
+            // from the cache, so it takes the regular path and is skipped again.
+            // The window comparison is the searchable identity: bitwise equal
+            // storage, or value equality plus byte-identical rendered fields —
+            // canonical value equality alone is weaker than search equivalence
+            // (a zero sign or a string encoding can render differently).
+            if let previous = lookup(entry.id), previous.isRunning == isRunning,
+               Self.sameQueryKey(previous.query, query), previous.options == options,
+               KimiMessage.sameSearchableWindow(entry.messages[...], previous.messages[...]) {
+                var adopted = previous
+                adopted.messages = entry.messages
+                next[entry.id] = adopted
+                hits += previous.hits
+                continue
+            }
+            let role = Self.role(of: entry)
+            guard options.role == .all || role == options.role else { continue }
+            // Round 30: cross-instance reuse under round-12's exact predicate
+            // (byte-exact key + sameSearchableWindow verification inside the
+            // cache). A verified payload adopts the caller's messages copy,
+            // mirroring the instance-level reuse above.
+            let cacheKey = ConversationEntryCache.key(entryID: entry.id, query: query,
+                                                      options: options, isRunning: isRunning)
+            // Captured BEFORE the rebuild: a locale notification landing
+            // mid-build makes store() refuse the stale-locale payload.
+            let cacheGeneration = entryCache.generationNow
+            if let payload = entryCache.payload(forKey: cacheKey, messages: entry.messages[...]) {
+                next[entry.id] = Entry(sources: payload.sources, text: payload.text,
+                                       sourceEnds: payload.sourceEnds, role: payload.role,
+                                       messages: entry.messages, isRunning: payload.isRunning,
+                                       query: payload.query, options: payload.options,
+                                       hits: payload.hits)
+                hits += payload.hits
+                continue
+            }
+            let pieces = Self.sources(of: entry, role: role)
+            let sources = pieces.map(\.text)
+            let previous = lookup(entry.id)
+            let text: NSString
+            let sourceEnds: [Int]
+            if let previous, Self.sameRenderedSources(previous.sources, sources) {
+                text = previous.text
+                sourceEnds = previous.sourceEnds
+            } else {
+                let rendered = sources.map { source in
+                    renderedCache.rendered(source) { Self.renderedText(ReplyDocument.parse(source)) }
+                }
+                var end = 0
+                sourceEnds = rendered.map { text in end += (text as NSString).length + 1; return end }
+                text = rendered.joined(separator: "\n") as NSString
+            }
+            var matches: [NSRange] = []
+            if let regex {
+                matches = regex.matches(in: text as String, range: NSRange(location: 0, length: text.length)).map(\.range)
+            } else {
+                var range = NSRange(location: 0, length: text.length)
+                while range.length > 0 {
+                    let found = text.range(of: query, options: options.compareOptions(), range: range)
+                    guard found.location != NSNotFound else { break }
+                    matches.append(found)
+                    range = NSRange(location: NSMaxRange(found), length: text.length - NSMaxRange(found))
+                }
+            }
+            var toolOccurrences: [String: Int] = [:]
+            var entryHits: [ConversationSearchHit] = []
+            for (index, found) in matches.enumerated() {
+                let start = max(0, found.location - 50), end = min(text.length, NSMaxRange(found) + 80)
+                let excerptRange = text.rangeOfComposedCharacterSequences(for: NSRange(location: start, length: end - start))
+                let sourceIndex = sourceEnds.firstIndex { found.location < $0 }
+                let toolID = sourceIndex.flatMap { pieces[$0].toolID }
+                let toolOccurrence = toolID.map { toolOccurrences[$0, default: 0] }
+                entryHits.append(.init(entryID: entry.id, occurrence: index, excerpt: text.substring(with: excerptRange),
+                                       toolID: toolID, toolOccurrence: toolOccurrence))
+                if let toolID { toolOccurrences[toolID, default: 0] += 1 }
+            }
+            let built = Entry(sources: sources, text: text, sourceEnds: sourceEnds, role: role,
+                                messages: entry.messages, isRunning: isRunning,
+                                query: query, options: options, hits: entryHits)
+            next[entry.id] = built
+            hits += entryHits
+            entryCache.store(payload: .init(messages: built.messages, sources: built.sources,
+                                            text: built.text, sourceEnds: built.sourceEnds,
+                                            role: built.role, isRunning: built.isRunning,
+                                            query: built.query, options: built.options,
+                                            hits: built.hits),
+                             forKey: cacheKey, generation: cacheGeneration)
+        }
+        return hits
+    }
+
+    /// The query is the search key and, in regex mode, the pattern syntax
+    /// itself: canonically equal queries in different encodings (NFC vs NFD)
+    /// are different patterns with different matches, and even literal
+    /// matching is not guaranteed to fold them alike. Cache reuse therefore
+    /// requires encoding-exact query equality — unlike the message window,
+    /// whose value semantics deliberately treat a rebuilt window as unchanged.
+    private static func sameQueryKey(_ lhs: String, _ rhs: String) -> Bool {
+        lhs.utf8.elementsEqual(rhs.utf8)
+    }
+
+    /// The rendered-text cache is keyed by the sources' bytes, not their
+    /// canonical value: a canonically equal but encoding-distinct source (an
+    /// NFC/NFD payload swap) renders different search bytes, so reusing the
+    /// cached NSString for it would search stale text — the same reasoning
+    /// as the query key, applied to the rendered side.
+    private static func sameRenderedSources(_ lhs: [String], _ rhs: [String]) -> Bool {
+        guard lhs.count == rhs.count else { return false }
+        for (left, right) in zip(lhs, rhs) where !sameRenderedUTF8(left, right) { return false }
+        return true
+    }
+
+    /// User prompts, tool activity and assistant text search separately. Tool
+    /// parts count only on activity rows — an empty-output row holds the same
+    /// message and must not double the hits. Sources build only after the role
+    /// filter passes, so a user-only search never formats tool JSON.
+    private static func role(of entry: ConversationTimelineEntry) -> ConversationFindOptions.Role {
+        if entry.messages.contains(where: { $0.isUserPrompt }) { return .user }
+        let parts = entry.messages.flatMap(\.content)
+        let hasToolActivity = (entry.presentation == .activity || entry.presentation == .progress)
+            && parts.contains { $0.type == "tool_use" || $0.type == "tool_result" }
+        return hasToolActivity ? .tool : .assistant
+    }
+    private static func sources(of entry: ConversationTimelineEntry, role: ConversationFindOptions.Role) -> [(text: String, toolID: String?)] {
+        let parts = entry.messages.flatMap(\.content)
+        var sources: [(text: String, toolID: String?)] = parts.filter { $0.type == "text" }.compactMap(\.visibleText).map { ($0, nil) }
+        guard role == .tool else { return sources }
+        sources += parts.filter { $0.type == "tool_use" || $0.type == "tool_result" }
+            .flatMap { part in
+                [part.toolName, part.name, part.text, part.input?.display, part.output?.display]
+                    .compactMap { value in value.flatMap { $0.isEmpty ? nil : ($0, part.toolCallId) } }
+            }
+        return sources
+    }
+
+    private static func renderedText(_ blocks: [ReplyBlock]) -> String {
+        blocks.map { block in
+            switch block {
+            case .paragraph(let runs), .heading(_, let runs): return runs.map(\.text).joined()
+            case .code(_, let source): return source
+            // Math is searchable by its TeX source.
+            case .math(let latex): return latex
+            case .list(let items): return items.map { renderedText($0.blocks) }.joined(separator: "\n")
+            case .quote(let children), .alert(_, let children): return renderedText(children)
+            case .table(let headers, let rows, _): return (headers + rows.flatMap { $0 }).map { $0.map(\.text).joined() }.joined(separator: "\n")
+            case .rule: return ""
+            }
+        }.joined(separator: "\n")
+    }
+
+}

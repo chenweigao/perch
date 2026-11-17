@@ -1,0 +1,3 @@
+PASS byte-shape comparisons and caller mutation isolation count=8392
+storage running=false rebuild/earlier/shared/advance=[true, true, true, true]
+storage running=true rebuild/earlier/shared/advance=[false, false, false, false]

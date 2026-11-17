@@ -1,0 +1,4 @@
+messages=16000 split=15998 size=73 stride=80
+sameWindowBits=true sameWindow=true size_byte_diffs=0 padding_byte_diffs=57895
+second_copy sameWindowBits=true
+copy_vs_copy sameWindowBits=true

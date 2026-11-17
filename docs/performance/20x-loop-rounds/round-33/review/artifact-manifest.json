@@ -1,0 +1,9 @@
+{
+  "root": "<worktree>/review-artifacts",
+  "reports": ["review-findings.json", "evidence-audit.json", "quantization-witness.json", "probe-receipts.json"],
+  "reproduction_sources": ["audit-evidence.py", "quantization-witness.py", "run-probes.py", "GuardProbe.swift", "ReviewBaseline.swift", "WindowBitsExports.swift"],
+  "candidate_receipts": ["release-build.log", "release-checks.log", "candidate-streaming-functional.log", "evidence-audit.log", "quantization-witness.log", "probe-driver.log"],
+  "control": ["control/ConversationSearch.swift", "control/core-build.log", "control/checks-link.log", "control/checks.log", "control/probe-build.log", "control/probe.log"],
+  "surviving_mutant": ["running-bypass/ConversationSearch.swift", "running-bypass/core-build.log", "running-bypass/checks-link.log", "running-bypass/checks.log", "running-bypass/probe-build.log", "running-bypass/probe-unbuffered.log"],
+  "cleanup": "Review-generated binaries, objects and module caches were removed. Product source and committed tests were not changed. Normal ignored SwiftPM build output remains."
+}

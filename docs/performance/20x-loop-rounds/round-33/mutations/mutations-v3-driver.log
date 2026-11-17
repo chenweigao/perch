@@ -1,0 +1,13 @@
+=== control Tue Nov 17 07:24:45 CST 2026 ===
+control_build_exit=0
+control_exit=0 pass=108
+.local/round33/mutation-kills-v3.sh: line 20: 2993186 Illegal instruction     timeout 900 "$MUT/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks" > "$OUT/$name-checks.log" 2>&1
+remove-concat-guard exit=132 kill_at=ConversationPrefixCacheTests.swift:579
+.local/round33/mutation-kills-v3.sh: line 20: 2997454 Illegal instruction     timeout 900 "$MUT/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks" > "$OUT/$name-checks.log" 2>&1
+always-skip-concat exit=132 kill_at=StepAwareReadingTests.swift:142
+.local/round33/mutation-kills-v3.sh: line 20: 3003949 Illegal instruction     timeout 900 "$MUT/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks" > "$OUT/$name-checks.log" 2>&1
+running-bypass exit=132 kill_at=ConversationPrefixCacheTests.swift:589
+=== control rerun (tree restored) Tue Nov 17 07:30:47 CST 2026 ===
+control_rebuild_exit=0
+control_rerun_exit=0 pass=108
+DONE Tue Nov 17 07:31:52 CST 2026
