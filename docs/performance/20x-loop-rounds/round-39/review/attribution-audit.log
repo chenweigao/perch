@@ -1,0 +1,198 @@
+{
+  "total": 20527,
+  "filter_counts": {
+    "wire-region-patterns": 9156,
+    "wire-plus-json": 9273,
+    "warm-markers": 9281,
+    "wire-json-apply": 9282
+  },
+  "decode_free": 11254,
+  "regions_exact_match": false,
+  "all_trace_regions_exact_match": false,
+  "inclusive_comparison": {
+    "displayMessages.getter": {
+      "archived": 955,
+      "recomputed": 955,
+      "match": true
+    },
+    "KimiMessage.sameWindow": {
+      "archived": 1158,
+      "recomputed": 1158,
+      "match": true
+    },
+    "TV.canReuse": {
+      "archived": 564,
+      "recomputed": 564,
+      "match": true
+    },
+    "TV.projectTurns": {
+      "archived": 759,
+      "recomputed": 759,
+      "match": true
+    },
+    "TV.Pass.normalize": {
+      "archived": 529,
+      "recomputed": 529,
+      "match": true
+    },
+    "History.presented": {
+      "archived": 128,
+      "recomputed": 128,
+      "match": true
+    },
+    "History.joined": {
+      "archived": 125,
+      "recomputed": 125,
+      "match": true
+    },
+    "joinedIncremental": {
+      "archived": 0,
+      "recomputed": 0,
+      "match": true
+    },
+    "History.init": {
+      "archived": 84,
+      "recomputed": 84,
+      "match": true
+    },
+    "Input.equal": {
+      "archived": 12,
+      "recomputed": 12,
+      "match": true
+    },
+    "model.update": {
+      "archived": 4376,
+      "recomputed": 4376,
+      "match": true
+    },
+    "Snapshot.presented": {
+      "archived": 642,
+      "recomputed": 642,
+      "match": true
+    },
+    "ConversationActivity.init": {
+      "archived": 224,
+      "recomputed": 224,
+      "match": true
+    },
+    "TimelineEntry.make": {
+      "archived": 951,
+      "recomputed": 951,
+      "match": true
+    },
+    "ActivityNarrative": {
+      "archived": 729,
+      "recomputed": 729,
+      "match": true
+    },
+    "NarrativeTextCache": {
+      "archived": 182,
+      "recomputed": 182,
+      "match": true
+    },
+    "NarrativePhaseScan": {
+      "archived": 0,
+      "recomputed": 0,
+      "match": true
+    },
+    "ConversationSearch.search": {
+      "archived": 1500,
+      "recomputed": 1500,
+      "match": true
+    },
+    "resolution-memo-hit-path": {
+      "archived": 34,
+      "recomputed": 34,
+      "match": true
+    }
+  },
+  "percentage_mismatches": [],
+  "region_remainder": 34,
+  "validation_union": {
+    "count": 1184,
+    "percent": 10.520703749777857
+  },
+  "fidelity_ratio": 1.125925925925926,
+  "harness_change_percent": -22.91861552853134,
+  "consumer_breakdown": {
+    "arc-copy": {
+      "total": 2386,
+      "inclusive_membership": {
+        "displayMessages.getter": 475,
+        "KimiMessage.sameWindow": 13,
+        "TV.canReuse": 3,
+        "TV.projectTurns": 130,
+        "TV.Pass.normalize": 105,
+        "History.presented": 13,
+        "History.joined": 12,
+        "joinedIncremental": 0,
+        "History.init": 18,
+        "Input.equal": 0,
+        "model.update": 724,
+        "Snapshot.presented": 247,
+        "ConversationActivity.init": 35,
+        "TimelineEntry.make": 254,
+        "ActivityNarrative": 96,
+        "NarrativeSteps": 8,
+        "NarrativeStageAssembly": 96,
+        "NarrativeTextCache": 18,
+        "NarrativePhaseScan": 0,
+        "ConversationSearch.search": 63,
+        "resolution-memo-hit-path": 6
+      }
+    },
+    "utf16-bridge": {
+      "total": 2392,
+      "inclusive_membership": {
+        "displayMessages.getter": 477,
+        "KimiMessage.sameWindow": 14,
+        "TV.canReuse": 11,
+        "TV.projectTurns": 142,
+        "TV.Pass.normalize": 92,
+        "History.presented": 7,
+        "History.joined": 5,
+        "joinedIncremental": 0,
+        "History.init": 5,
+        "Input.equal": 0,
+        "model.update": 643,
+        "Snapshot.presented": 181,
+        "ConversationActivity.init": 33,
+        "TimelineEntry.make": 222,
+        "ActivityNarrative": 73,
+        "NarrativeSteps": 9,
+        "NarrativeStageAssembly": 73,
+        "NarrativeTextCache": 17,
+        "NarrativePhaseScan": 0,
+        "ConversationSearch.search": 98,
+        "resolution-memo-hit-path": 5
+      }
+    },
+    "narrative": {
+      "total": 251,
+      "inclusive_membership": {
+        "displayMessages.getter": 0,
+        "KimiMessage.sameWindow": 0,
+        "TV.canReuse": 0,
+        "TV.projectTurns": 0,
+        "TV.Pass.normalize": 0,
+        "History.presented": 0,
+        "History.joined": 0,
+        "joinedIncremental": 0,
+        "History.init": 0,
+        "Input.equal": 0,
+        "model.update": 251,
+        "Snapshot.presented": 0,
+        "ConversationActivity.init": 0,
+        "TimelineEntry.make": 0,
+        "ActivityNarrative": 251,
+        "NarrativeSteps": 25,
+        "NarrativeStageAssembly": 251,
+        "NarrativeTextCache": 54,
+        "NarrativePhaseScan": 0,
+        "ConversationSearch.search": 0,
+        "resolution-memo-hit-path": 11
+      }
+    }
+  }
+}
+HISTORICAL_MAC_CHAIN [{"file": "docs/performance/20x-loop-rounds/round-35/ab/macos-ab-v2-summary.json", "metric": "chain_total", "base": 0.59, "cand": 0.59, "change": 0.0, "spread": 5.263157894736848, "printed_spread": 5.263157894736848, "spread_match": true}, {"file": "docs/performance/20x-loop-rounds/round-35/ab/macos-ab-v3-summary.json", "metric": "chain_total", "base": 0.59, "cand": 0.59, "change": 0.0, "spread": 8.620689655172423, "printed_spread": 8.620689655172423, "spread_match": true}, {"file": "docs/performance/20x-loop-rounds/round-36/ab/macos-ab-v2-summary.json", "metric": "chain_total", "base": 0.6, "cand": 0.6, "change": 0.0, "spread": 6.896551724137938, "printed_spread": 6.896551724137938, "spread_match": true}, {"file": "docs/performance/20x-loop-rounds/round-36/ab/macos-ab-v3-summary.json", "metric": "chain_total", "base": 0.61, "cand": 0.585, "change": -4.098360655737709, "spread": 6.779661016949159, "printed_spread": 6.779661016949159, "spread_match": true}, {"file": "docs/performance/20x-loop-rounds/round-38/ab/macos-ab-v1-summary.json", "metric": "chain_total", "base": 0.6, "cand": 0.46, "change": -23.33333333333333, "spread": 8.474576271186448, "printed_spread": 8.474576271186448, "spread_match": true}, {"file": "docs/performance/20x-loop-rounds/round-38/ab/macos-ab-v2-summary.json", "metric": "chain_total", "base": 0.605, "cand": 0.46499999999999997, "change": -23.140495867768596, "spread": 4.3478260869565135, "printed_spread": 4.3478260869565135, "spread_match": true}, {"file": "docs/performance/20x-loop-rounds/round-38/ab/macos-ab-v3-summary.json", "metric": "chain_total", "base": 0.605, "cand": 0.46499999999999997, "change": -23.140495867768596, "spread": 5.084745762711869, "printed_spread": 5.084745762711869, "spread_match": true}]

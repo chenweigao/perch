@@ -1,0 +1,39 @@
+{
+  "suite": "portable",
+  "group": "all",
+  "scope": "offline synthetic checks; no SSH, real models or frame-rate certification",
+  "commit": "dd5211eb5bdf2421389f86a27efde4916b722f03",
+  "dirty": false,
+  "checks": [
+    {
+      "name": "version",
+      "command": [
+        "/usr/bin/python3",
+        "scripts/check-version.py"
+      ],
+      "log": "version.log",
+      "exit_code": 0,
+      "seconds": 0.06,
+      "passed": true
+    },
+    {
+      "name": "bridge",
+      "command": [
+        "/usr/bin/python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "remote",
+        "-p",
+        "test_*.py"
+      ],
+      "log": "bridge.log",
+      "exit_code": 1,
+      "seconds": 8.33,
+      "passed": false
+    }
+  ],
+  "status": "failed",
+  "seconds": 8.4
+}

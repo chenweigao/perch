@@ -1,0 +1,26 @@
+{
+  "38": {
+    "xml_sha256": "f2cec9427b8b85b37969422e74aa17c1ce86ad7fe0b90bc37e3570ca7a365c52",
+    "total": 20639,
+    "decode_ancestry": 8354,
+    "decode_free": 12285,
+    "narrative_inclusive": 2731,
+    "narrative_inclusive_percent": 22.230362230362232,
+    "narrative_region": 1489,
+    "narrative_region_full_percent": 7.214496826396628,
+    "archived_streaming_output_exact_match": true
+  },
+  "39": {
+    "xml_sha256": "4d5db7fde78f770c41d0e6bfa6067d05f512e9c8dbe58455df6e56c5cf9ed39a",
+    "total": 20527,
+    "decode_ancestry": 9273,
+    "decode_free": 11254,
+    "narrative_inclusive": 729,
+    "narrative_inclusive_percent": 6.477696818908832,
+    "narrative_region": 251,
+    "narrative_region_full_percent": 1.2227797534953964,
+    "archived_streaming_output_exact_match": true
+  },
+  "harness_code_exact_after_round_renaming": true,
+  "interpretation": "Inclusive是各自decode-free分母，region是各自full-trace分母。跨采样份额与A/B墙钟不得直接等同。两份harness代码轮名归一后相同，仅支持同类场景下方向性旁证；205 vs bench35更新、1 vs bench2 getter、find与未计时model.update等差异未被fidelity比率消除。"
+}

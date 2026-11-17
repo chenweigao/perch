@@ -1,0 +1,31 @@
+commit 673fa1fbc12037debe7bfa94875cbe7c181d3024
+Author:     chenweigao <redacted-github-noreply>
+AuthorDate: Tue Nov 17 21:46:28 2026 +0800
+Commit:     chenweigao <redacted-github-noreply>
+CommitDate: Tue Nov 17 21:46:28 2026 +0800
+
+    docs(performance): round-39 evaluation — post-memo streaming attribution, floor analysis, round-40 combined-candidate design
+    
+    Attribution @d8eec30 (STREAMING shape, decode-free n=11,254): round-38
+    memo confirmed — narrative region 7.21->1.22%, ActivityNarrative
+    inclusive 22.23->6.48%, resolution memo hit path 0.30%, harness chain
+    1.069->0.824ms (-23%, cross-validates the adopted A/B magnitude).
+    
+    Post-memo composition: intrinsic value-semantics churn ~42.5% (Input API
+    red-lined), design verification ~12% (sameWindow 10.29% + canReuse
+    5.01%), red-lined search matching (cf-match 9.56% within search 13.33%),
+    structurally-blocked displayMessages 8.49%, and the two remaining ~8%
+    per-delta full re-derivation points of the live turn: TimelineEntry.make
+    (8.45%) and narrative steps re-derivation (within the 6.48% residual).
+    
+    Verdict: evaluation round — every single-point attackable share is below
+    the classifier's reliable threshold; deliverable is the round-40 combined
+    candidate design ('live-turn incremental derivation family': prefix-stable
+    live turn reuses derived entries/steps across deltas with physical-
+    identity fast-path validation + deep-== fallback; combined ceiling 9-11%
+    over threshold; single-mechanism-class discipline per the round-35
+    precedent of one mechanism across two structures). Queue demotions
+    recorded with data. Zero product bytes (git diff d8eec30 HEAD -- Sources/
+    Tests/ = 0). Stop counter 1/3.
+    
+    Co-Authored-By: Claude Code <<redacted-email>>

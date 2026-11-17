@@ -1,0 +1,562 @@
+[
+  {
+    "file": "docs/performance/20x-loop-rounds/round-35/ab/linux-ab-v2-summary.json",
+    "metric": "chain_total",
+    "base": 1.3250000000000002,
+    "cand": 1.335,
+    "change": 0.7547169811320531,
+    "spread": 3.1007751937984525,
+    "printed_spread": 3.1007751937984525,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-35/ab/linux-ab-v2-summary.json",
+    "metric": "older_page_full_chain",
+    "base": 11.370000000000001,
+    "cand": 6.65,
+    "change": -41.512752858399296,
+    "spread": 12.418300653594756,
+    "printed_spread": 12.418300653594756,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-35/ab/linux-ab-v2-summary.json",
+    "metric": "stage_narrative",
+    "base": 0.22,
+    "cand": 0.22,
+    "change": 0.0,
+    "spread": 0.0,
+    "printed_spread": 0.0,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-35/ab/linux-ab-v2-summary.json",
+    "metric": "presentation_update",
+    "base": 0.43,
+    "cand": 0.44,
+    "change": 2.3255813953488413,
+    "spread": 2.325581395348839,
+    "printed_spread": 2.325581395348839,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-35/ab/linux-ab-v3-summary.json",
+    "metric": "chain_total",
+    "base": 1.335,
+    "cand": 1.33,
+    "change": -0.3745318352059823,
+    "spread": 6.250000000000005,
+    "printed_spread": 6.250000000000005,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-35/ab/linux-ab-v3-summary.json",
+    "metric": "older_page_full_chain",
+    "base": 11.415,
+    "cand": 6.535,
+    "change": -42.750766535260624,
+    "spread": 10.893854748603351,
+    "printed_spread": 10.893854748603351,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-35/ab/linux-ab-v3-summary.json",
+    "metric": "stage_narrative",
+    "base": 0.22,
+    "cand": 0.22,
+    "change": 0.0,
+    "spread": 4.761904761904766,
+    "printed_spread": 4.761904761904766,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-35/ab/linux-ab-v3-summary.json",
+    "metric": "presentation_update",
+    "base": 0.44,
+    "cand": 0.435,
+    "change": -1.1363636363636354,
+    "spread": 4.651162790697678,
+    "printed_spread": 4.651162790697678,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-35/ab/macos-ab-v2-summary.json",
+    "metric": "chain_total",
+    "base": 0.59,
+    "cand": 0.59,
+    "change": 0.0,
+    "spread": 5.263157894736848,
+    "printed_spread": 5.263157894736848,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-35/ab/macos-ab-v2-summary.json",
+    "metric": "older_page_full_chain",
+    "base": 4.14,
+    "cand": 2.62,
+    "change": -36.71497584541063,
+    "spread": 3.5294117647058942,
+    "printed_spread": 3.5294117647058942,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-35/ab/macos-ab-v2-summary.json",
+    "metric": "stage_narrative",
+    "base": 0.17,
+    "cand": 0.17,
+    "change": 0.0,
+    "spread": 6.250000000000005,
+    "printed_spread": 6.250000000000005,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-35/ab/macos-ab-v2-summary.json",
+    "metric": "presentation_update",
+    "base": 0.27,
+    "cand": 0.27,
+    "change": 0.0,
+    "spread": 7.692307692307699,
+    "printed_spread": 7.692307692307699,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-35/ab/macos-ab-v3-summary.json",
+    "metric": "chain_total",
+    "base": 0.59,
+    "cand": 0.59,
+    "change": 0.0,
+    "spread": 8.620689655172423,
+    "printed_spread": 8.620689655172423,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-35/ab/macos-ab-v3-summary.json",
+    "metric": "older_page_full_chain",
+    "base": 4.125,
+    "cand": 2.665,
+    "change": -35.39393939393939,
+    "spread": 6.130268199233722,
+    "printed_spread": 6.130268199233722,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-35/ab/macos-ab-v3-summary.json",
+    "metric": "stage_narrative",
+    "base": 0.165,
+    "cand": 0.165,
+    "change": 0.0,
+    "spread": 12.499999999999993,
+    "printed_spread": 12.499999999999993,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-35/ab/macos-ab-v3-summary.json",
+    "metric": "presentation_update",
+    "base": 0.265,
+    "cand": 0.265,
+    "change": 0.0,
+    "spread": 7.692307692307699,
+    "printed_spread": 7.692307692307699,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-36/ab/linux-ab-v2-summary.json",
+    "metric": "chain_total",
+    "base": 1.3450000000000002,
+    "cand": 1.34,
+    "change": -0.3717472118959231,
+    "spread": 4.5454545454545325,
+    "printed_spread": 4.5454545454545325,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-36/ab/linux-ab-v2-summary.json",
+    "metric": "older_page_full_chain",
+    "base": 6.890000000000001,
+    "cand": 5.13,
+    "change": -25.54426705370102,
+    "spread": 15.717092337917482,
+    "printed_spread": 15.717092337917482,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-36/ab/linux-ab-v2-summary.json",
+    "metric": "stage_narrative",
+    "base": 0.24,
+    "cand": 0.235,
+    "change": -2.083333333333337,
+    "spread": 9.090909090909086,
+    "printed_spread": 9.090909090909086,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-36/ab/linux-ab-v2-summary.json",
+    "metric": "presentation_update",
+    "base": 0.455,
+    "cand": 0.45,
+    "change": -1.098901098901095,
+    "spread": 6.976744186046519,
+    "printed_spread": 6.976744186046519,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-36/ab/linux-ab-v3-summary.json",
+    "metric": "chain_total",
+    "base": 1.33,
+    "cand": 1.31,
+    "change": -1.5037593984962405,
+    "spread": 5.468750000000004,
+    "printed_spread": 5.468750000000004,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-36/ab/linux-ab-v3-summary.json",
+    "metric": "older_page_full_chain",
+    "base": 6.84,
+    "cand": 5.115,
+    "change": -25.21929824561403,
+    "spread": 5.742574257425743,
+    "printed_spread": 5.742574257425743,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-36/ab/linux-ab-v3-summary.json",
+    "metric": "stage_narrative",
+    "base": 0.22,
+    "cand": 0.22,
+    "change": 0.0,
+    "spread": 0.0,
+    "printed_spread": 0.0,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-36/ab/linux-ab-v3-summary.json",
+    "metric": "presentation_update",
+    "base": 0.44,
+    "cand": 0.44,
+    "change": 0.0,
+    "spread": 2.325581395348839,
+    "printed_spread": 2.325581395348839,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-36/ab/macos-ab-v2-summary.json",
+    "metric": "chain_total",
+    "base": 0.6,
+    "cand": 0.6,
+    "change": 0.0,
+    "spread": 6.896551724137938,
+    "printed_spread": 6.896551724137938,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-36/ab/macos-ab-v2-summary.json",
+    "metric": "older_page_full_chain",
+    "base": 2.685,
+    "cand": 2.0199999999999996,
+    "change": -24.767225325884556,
+    "spread": 4.0000000000000036,
+    "printed_spread": 4.0000000000000036,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-36/ab/macos-ab-v2-summary.json",
+    "metric": "stage_narrative",
+    "base": 0.17,
+    "cand": 0.17,
+    "change": 0.0,
+    "spread": 6.250000000000005,
+    "printed_spread": 6.250000000000005,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-36/ab/macos-ab-v2-summary.json",
+    "metric": "presentation_update",
+    "base": 0.27,
+    "cand": 0.27,
+    "change": 0.0,
+    "spread": 7.692307692307699,
+    "printed_spread": 7.692307692307699,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-36/ab/macos-ab-v3-summary.json",
+    "metric": "chain_total",
+    "base": 0.61,
+    "cand": 0.585,
+    "change": -4.098360655737709,
+    "spread": 6.779661016949159,
+    "printed_spread": 6.779661016949159,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-36/ab/macos-ab-v3-summary.json",
+    "metric": "older_page_full_chain",
+    "base": 2.66,
+    "cand": 2.07,
+    "change": -22.180451127819556,
+    "spread": 10.309278350515473,
+    "printed_spread": 10.309278350515473,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-36/ab/macos-ab-v3-summary.json",
+    "metric": "stage_narrative",
+    "base": 0.17,
+    "cand": 0.17,
+    "change": 0.0,
+    "spread": 6.250000000000005,
+    "printed_spread": 6.250000000000005,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-36/ab/macos-ab-v3-summary.json",
+    "metric": "presentation_update",
+    "base": 0.27,
+    "cand": 0.265,
+    "change": -1.851851851851849,
+    "spread": 7.692307692307699,
+    "printed_spread": 7.692307692307699,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-38/ab/linux-ab-v1-summary.json",
+    "metric": "chain_total",
+    "base": 1.3450000000000002,
+    "cand": 1.16,
+    "change": -13.754646840148721,
+    "spread": 5.357142857142842,
+    "printed_spread": 5.357142857142842,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-38/ab/linux-ab-v1-summary.json",
+    "metric": "older_page_full_chain",
+    "base": 5.145,
+    "cand": 4.915,
+    "change": -4.470359572400384,
+    "spread": 6.2630480167014575,
+    "printed_spread": 6.2630480167014575,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-38/ab/linux-ab-v1-summary.json",
+    "metric": "stage_narrative",
+    "base": 0.22,
+    "cand": 0.07,
+    "change": -68.18181818181817,
+    "spread": 0.0,
+    "printed_spread": 0.0,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-38/ab/linux-ab-v1-summary.json",
+    "metric": "presentation_update",
+    "base": 0.44,
+    "cand": 0.27,
+    "change": -38.63636363636363,
+    "spread": 3.703703703703707,
+    "printed_spread": 3.703703703703707,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-38/ab/linux-ab-v2-summary.json",
+    "metric": "chain_total",
+    "base": 1.3450000000000002,
+    "cand": 1.1549999999999998,
+    "change": -14.126394052044633,
+    "spread": 5.309734513274342,
+    "printed_spread": 5.309734513274342,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-38/ab/linux-ab-v2-summary.json",
+    "metric": "older_page_full_chain",
+    "base": 5.335,
+    "cand": 4.88,
+    "change": -8.52858481724461,
+    "spread": 19.207920792079204,
+    "printed_spread": 19.207920792079204,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-38/ab/linux-ab-v2-summary.json",
+    "metric": "stage_narrative",
+    "base": 0.22,
+    "cand": 0.08,
+    "change": -63.63636363636363,
+    "spread": 4.545454545454549,
+    "printed_spread": 4.545454545454549,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-38/ab/linux-ab-v2-summary.json",
+    "metric": "presentation_update",
+    "base": 0.44,
+    "cand": 0.28,
+    "change": -36.36363636363635,
+    "spread": 4.651162790697678,
+    "printed_spread": 4.651162790697678,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-38/ab/linux-ab-v3-summary.json",
+    "metric": "chain_total",
+    "base": 1.33,
+    "cand": 1.165,
+    "change": -12.406015037593987,
+    "spread": 4.3859649122807065,
+    "printed_spread": 4.3859649122807065,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-38/ab/linux-ab-v3-summary.json",
+    "metric": "older_page_full_chain",
+    "base": 5.09,
+    "cand": 4.965,
+    "change": -2.4557956777996104,
+    "spread": 19.361277445109796,
+    "printed_spread": 19.361277445109796,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-38/ab/linux-ab-v3-summary.json",
+    "metric": "stage_narrative",
+    "base": 0.22,
+    "cand": 0.07,
+    "change": -68.18181818181817,
+    "spread": 0.0,
+    "printed_spread": 0.0,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-38/ab/linux-ab-v3-summary.json",
+    "metric": "presentation_update",
+    "base": 0.43,
+    "cand": 0.275,
+    "change": -36.04651162790697,
+    "spread": 3.703703703703707,
+    "printed_spread": 3.703703703703707,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-38/ab/macos-ab-v1-summary.json",
+    "metric": "chain_total",
+    "base": 0.6,
+    "cand": 0.46,
+    "change": -23.33333333333333,
+    "spread": 8.474576271186448,
+    "printed_spread": 8.474576271186448,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-38/ab/macos-ab-v1-summary.json",
+    "metric": "older_page_full_chain",
+    "base": 1.99,
+    "cand": 1.885,
+    "change": -5.276381909547734,
+    "spread": 24.352331606217618,
+    "printed_spread": 24.352331606217618,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-38/ab/macos-ab-v1-summary.json",
+    "metric": "stage_narrative",
+    "base": 0.17,
+    "cand": 0.04,
+    "change": -76.47058823529412,
+    "spread": 33.33333333333334,
+    "printed_spread": 33.33333333333334,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-38/ab/macos-ab-v1-summary.json",
+    "metric": "presentation_update",
+    "base": 0.27,
+    "cand": 0.13,
+    "change": -51.85185185185186,
+    "spread": 7.692307692307699,
+    "printed_spread": 7.692307692307699,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-38/ab/macos-ab-v2-summary.json",
+    "metric": "chain_total",
+    "base": 0.605,
+    "cand": 0.46499999999999997,
+    "change": -23.140495867768596,
+    "spread": 4.3478260869565135,
+    "printed_spread": 4.3478260869565135,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-38/ab/macos-ab-v2-summary.json",
+    "metric": "older_page_full_chain",
+    "base": 2.04,
+    "cand": 1.86,
+    "change": -8.823529411764708,
+    "spread": 6.59898477157361,
+    "printed_spread": 6.59898477157361,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-38/ab/macos-ab-v2-summary.json",
+    "metric": "stage_narrative",
+    "base": 0.17,
+    "cand": 0.04,
+    "change": -76.47058823529412,
+    "spread": 25.000000000000007,
+    "printed_spread": 25.000000000000007,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-38/ab/macos-ab-v2-summary.json",
+    "metric": "presentation_update",
+    "base": 0.27,
+    "cand": 0.14,
+    "change": -48.14814814814815,
+    "spread": 7.142857142857128,
+    "printed_spread": 7.142857142857128,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-38/ab/macos-ab-v3-summary.json",
+    "metric": "chain_total",
+    "base": 0.605,
+    "cand": 0.46499999999999997,
+    "change": -23.140495867768596,
+    "spread": 5.084745762711869,
+    "printed_spread": 5.084745762711869,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-38/ab/macos-ab-v3-summary.json",
+    "metric": "older_page_full_chain",
+    "base": 2.04,
+    "cand": 1.92,
+    "change": -5.882352941176472,
+    "spread": 7.772020725388608,
+    "printed_spread": 7.772020725388608,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-38/ab/macos-ab-v3-summary.json",
+    "metric": "stage_narrative",
+    "base": 0.17,
+    "cand": 0.04,
+    "change": -76.47058823529412,
+    "spread": 5.8823529411764595,
+    "printed_spread": 5.8823529411764595,
+    "spread_match": true
+  },
+  {
+    "file": "docs/performance/20x-loop-rounds/round-38/ab/macos-ab-v3-summary.json",
+    "metric": "presentation_update",
+    "base": 0.27,
+    "cand": 0.14,
+    "change": -48.14814814814815,
+    "spread": 7.692307692307699,
+    "printed_spread": 7.692307692307699,
+    "spread_match": true
+  }
+]
