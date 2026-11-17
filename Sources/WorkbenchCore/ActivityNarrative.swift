@@ -620,8 +620,32 @@ private enum NarrativePhaseScan {
                         }
                     }
                     guard matched else { continue }
-                    let leadingProven = offset == 0 || bytes[offset - 1] < 0x80
-                    let trailingProven = offset + keyword.count == count || bytes[offset + keyword.count] < 0x80
+                    // Round 41 (queued by round-26 review F8): the boundary
+                    // proofs extend from "adjacent byte is ASCII" to the
+                    // decoded-scalar proofs the delimiter scan already pins —
+                    // a preceding scalar outside the pinned Prepend set cannot
+                    // fuse forward over the keyword (GB9b), and a following
+                    // scalar that begins no binding mark cannot absorb its
+                    // last character — so the keyword's characters are their
+                    // own graphemes and the legacy canonical `contains`
+                    // necessarily matches (the round-22 no-false-positive
+                    // argument, with the same two primitives whose
+                    // completeness the round-24 fusionGap walk and
+                    // checkCollapsedWhitespace pin). CJK keywords inside CJK
+                    // prose thereby stay on the confirmed fast path instead
+                    // of falling to lowercased+contains every derivation.
+                    // Unprovable boundaries keep the original inconclusive
+                    // fallback, so legacy semantics decide exactly where the
+                    // proof does not reach.
+                    var leadingProven = offset == 0 || bytes[offset - 1] < 0x80
+                    if !leadingProven,
+                       let previous = NarrativeDelimiterScan.precedingScalar(in: bytes, before: offset) {
+                        leadingProven = !String.isPrependScalar(previous)
+                    }
+                    var trailingProven = offset + keyword.count == count || bytes[offset + keyword.count] < 0x80
+                    if !trailingProven, offset + keyword.count < count {
+                        trailingProven = !String.beginsBindingMark(in: bytes, at: offset + keyword.count)
+                    }
                     if leadingProven && trailingProven {
                         switch keywords[index].phase {
                         case .validating: confirmedValidating = true
@@ -829,7 +853,7 @@ final class CommentaryDerivation {
         if parts.count == 1, currentParts.count == 1 {
             let stored = parts[0]
             let growing = currentParts[0]
-            shape = growing == stored ? .unchanged : (growing.hasPrefix(stored) ? .growth : .reseed)
+            shape = growing == stored ? .unchanged : (Self.isBytePrefix(stored, of: growing) ? .growth : .reseed)
         } else if parts.isEmpty, currentParts.isEmpty {
             shape = .unchanged
         }
@@ -888,6 +912,25 @@ final class CommentaryDerivation {
     }
 
     private var pendingMachineStart: Int? = nil
+
+    /// Byte-level prefix validation. `String.hasPrefix` is grapheme-aware
+    /// and costs ~32µs on a 2.8KB CJK string (measured); a plain UTF-8
+    /// prefix memcmp costs ~1.7µs and implies the content prefix.
+    /// Canonically-equal-but-byte-different growth (NFC/NFD re-encoding)
+    /// fails here and takes the reseed path — the conservative direction
+    /// (a needless reseed, never a missed one).
+    private static func isBytePrefix(_ stored: String, of current: String) -> Bool {
+        var storedBody = stored
+        var currentBody = current
+        return storedBody.withUTF8 { storedBytes in
+            currentBody.withUTF8 { currentBytes in
+                guard currentBytes.count >= storedBytes.count else { return false }
+                for index in 0..<storedBytes.count
+                where storedBytes[index] != currentBytes[index] { return false }
+                return true
+            }
+        }
+    }
 
     /// Full state reset (reseed / defensive bail): the next feed rebuilds
     /// everything from the current growing part in one O(T) pass.
@@ -1106,7 +1149,7 @@ final class CommentaryDerivation {
     /// current joined text at every observation (committed results are
     /// count-invariant below the frontier; see ScanState's contract).
     private func runPhaseScan(lenTrimmed: Int) -> ActivityNarrativePhase {
-        joined.withUnsafeBufferPointer { buf in
+        return joined.withUnsafeBufferPointer { buf in
             if !phaseState.compatibilityDetected {
                 let limit = max(phaseState.offset, lenTrimmed - Self.phaseHoldback)
                 NarrativePhaseScan.scan(&phaseState, buf, limit: limit, count: lenTrimmed)
