@@ -1,0 +1,46 @@
+streaming_bench messages=16142 entries=8993 rows=692 measured=30
+  apply                       median_ms=    0.00
+  display_messages_workspace  median_ms=    0.29
+  conversation_activity       median_ms=    0.05
+  display_messages_timeline   median_ms=    0.28
+  presentation_update         median_ms=    0.28
+  presented_rows              median_ms=    0.15
+  memory_keys                 median_ms=    0.11
+  chain_total                 median_ms=    1.16
+  presentation_update breakdown (separate warm model with metrics):
+    input_comparison            median_ms=    0.00
+    tool_projection             median_ms=    0.07
+    turn_projection             median_ms=    0.06
+    narrative                   median_ms=    0.07
+    row_projection              median_ms=    0.02
+    summary                     median_ms=    0.00
+    retained_cost               median_ms=    0.01
+    total                       median_ms=    0.24
+  find_bar_query_update       median_ms=    0.51
+  find_bar_cold_query         median_ms=  350.23
+  find_bar_reopen_query       median_ms=    0.1394
+  older_page_full_chain       median_ms=    5.26
+    presentation_update         median_ms=    4.81
+    presented_rows              median_ms=    0.42
+    conversation_activity       median_ms=    0.07
+    presentation_update breakdown (separate warm model with metrics):
+      tool_projection             median_ms=    0.82
+      turn_projection             median_ms=    1.33
+      narrative                   median_ms=    0.14
+      row_projection              median_ms=    0.02
+      retained_cost               median_ms=    3.94
+      model_total                 median_ms=    6.69
+  release_model_state         median_ms=   12.91
+  commentary_chain_total      median_ms=    1.8170
+  commentary_apply            median_ms=    0.0043
+  commentary_display_workspacemedian_ms=    0.3023
+  commentary_activity         median_ms=    0.3289
+  commentary_display_timeline median_ms=    0.2977
+  commentary_presentation_updamedian_ms=    0.4560
+  commentary_presented_rows   median_ms=    0.1490
+  commentary_memory_keys      median_ms=    0.2787
+  commentary_find_query_updatemedian_ms=    0.5401
+  commentary_narrative        median_ms=    0.0933
+  commentary_turn_projection  median_ms=    0.1111
+  commentary_tool_projection  median_ms=    0.0661
+  commentary_input_comparison median_ms=    0.0009

@@ -1,0 +1,5 @@
+activity_bench turns=50 messages=320 edit_stats_median_ms=0.166 running_ids_median_ms=0.001 activity_init_median_ms=0.006 checksum=54360
+activity_bench turns=200 messages=1280 edit_stats_median_ms=0.666 running_ids_median_ms=0.002 activity_init_median_ms=0.007 checksum=216360
+activity_bench turns=1000 messages=6400 edit_stats_median_ms=3.341 running_ids_median_ms=0.003 activity_init_median_ms=0.007 checksum=1080360
+activity_bench single_turn_calls=200 messages=400 activity_init_median_ms=0.272 active=15
+activity_bench single_turn_calls=1000 messages=2000 activity_init_median_ms=1.352 active=15

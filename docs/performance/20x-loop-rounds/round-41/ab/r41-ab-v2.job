@@ -1,0 +1,91 @@
+#!/bin/bash
+# Round 41 v2 Mac mini formal A/B (ARBITRATION side, decides adoption):
+# incremental commentary derivator. base = dade949f (v1: bench
+# commentary-shape measurement, tests-only, identical bench bytes on both
+# sides). candidate = e1b7c29e (v5 = derivator + reseed-defers-to-
+# from-scratch + byte-prefix validation + decoded phase boundary proofs +
+# pin surface without @testable). v2 of this job: v1 built BOTH sides
+# from dade949f because e1b7c29e was not yet pushed and the detached
+# checkout failed silently under set -u (no -e); full-SHA checkout
+# assertions + fixture-hash diff gate added, invalid batch discarded.
+# Adoption rides on commentary_chain_total (NEW metric — first formal
+# batch defines its spread band; Linux debug sentinel showed -8.6% but
+# debug binaries over-penalize the derivator's generic code, so this
+# release batch decides). Guards: chain_total, streaming older_page /
+# append / reopen / find metrics, and the other four bench modes.
+# BOTH sides pristine checkouts — no patch application; every exit code
+# recorded without pipe-swallowing. Six alternating pairs x five modes,
+# binaries IN PLACE (round-18 doctrine).
+set -u
+cd "$HOME/_worktrees/20x-loop-20261112/perch"
+LOGS="$HOME/Library/Logs/perf-loop-20261116"
+RES="$LOGS/ab41v2"
+rm -rf "$RES"; mkdir -p "$RES"
+echo "=== prepare $(date) ==="
+git fetch origin
+git checkout -- . 2>/dev/null; git clean -fdq Sources/ Tests/
+echo "porcelain_preclean=$(git status --porcelain | wc -l | tr -d ' ')"
+git checkout --detach dade949f0bfc1c9587c52831dc3e69b08c9401ad
+echo "HEAD_base=$(git rev-parse HEAD)"
+if [ "$(git rev-parse HEAD)" != "dade949f0bfc1c9587c52831dc3e69b08c9401ad" ]; then echo ABORT_CHECKOUT_BASE; echo "DONE $(date)"; exit 1; fi
+rm -rf .build/round41v2-ab-base .build/round41v2-ab-cand
+echo "=== base build (dade949f) $(date) ==="
+swift build -c release --product WorkbenchChecks --scratch-path .build/round41v2-ab-base > "$RES/base-build.log" 2>&1
+base_build_exit=$?; echo "base_build_exit=$base_build_exit"
+shasum -a 256 Tests/WorkbenchCoreTests/PresentationBench.swift Tests/WorkbenchCoreTests/StreamingBench.swift Tests/WorkbenchCoreTests/ActivityBench.swift Tests/WorkbenchCoreTests/EditLineBench.swift Tests/WorkbenchCoreTests/BenchClock.swift Tests/WorkbenchCoreTests/LinkScanMaterializeTests.swift > "$RES/fixture-hashes-base.txt"
+echo "=== candidate checkout + build (e1b7c29e) $(date) ==="
+git checkout --detach e1b7c29e5d80c52be97d1c235e803f3e3c94c7de
+echo "HEAD_cand=$(git rev-parse HEAD)"
+if [ "$(git rev-parse HEAD)" != "e1b7c29e5d80c52be97d1c235e803f3e3c94c7de" ]; then echo ABORT_CHECKOUT_CAND; echo "DONE $(date)"; exit 1; fi
+swift build -c release --product WorkbenchChecks --scratch-path .build/round41v2-ab-cand > "$RES/cand-build.log" 2>&1
+cand_build_exit=$?; echo "cand_build_exit=$cand_build_exit"
+shasum -a 256 Tests/WorkbenchCoreTests/PresentationBench.swift Tests/WorkbenchCoreTests/StreamingBench.swift Tests/WorkbenchCoreTests/ActivityBench.swift Tests/WorkbenchCoreTests/EditLineBench.swift Tests/WorkbenchCoreTests/BenchClock.swift Tests/WorkbenchCoreTests/LinkScanMaterializeTests.swift > "$RES/fixture-hashes-cand.txt"
+if ! diff "$RES/fixture-hashes-base.txt" "$RES/fixture-hashes-cand.txt" > "$RES/fixture-hash-diff.txt"; then
+  echo ABORT_FIXTURE_HASH_DIFF; cat "$RES/fixture-hash-diff.txt"
+  git checkout -- . 2>/dev/null; git clean -fdq Sources/ Tests/
+  echo "DONE $(date)"; exit 1
+fi
+if [ "$base_build_exit" != 0 ] || [ "$cand_build_exit" != 0 ]; then
+  echo ABORT_BUILD
+  git checkout -- . 2>/dev/null; git clean -fdq Sources/ Tests/
+  rm -rf .build/round41v2-ab-base .build/round41v2-ab-cand
+  echo "porcelain_after=$(git status --porcelain | wc -l | tr -d ' ')"
+  echo "DONE $(date)"
+  exit 1
+fi
+BASE="$PWD/.build/round41v2-ab-base/out/Products/Release/WorkbenchChecks"
+CAND="$PWD/.build/round41v2-ab-cand/out/Products/Release/WorkbenchChecks"
+if [ ! -x "$BASE" ]; then BASE="$PWD/.build/round41v2-ab-base/release/WorkbenchChecks"; fi
+if [ ! -x "$CAND" ]; then CAND="$PWD/.build/round41v2-ab-cand/release/WorkbenchChecks"; fi
+shasum -a 256 "$BASE" "$CAND" | tee "$RES/binary-hashes.txt"
+echo "=== checks both sides (base = v1 pin set, record; cand = gate) $(date) ==="
+"$BASE" > "$RES/checks-base.log" 2>&1; base_checks_exit=$?
+echo "base_checks_exit=$base_checks_exit pass=$(grep -c '^PASS' "$RES/checks-base.log")"
+"$CAND" > "$RES/checks-cand.log" 2>&1; cand_checks_exit=$?
+echo "cand_checks_exit=$cand_checks_exit pass=$(grep -c '^PASS' "$RES/checks-cand.log")"
+grep -h 'commentary derivator' "$RES/checks-cand.log"
+if [ "$base_checks_exit" != 0 ] || [ "$cand_checks_exit" != 0 ]; then
+  echo ABORT_CHECKS
+  git checkout -- . 2>/dev/null; git clean -fdq Sources/ Tests/
+  rm -rf .build/round41v2-ab-base .build/round41v2-ab-cand
+  echo "porcelain_after=$(git status --porcelain | wc -l | tr -d ' ')"
+  echo "DONE $(date)"
+  exit 1
+fi
+echo "=== pairs $(date) ==="
+for pair in 1 2 3 4 5 6; do
+  for variant in baseline candidate; do
+    bin="$BASE"
+    [ "$variant" = candidate ] && bin="$CAND"
+    for mode in streaming 1 activity edit-lines presentation-token; do
+      WORKBENCH_BENCH="$mode" "$bin" > "$RES/pair$pair-$variant-$mode.log" 2>&1
+      echo "pair=$pair variant=$variant mode=$mode exit=$?"
+    done
+  done
+  echo "pair$pair done $(date)"
+done
+shasum -a 256 "$BASE" "$CAND" | tee "$RES/binary-hashes-final.txt"
+git checkout -- . 2>/dev/null; git clean -fdq Sources/ Tests/
+rm -rf .build/round41v2-ab-base .build/round41v2-ab-cand
+echo "porcelain_after=$(git status --porcelain | wc -l | tr -d ' ')"
+echo "DONE $(date)"

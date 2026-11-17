@@ -1,0 +1,59 @@
+total=20687 decode-ancestry=8537 (41.27%) decode-free=12150
+
+== decode-free innermost-region composition (n=12150) ==
+    2280  18.77%  string-compare
+    2151  17.70%  utf16-bridge
+    2121  17.46%  arc-copy
+    1284  10.57%  cf-match
+     964   7.93%  teardown
+     813   6.69%  input-compare
+     550   4.53%  string-hash
+     391   3.22%  timeline-make
+     341   2.81%  alloc
+     302   2.49%  dict-find
+     248   2.04%  narrative
+     175   1.44%  tool-visibility
+     161   1.33%  turn-summary
+     107   0.88%  model-update
+      74   0.61%  outside
+      62   0.51%  find-verify
+      61   0.50%  find-search
+      26   0.21%  activity-init
+
+== product-function inclusive shares (decode-free denominator) ==
+     876   7.21%  displayMessages.getter
+      21   0.17%  NarrativePhaseScan
+     336   2.77%  ActivityNarrativeSnapshot.narrativeText
+     743   6.12%  ActivityNarrativeSnapshot.clean
+    1570  12.92%  NarrativeTextCache
+    2239  18.43%  ActivityNarrative(make etc)
+    1134   9.33%  KimiMessage.sameWindow
+     559   4.60%  TV.canReuse
+     694   5.71%  TV.projectTurns
+     502   4.13%  TV.Pass.normalize
+     771   6.35%  TimelineEntry.make
+     122   1.00%  History.presented
+    5578  45.91%  model.update
+     616   5.07%  Snapshot.presented
+     213   1.75%  ConversationActivity.init
+    1735  14.28%  ConversationSearch.search
+      10   0.08%  KimiInFlight.appendDelta
+      11   0.09%  KimiConversation.apply
+     574   4.72%  String.== (any frame)
+     668   5.50%  _stringCompare family leaf-ish
+     443   3.65%  KimiPart derived equals
+
+== string-compare region: product-frame attribution (decode-free) ==
+string-compare-ish leaves: 1469 (12.09% of decode-free)
+     534   36.4% of group    4.40%-of-free  ToolVisibilityProjection.canReuse(_:messages:split:sessionID:activeIDs:online:)
+     279   19.0% of group    2.30%-of-free  static KimiMessage.sameSearchableWindow(_:_:)
+     145    9.9% of group    1.19%-of-free  static JSONValue.__derived_enum_equals(_:_:)
+     133    9.1% of group    1.09%-of-free  <no product frame in 20>
+      85    5.8% of group    0.70%-of-free  static ActivityNarrativeSnapshot.clean(_:limit:)
+      54    3.7% of group    0.44%-of-free  static ActivityNarrativeProjection.make(entries:tools:isRunning:external:cache:)
+      39    2.7% of group    0.32%-of-free  ConversationPresentationModel.update(_:)
+      35    2.4% of group    0.29%-of-free  static ConversationTimelineEntry.make(_:isRunning:)
+      33    2.2% of group    0.27%-of-free  static ConversationPresentationModel.Input.== infix(_:_:)
+      25    1.7% of group    0.21%-of-free  ToolVisibilityProjection.Pass.normalize(_:)
+       9    0.6% of group    0.07%-of-free  static NarrativeTextCache.narrativeText(_:_:)
+       9    0.6% of group    0.07%-of-free  static ConversationPresentationModel.row(_:tools:activity:)

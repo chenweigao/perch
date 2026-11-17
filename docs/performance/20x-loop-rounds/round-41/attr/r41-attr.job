@@ -1,0 +1,204 @@
+#!/bin/bash
+# Round-41 attribution: the COMMENTARY streaming shape (assistant.delta
+# text growth — the product's prose-streaming form; the thinking-only
+# shape profiled in rounds 34/38/39 derives placeholder steps and never
+# exercises the .progress commentary path: clean/narrativeText/phase over
+# the growing joined text + full-text-keyed static tables, round-39 F2's
+# separate-workload hypothesis). Harness lineage: round-34/38/39 stream
+# profile with the delta event switched to assistant.delta and offsets
+# tracking assistantText (matches the round-41 bench extension dade949f).
+# Base = 8e76f5d (round-40 merged). Bench context: Linux first readings
+# commentary_chain_total 1.8375ms vs chain_total 1.16ms (+58%). Time
+# Profiler, attribution only (never A/B). Decode-free denominator per
+# round-34 F2 correction.
+# set -u without set -e: every failure path reverts the tree before
+# exiting (r31b lesson).
+set -u
+cd "$HOME/_worktrees/20x-loop-20261112/perch"
+echo "=== prepare $(date) ==="
+git fetch origin
+git checkout --detach 8e76f5d
+echo "HEAD=$(git rev-parse HEAD)"
+echo "porcelain_before=$(git status --porcelain | wc -l | tr -d ' ')"
+git checkout -- Tests/ 2>/dev/null || true
+git clean -fdq Tests/ 2>/dev/null || true
+echo "porcelain_preclean=$(git status --porcelain | wc -l | tr -d ' ')"
+echo "=== apply temporary profile loop modes ==="
+python3 - <<'PYEOF2'
+path = 'Tests/WorkbenchCoreTests/ProtocolTests.swift'
+s = open(path).read()
+anchor = 'case "1":'
+assert anchor in s, 'anchor missing'
+s = s.replace(anchor, 'case "r41-stream-profile":\n            try benchR41CommentaryProfile()\n            return\n        ' + anchor, 1)
+open(path, 'w').write(s)
+PYEOF2
+cat >> Tests/WorkbenchCoreTests/StreamingBench.swift <<'SWIFTEOF'
+/// Round-38 attribution-only harness (lineage: round-34) (never committed). Fixture identical to
+/// benchStreamingDelta INCLUDING the -5..<0 history pre-loop (earlierRaw), so
+/// prepended pages carry distinct message ids exactly like the bench.
+func benchR41CommentaryProfile() throws {
+    let seconds = Double(ProcessInfo.processInfo.environment["R41_PROFILE_SECONDS"] ?? "") ?? 20
+
+    let completedTurns = Int(ProcessInfo.processInfo.environment["STREAMING_TURNS"] ?? "") ?? 230
+    let cyclesPerTurn = 34
+    let runningCycles = 20
+    let thinking = String(repeating: "先确认当前实现与调用方的约束，再决定下一步 inspect the call sites. ", count: 9)
+    let prompt = String(repeating: "请继续推进这个任务，修复问题并验证结果。", count: 8)
+    let answer = (0..<12).map { "- 第 \($0) 项结论：`Identifier\($0)` 已经处理，并附带 English notes for the reader." }
+        .joined(separator: "\n")
+    let readOutput = (0..<60).map { "\($0)\tlet value\($0) = compute(\($0)) // 源代码行" }.joined(separator: "\n")
+    let bashOutput = (0..<24).map { "PASS case \($0) 通过 in 0.0\($0)s" }.joined(separator: "\n")
+    let grepOutput = (0..<16).map { "Sources/File\($0).swift:\($0 * 7): match 匹配行" }.joined(separator: "\n")
+    let oldBlock = (0..<14).map { "    let value\($0) = compute(\($0)) // 原有实现" }.joined(separator: "\n")
+    let newBlock = (0..<16).map { "    let value\($0) = computeFaster(\($0)) // 新实现" }.joined(separator: "\n")
+    let written = (0..<90).map { "line \($0): 写入的文件内容 with mixed text" }.joined(separator: "\n")
+    var raw: [[String: Any]] = []
+    var clock = 0
+    func stamp() -> String { clock += 1; return String(format: "2026-10-23T%09d", clock) }
+    func cycle(turn: Int, step: Int) {
+        let id = "t\(turn)-s\(step)"
+        let tool: [String: Any]
+        let output: String
+        switch step % 10 {
+        case 0, 3, 6:
+            tool = ["type": "tool_use", "tool_call_id": "call-\(id)", "tool_name": "Read",
+                    "input": ["file_path": "/repo/Sources/File\(step).swift"]]
+            output = readOutput
+        case 1, 4, 8:
+            tool = ["type": "tool_use", "tool_call_id": "call-\(id)", "tool_name": "Bash",
+                    "input": ["command": "swift test --filter Case\(step)", "description": "Run case \(step)"]]
+            output = bashOutput
+        case 2, 7:
+            tool = ["type": "tool_use", "tool_call_id": "call-\(id)", "tool_name": "Grep",
+                    "input": ["pattern": "compute\\(", "path": "/repo/Sources"]]
+            output = grepOutput
+        case 5:
+            tool = ["type": "tool_use", "tool_call_id": "call-\(id)", "tool_name": "Edit",
+                    "input": ["file_path": "/repo/Sources/File\(step).swift", "old_string": oldBlock, "new_string": newBlock]]
+            output = "ok"
+        default:
+            tool = ["type": "tool_use", "tool_call_id": "call-\(id)", "tool_name": "Write",
+                    "input": ["file_path": "/repo/Generated/Out\(turn)-\(step).swift", "content": written]]
+            output = "ok"
+        }
+        var content: [[String: Any]] = [["type": "thinking", "thinking": thinking]]
+        if step % 4 == 0 { content.append(["type": "text", "text": "检查第 \(step) 步的结果。"]) }
+        content.append(tool)
+        raw.append(["id": "a-\(id)", "role": "assistant", "created_at": stamp(), "content": content])
+        raw.append(["id": "r-\(id)", "role": "tool", "created_at": stamp(), "content": [
+            ["type": "tool_result", "tool_call_id": "call-\(id)", "is_error": false, "output": output]]])
+    }
+    func turn(_ turn: Int, running: Bool) {
+        raw.append(["id": "u-\(turn)", "role": "user", "created_at": stamp(),
+                    "content": [["type": "text", "text": "第 \(turn) 轮：\(prompt)"]]])
+        for step in 0..<(running ? runningCycles : cyclesPerTurn) { cycle(turn: turn, step: step) }
+        if !running {
+            raw.append(["id": "f-\(turn)", "role": "assistant", "created_at": stamp(), "content": [
+                ["type": "thinking", "thinking": thinking], ["type": "text", "text": "完成。\n\n\(answer)"]]])
+        }
+    }
+    // Earlier turns of the same shape, read later as 100-message history
+    // pages (bench uses 5 turns/3 pages; the profile harness extends to 30
+    // turns/20 pages so measured prepends dominate the per-cycle re-warm —
+    // each prepend is mechanically identical, window grows 16k->18k, both
+    // disclosed).
+    for index in -30..<0 { turn(index, running: false) }
+    let earlierRaw = raw
+    raw = []
+    for index in 0...completedTurns { turn(index, running: index == completedTurns) }
+    let snapshotJSON: [String: Any] = [
+        "as_of_seq": 1, "epoch": "bench",
+        "session": ["id": "s", "title": "bench", "updated_at": "1", "busy": true, "main_turn_active": true,
+                    "metadata": ["cwd": "/repo"], "agent_config": ["model": "bench"]],
+        "messages": ["items": raw, "has_more": false],
+        "in_flight_turn": ["turn_id": 1, "assistant_text": "", "thinking_text": "开始思考。", "running_tools": []],
+        "pending_approvals": [], "pending_questions": []
+    ]
+    let snapshotData = try JSONSerialization.data(withJSONObject: snapshotJSON)
+    var conversation = KimiConversation(try KimiWire.decoder().decode(KimiSnapshot.self, from: snapshotData))
+    let messages = conversation.displayMessages
+
+    let decoder = KimiWire.decoder()
+    func ms(_ t: Double) -> Double { (benchNow() - t) * 1000 }
+    let key = "host:kimi:s"
+    let updatesPerCycle = 205
+    var samples: [Double] = []
+    var findSamples: [Double] = []
+    var cycles = 0
+    let deadline = Date().timeIntervalSince1970 + seconds
+    // ONE find bar across all cycles: the bench query_update shape is a warm
+    // same-instance re-search (a per-cycle fresh instance would make the
+    // ~630ms cold build dominate every restart).
+    let findBar = ConversationSearch(renderedCache: RenderedSourceCache(),
+                                     entryCache: ConversationEntryCache(),
+                                     prefixCache: ConversationPrefixCache())
+    while Date().timeIntervalSince1970 < deadline {
+        cycles += 1
+        var conv = KimiConversation(try decoder.decode(KimiSnapshot.self, from: snapshotData))
+        let handle = ConversationPresentationHandle()
+        let cache = ConversationPresentationCache()
+        let model = ConversationPresentationModel(key: key)
+        _ = model.update(.init(messages: conv.displayMessages, isRunning: true, epoch: "bench", language: "zh"))
+        for update in 0..<updatesPerCycle {
+            let event = try decoder.decode(KimiEvent.self, from: JSONSerialization.data(withJSONObject: [
+                "type": "assistant.delta", "session_id": "s", "epoch": "bench", "volatile": true,
+                "offset": conv.live?.assistantText.utf16.count ?? 0,
+                "payload": ["agentId": "main", "turnId": 1, "delta": "第 \(update) 段结论:实现满足约束,继续推进验证与收尾工作。"]] as [String: Any]))
+            let tAll = benchNow()
+            _ = conv.apply(event)
+            let timelineMessages = conv.displayMessages
+            let input = ConversationPresentationModel.Input(messages: timelineMessages, live: [], running: [], isRunning: true,
+                                                            online: true, epoch: "bench", language: "zh")
+            let snapshot = handle.update(key: key, input: input, cache: cache)
+            _ = model.update(input)
+            let presented = snapshot.presented(activity: [:], foldsProcess: true, isRunning: true)
+            let memoryKeys = presented.rows.map { key + ":" + $0.entry.id }
+            _ = ConversationActivity(messages: timelineMessages, isRunning: true, liveTools: [], online: true,
+                                     isThinking: true, isResponding: true)
+            let tFind = benchNow()
+            let found = findBar.hits(in: timelineMessages, query: "已经处理", running: true)
+            findSamples.append(ms(tFind))
+            precondition(found.hits.count >= completedTurns)
+            _ = memoryKeys
+            samples.append(ms(tAll))
+        }
+    }
+    samples.sort(); findSamples.sort()
+    print("r41_profile shape=streaming cycles=\(cycles) updates=\(samples.count)")
+    print(String(format: "r41_chain_median_ms=%.3f min_ms=%.3f max_ms=%.3f find_median_ms=%.3f",
+                 samples[samples.count / 2], samples[0], samples[samples.count - 1],
+                 findSamples[findSamples.count / 2]))
+}
+SWIFTEOF
+
+echo "=== build $(date) ==="
+swift build -c release --product WorkbenchChecks --scratch-path .build/round41-profile > /tmp/round41-profile-build.log 2>&1
+build_exit=$?
+echo "build_exit=$build_exit"
+if [ "$build_exit" != 0 ]; then
+  tail -5 /tmp/round41-profile-build.log
+  git checkout -- Tests/
+  rm -rf .build/round41-profile
+  git status --porcelain | wc -l | tr -d ' ' | sed 's/^/porcelain_after=/'
+  echo "ABORT_BUILD"
+  echo "DONE $(date)"
+  exit 1
+fi
+BIN="$PWD/.build/round41-profile/out/Products/Release/WorkbenchChecks"
+shasum -a 256 "$BIN"
+
+mkdir -p .local/round41
+echo "=== timing context runs (5s, untraced) $(date) ==="
+R41_PROFILE_SECONDS=5 WORKBENCH_BENCH=r41-stream-profile "$BIN" 2>&1 | grep -E 'r41_profile|r41_chain' || echo "streaming_timing_no_output"
+
+echo "=== record streaming $(date) ==="
+rm -rf .local/round41/streaming.trace .local/round41/streaming-time-profile.xml
+WORKBENCH_BENCH=r41-stream-profile xcrun xctrace record --template 'Time Profiler' --launch "$BIN" --output .local/round41/streaming.trace --time-limit 40s > /tmp/r41-record-streaming.log 2>&1
+echo "record_streaming_exit=$?"; tail -2 /tmp/r41-record-streaming.log
+xcrun xctrace export --input .local/round41/streaming.trace --xpath '/trace-toc/run[1]/data/table[@schema="time-profile"]' --output .local/round41/streaming-time-profile.xml 2>&1 | tail -1 || echo export_streaming_failed
+
+echo "=== revert $(date) ==="
+git checkout -- Tests/
+rm -rf .build/round41-profile
+echo "porcelain_after=$(git status --porcelain | wc -l | tr -d ' ')"
+echo "DONE $(date)"
