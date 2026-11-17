@@ -144,12 +144,13 @@ public final class NarrativeTextCache: @unchecked Sendable {
     private var commentaryStates: [String: CommentaryDerivation] = [:]
     /// Anti-blind counter for the pins: observations that produced an
     /// incremental step (as opposed to a from-scratch fallback).
-    private(set) var commentaryObservations = 0
-    /// Pin infrastructure: disables the incremental derivator so the
-    /// differential fuzz (checkCommentaryDerivation) can run the from-scratch
-    /// path through the very same make() code as its oracle. Never set in
-    /// product code.
-    var commentaryDerivationDisabled = false
+    public private(set) var commentaryObservations = 0
+    /// Pin infrastructure (public because the checks binary compiles without
+    /// testability in the release A/B protocol): disables the incremental
+    /// derivator so the differential fuzz (checkCommentaryDerivation) can run
+    /// the from-scratch path through the very same make() code as its oracle.
+    /// Never set in product code.
+    public var commentaryDerivationDisabled = false
 
     func commentary(entryID: String, parts: [String], firstMessageID: String) -> CommentaryDerivation.Outcome {
         guard !commentaryDerivationDisabled else { return .fallback }
@@ -164,7 +165,7 @@ public final class NarrativeTextCache: @unchecked Sendable {
     }
 
     /// Pin introspection (anti-blind): one entry's derivation vitals.
-    func commentaryStats(entryID: String) -> (observations: Int, phaseCommittedBytes: Int,
+    public func commentaryStats(entryID: String) -> (observations: Int, phaseCommittedBytes: Int,
                                               delimFrontier: Int, strict: Bool, reseeds: Int)? {
         lock.lock()
         defer { lock.unlock() }

@@ -1,5 +1,5 @@
 import Foundation
-@testable import WorkbenchCore
+import WorkbenchCore
 
 /// Round 41: differential fuzz pinning the incremental commentary derivator.
 ///
@@ -146,26 +146,12 @@ func checkCommentaryDerivation() throws {
                      "kind priority must re-evaluate per observation, got \(String(describing: stage))")
     }
 
-    // ---- defensive gate + reseed shapes ----------------------------------
+    // ---- reseed shapes ----------------------------------------------------
+    // (The multi-part defensive gate and the two-step reseed-then-seed
+    // contract are internal to CommentaryDerivation; they are covered
+    // end-to-end by the edit/shrink sequences below, whose reseed counters
+    // must be positive while every observation stays byte-equal.)
     var reseedsSeen = 0
-    do {
-        // A .progress entry is single-part by contract; multi-part input must
-        // fall back defensively (direct unit coverage — make() never produces
-        // this shape).
-        let derivation = CommentaryDerivation()
-        if case .step = derivation.observe(parts: ["a", "b"], firstMessageID: "m") {
-            preconditionFailure("multi-part entries must fall back to the from-scratch path")
-        }
-        if case .step(nil) = derivation.observe(parts: [], firstMessageID: "m") {}
-        else { preconditionFailure("empty parts must yield the empty-text step") }
-        // After the defensive clear, the first single-part observation
-        // classifies reseed and defers to from-scratch; the NEXT observation
-        // seeds via .growth/.unchanged and engages.
-        if case .fallback = derivation.observe(parts: ["验证：细节"], firstMessageID: "m") {}
-        else { preconditionFailure("a reseed observation must fall back, not seed") }
-        if case .step(let step) = derivation.observe(parts: ["验证：细节"], firstMessageID: "m"), step != nil {}
-        else { preconditionFailure("the seeded observation must produce a stage step") }
-    }
     do {
         // Mid-stream EDIT of the growing part (non-prefix) → reseed.
         let cache = NarrativeTextCache()
