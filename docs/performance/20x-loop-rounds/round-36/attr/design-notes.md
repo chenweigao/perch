@@ -58,7 +58,7 @@ prepend 相 16,925 样本（82.9%）。round-35 目标达成确证：projectTurn
 consumer 5.09%→**0.64%**，History.init 2.67%→跌出前八。
 
 **新首位 consumer = History.joined（inclusive ≈12.5% of prepend）**：
-- string-hash 叶深走查：joined 1129 样本 = 全部字符串哈希的 67.8% = 6.75%
+- string-hash 叶深走查：joined 1129 样本 = 全部字符串哈希的 67.8% = 6.67%
 - dict-find：joined 550 = 3.25%；string-compare：joined 385 = 2.27%；region 0.29%
 - 机制：joined() 每次调用对**全窗口 folded ids 做 parents.merge**
   （逐 id 字符串哈希+探测+冲突比较）——History 实例每次 prepend 新建 ⇒
