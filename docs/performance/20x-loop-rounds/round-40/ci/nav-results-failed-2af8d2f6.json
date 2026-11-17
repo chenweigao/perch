@@ -1,0 +1,114 @@
+{
+  "suite": "macos",
+  "group": "navigation-interaction",
+  "scope": "offline synthetic checks; no SSH, real models or frame-rate certification",
+  "commit": "994ed13ad848549d07f165edbdafe9820e91fd61",
+  "dirty": false,
+  "checks": [
+    {
+      "name": "navigation-streaming-rendering",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/run-navigation-check.py",
+        "streaming-rendering",
+        "--output",
+        "/Users/<runner>/work/perch/perch/.local/functional-navigation-interaction/navigation-streaming-rendering"
+      ],
+      "log": "navigation-streaming-rendering.log",
+      "exit_code": 0,
+      "seconds": 10.25,
+      "passed": true
+    },
+    {
+      "name": "navigation-tool-card",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/run-navigation-check.py",
+        "tool-card",
+        "--output",
+        "/Users/<runner>/work/perch/perch/.local/functional-navigation-interaction/navigation-tool-card"
+      ],
+      "log": "navigation-tool-card.log",
+      "exit_code": 0,
+      "seconds": 4.99,
+      "passed": true
+    },
+    {
+      "name": "navigation-fast-scroll",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/run-navigation-check.py",
+        "fast-scroll",
+        "--output",
+        "/Users/<runner>/work/perch/perch/.local/functional-navigation-interaction/navigation-fast-scroll"
+      ],
+      "log": "navigation-fast-scroll.log",
+      "exit_code": 0,
+      "seconds": 27.02,
+      "passed": true
+    },
+    {
+      "name": "navigation-turns",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/run-navigation-check.py",
+        "turns",
+        "--output",
+        "/Users/<runner>/work/perch/perch/.local/functional-navigation-interaction/navigation-turns"
+      ],
+      "log": "navigation-turns.log",
+      "exit_code": 0,
+      "seconds": 15.92,
+      "passed": true
+    },
+    {
+      "name": "navigation-roundtrip",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/run-navigation-check.py",
+        "roundtrip",
+        "--output",
+        "/Users/<runner>/work/perch/perch/.local/functional-navigation-interaction/navigation-roundtrip"
+      ],
+      "log": "navigation-roundtrip.log",
+      "exit_code": 0,
+      "seconds": 15.41,
+      "passed": true
+    },
+    {
+      "name": "navigation-disclosure",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/run-navigation-check.py",
+        "disclosure",
+        "--disclosure-context",
+        "--assert-atomic-disclosure",
+        "--output",
+        "/Users/<runner>/work/perch/perch/.local/functional-navigation-interaction/navigation-disclosure"
+      ],
+      "log": "navigation-disclosure.log",
+      "exit_code": 0,
+      "seconds": 13.11,
+      "passed": true
+    },
+    {
+      "name": "navigation-disclosure-full",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/run-navigation-check.py",
+        "disclosure",
+        "--disclosure-context",
+        "--assert-atomic-disclosure",
+        "--output",
+        "/Users/<runner>/work/perch/perch/.local/functional-navigation-interaction/navigation-disclosure-full",
+        "--full-content"
+      ],
+      "log": "navigation-disclosure-full.log",
+      "exit_code": 1,
+      "seconds": 11.39,
+      "passed": false
+    }
+  ],
+  "status": "failed",
+  "seconds": 98.14
+}

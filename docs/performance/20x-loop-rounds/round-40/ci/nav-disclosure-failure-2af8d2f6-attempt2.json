@@ -1,0 +1,12 @@
+{
+  "heights" : [
+    28
+  ],
+  "iteration" : 4,
+  "keys" : [
+    "disclosure-Thoughts:thinking:disclosure-body:0:thought",
+    "disclosure-Bash:activity:tool:bash:expanded",
+    "disclosure-Bash:activity:tool:bash:tool:bash:expanded"
+  ],
+  "kind" : "Thoughts"
+}
