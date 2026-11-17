@@ -1,0 +1,21 @@
+E.............................................................................................................................../home/<runner>/work/perch/perch/remote/native-agent-service.py:854: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp10y0jvge/isolated-dsh.stderr' mode='a' encoding='UTF-8'>
+  def __init__(self, session):
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+................................................................................................
+======================================================================
+ERROR: test_abort_cancels_the_wait_without_approval (test_claude_plan_worker.PlanWorkerTests.test_abort_cancels_the_wait_without_approval)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/<runner>/work/perch/perch/remote/test_claude_plan_worker.py", line 41, in setUp
+    self.wait('ready')
+  File "/home/<runner>/work/perch/perch/remote/test_claude_plan_worker.py", line 50, in wait
+    value=self.events.get(timeout=5)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/queue.py", line 179, in get
+    raise Empty
+_queue.Empty
+
+----------------------------------------------------------------------
+Ran 224 tests in 7.982s
+
+FAILED (errors=1)
