@@ -1,0 +1,48 @@
+profile=streaming total_samples=20639
+
+== phase [chain] n=20639 (100.0% of trace) ==
+    4533  21.96%  setup-wire-decode
+    3195  15.48%  arc-copy
+    2463  11.93%  utf16-bridge
+    1798   8.71%  string-compare
+    1737   8.42%  teardown
+    1489   7.21%  narrative
+    1386   6.72%  cf-match
+     890   4.31%  alloc
+     780   3.78%  input-compare
+     678   3.29%  string-hash
+     479   2.32%  dict-find
+     386   1.87%  timeline-make
+     176   0.85%  tool-visibility
+     148   0.72%  find-search
+     137   0.66%  model-update
+     101   0.49%  turn-summary
+      74   0.36%  find-verify
+      69   0.33%  outside
+      53   0.26%  setup-json
+      39   0.19%  activity-init
+      14   0.07%  presented-fold
+  -- top leaves --
+    1128   5.47%  swift_release
+     909   4.40%  swift_retain
+     865   4.19%  swift_bridgeObjectRelease
+     765   3.71%  closure #1 in closure #1 in static KimiMessage.sameWindow(_:_:)
+     554   2.68%  swift_bridgeObjectRetain
+     495   2.40%  DYLD-STUB$$swift_bridgeObjectRelease
+     423   2.05%  DYLD-STUB$$swift_bridgeObjectRetain
+     385   1.87%  _platform_memmove
+     381   1.85%  __CFStringFoldCharacterClusterAtIndex
+     352   1.71%  _StringGuts.append(_:)
+     329   1.59%  specialized static JSONScanner._slowpath_stringValue(from:appendingTo:fullSource:)
+     313   1.52%  validateUTF8(_:)
+     297   1.44%  _xzm_free_tc
+     297   1.44%  _stringCompareFastUTF8Abnormal(_:_:expecting:)
+  -- hash/dict consumers --
+     241   1.17%  String.hash(into:)
+      87   0.42%  JSONDecoderImpl.KeyedContainer.decodeIfPresent(_:forKey:)
+      70   0.34%  AppLanguage.localization.getter
+      54   0.26%  ToolVisibilityProjection.Pass.collect(_:)
+      49   0.24%  ToolVisibilityProjection.Pass.normalize(_:)
+      43   0.21%  static JSONDecoderImpl.KeyedContainer.stringify(objectRegion:using:codingPathNode:keyDecod
+      43   0.21%  JSONDecoderImpl.KeyedContainer.decodeIfPresent<A>(_:forKey:)
+      30   0.15%  ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)

@@ -1,0 +1,122 @@
+{
+  "verdict": "PENDING",
+  "candidate": "673fa1fb",
+  "base": "d8eec30",
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "BLOCKING",
+      "status": "confirmed by independent Mac historical chain_total samples: spread 4.35-8.62%; not a fixed threshold",
+      "title": "单点≤8.5%不足以推出低于分类器阈值",
+      "evidence": [
+        "round-39.md:9,61-64,81-82 确定性主张单点全部低于阈、唯余组合",
+        "round-38.md:288-291 chain_total 实测 spread=5.08%，小于 make inclusive 8.45%",
+        "INDEX.md:234 明令不得跨指标借用 spread 裁决"
+      ],
+      "requested_change": "撤回数学式不可裁决/唯余组合表述，降级为未完成可转化收益估算和 Mac 粗筛、暂不选题；组合9-11%仅未验证假设，采纳仍由同指标同批实测分类器裁决。"
+    },
+    {
+      "id": "F2",
+      "severity": "BLOCKING",
+      "title": "thinking-only harness不支持narrative残余主体=增长文本三遍扫描/8192驱逐风暴的机制主张",
+      "evidence": [
+        "r39-attr.job:142-145只有thinking.delta，assistant_text为空，无activity_summary",
+        "ActivityNarrative.swift:691-719 普通thinking只产thinkingPlaceholder，不调用phase/clean/narrativeText",
+        "原始XML独立复算NarrativePhaseScan=0、NarrativeTextCache.steps inclusive=89/11254=0.79%；不是全narrative 729/11254=6.48%均可归为steps"
+      ],
+      "requested_change": "撤回已确证的残余主体/静态表必miss/驱逐风暴表述；将assistant文本增长的扫描与组合4-5%预估列为另一负载假设，须同构归因与上下文内粗筛后立项。",
+      "status": "confirmed by source and original XML"
+    },
+    {
+      "id": "F3",
+      "severity": "BLOCKING",
+      "title": "42.5%通用ARC/bridge桶不能全额归为Input红线不可攻churn",
+      "evidence": [
+        "round39.md:56-57以ARC/bridge=42.5%全部归值语义窗口固有churn",
+        "原始XML中arc-copy+utf16-bridge共有4778；其中476归TimelineEntry.make、169归ActivityNarrativeProjection，恰为报告自称可攻的消费方",
+        "generic innermost机制桶和product inclusive消费者是重叠的分类，不能视为互斥可攻性分区"
+      ],
+      "requested_change": "限定Input形变只封锁已证实的对应窗口成本；将42.5%写为通用机械桶，给出消费者归属/余量，撤回整个桶不可攻确定性主张；历史分页42.91%不能直接证明流式全部同源。",
+      "status": "confirmed by original XML consumer attribution"
+    }
+  ],
+  "verified": [
+    "根AGENTS.md已读；docs/Sources/Tests无更细AGENTS；产物仅review-artifacts/",
+    "HEAD=673fa1fbc12037debe7bfa94875cbe7c181d3024；base=d8eec30d40451d997f3f06a871d91f773312bbea",
+    "git diff base..candidate -- Sources/ Tests/ 为0行；11个改动文件全部docs，门槛脚本无改动",
+    "round-39报告及attr全部6文件已读；r39分析器与r38 cmp逐字节相同",
+    "round-34/37报告、INDEX行及34/35/37/38后记已读",
+    "settle 76e34c1c为候选首个提交；Git谱系与GitHub PR360 merge=d8eec30、终head=9b4d97b9、mergedAt一致",
+    "Mac归档porcelain_before/preclean/after=0；build/record/driver exit=0；现时PR361 CI尚未全部完成",
+    "双原始XML独立复算 streaming-attribution.txt逐字相同；所有归档inclusive counts/百分比吻合；decode-ancestry=9273(45.17%)，decode-free=11254",
+    "round38 narrative inclusive 2731/12285=22.23036% 与 round39 729/11254=6.47770%吻合；full-trace narrative region 7.21450→1.22278%",
+    "历史Mac同指标chain_total spread逐样本复算4.35-8.62%，不支持单点全部低于阈",
+    "原始XML验证sameWindow∪canReuse=1184/11254=10.52070%；未列region 34个已逐桶识别"
+  ],
+  "independent_recalculation": {
+    "raw_xml_retrieved_read_only": true,
+    "total": 20527,
+    "decode_ancestry": 9273,
+    "decode_free": 11254,
+    "archived_inclusive_counts_all_match": true,
+    "archived_percentages_all_match": true,
+    "listed_regions_all_match": true,
+    "unlisted_region_samples": 34,
+    "validation_union_sameWindow_canReuse": {
+      "count": 1184,
+      "percent": 10.520703749777857
+    },
+    "fidelity_ratio": 1.125925925925926,
+    "harness_change_percent": -22.91861552853134,
+    "Mac_chain_spreads_round35_36_38": [
+      5.263157894736848,
+      8.620689655172423,
+      6.896551724137938,
+      6.779661016949159,
+      8.474576271186448,
+      4.3478260869565135,
+      5.084745762711869
+    ]
+  },
+  "outstanding": [
+    "组合设计物理身份/深值回退/局部性真实API反例探针构建运行",
+    "round38原始XML对照复算与跨测量面限定",
+    "原样WorkbenchChecks构建运行（独立scratch后台进行）",
+    "最终CI/portable状态与最终分级；INDEX缺round39行记录"
+  ],
+  "records": [
+    {
+      "id": "R1",
+      "severity": "RECORD",
+      "status": "confirmed; impact audit in progress",
+      "title": "fixture全等血统声明不准确",
+      "evidence": [
+        "round-39.md:23-24 声称 fixture=benchStreamingDelta 全等含 -5..<0",
+        "r39-attr.job:104 实际 -30..<0；bench StreamingBench.swift:74 为 -5..<0",
+        "r39-attr.job:147-158 每delta只有一次displayMessages，bench:135,144为两次；harness isResponding=true 与 bench false 不同"
+      ],
+      "requested_change": "明确血统复用但非全等，列出已知差异、历史预循环仅改变时间戳而earlierRaw不参与streaming、205 vs 35更新与预热/调用形态；保真比率仅sanity check，不证明负载分布同构。"
+    },
+    {
+      "id": "R2",
+      "severity": "RECORD",
+      "title": "跨测量面互证应限定为方向旁证，displayMessages绝对值不变未验证",
+      "evidence": [
+        "两份原始XML与同型harness轮名归一后逐字相同；1.069→0.824=-22.9186%，A/B采纳=-23.1405%",
+        "harness含find、额外model.update、仅一次getter、205更新；A/B chain_total不含find及额外model.update、两次getter、35更新",
+        "round39.md:46 absolute unchanged无每update墙钟/配对测量，834→955原始样本本身不能证明绝对成本不变"
+      ],
+      "requested_change": "保留round38采纳由原A/B承载；归因+独立harness只作机制/方向旁证，不能以百分比近似证明定量一致；改为结构未改、绝对成本本轮未独立测量。"
+    },
+    {
+      "id": "R3",
+      "severity": "RECORD",
+      "title": "候选INDEX未新增round39行/后记，portable收据未入树",
+      "evidence": [
+        "INDEX轮次记录到round38为止；base正确为d8eec30，但无round39条目/1/3/round40设计队列",
+        "round39.md:105-106称portable结果随证据提交，round39目录没有portable文件"
+      ],
+      "requested_change": "收尾补round39 INDEX行与队列/计数，portable如实标待补或归档收据；不得宣称当前候选已经全部验证。"
+    }
+  ]
+}

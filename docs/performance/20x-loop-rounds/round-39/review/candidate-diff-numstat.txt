@@ -1,0 +1,11 @@
+20	2	docs/performance/20x-loop-rounds/2026-11-17-round-38.md
+118	0	docs/performance/20x-loop-rounds/2026-11-17-round-39.md
+2	2	docs/performance/20x-loop-rounds/INDEX.md
+21	0	docs/performance/20x-loop-rounds/round-38/ci/bridge-failed-9b4d97b9.log
+39	0	docs/performance/20x-loop-rounds/round-38/ci/portable-results-failed-9b4d97b9.json
+184	0	docs/performance/20x-loop-rounds/round-39/attr/analyze_r39.py
+25	0	docs/performance/20x-loop-rounds/round-39/attr/attr-driver.log
+42	0	docs/performance/20x-loop-rounds/round-39/attr/decode-free-composition.txt
+5	0	docs/performance/20x-loop-rounds/round-39/attr/fidelity-dryrun-linux.log
+203	0	docs/performance/20x-loop-rounds/round-39/attr/r39-attr.job
+48	0	docs/performance/20x-loop-rounds/round-39/attr/streaming-attribution.txt

@@ -1,0 +1,925 @@
+{
+  "xml_sha256": "4d5db7fde78f770c41d0e6bfa6067d05f512e9c8dbe58455df6e56c5cf9ed39a",
+  "total": 20527,
+  "filter_counts": {
+    "wire-region-patterns": 9156,
+    "wire-plus-json": 9273,
+    "warm-markers": 9281,
+    "wire-json-apply": 9282
+  },
+  "decode_free": 11254,
+  "regions": {
+    "outside": 74,
+    "alloc": 356,
+    "teardown": 1043,
+    "cf-match": 1076,
+    "string-compare": 919,
+    "dict-find": 280,
+    "arc-copy": 2386,
+    "string-hash": 499,
+    "utf16-bridge": 2392,
+    "tool-visibility": 192,
+    "timeline-make": 399,
+    "model-update": 123,
+    "turn-summary": 129,
+    "narrative": 251,
+    "find-search": 143,
+    "find-entry-cache": 6,
+    "input-compare": 841,
+    "activity-init": 31,
+    "history-join": 8,
+    "presented-fold": 15,
+    "find-verify": 86,
+    "apply-event": 3,
+    "display-messages": 2
+  },
+  "regions_exact_match": false,
+  "listed_regions_exact_match": true,
+  "unlisted_regions": {
+    "find-entry-cache": 6,
+    "history-join": 8,
+    "presented-fold": 15,
+    "apply-event": 3,
+    "display-messages": 2
+  },
+  "raw_narrative_name_match": 873,
+  "all_trace_regions": {
+    "outside": 74,
+    "alloc": 935,
+    "teardown": 1867,
+    "cf-match": 1089,
+    "string-compare": 1929,
+    "dict-find": 567,
+    "arc-copy": 3440,
+    "string-hash": 710,
+    "setup-json": 72,
+    "utf16-bridge": 2600,
+    "setup-wire-decode": 5015,
+    "tool-visibility": 192,
+    "timeline-make": 399,
+    "model-update": 123,
+    "turn-summary": 129,
+    "narrative": 251,
+    "find-search": 143,
+    "find-entry-cache": 6,
+    "input-compare": 841,
+    "activity-init": 31,
+    "history-join": 8,
+    "presented-fold": 15,
+    "find-verify": 86,
+    "apply-event": 3,
+    "display-messages": 2
+  },
+  "all_trace_regions_exact_match": false,
+  "inclusive": {
+    "displayMessages.getter": 955,
+    "KimiMessage.sameWindow": 1158,
+    "TV.canReuse": 564,
+    "TV.projectTurns": 759,
+    "TV.Pass.normalize": 529,
+    "History.presented": 128,
+    "History.joined": 125,
+    "joinedIncremental": 0,
+    "History.init": 84,
+    "Input.equal": 12,
+    "model.update": 4376,
+    "Snapshot.presented": 642,
+    "ConversationActivity.init": 224,
+    "TimelineEntry.make": 951,
+    "ActivityNarrative": 729,
+    "NarrativeSteps": 89,
+    "NarrativeStageAssembly": 729,
+    "NarrativeTextCache": 182,
+    "NarrativePhaseScan": 0,
+    "ConversationSearch.search": 1500,
+    "resolution-memo-hit-path": 34
+  },
+  "inclusive_comparison": {
+    "displayMessages.getter": {
+      "archived": 955,
+      "recomputed": 955,
+      "match": true
+    },
+    "KimiMessage.sameWindow": {
+      "archived": 1158,
+      "recomputed": 1158,
+      "match": true
+    },
+    "TV.canReuse": {
+      "archived": 564,
+      "recomputed": 564,
+      "match": true
+    },
+    "TV.projectTurns": {
+      "archived": 759,
+      "recomputed": 759,
+      "match": true
+    },
+    "TV.Pass.normalize": {
+      "archived": 529,
+      "recomputed": 529,
+      "match": true
+    },
+    "History.presented": {
+      "archived": 128,
+      "recomputed": 128,
+      "match": true
+    },
+    "History.joined": {
+      "archived": 125,
+      "recomputed": 125,
+      "match": true
+    },
+    "joinedIncremental": {
+      "archived": 0,
+      "recomputed": 0,
+      "match": true
+    },
+    "History.init": {
+      "archived": 84,
+      "recomputed": 84,
+      "match": true
+    },
+    "Input.equal": {
+      "archived": 12,
+      "recomputed": 12,
+      "match": true
+    },
+    "model.update": {
+      "archived": 4376,
+      "recomputed": 4376,
+      "match": true
+    },
+    "Snapshot.presented": {
+      "archived": 642,
+      "recomputed": 642,
+      "match": true
+    },
+    "ConversationActivity.init": {
+      "archived": 224,
+      "recomputed": 224,
+      "match": true
+    },
+    "TimelineEntry.make": {
+      "archived": 951,
+      "recomputed": 951,
+      "match": true
+    },
+    "ActivityNarrative": {
+      "archived": 729,
+      "recomputed": 729,
+      "match": true
+    },
+    "NarrativeTextCache": {
+      "archived": 182,
+      "recomputed": 182,
+      "match": true
+    },
+    "NarrativePhaseScan": {
+      "archived": 0,
+      "recomputed": 0,
+      "match": true
+    },
+    "ConversationSearch.search": {
+      "archived": 1500,
+      "recomputed": 1500,
+      "match": true
+    },
+    "resolution-memo-hit-path": {
+      "archived": 34,
+      "recomputed": 34,
+      "match": true
+    }
+  },
+  "percentage_checks": [
+    {
+      "file": "decode-free-composition.txt",
+      "label": "utf16-bridge",
+      "count": 2392,
+      "printed": 21.25,
+      "calculated": 21.25,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "arc-copy",
+      "count": 2386,
+      "printed": 21.2,
+      "calculated": 21.2,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "cf-match",
+      "count": 1076,
+      "printed": 9.56,
+      "calculated": 9.56,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "teardown",
+      "count": 1043,
+      "printed": 9.27,
+      "calculated": 9.27,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "string-compare",
+      "count": 919,
+      "printed": 8.17,
+      "calculated": 8.17,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "input-compare",
+      "count": 841,
+      "printed": 7.47,
+      "calculated": 7.47,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "string-hash",
+      "count": 499,
+      "printed": 4.43,
+      "calculated": 4.43,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "timeline-make",
+      "count": 399,
+      "printed": 3.55,
+      "calculated": 3.55,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "alloc",
+      "count": 356,
+      "printed": 3.16,
+      "calculated": 3.16,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "dict-find",
+      "count": 280,
+      "printed": 2.49,
+      "calculated": 2.49,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "narrative",
+      "count": 251,
+      "printed": 2.23,
+      "calculated": 2.23,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "tool-visibility",
+      "count": 192,
+      "printed": 1.71,
+      "calculated": 1.71,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "find-search",
+      "count": 143,
+      "printed": 1.27,
+      "calculated": 1.27,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "turn-summary",
+      "count": 129,
+      "printed": 1.15,
+      "calculated": 1.15,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "model-update",
+      "count": 123,
+      "printed": 1.09,
+      "calculated": 1.09,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "find-verify",
+      "count": 86,
+      "printed": 0.76,
+      "calculated": 0.76,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "outside",
+      "count": 74,
+      "printed": 0.66,
+      "calculated": 0.66,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "activity-init",
+      "count": 31,
+      "printed": 0.28,
+      "calculated": 0.28,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "displayMessages.getter",
+      "count": 955,
+      "printed": 8.49,
+      "calculated": 8.49,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "KimiMessage.sameWindow",
+      "count": 1158,
+      "printed": 10.29,
+      "calculated": 10.29,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "TV.canReuse",
+      "count": 564,
+      "printed": 5.01,
+      "calculated": 5.01,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "TV.projectTurns",
+      "count": 759,
+      "printed": 6.74,
+      "calculated": 6.74,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "TV.Pass.normalize",
+      "count": 529,
+      "printed": 4.7,
+      "calculated": 4.7,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "History.presented",
+      "count": 128,
+      "printed": 1.14,
+      "calculated": 1.14,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "History.joined",
+      "count": 125,
+      "printed": 1.11,
+      "calculated": 1.11,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "joinedIncremental",
+      "count": 0,
+      "printed": 0.0,
+      "calculated": 0.0,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "History.init",
+      "count": 84,
+      "printed": 0.75,
+      "calculated": 0.75,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "Input.equal",
+      "count": 12,
+      "printed": 0.11,
+      "calculated": 0.11,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "model.update",
+      "count": 4376,
+      "printed": 38.88,
+      "calculated": 38.88,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "Snapshot.presented",
+      "count": 642,
+      "printed": 5.7,
+      "calculated": 5.7,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "ConversationActivity.init",
+      "count": 224,
+      "printed": 1.99,
+      "calculated": 1.99,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "TimelineEntry.make",
+      "count": 951,
+      "printed": 8.45,
+      "calculated": 8.45,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "ActivityNarrative",
+      "count": 729,
+      "printed": 6.48,
+      "calculated": 6.48,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "NarrativeTextCache",
+      "count": 182,
+      "printed": 1.62,
+      "calculated": 1.62,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "NarrativePhaseScan",
+      "count": 0,
+      "printed": 0.0,
+      "calculated": 0.0,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "ConversationSearch.search",
+      "count": 1500,
+      "printed": 13.33,
+      "calculated": 13.33,
+      "match": true
+    },
+    {
+      "file": "decode-free-composition.txt",
+      "label": "resolution-memo-hit-path",
+      "count": 34,
+      "printed": 0.3,
+      "calculated": 0.3,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "setup-wire-decode",
+      "count": 5015,
+      "printed": 24.43,
+      "calculated": 24.43,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "arc-copy",
+      "count": 3440,
+      "printed": 16.76,
+      "calculated": 16.76,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "utf16-bridge",
+      "count": 2600,
+      "printed": 12.67,
+      "calculated": 12.67,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "string-compare",
+      "count": 1929,
+      "printed": 9.4,
+      "calculated": 9.4,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "teardown",
+      "count": 1867,
+      "printed": 9.1,
+      "calculated": 9.1,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "cf-match",
+      "count": 1089,
+      "printed": 5.31,
+      "calculated": 5.31,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "alloc",
+      "count": 935,
+      "printed": 4.55,
+      "calculated": 4.55,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "input-compare",
+      "count": 841,
+      "printed": 4.1,
+      "calculated": 4.1,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "string-hash",
+      "count": 710,
+      "printed": 3.46,
+      "calculated": 3.46,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "dict-find",
+      "count": 567,
+      "printed": 2.76,
+      "calculated": 2.76,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "timeline-make",
+      "count": 399,
+      "printed": 1.94,
+      "calculated": 1.94,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "narrative",
+      "count": 251,
+      "printed": 1.22,
+      "calculated": 1.22,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "tool-visibility",
+      "count": 192,
+      "printed": 0.94,
+      "calculated": 0.94,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "find-search",
+      "count": 143,
+      "printed": 0.7,
+      "calculated": 0.7,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "turn-summary",
+      "count": 129,
+      "printed": 0.63,
+      "calculated": 0.63,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "model-update",
+      "count": 123,
+      "printed": 0.6,
+      "calculated": 0.6,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "find-verify",
+      "count": 86,
+      "printed": 0.42,
+      "calculated": 0.42,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "outside",
+      "count": 74,
+      "printed": 0.36,
+      "calculated": 0.36,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "setup-json",
+      "count": 72,
+      "printed": 0.35,
+      "calculated": 0.35,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "activity-init",
+      "count": 31,
+      "printed": 0.15,
+      "calculated": 0.15,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "presented-fold",
+      "count": 15,
+      "printed": 0.07,
+      "calculated": 0.07,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "swift_release",
+      "count": 1253,
+      "printed": 6.1,
+      "calculated": 6.1,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "swift_retain",
+      "count": 1015,
+      "printed": 4.94,
+      "calculated": 4.94,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "swift_bridgeObjectRelease",
+      "count": 925,
+      "printed": 4.51,
+      "calculated": 4.51,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "closure #1 in closure #1 in static KimiMessage.sameWindow(_:_:)",
+      "count": 819,
+      "printed": 3.99,
+      "calculated": 3.99,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "swift_bridgeObjectRetain",
+      "count": 609,
+      "printed": 2.97,
+      "calculated": 2.97,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "DYLD-STUB$$swift_bridgeObjectRelease",
+      "count": 503,
+      "printed": 2.45,
+      "calculated": 2.45,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "DYLD-STUB$$swift_bridgeObjectRetain",
+      "count": 481,
+      "printed": 2.34,
+      "calculated": 2.34,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "__CFStringFoldCharacterClusterAtIndex",
+      "count": 402,
+      "printed": 1.96,
+      "calculated": 1.96,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "_platform_memmove",
+      "count": 396,
+      "printed": 1.93,
+      "calculated": 1.93,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "_StringGuts.append(_:)",
+      "count": 383,
+      "printed": 1.87,
+      "calculated": 1.87,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "specialized static JSONScanner._slowpath_stringValue(from:appendingTo:fullSource:)",
+      "count": 342,
+      "printed": 1.67,
+      "calculated": 1.67,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "validateUTF8(_:)",
+      "count": 334,
+      "printed": 1.63,
+      "calculated": 1.63,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "_xzm_free_tc",
+      "count": 327,
+      "printed": 1.59,
+      "calculated": 1.59,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "_stringCompareFastUTF8Abnormal(_:_:expecting:)",
+      "count": 317,
+      "printed": 1.54,
+      "calculated": 1.54,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "String.hash(into:)",
+      "count": 242,
+      "printed": 1.18,
+      "calculated": 1.18,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "JSONDecoderImpl.KeyedContainer.decodeIfPresent(_:forKey:)",
+      "count": 122,
+      "printed": 0.59,
+      "calculated": 0.59,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "static JSONDecoderImpl.KeyedContainer.stringify(objectRegion:using:codingPathNode:keyDecod",
+      "count": 80,
+      "printed": 0.39,
+      "calculated": 0.39,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "ToolVisibilityProjection.Pass.collect(_:)",
+      "count": 73,
+      "printed": 0.36,
+      "calculated": 0.36,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "JSONDecoderImpl.KeyedContainer.decodeIfPresent<A>(_:forKey:)",
+      "count": 55,
+      "printed": 0.27,
+      "calculated": 0.27,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "ToolVisibilityProjection.Pass.normalize(_:)",
+      "count": 52,
+      "printed": 0.25,
+      "calculated": 0.25,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "JSONDecoderImpl.KeyedContainer.decode(_:forKey:)",
+      "count": 45,
+      "printed": 0.22,
+      "calculated": 0.22,
+      "match": true
+    },
+    {
+      "file": "streaming-attribution.txt",
+      "label": "ToolVisibilityProjection.Pass.present(id:call:result:)",
+      "count": 44,
+      "printed": 0.21,
+      "calculated": 0.21,
+      "match": true
+    }
+  ],
+  "percentage_mismatches": [],
+  "region_sum": 11220,
+  "region_remainder": 34,
+  "validation_union": {
+    "count": 1184,
+    "percent": 10.520703749777857
+  },
+  "consumer_breakdown": {
+    "arc-copy": {
+      "total": 2386,
+      "inclusive_membership": {
+        "displayMessages.getter": 475,
+        "KimiMessage.sameWindow": 13,
+        "TV.canReuse": 3,
+        "TV.projectTurns": 130,
+        "TV.Pass.normalize": 105,
+        "History.presented": 13,
+        "History.joined": 12,
+        "joinedIncremental": 0,
+        "History.init": 18,
+        "Input.equal": 0,
+        "model.update": 724,
+        "Snapshot.presented": 247,
+        "ConversationActivity.init": 35,
+        "TimelineEntry.make": 254,
+        "ActivityNarrative": 96,
+        "NarrativeSteps": 8,
+        "NarrativeStageAssembly": 96,
+        "NarrativeTextCache": 18,
+        "NarrativePhaseScan": 0,
+        "ConversationSearch.search": 63,
+        "resolution-memo-hit-path": 6
+      }
+    },
+    "utf16-bridge": {
+      "total": 2392,
+      "inclusive_membership": {
+        "displayMessages.getter": 477,
+        "KimiMessage.sameWindow": 14,
+        "TV.canReuse": 11,
+        "TV.projectTurns": 142,
+        "TV.Pass.normalize": 92,
+        "History.presented": 7,
+        "History.joined": 5,
+        "joinedIncremental": 0,
+        "History.init": 5,
+        "Input.equal": 0,
+        "model.update": 643,
+        "Snapshot.presented": 181,
+        "ConversationActivity.init": 33,
+        "TimelineEntry.make": 222,
+        "ActivityNarrative": 73,
+        "NarrativeSteps": 9,
+        "NarrativeStageAssembly": 73,
+        "NarrativeTextCache": 17,
+        "NarrativePhaseScan": 0,
+        "ConversationSearch.search": 98,
+        "resolution-memo-hit-path": 5
+      }
+    },
+    "narrative": {
+      "total": 251,
+      "inclusive_membership": {
+        "displayMessages.getter": 0,
+        "KimiMessage.sameWindow": 0,
+        "TV.canReuse": 0,
+        "TV.projectTurns": 0,
+        "TV.Pass.normalize": 0,
+        "History.presented": 0,
+        "History.joined": 0,
+        "joinedIncremental": 0,
+        "History.init": 0,
+        "Input.equal": 0,
+        "model.update": 251,
+        "Snapshot.presented": 0,
+        "ConversationActivity.init": 0,
+        "TimelineEntry.make": 0,
+        "ActivityNarrative": 251,
+        "NarrativeSteps": 25,
+        "NarrativeStageAssembly": 251,
+        "NarrativeTextCache": 54,
+        "NarrativePhaseScan": 0,
+        "ConversationSearch.search": 0,
+        "resolution-memo-hit-path": 11
+      }
+    }
+  },
+  "fidelity_ratio": 1.125925925925926,
+  "harness_change_percent": -22.91861552853134
+}
