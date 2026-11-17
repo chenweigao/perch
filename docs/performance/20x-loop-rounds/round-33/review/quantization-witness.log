@@ -1,0 +1,45 @@
+{
+  "printed_baseline": [
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.11
+  ],
+  "candidate": [
+    0.0753,
+    0.0845,
+    0.076,
+    0.0779,
+    0.0817,
+    0.0784
+  ],
+  "printed_stats": {
+    "baseline_median": 0.1,
+    "candidate_median": 0.07815,
+    "change_percent": -21.85,
+    "max_spread_percent": 12.217795484727754,
+    "worst_pair_percent": -15.500000000000004,
+    "passes_benefit_classifier": true,
+    "ranges_separated": true
+  },
+  "consistent_latent_baseline_witness": [
+    0.0951,
+    0.0951,
+    0.0951,
+    0.0951,
+    0.0951,
+    0.1149
+  ],
+  "witness_stats": {
+    "baseline_median": 0.0951,
+    "candidate_median": 0.07815,
+    "change_percent": -17.823343848580453,
+    "max_spread_percent": 20.820189274447948,
+    "worst_pair_percent": -11.146161934805466,
+    "passes_benefit_classifier": false,
+    "ranges_separated": true
+  }
+}
+PASS: same 2dp baseline receipts permit a 4dp sample set failing the required beyond-spread classifier, despite six separated improvements

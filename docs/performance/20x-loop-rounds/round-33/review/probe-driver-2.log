@@ -1,0 +1,13 @@
+core-build.log exit 0
+checks-link.log exit 0
+checks.log exit 0
+probe-build.log exit 0
+probe.log exit 0
+summary control 0 108 1 0
+core-build.log exit 0
+checks-link.log exit 0
+checks.log exit 0
+probe-build.log exit 0
+probe.log exit -4
+summary running-bypass 0 108 1 -4
+PASS: running-bypass mutant survives complete original checks but dies on running=true consumer probe

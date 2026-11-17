@@ -1,0 +1,9 @@
+candidate_rebuild_exit=0
+candidate_rebuild_head=afd99aa3bd1754a3e4310e2396ed5a923c455a09
+candidate_rebuild_porcelain=0
+a9b9faa9d30ee73bbddd7c650e548cc4cc6a3fb7b5508255d83246e1ff4d6af1  .build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+baseline_rebuild_head=4c184e577b7fc0feb254dac4caa91b2e0c38bd08
+baseline_rebuild_porcelain=2
+?? build.log
+?? rebuild.log
+f57825bda3ba1537b3775424512fa20c348ebdb436f3722ce95525b17b9abc0f  /tmp/r33v1-ab-base/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks

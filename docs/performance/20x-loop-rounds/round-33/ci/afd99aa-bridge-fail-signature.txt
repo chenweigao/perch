@@ -1,0 +1,2 @@
+2026-11-16T22:14:02.2881670Z   File "/home/<runner>/work/perch/perch/remote/test_claude_plan_worker.py", line 50, in wait
+2026-11-16T22:14:02.2882759Z   File "/usr/lib/python3.12/queue.py", line 179, in get

@@ -1,0 +1,11 @@
+candidate_rebuild_exit=0
+candidate_rebuild_head=69094ed8482e26f6d68bcb4f132c1b7981451f9d
+candidate_rebuild_porcelain=1
+ M docs/performance/20x-loop-rounds/2026-11-17-round-33.md
+773874ef667de8ae0e0c3b197f08ab21c0e424e53c9aebde00be4c7a20ac3023  .build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+baseline_rebuild_head=4c184e577b7fc0feb254dac4caa91b2e0c38bd08
+baseline_rebuild_porcelain=3 (expected 1: the disclosed print-precision fixture patch)
+ M Tests/WorkbenchCoreTests/StreamingBench.swift
+?? build.log
+?? rebuild.log
+7a08cc18a0fa7fd847226c6eb4db57a4c7df758388dc0fe271a6772d9fd7b261  /tmp/r33v4-ab-base/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks

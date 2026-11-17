@@ -1,0 +1,11 @@
+PASS byte-shape comparisons and caller mutation isolation count=8392
+storage running=false rebuild/earlier/shared/advance=[true, true, true, true]
+storage running=true rebuild/earlier/shared/advance=[true, true, true, true]
+KimiMessage size=73 stride=80
+materialized metadata=nil sameWindowBits=true sameWindow=true compared_byte_differences=[]
+materialized metadata=Optional(["x": "value"]) sameWindowBits=true sameWindow=true compared_byte_differences=[]
+materialized metadata=Optional("text") sameWindowBits=true sameWindow=true compared_byte_differences=[]
+materialized metadata=Optional(42) sameWindowBits=true sameWindow=true compared_byte_differences=[]
+materialized metadata=Optional(true) sameWindowBits=true sameWindow=true compared_byte_differences=[]
+materialized bitwise_equal_cases=5/5
+shared-array empty append copied=true count=1000000 elapsed_ms=2.390908

@@ -1,0 +1,43 @@
+REVIEW_BITS node_entries=8970 source_count=16100 prefix_count=16100 bitwise=true value=true
+REVIEW_BYTES size_diffs=0 pad_diffs=16729
+REVIEW_BITS node_entries=8970 source_count=16100 prefix_count=16100 bitwise=true value=true
+REVIEW_BYTES size_diffs=0 pad_diffs=16729
+REVIEW_BITS node_entries=8970 source_count=16100 prefix_count=16100 bitwise=true value=true
+REVIEW_BYTES size_diffs=0 pad_diffs=16729
+REVIEW_BITS node_entries=8970 source_count=16100 prefix_count=16100 bitwise=true value=true
+REVIEW_BYTES size_diffs=0 pad_diffs=16729
+REVIEW_BITS node_entries=8970 source_count=16100 prefix_count=16100 bitwise=true value=true
+REVIEW_BYTES size_diffs=0 pad_diffs=16729
+streaming_bench messages=16142 entries=8993 rows=692 measured=30
+  apply                       median_ms=    0.00
+  display_messages_workspace  median_ms=    0.30
+  conversation_activity       median_ms=    0.05
+  display_messages_timeline   median_ms=    0.30
+  presentation_update         median_ms=    0.42
+  presented_rows              median_ms=    0.15
+  memory_keys                 median_ms=    0.11
+  chain_total                 median_ms=    1.33
+  presentation_update breakdown (separate warm model with metrics):
+    input_comparison            median_ms=    0.00
+    tool_projection             median_ms=    0.07
+    turn_projection             median_ms=    0.06
+    narrative                   median_ms=    0.20
+    row_projection              median_ms=    0.02
+    summary                     median_ms=    0.00
+    retained_cost               median_ms=    0.01
+    total                       median_ms=    0.38
+  find_bar_query_update       median_ms=    0.50
+  find_bar_cold_query         median_ms=  346.63
+  find_bar_reopen_query       median_ms=    0.1279
+  older_page_full_chain       median_ms=   10.76
+    presentation_update         median_ms=    9.00
+    presented_rows              median_ms=    1.70
+    conversation_activity       median_ms=    0.07
+    presentation_update breakdown (separate warm model with metrics):
+      tool_projection             median_ms=    2.11
+      turn_projection             median_ms=    3.94
+      narrative                   median_ms=    0.31
+      row_projection              median_ms=    0.02
+      retained_cost               median_ms=    3.33
+      model_total                 median_ms=   10.97
+  release_model_state         median_ms=   12.93
