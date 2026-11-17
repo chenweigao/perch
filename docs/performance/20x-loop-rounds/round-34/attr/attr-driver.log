@@ -1,0 +1,38 @@
+=== prepare Tue Nov 17 09:01:36 CST 2026 ===
+From github.com:chenweigao/perch
+   4c184e57..146d4fd5  main       -> origin/main
+ * [new branch]        perf/20x-loop-34-20261117 -> origin/perf/20x-loop-34-20261117
+Previous HEAD position was 69094ed8 test(core): round-33 v4 — review F1-F3/N1 closure (five-route identity pin, honest bitwise wording, analyzer rule A2)
+HEAD is now at 146d4fd5 Merge pull request #355 from chenweigao/perf/20x-loop-33-20261117
+HEAD=146d4fd508912600f78710bd9eab1c93cb824e3d
+porcelain_before=0
+porcelain_preclean=0
+=== apply temporary profile loop modes ===
+porcelain_applied=2
+=== build Tue Nov 17 09:01:40 CST 2026 ===
+build_exit=0
+b5caaa8992e89a502d0324b8fbc849ab80ada25b4f3afc7c8204761a9e16ce11  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round34-profile/out/Products/Release/WorkbenchChecks
+=== timing context runs (5s, untraced) Tue Nov 17 09:02:55 CST 2026 ===
+r34_profile shape=paging cycles=39 prepends=780
+r34_profile shape=streaming cycles=9 updates=1845
+=== record paging Tue Nov 17 09:03:06 CST 2026 ===
+record_paging_exit=0
+Recording completed. Saving output file...
+Output file saved as: paging.trace
+Finished export to the file: /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/round34/paging-time-profile.xml
+=== record streaming Tue Nov 17 09:03:35 CST 2026 ===
+record_streaming_exit=0
+Recording completed. Saving output file...
+Output file saved as: streaming.trace
+Finished export to the file: /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/round34/streaming-time-profile.xml
+total 40976
+drwxr-xr-x   6 <mini>  staff       192 Nov 17 09:04 .
+drwxr-xr-x  32 <mini>  staff      1024 Nov 17 09:02 ..
+-rw-r--r--   1 <mini>  staff   7256330 Nov 17 09:03 paging-time-profile.xml
+drwxr-xr-x  10 <mini>  staff       320 Nov 17 09:03 paging.trace
+-rw-r--r--   1 <mini>  staff  13384853 Nov 17 09:04 streaming-time-profile.xml
+drwxr-xr-x  10 <mini>  staff       320 Nov 17 09:04 streaming.trace
+=== revert Tue Nov 17 09:04:03 CST 2026 ===
+porcelain_after=0
+DONE Tue Nov 17 09:04:03 CST 2026
+exit=0

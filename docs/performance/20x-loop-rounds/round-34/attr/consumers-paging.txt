@@ -1,0 +1,54 @@
+== consumers of leaf [Hasher.combine(bytes:)] (n=1499) ==
+   1404  String.hash(into:)
+     39  ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+     31  ConversationPresentationModel.History.joined(_:foldsProcess:)
+      8  AppLanguage.localization.getter
+      5  specialized ConversationPresentationModel.History.init(turns:turnCount:source:)
+      4  ToolVisibilityProjection.Pass.normalize(_:)
+      3  ConversationPresentationModel.update(_:)
+      2  JSONValue.subscript.getter
+
+== consumers of leaf [__RawDictionaryStorage.find] (n=2345) ==
+    719  ConversationPresentationModel.History.joined(_:foldsProcess:)
+    561  ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+    527  specialized ConversationPresentationModel.History.init(turns:turnCount:source:)
+     91  ToolVisibilityProjection.Pass.normalize(_:)
+     81  AppLanguage.localization.getter
+     76  ToolVisibilityProjection.Pass.collect(_:)
+     45  closure #1 in static ConversationPresentationModel.Presentation.parents(of:into:)
+     43  specialized static ConversationPresentationModel.row(_:tools:activity:)
+
+== consumers of leaf [_StringBreadcrumbs.init] (n=343) ==
+    333  benchR34PagingProfile()
+     10  specialized ConversationActivity.init(messages:isRunning:liveTools:running:online:isThinking:isRespo
+
+== consumers of leaf [String.hash(into:)] (n=1728) ==
+    667  ConversationPresentationModel.History.joined(_:foldsProcess:)
+    573  ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+    183  specialized ConversationPresentationModel.History.init(turns:turnCount:source:)
+     68  ToolVisibilityProjection.Pass.normalize(_:)
+     43  ToolVisibilityProjection.Pass.collect(_:)
+     38  AppLanguage.localization.getter
+     34  closure #1 in static ConversationPresentationModel.Presentation.parents(of:into:)
+     30  specialized static ToolVisibilityProjection.identities(in:)
+
+== consumers of leaf [swift_bridgeObjectRetain] (n=1417) ==
+    241  specialized _ContiguousArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForAppend
+    238  specialized UnsafeMutablePointer.initialize(from:count:)
+    206  initializeWithCopy for ClosedRange<>.Index
+    127  ConversationPresentationModel.update(_:)
+     84  ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+     81  ToolVisibilityProjection.Pass.normalize(_:)
+     54  ConversationPresentationModel.History.presented(activity:foldsProcess:)
+     47  closure #1 in static ConversationPresentationModel.Presentation.parents(of:into:)
+
+== consumers of leaf [swift_bridgeObjectRelease] (n=1903) ==
+    829  _ContiguousArrayStorage.__deallocating_deinit
+    383  ConversationPresentationModel.update(_:)
+    211  _DictionaryStorage.__deallocating_deinit
+     58  ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+     46  specialized ConversationPresentationModel.History.init(turns:turnCount:source:)
+     35  _DictionaryStorage.deinit
+     32  specialized flush #1 (running:) in static ConversationTimelineEntry.make(_:isRunning:)
+     31  static ConversationPresentationModel.cost(_:)
+
