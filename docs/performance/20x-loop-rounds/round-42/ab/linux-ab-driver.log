@@ -1,0 +1,13 @@
+=== prepare Wed Nov 18 06:54:49 CST 2026 ===
+c252aa381fecb9fb1663574265668883  /tmp/r42-base
+fca07c5bfe24a6209c95c5fa00269e07  /tmp/r42-v1-cand
+=== checks both sides Wed Nov 18 06:54:49 CST 2026 ===
+base_checks_exit=0
+cand_checks_exit=0
+... [67 lines elided] ...
+pair=6 variant=candidate mode=edit-lines exit=0
+pair=6 variant=candidate mode=presentation-token exit=0
+pair6 done Wed Nov 18 06:56:46 CST 2026
+c252aa381fecb9fb1663574265668883  /tmp/r42-base
+fca07c5bfe24a6209c95c5fa00269e07  /tmp/r42-v1-cand
+DONE Wed Nov 18 06:56:46 CST 2026

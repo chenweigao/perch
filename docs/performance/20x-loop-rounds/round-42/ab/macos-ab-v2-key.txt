@@ -1,0 +1,7 @@
+
+== macos-ab-r42v2 key metrics ==
+chain_total                               0.4550 ->    0.3600 (-20.88%) band= 5.56% sep=6/6f 0/6s SEPARATED
+commentary_chain_total                    0.6572 ->    0.4383 (-33.30%) band= 8.58% sep=6/6f 0/6s SEPARATED
+commentary_narrative                      0.0416 ->    0.0404 ( -2.77%) band= 9.64% sep=3/6f 2/6s within-noise
+commentary_presentation_upda              0.1452 ->    0.1430 ( -1.58%) band= 6.83% sep=4/6f 2/6s within-noise
+older_page_full_chain                     1.8350 ->    1.8500 ( +0.82%) band= 5.52% sep=2/6f 3/6s within-noise

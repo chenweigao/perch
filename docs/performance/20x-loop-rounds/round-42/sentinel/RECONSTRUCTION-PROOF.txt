@@ -1,0 +1,8 @@
+Sentinel script's trailing `git checkout HEAD -- Sources Tests` (HEAD =
+skeleton commit d0e3a3e2) wiped the uncommitted v1 product sources.
+Reconstruction from session context was proven byte-exact:
+  rebuilt release binary md5 = fca07c5bfe24a6209c95c5fa00269e07
+  sentinel-run candidate md5 = fca07c5bfe24a6209c95c5fa00269e07
+The base binary rebuilt later from d0e3a3e2 product sources is
+md5 c252aa381fecb9fb1663574265668883 — byte-identical to the round-41
+v7-era release base, cross-round reproducibility corroboration.

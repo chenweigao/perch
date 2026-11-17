@@ -1,0 +1,13 @@
+=== r42 battery start Wed Nov 18 07:05:13 CST 2026 ===
+m0-pristine exit=0 (must be 0)
+.local/round42/run-battery-r42.sh: line 22: 683295 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m1-delta-fork-drop DIED exit=132 killer=WorkbenchChecks/DisplayMessagesMemoTests.swift:86: Precondition failed: displayMessages memo diverged [assistant-delta-0] step 1: warm==false counts 3/3/3
+.local/round42/run-battery-r42.sh: line 22: 684816 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m2-prepend-fork-drop DIED exit=132 killer=WorkbenchChecks/DisplayMessagesMemoTests.swift:86: Precondition failed: displayMessages memo diverged [prepend-page] step 20: warm==false counts 3/3/5
+.local/round42/run-battery-r42.sh: line 22: 685995 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m3-never-store DIED exit=132 killer=WorkbenchChecks/DisplayMessagesMemoTests.swift:126: Precondition failed: warm and cold paths must both execute per lineage, got (hits: 0, misses: 2)
+.local/round42/run-battery-r42.sh: line 22: 687335 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m4-cache-blind DIED exit=132 killer=WorkbenchChecks/DisplayMessagesMemoTests.swift:126: Precondition failed: warm and cold paths must both execute per lineage, got (hits: 0, misses: 2)
+m5-toolprogress-fork-drop SURVIVED (expected — documented equivalent mutant)
+m6-reconcile-tail-fork-drop SURVIVED (expected — documented equivalent mutant)
+=== r42 battery done Wed Nov 18 07:06:32 CST 2026 ===
