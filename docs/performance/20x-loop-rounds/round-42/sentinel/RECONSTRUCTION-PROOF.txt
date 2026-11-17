@@ -1,6 +1,11 @@
 Sentinel script's trailing `git checkout HEAD -- Sources Tests` (HEAD =
 skeleton commit d0e3a3e2) wiped the uncommitted v1 product sources.
-Reconstruction from session context was proven byte-exact:
+Reconstruction from session context produced a byte-identical EXECUTABLE
+(review MINOR-3 qualification: this proves measured-executable equivalence
+under the recorded provenance, NOT source-byte identity — a comment-level
+difference would be invisible and no pre-incident source digest was
+archived; the adoption batch is unaffected because the Mac job built both
+sides from pinned pristine commits independently):
   rebuilt release binary md5 = fca07c5bfe24a6209c95c5fa00269e07
   sentinel-run candidate md5 = fca07c5bfe24a6209c95c5fa00269e07
 The base binary rebuilt later from d0e3a3e2 product sources is
