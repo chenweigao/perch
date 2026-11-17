@@ -286,7 +286,11 @@ public final class ToolVisibilityProjection {
         if let alignment {
             // The aligned cached turns keep their relative values; the base
             // absorbs the positional shift (new leading turns).
-            ownerBase = cachedOwnerBase + alignment.lowerBound
+            // Aligned turns keep their relative values: cached turn j moves
+            // from absolute (j + cachedOwnerBase... rel j - cachedOwnerBase)
+            // to alignment.lowerBound + (j - consumedLeading), so the base
+            // shifts by (lowerBound - consumedLeading).
+            ownerBase = cachedOwnerBase + alignment.lowerBound - consumedLeading
             var incremental = cachedOwner  // COW copy; old relative values stay valid
             if let consumedIdentities {
                 let consumedRelative = 0 - cachedOwnerBase

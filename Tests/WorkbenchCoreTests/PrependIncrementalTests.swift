@@ -10,16 +10,22 @@ import WorkbenchCore
 /// update (empty caches), while a WARM model carries the incremental
 /// state across the sequence. Every step feeds both models the identical
 /// input and requires identical rows, navigation, narrative key and both
-/// fold shapes. The matrix walks the paths the incremental fast route must
-/// match exactly: pure full-turn prepends, page-split partial turns, the
-/// MERGE of a partial leading turn by the next page (the case that consumes
-/// one cached turn), duplicate tool identities across page and window (the
-/// whole-window rejection path), interior edits forcing rebuilds, turn
-/// boundary growth interleaved with prepends, live tools anchored into a
-/// consumed turn, connection-state flips, language resets and duplicate
-/// message ids inside a page. A wrong base shift, a missing consumed-entry
-/// removal, or a wrong last-wins order in the incremental dictionary shows
-/// up here as a divergence from the fresh model.
+/// fold shapes, plus narrative-overlay presentations (the overlay path
+/// reads History.entryTurns — a wrong relative base attaches overlays to
+/// the wrong turns).
+///
+/// Scenario coverage: pure full-turn prepends; a page boundary splitting a
+/// turn and the next page MERGING it back (the path that consumes one
+/// cached leading turn in both structures); a REMEMBERED live tool whose
+/// dangling call lives in a completed turn (its observedByTurn placement
+/// reads owner[id] + base — a wrong base shift changes the tool's rendered
+/// status); interior edits forcing chunk rebuilds; turn-boundary growth;
+/// connection flips; language resets; trailing streaming deltas. A final
+/// poisoning phase on a second warm model covers the whole-window rejection
+/// routes: a prepended page duplicating an existing tool identity, a page
+/// with duplicate message ids, and a live tool anchored to the current
+/// prompt whose call sits in the prefix (separates() rejection) — after
+/// these, the chunk path stays disabled for the session, so they run last.
 func checkPrependIncremental() throws {
     func decode(_ raw: [[String: Any]]) throws -> [KimiMessage] {
         try KimiWire.decoder().decode([KimiMessage].self, from: JSONSerialization.data(withJSONObject: raw))
@@ -50,21 +56,32 @@ func checkPrependIncremental() throws {
         return rows
     }
 
+    // The trailing live turn carries a DANGLING tool call (no result) that
+    // stays live across the whole phase: once a turn boundary completes its
+    // turn, the tool becomes a remembered live tool of an earlier turn —
+    // observedByTurn then reads owner[call-LIVE-T] + base, making the
+    // relative-base arithmetic observable in the rendered tool status.
     var baseRaw = (0..<5).flatMap { turnRaw("A\($0)") }
-    // The trailing live turn (no final answer yet).
     baseRaw.append(["id": "u-live", "role": "user", "created_at": "4",
                     "content": [["type": "text", "text": "当前轮：正在进行。"]]])
     baseRaw.append(["id": "a-live", "role": "assistant", "created_at": "5",
-                    "content": [["type": "thinking", "thinking": "推进中……"]]])
+                    "content": [["type": "thinking", "thinking": "推进中……"],
+                                ["type": "tool_use", "tool_call_id": "call-LIVE-T",
+                                 "tool_name": "Bash", "input": ["command": "swift build"]]]])
+    let rememberedLive = try liveTool("call-LIVE-T", "Bash")
 
     let pageFull = (0..<3).flatMap { turnRaw("B\($0)") }        // three whole older turns
-    let pageC = (0..<2).flatMap { turnRaw("C\($0)", tools: 3) } // will be split across two pages
-    let splitAt = pageC.count / 2                               // a page boundary inside turn C0
+    let pageC = (0..<2).flatMap { turnRaw("C\($0)", tools: 3) } // split across two pages
+    // turnRaw(C0, tools: 3) is 5 messages (prompt, assistant, 3 results), so
+    // index 3 splits turn C0 itself: the back page carries a leading PARTIAL
+    // turn (two orphan results) that the front page later MERGES back.
+    let splitAt = 3
 
     let warm = ConversationPresentationModel(key: "s")
     var window = try decode(baseRaw)
     var step = 0
-    func compare(_ label: String, live: [KimiLiveTool] = [], running: Set<String> = [],
+    func compare(_ label: String, live: [KimiLiveTool] = [rememberedLive],
+                 running: Set<String> = ["call-LIVE-T"],
                  online: Bool = true, language: String = "zh") throws {
         step += 1
         let input = ConversationPresentationModel.Input(messages: window, live: live, running: running,
@@ -85,7 +102,9 @@ func checkPrependIncremental() throws {
         // Narrative overlays exercise History.entryTurns (the byTurn grouping
         // reads it): a wrong relative turn base attaches overlays to the
         // wrong turns and diverges here.
-        let overlayIDs = [w.rows.first?.entry.id, w.rows.dropFirst(2).first?.entry.id].compactMap { $0 }
+        // ALL row ids: a stale entryTurns mapping (e.g. a consumed turn's
+        // entries left behind) misplaces overlays on the merged turn's rows.
+        let overlayIDs = w.rows.map(\.entry.id)
         var overlay: [String: ActivityNarrativeRow] = [:]
         for id in overlayIDs {
             overlay[id] = ActivityNarrativeRow(narrative: .init(turnID: "u", stageID: "external-\(id)",
@@ -113,16 +132,7 @@ func checkPrependIncremental() throws {
     window = try decode(Array(pageC[..<splitAt])) + window
     try compare("prepend-completes-merged-turn")
 
-    // 3. a page whose tool identity duplicates one already in the window:
-    // both models must take the same (whole-window) rejection route
-    var dupRaw = turnRaw("D0")
-    dupRaw[1]["content"] = [["type": "text", "text": "重复调用。"],
-                            ["type": "tool_use", "tool_call_id": "call-A1-0",
-                             "tool_name": "Read", "input": ["file_path": "/repo/A1-0.swift"]]]
-    window = try decode(dupRaw) + window
-    try compare("prepend-duplicate-tool-identity")
-
-    // 4. interior edit (same id, changed text) then another prepend:
+    // 3. interior edit (same id, changed text) then another prepend:
     // the edited turn's chunk must rebuild, dropping to the full path
     var edited = window
     if let index = edited.firstIndex(where: { $0.id == "a-A0" }) {
@@ -136,53 +146,93 @@ func checkPrependIncremental() throws {
     window = try decode(turnRaw("E0")) + window
     try compare("prepend-after-edit")
 
-    // 5. tail growth (turn boundary) interleaved with a prepend
+    // 4. turn boundary: the live turn completes, call-LIVE-T becomes a
+    // remembered live tool of an earlier turn; the next prepends then run
+    // the incremental path WITH observedByTurn reading owner + base.
     window += try decode([["id": "u-live2", "role": "user", "created_at": "6",
                            "content": [["type": "text", "text": "新一轮：继续。"]]],
                           ["id": "a-live2", "role": "assistant", "created_at": "7",
                            "content": [["type": "thinking", "thinking": "思考中……"]]]])
     try compare("turn-boundary-growth")
     window = try decode(turnRaw("F0", tools: 1)) + window
-    try compare("prepend-after-boundary")
+    try compare("prepend-with-remembered-live")
+    window = try decode(turnRaw("F1")) + window
+    try compare("prepend-again-with-remembered-live")
 
-    // 6. live tool anchored into the turn a merge will consume
-    let liveID = "call-F0-0"
-    window = try decode((0..<2).flatMap { turnRaw("G\($0)") }) + window
-    try compare("prepend-with-live-tool", live: [try liveTool(liveID)], running: [liveID])
-
-    // 7. connection flip + prepend (chunk reuse breaks; caches must reset consistently)
-    try compare("offline", live: [try liveTool(liveID)], running: [liveID], online: false)
+    // 5. connection flip + prepend (chunk reuse breaks; caches must reset consistently)
+    try compare("offline", online: false)
     window = try decode(turnRaw("H0")) + window
-    try compare("prepend-offline", live: [try liveTool(liveID)], running: [liveID], online: false)
-    try compare("back-online", live: [try liveTool(liveID)], running: [liveID], online: true)
+    try compare("prepend-offline", online: false)
+    try compare("back-online")
 
-    // 8. language change (discardPrefix) then prepend
+    // 6. language change (discardPrefix) then prepend
     try compare("language-en", language: "en")
     window = try decode(turnRaw("I0")) + window
     try compare("prepend-after-language-change", language: "en")
 
-    // 9. duplicate MESSAGE ids inside one prepended page
-    let dupPage = turnRaw("J0") + turnRaw("J0")
-    window = try decode(dupPage) + window
-    try compare("prepend-page-with-duplicate-message-ids")
-
-    // 10. a live tool whose call is RECORDED in window history: its owner
-    // lookup (owner[id] + relative base) drives observedByTurn and the
-    // chunk's observed state — a wrong base shift misplaces the tool row.
+    // 7. a live tool whose call AND result are recorded in history (owner
+    // lookup with a redundant observed state) + prepend
     let historicLive = "call-A2-0"
-    try compare("live-tool-in-history", live: [try liveTool(historicLive)], running: [historicLive])
     window = try decode(turnRaw("K0")) + window
-    try compare("prepend-with-historic-live", live: [try liveTool(historicLive)], running: [historicLive])
+    try compare("prepend-with-historic-live",
+                live: [rememberedLive, try liveTool(historicLive)],
+                running: ["call-LIVE-T", historicLive])
 
-    // 11. streaming deltas after all prepends (the steady update path with
+    // 8. streaming deltas after all prepends (the steady update path with
     // the incremental caches in place)
     for tick in 0..<3 {
         if let index = window.lastIndex(where: { $0.id == "a-live2" }) {
             window[index] = try decode([["id": "a-live2", "role": "assistant", "created_at": "7",
                                          "content": [["type": "thinking", "thinking": "思考中……\(tick)"]]]])[0]
         }
-        try compare("streaming-delta-\(tick)")
+        try compare("streaming-delta-\(tick)",
+                    live: [rememberedLive, try liveTool(historicLive)],
+                    running: ["call-LIVE-T", historicLive])
     }
 
-    print("PASS: prepend incremental indexes — warm-vs-fresh differential equality over 11 scenario groups with narrative-overlay comparisons (pure prepends, page-split partial turn, the merge that consumes the cached leading turn, duplicate tool identity rejection, interior edit rebuild, turn-boundary growth, live tool anchored into a consumed turn, connection flips, language reset, duplicate page ids, a live tool recorded in history, trailing streaming deltas) comparing rows, navigation, narrative key, both fold shapes and overlay presentations per step")
+    // 9. POISONING phase (fresh warm model): routes that permanently reject
+    // the chunk path for the session — both models must agree everywhere.
+    let warm2 = ConversationPresentationModel(key: "s2")
+    var window2 = try decode(baseRaw)
+    var step2 = 0
+    func compare2(_ label: String) throws {
+        step2 += 1
+        let input = ConversationPresentationModel.Input(messages: window2, live: [], running: [],
+                                                        isRunning: true, online: true, epoch: "bench",
+                                                        language: "zh")
+        let fresh2 = ConversationPresentationModel(key: "s2")
+        let w = warm2.update(input)
+        let f = fresh2.update(input)
+        precondition(w.rows == f.rows, "poison step \(step2) (\(label)): rows diverged")
+        precondition(w.navigation == f.navigation, "poison step \(step2) (\(label)): navigation diverged")
+        precondition(w.presented(activity: [:], foldsProcess: true, isRunning: true)
+                     == f.presented(activity: [:], foldsProcess: true, isRunning: true),
+                     "poison step \(step2) (\(label)): presentation diverged")
+    }
+    try compare2("baseline")
+    // a prepended page whose tool identity duplicates one already in the window
+    var dupRaw = turnRaw("D0")
+    dupRaw[1]["content"] = [["type": "text", "text": "重复调用。"],
+                            ["type": "tool_use", "tool_call_id": "call-A1-0",
+                             "tool_name": "Read", "input": ["file_path": "/repo/A1-0.swift"]]]
+    window2 = try decode(dupRaw) + window2
+    try compare2("prepend-duplicate-tool-identity")
+    // duplicate MESSAGE ids inside one prepended page
+    window2 = try decode(turnRaw("J0") + turnRaw("J0")) + window2
+    try compare2("prepend-page-with-duplicate-message-ids")
+    // a live tool anchored to the CURRENT prompt whose call sits in the
+    // prefix: separates() rejects the split projection (whole-window route)
+    let anchoredLive = "call-A3-0"
+    window2 = try decode(turnRaw("L0")) + window2
+    let input3 = ConversationPresentationModel.Input(messages: window2,
+                                                     live: [try liveTool(anchoredLive)],
+                                                     running: [anchoredLive],
+                                                     isRunning: true, online: true, epoch: "bench",
+                                                     language: "zh")
+    let w3 = warm2.update(input3)
+    let f3 = ConversationPresentationModel(key: "s2").update(input3)
+    precondition(w3.rows == f3.rows && w3.navigation == f3.navigation,
+                 "poison step (anchored-live): diverged")
+
+    print("PASS: prepend incremental indexes — warm-vs-fresh differential equality over 9 scenario groups with narrative-overlay comparisons (pure prepends, page-split partial turn, the merge that consumes the cached leading turn, remembered live tool whose observedByTurn placement reads owner+base, interior edit rebuild, turn-boundary growth, connection flips, language reset, trailing streaming deltas) plus the poisoning phase (duplicate tool identity, duplicate page message ids, anchored-live separates rejection) against the full-rebuild reference")
 }

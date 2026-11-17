@@ -148,7 +148,10 @@ public final class ConversationPresentationModel {
                 }
             }
             if let prior, let match = matched {
-                let base = prior.turnIndexBase + match.leadingNew
+                // Suffix turns keep their relative values: a prior turn at
+                // absolute p moves to leadingNew + (p - consumed), so the
+                // base shifts by (leadingNew - consumed).
+                let base = prior.turnIndexBase + match.leadingNew - match.consumed
                 var entryTurns = prior.entryTurns  // COW copy
                 if match.consumed > 0 {
                     // Drop the consumed leading turn's entries; the merged
