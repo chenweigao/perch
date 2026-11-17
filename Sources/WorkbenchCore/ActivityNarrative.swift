@@ -70,6 +70,36 @@ public final class NarrativeTextCache: @unchecked Sendable {
         value(&narratives, text, make)
     }
 
+    /// One tool step's pure resolution against the live tool table: everything
+    /// `make` derives from the VisibleTool value alone (phase, compact target,
+    /// shell headline, incidental flag). The stage-assembly decisions around it
+    /// depend on prior stages and are NOT part of the resolution.
+    struct ToolResolution: Equatable, Sendable {
+        let phase: ActivityNarrativePhase
+        let target: String
+        let headline: String
+        let incidental: Bool
+    }
+
+    private var toolResolutions: [String: (tool: VisibleTool, resolution: ToolResolution)] = [:]
+
+    /// A tool step's resolution, reusable while the tool VALUE is unchanged.
+    /// Streaming deltas revisit every completed tool of the live turn on each
+    /// update while only the running tool's value moves; the full-value check
+    /// (same doctrine as steps(for:)) recomputes exactly when status, input,
+    /// output or progress moved, so results are identical to deriving fresh.
+    func resolution(for tool: VisibleTool, derive: () -> ToolResolution) -> ToolResolution {
+        lock.lock()
+        if let hit = toolResolutions[tool.id], hit.tool == tool { lock.unlock(); return hit.resolution }
+        lock.unlock()
+        let derived = derive()
+        lock.lock()
+        if toolResolutions.count > 65536 { toolResolutions.removeAll() }
+        toolResolutions[tool.id] = (tool, derived)
+        lock.unlock()
+        return derived
+    }
+
     /// An entry's ordered fold steps, reusable while the entry's messages and
     /// presentation are unchanged. Full values, not an id hash, are the validation:
     /// a reused id with edited content or a running state change must recompute.
@@ -676,19 +706,30 @@ public enum ActivityNarrativeProjection {
                     }
                 case .tool(let part):
                     guard let id = part.toolCallId, let tool = tools[id] else { continue }
-                    let nextPhase = toolPhase(tool)
-                    let target = ToolPresentation.compactTarget(tool)
-                    let shellCommand = ShellActivity.command(tool)
-                    let shell = shellCommand.flatMap(ShellActivity.parse)
-                    let headline: String
-                    if shellCommand != nil, nextPhase != .blocked {
-                        let description = tool.input?["description"].string?.trimmingCharacters(in: .whitespacesAndNewlines)
-                        headline = description.flatMap { $0.isEmpty ? nil : $0 }
-                            ?? shell?.headline ?? L("准备命令环境")
-                    } else { headline = localHeadline(nextPhase, target: target) }
-                    // Waiting/setup commands are evidence within the current task,
-                    // not a new semantic stage that displaces explicit progress.
-                    let incidental = shellCommand != nil && (shell?.category == nil || shell?.category == "wait") && nextPhase != .blocked
+                    // Round 38: the tool step's resolution is a pure function of
+                    // the tool value; memoize it with full-value validation so a
+                    // streaming delta only re-derives the tools that moved.
+                    let resolution = cache.resolution(for: tool) {
+                        let phaseValue = toolPhase(tool)
+                        let targetValue = ToolPresentation.compactTarget(tool)
+                        let shellCommand = ShellActivity.command(tool)
+                        let shell = shellCommand.flatMap(ShellActivity.parse)
+                        let headlineValue: String
+                        if shellCommand != nil, phaseValue != .blocked {
+                            let description = tool.input?["description"].string?.trimmingCharacters(in: .whitespacesAndNewlines)
+                            headlineValue = description.flatMap { $0.isEmpty ? nil : $0 }
+                                ?? shell?.headline ?? L("准备命令环境")
+                        } else { headlineValue = localHeadline(phaseValue, target: targetValue) }
+                        // Waiting/setup commands are evidence within the current task,
+                        // not a new semantic stage that displaces explicit progress.
+                        let incidentalValue = shellCommand != nil && (shell?.category == nil || shell?.category == "wait") && phaseValue != .blocked
+                        return NarrativeTextCache.ToolResolution(phase: phaseValue, target: targetValue,
+                                                                 headline: headlineValue, incidental: incidentalValue)
+                    }
+                    let nextPhase = resolution.phase
+                    let target = resolution.target
+                    let headline = resolution.headline
+                    let incidental = resolution.incidental
                     let needsStage = stages.isEmpty || (!incidental && stages.last!.narrative.phase != nextPhase && !stages.last!.toolIDs.isEmpty)
                     if needsStage {
                         appendStage(id: "stage:\(turnID):tool:\(id)", phase: nextPhase, subject: target,
