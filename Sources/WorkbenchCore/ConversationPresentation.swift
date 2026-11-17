@@ -104,8 +104,14 @@ public final class ConversationPresentationModel {
     final class History {
         let turns: [HistoryTurn]
         let rows: [Row]
-        /// Entry id -> index of its turn.
+        /// Entry id -> its turn's index RELATIVE to `turnIndexBase` (absolute
+        /// index = stored value + base). Round 35: the offset indirection lets
+        /// a prepended page reuse the prior dictionary by copy-on-write — old
+        /// relative values survive the positional shift untouched, and only the
+        /// new leading turns' rows are inserted, instead of rehashing every
+        /// entry id in the window per prepend.
         private let entryTurns: [String: Int]
+        private let turnIndexBase: Int
         private let uniqueEntries: Bool
         let navigation: [ConversationTurnSummary]
         let turnCount: Int
@@ -113,18 +119,74 @@ public final class ConversationPresentationModel {
         var cost = 0
         private var presentation: (activity: [String: ActivityNarrativeRow], foldsProcess: Bool, value: Presentation)?
 
-        init(turns: [HistoryTurn] = [], turnCount: Int = 0, source: ToolVisibilityProjection.Prefix? = nil) {
+        init(turns: [HistoryTurn] = [], turnCount: Int = 0, source: ToolVisibilityProjection.Prefix? = nil,
+             prior: History? = nil) {
             self.turns = turns; self.turnCount = turnCount; self.source = source
-            var rows: [Row] = [], navigation: [ConversationTurnSummary] = [], entryTurns: [String: Int] = [:]
+            var rows: [Row] = [], navigation: [ConversationTurnSummary] = []
             rows.reserveCapacity(turns.reduce(0) { $0 + $1.rows.count })
-            entryTurns.reserveCapacity(rows.capacity)
-            for (index, turn) in turns.enumerated() {
+            for turn in turns {
                 rows.append(contentsOf: turn.rows)
                 navigation.append(contentsOf: turn.navigation)
-                for row in turn.rows { entryTurns[row.entry.id] = index }
             }
-            self.rows = rows; self.navigation = navigation; self.entryTurns = entryTurns
-            uniqueEntries = entryTurns.count == rows.count
+            // Prepend detection with merge tolerance: a suffix of prior.turns
+            // matches the tail of `turns` by INSTANCE identity, with new turns
+            // only at the front. At most the FIRST prior turn may be missing:
+            // a page boundary can split a turn whose head the next page
+            // merges into a new leading turn (fresh HistoryTurn instance).
+            // Anything deeper (an edited or rebuilt interior turn) falls back
+            // to the full build.
+            var matched: (consumed: Int, leadingNew: Int)?
+            if let prior, !prior.turns.isEmpty {
+                for consumed in 0..<min(2, prior.turns.count) {
+                    let suffixCount = prior.turns.count - consumed
+                    let k = turns.count - suffixCount
+                    guard k >= 1, turns.count >= suffixCount else { continue }
+                    if (0..<suffixCount).allSatisfy({ turns[k + $0] === prior.turns[consumed + $0] }) {
+                        matched = (consumed, k)
+                        break
+                    }
+                }
+            }
+            if let prior, let match = matched {
+                let base = prior.turnIndexBase + match.leadingNew
+                var entryTurns = prior.entryTurns  // COW copy
+                if match.consumed > 0 {
+                    // Drop the consumed leading turn's entries; the merged
+                    // turn re-inserts the ids it still carries below.
+                    let consumedRelative = 0 - prior.turnIndexBase
+                    for row in prior.turns[0].rows where entryTurns[row.entry.id] == consumedRelative {
+                        entryTurns.removeValue(forKey: row.entry.id)
+                    }
+                }
+                var inserted: Set<String> = []
+                for j in 0..<match.leadingNew {
+                    for row in turns[j].rows {
+                        let id = row.entry.id
+                        // Full-build semantics are "last occurrence wins":
+                        // the prior suffix turns sit AFTER the new leading
+                        // ones, so an id they hold keeps that (later) turn;
+                        // among the new turns a later j overwrites an earlier.
+                        if inserted.contains(id) {
+                            entryTurns[id] = j - base
+                        } else if entryTurns[id] == nil {
+                            entryTurns[id] = j - base
+                            inserted.insert(id)
+                        }
+                    }
+                }
+                self.turnIndexBase = base
+                self.entryTurns = entryTurns
+            } else {
+                var entryTurns: [String: Int] = [:]
+                entryTurns.reserveCapacity(rows.capacity)
+                for (index, turn) in turns.enumerated() {
+                    for row in turn.rows { entryTurns[row.entry.id] = index }
+                }
+                self.turnIndexBase = 0
+                self.entryTurns = entryTurns
+            }
+            self.rows = rows; self.navigation = navigation
+            uniqueEntries = self.entryTurns.count == rows.count
         }
 
         func contains(entry id: String) -> Bool { entryTurns[id] != nil }
@@ -137,7 +199,8 @@ public final class ConversationPresentationModel {
             var relevant: [String: ActivityNarrativeRow] = [:]
             var byTurn: [Int: [String: ActivityNarrativeRow]] = [:]
             for (id, narrative) in activity {
-                guard let turn = entryTurns[id] else { continue }
+                guard let relative = entryTurns[id] else { continue }
+                let turn = relative + turnIndexBase
                 relevant[id] = narrative; byTurn[turn, default: [:]][id] = narrative
             }
             if let presentation, presentation.foldsProcess == foldsProcess, presentation.activity == relevant {
@@ -385,7 +448,8 @@ public final class ConversationPresentationModel {
                     next[id] = turn; built.append(turn)
                 }
                 historyTurns = next
-                earlier = History(turns: built, turnCount: chunks.count, source: parts.prefix)
+                earlier = History(turns: built, turnCount: chunks.count, source: parts.prefix,
+                                  prior: history)
             } else {
                 let timeline = turns.update(parts.prefix.messages, isRunning: false)
                 reusedTurnCount = timeline.reusedTurnCount; rebuiltTurnCount = timeline.rebuiltTurnCount
