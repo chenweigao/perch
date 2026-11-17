@@ -48,6 +48,28 @@ func checkToolResolutionMemo() throws {
                      "step \(index): memoized narrative diverged from the fresh-cache oracle")
         precondition(!shared.stages.isEmpty, "step \(index): fixture must produce stages")
     }
+    // Language-switch leg (review F1): resolutions embed localized strings
+    // (phase.label, shell headlines, L() fallbacks all read
+    // AppLanguage.current at derive time). After a UI language change the
+    // shared-cache path must re-derive and match the fresh-cache oracle.
+    // Platform disclosure: on Linux L() resolves to the identity key text,
+    // so this leg is vacuous-by-platform there (the per-entry language
+    // token is still exercised); on Darwin it runs against real bundles.
+    let defaultsKey = AppLanguage.defaultsKey
+    let priorLanguage = UserDefaults.standard.string(forKey: defaultsKey)
+    for language in ["en", "zh-Hans", "en"] {
+        UserDefaults.standard.set(language, forKey: defaultsKey)
+        let tool = toolValue("git status", status: .running)
+        let shared = ActivityNarrativeProjection.make(entries: entries, tools: [tool.id: tool],
+                                                      isRunning: true, cache: cache)
+        let oracle = ActivityNarrativeProjection.make(entries: entries, tools: [tool.id: tool],
+                                                      isRunning: true, cache: NarrativeTextCache())
+        precondition(shared == oracle,
+                     "language \(language): memo diverged from the fresh-cache oracle after a language switch")
+    }
+    if let priorLanguage { UserDefaults.standard.set(priorLanguage, forKey: defaultsKey) }
+    else { UserDefaults.standard.removeObject(forKey: defaultsKey) }
+
     // Anti-blind: the sequence must actually move the observable narrative,
     // otherwise every snapshot comparison above could pass vacuously.
     let running = ActivityNarrativeProjection.make(entries: entries,
@@ -56,5 +78,5 @@ func checkToolResolutionMemo() throws {
         tools: ["shell1": sequence[5]], isRunning: true)
     precondition(running != blocked,
                  "fixture blind: a status change must change the narrative")
-    print("PASS: tool resolution memo — shared-cache vs fresh-cache differential over a value-change sequence (status transitions, input change, wait category, value revisit) with anti-blind divergence assertion")
+    print("PASS: tool resolution memo — shared-cache vs fresh-cache differential over a value-change sequence (status transitions, input change, wait category, value revisit), a language-switch leg (review F1; vacuous-by-platform on Linux where L() is identity, live on Darwin), and an anti-blind divergence assertion")
 }

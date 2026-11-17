@@ -81,23 +81,40 @@ public final class NarrativeTextCache: @unchecked Sendable {
         let incidental: Bool
     }
 
-    private var toolResolutions: [String: (tool: VisibleTool, resolution: ToolResolution)] = [:]
+    private var toolResolutions: [String: (tool: VisibleTool, language: String, resolution: ToolResolution)] = [:]
 
-    /// A tool step's resolution, reusable while the tool VALUE is unchanged.
-    /// Streaming deltas revisit every completed tool of the live turn on each
-    /// update while only the running tool's value moves; the full-value check
-    /// (same doctrine as steps(for:)) recomputes exactly when status, input,
-    /// output or progress moved, so results are identical to deriving fresh.
-    func resolution(for tool: VisibleTool, derive: () -> ToolResolution) -> ToolResolution {
+    /// A tool step's resolution, reusable while the tool VALUE and the UI
+    /// language are unchanged. Streaming deltas revisit every completed tool
+    /// of the live turn on each update while only the running tool's value
+    /// moves; the full-value check (same doctrine as steps(for:)) recomputes
+    /// exactly when status, input, output or progress moved. Unlike steps,
+    /// the resolution embeds LOCALIZED strings (phase.label, shell headlines,
+    /// L() fallbacks read AppLanguage.current at derive time), so the entry
+    /// also records the resolved language and misses when it moved — a
+    /// language switch re-derives every resolution (review F1).
+    func resolution(for tool: VisibleTool, language: String, derive: () -> ToolResolution) -> ToolResolution {
         lock.lock()
-        if let hit = toolResolutions[tool.id], hit.tool == tool { lock.unlock(); return hit.resolution }
+        if let hit = toolResolutions[tool.id], hit.tool == tool, hit.language == language {
+            lock.unlock(); return hit.resolution
+        }
         lock.unlock()
         let derived = derive()
         lock.lock()
         if toolResolutions.count > 65536 { toolResolutions.removeAll() }
-        toolResolutions[tool.id] = (tool, derived)
+        toolResolutions[tool.id] = (tool, language, derived)
         lock.unlock()
         return derived
+    }
+
+    /// Drop every tool resolution (localized strings) while keeping the
+    /// language-neutral steps and text tables. Called on the model's
+    /// language/epoch reset as hygiene; correctness rides on the per-entry
+    /// language validation above, which also covers a UserDefaults language
+    /// change that never surfaces as an input.language change.
+    func invalidateToolResolutions() {
+        lock.lock()
+        toolResolutions.removeAll()
+        lock.unlock()
     }
 
     /// An entry's ordered fold steps, reusable while the entry's messages and
@@ -604,6 +621,9 @@ public enum ActivityNarrativeProjection {
 
         var stages: [Builder] = []
         var entryStageIDs: [String: String] = [:]
+        // Captured once per call: the resolution memo validates against this
+        // token because its headlines embed L() output (AppLanguage.current).
+        let resolutionLanguage = AppLanguage.current.localization
 
         // Keywords matched against agent text in either language, not UI labels.
         // Only unresolved tool states (missingResult / disconnected) mark a stage
@@ -707,9 +727,10 @@ public enum ActivityNarrativeProjection {
                 case .tool(let part):
                     guard let id = part.toolCallId, let tool = tools[id] else { continue }
                     // Round 38: the tool step's resolution is a pure function of
-                    // the tool value; memoize it with full-value validation so a
-                    // streaming delta only re-derives the tools that moved.
-                    let resolution = cache.resolution(for: tool) {
+                    // the tool value AND the UI language; memoize it with
+                    // full-value + language validation so a streaming delta
+                    // only re-derives the tools that moved.
+                    let resolution = cache.resolution(for: tool, language: resolutionLanguage) {
                         let phaseValue = toolPhase(tool)
                         let targetValue = ToolPresentation.compactTarget(tool)
                         let shellCommand = ShellActivity.command(tool)
