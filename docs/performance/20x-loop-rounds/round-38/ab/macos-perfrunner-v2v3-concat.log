@@ -1,0 +1,172 @@
+=== prepare Tue Nov 17 20:08:01 CST 2026 ===
+From github.com:chenweigao/perch
+   80969b9d..4adc09f4  perf/20x-loop-38-20261117 -> origin/perf/20x-loop-38-20261117
+porcelain_preclean=0
+Previous HEAD position was 80969b9d perf(core): round-38 v1 — memoize narrative tool-step resolution with full-value validation
+HEAD is now at 6ac65f97 Merge pull request #359 from chenweigao/perf/20x-loop-37-20261117
+HEAD_base=6ac65f9736b5d90867c026dbecf512ce685c092e
+=== base build (pristine 529d41e) Tue Nov 17 20:08:05 CST 2026 ===
+base_build_exit=0
+=== candidate checkout + build (740b5f2e) Tue Nov 17 20:09:22 CST 2026 ===
+Previous HEAD position was 6ac65f97 Merge pull request #359 from chenweigao/perf/20x-loop-37-20261117
+HEAD is now at 4adc09f4 perf(core): round-38 v2 — record the UI language in the tool-resolution memo (review F1)
+HEAD_cand=4adc09f47ee7143503977a6d15397ee1c977b5c5
+cand_build_exit=0
+fb1999dbc1da9c48f1c475729522cdd38a7d182d1f4f718e82f9cba8b16756cb  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round38v2-ab-base/out/Products/Release/WorkbenchChecks
+2c619dd0d80bd30e6f93b54feef4e327d4f2d22956a62247fb3480f8b49e868b  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round38v2-ab-cand/out/Products/Release/WorkbenchChecks
+=== checks both sides (base = round-30 pin set, record; cand = gate) Tue Nov 17 20:10:39 CST 2026 ===
+base_checks_exit=0 pass=110
+cand_checks_exit=0 pass=111
+PASS: prefix cache — round-30 key encoding at prefix-table level (canonical-reorder DICTIONARY-LEVEL retrieval refusal), round-12 window predicate as the only reuse gate (same-count edit / NFD rebuild / count change refused), reference adoption (=== node), exact retention-inclusive accounting (INDEPENDENTLY hand-computed window walk + node excerpts + expanded payload costs incl. fileId/offsets/element-stride storage + entry-ID dictionary keys + node key + query bytes), replace accounting, generation-guarded store, budget-0 oracle, concrete LRU, oversized node AND key refusal, heavy window+payload JSONValue retention (24KB-budget refusal), REVIEW-shape refusals (fileId window / 2000-empty-part window / 4096-offset payload), query-storage normalization over a turn-advance chain of independently decoded queries (single shared buffer), mechanism SENTINELS (hits() must consume the shared node; turn advance must convert Entries.shared payloads — perf-only bypass mutants die), locale invalidation, removeAll, 8x100 concurrency single-copy accounting, four-regime (all-three-tiers budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 8 queries at canonical AND byte level, shared-warm non-vacuity, round-33 concat-guard consumption on ALL FIVE routes (rebuild/shared-adoption/running-true-adoption/instance-earlier/advance SHARE the node's hits storage; non-empty suffix concatenates independently; caller mutation COWs), and the staleness matrix (prefix edit/options/running/turn-boundary across instances + within-instance advance over an adopted shared node) against the budget-0 oracle
+=== pairs Tue Nov 17 20:11:04 CST 2026 ===
+pair=1 variant=baseline mode=1 exit=0
+pair=1 variant=baseline mode=streaming exit=0
+pair=1 variant=baseline mode=activity exit=0
+pair=1 variant=baseline mode=edit-lines exit=0
+pair=1 variant=baseline mode=presentation-token exit=0
+pair=1 variant=candidate mode=1 exit=0
+pair=1 variant=candidate mode=streaming exit=0
+pair=1 variant=candidate mode=activity exit=0
+pair=1 variant=candidate mode=edit-lines exit=0
+pair=1 variant=candidate mode=presentation-token exit=0
+pair=2 variant=baseline mode=1 exit=0
+pair=2 variant=baseline mode=streaming exit=0
+pair=2 variant=baseline mode=activity exit=0
+pair=2 variant=baseline mode=edit-lines exit=0
+pair=2 variant=baseline mode=presentation-token exit=0
+pair=2 variant=candidate mode=1 exit=0
+pair=2 variant=candidate mode=streaming exit=0
+pair=2 variant=candidate mode=activity exit=0
+pair=2 variant=candidate mode=edit-lines exit=0
+pair=2 variant=candidate mode=presentation-token exit=0
+pair=3 variant=baseline mode=1 exit=0
+pair=3 variant=baseline mode=streaming exit=0
+pair=3 variant=baseline mode=activity exit=0
+pair=3 variant=baseline mode=edit-lines exit=0
+pair=3 variant=baseline mode=presentation-token exit=0
+pair=3 variant=candidate mode=1 exit=0
+pair=3 variant=candidate mode=streaming exit=0
+pair=3 variant=candidate mode=activity exit=0
+pair=3 variant=candidate mode=edit-lines exit=0
+pair=3 variant=candidate mode=presentation-token exit=0
+pair=4 variant=baseline mode=1 exit=0
+pair=4 variant=baseline mode=streaming exit=0
+pair=4 variant=baseline mode=activity exit=0
+pair=4 variant=baseline mode=edit-lines exit=0
+pair=4 variant=baseline mode=presentation-token exit=0
+pair=4 variant=candidate mode=1 exit=0
+pair=4 variant=candidate mode=streaming exit=0
+pair=4 variant=candidate mode=activity exit=0
+pair=4 variant=candidate mode=edit-lines exit=0
+pair=4 variant=candidate mode=presentation-token exit=0
+pair=5 variant=baseline mode=1 exit=0
+pair=5 variant=baseline mode=streaming exit=0
+pair=5 variant=baseline mode=activity exit=0
+pair=5 variant=baseline mode=edit-lines exit=0
+pair=5 variant=baseline mode=presentation-token exit=0
+pair=5 variant=candidate mode=1 exit=0
+pair=5 variant=candidate mode=streaming exit=0
+pair=5 variant=candidate mode=activity exit=0
+pair=5 variant=candidate mode=edit-lines exit=0
+pair=5 variant=candidate mode=presentation-token exit=0
+pair=6 variant=baseline mode=1 exit=0
+pair=6 variant=baseline mode=streaming exit=0
+pair=6 variant=baseline mode=activity exit=0
+pair=6 variant=baseline mode=edit-lines exit=0
+pair=6 variant=baseline mode=presentation-token exit=0
+pair=6 variant=candidate mode=1 exit=0
+pair=6 variant=candidate mode=streaming exit=0
+pair=6 variant=candidate mode=activity exit=0
+pair=6 variant=candidate mode=edit-lines exit=0
+pair=6 variant=candidate mode=presentation-token exit=0
+fb1999dbc1da9c48f1c475729522cdd38a7d182d1f4f718e82f9cba8b16756cb  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round38v2-ab-base/out/Products/Release/WorkbenchChecks
+2c619dd0d80bd30e6f93b54feef4e327d4f2d22956a62247fb3480f8b49e868b  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round38v2-ab-cand/out/Products/Release/WorkbenchChecks
+porcelain_after=0
+DONE Tue Nov 17 20:12:22 CST 2026
+exit=0
+=== prepare Tue Nov 17 20:31:34 CST 2026 ===
+From github.com:chenweigao/perch
+   4adc09f4..a867c35f  perf/20x-loop-38-20261117 -> origin/perf/20x-loop-38-20261117
+porcelain_preclean=0
+Previous HEAD position was 4adc09f4 perf(core): round-38 v2 — record the UI language in the tool-resolution memo (review F1)
+HEAD is now at 6ac65f97 Merge pull request #359 from chenweigao/perf/20x-loop-37-20261117
+HEAD_base=6ac65f9736b5d90867c026dbecf512ce685c092e
+=== base build (pristine 529d41e) Tue Nov 17 20:31:38 CST 2026 ===
+base_build_exit=0
+=== candidate checkout + build (740b5f2e) Tue Nov 17 20:32:54 CST 2026 ===
+Previous HEAD position was 6ac65f97 Merge pull request #359 from chenweigao/perf/20x-loop-37-20261117
+HEAD is now at a867c35f perf(core): round-38 v3 — cheap language token (rawValue) for the resolution memo
+HEAD_cand=a867c35fe5ef2d2a5fb5834db4c551740baa23b2
+cand_build_exit=0
+81633ef5bc18efb50a5e2a1193883f95b420cfffc91028f9ac1967f420808772  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round38v3-ab-base/out/Products/Release/WorkbenchChecks
+c97aa9e8125e0180192960ac25bee1146bbb06632c312af181cd8dec0a1c53dd  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round38v3-ab-cand/out/Products/Release/WorkbenchChecks
+=== checks both sides (base = round-30 pin set, record; cand = gate) Tue Nov 17 20:34:12 CST 2026 ===
+base_checks_exit=0 pass=110
+cand_checks_exit=0 pass=111
+PASS: prefix cache — round-30 key encoding at prefix-table level (canonical-reorder DICTIONARY-LEVEL retrieval refusal), round-12 window predicate as the only reuse gate (same-count edit / NFD rebuild / count change refused), reference adoption (=== node), exact retention-inclusive accounting (INDEPENDENTLY hand-computed window walk + node excerpts + expanded payload costs incl. fileId/offsets/element-stride storage + entry-ID dictionary keys + node key + query bytes), replace accounting, generation-guarded store, budget-0 oracle, concrete LRU, oversized node AND key refusal, heavy window+payload JSONValue retention (24KB-budget refusal), REVIEW-shape refusals (fileId window / 2000-empty-part window / 4096-offset payload), query-storage normalization over a turn-advance chain of independently decoded queries (single shared buffer), mechanism SENTINELS (hits() must consume the shared node; turn advance must convert Entries.shared payloads — perf-only bypass mutants die), locale invalidation, removeAll, 8x100 concurrency single-copy accounting, four-regime (all-three-tiers budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 8 queries at canonical AND byte level, shared-warm non-vacuity, round-33 concat-guard consumption on ALL FIVE routes (rebuild/shared-adoption/running-true-adoption/instance-earlier/advance SHARE the node's hits storage; non-empty suffix concatenates independently; caller mutation COWs), and the staleness matrix (prefix edit/options/running/turn-boundary across instances + within-instance advance over an adopted shared node) against the budget-0 oracle
+=== pairs Tue Nov 17 20:34:36 CST 2026 ===
+pair=1 variant=baseline mode=1 exit=0
+pair=1 variant=baseline mode=streaming exit=0
+pair=1 variant=baseline mode=activity exit=0
+pair=1 variant=baseline mode=edit-lines exit=0
+pair=1 variant=baseline mode=presentation-token exit=0
+pair=1 variant=candidate mode=1 exit=0
+pair=1 variant=candidate mode=streaming exit=0
+pair=1 variant=candidate mode=activity exit=0
+pair=1 variant=candidate mode=edit-lines exit=0
+pair=1 variant=candidate mode=presentation-token exit=0
+pair=2 variant=baseline mode=1 exit=0
+pair=2 variant=baseline mode=streaming exit=0
+pair=2 variant=baseline mode=activity exit=0
+pair=2 variant=baseline mode=edit-lines exit=0
+pair=2 variant=baseline mode=presentation-token exit=0
+pair=2 variant=candidate mode=1 exit=0
+pair=2 variant=candidate mode=streaming exit=0
+pair=2 variant=candidate mode=activity exit=0
+pair=2 variant=candidate mode=edit-lines exit=0
+pair=2 variant=candidate mode=presentation-token exit=0
+pair=3 variant=baseline mode=1 exit=0
+pair=3 variant=baseline mode=streaming exit=0
+pair=3 variant=baseline mode=activity exit=0
+pair=3 variant=baseline mode=edit-lines exit=0
+pair=3 variant=baseline mode=presentation-token exit=0
+pair=3 variant=candidate mode=1 exit=0
+pair=3 variant=candidate mode=streaming exit=0
+pair=3 variant=candidate mode=activity exit=0
+pair=3 variant=candidate mode=edit-lines exit=0
+pair=3 variant=candidate mode=presentation-token exit=0
+pair=4 variant=baseline mode=1 exit=0
+pair=4 variant=baseline mode=streaming exit=0
+pair=4 variant=baseline mode=activity exit=0
+pair=4 variant=baseline mode=edit-lines exit=0
+pair=4 variant=baseline mode=presentation-token exit=0
+pair=4 variant=candidate mode=1 exit=0
+pair=4 variant=candidate mode=streaming exit=0
+pair=4 variant=candidate mode=activity exit=0
+pair=4 variant=candidate mode=edit-lines exit=0
+pair=4 variant=candidate mode=presentation-token exit=0
+pair=5 variant=baseline mode=1 exit=0
+pair=5 variant=baseline mode=streaming exit=0
+pair=5 variant=baseline mode=activity exit=0
+pair=5 variant=baseline mode=edit-lines exit=0
+pair=5 variant=baseline mode=presentation-token exit=0
+pair=5 variant=candidate mode=1 exit=0
+pair=5 variant=candidate mode=streaming exit=0
+pair=5 variant=candidate mode=activity exit=0
+pair=5 variant=candidate mode=edit-lines exit=0
+pair=5 variant=candidate mode=presentation-token exit=0
+pair=6 variant=baseline mode=1 exit=0
+pair=6 variant=baseline mode=streaming exit=0
+pair=6 variant=baseline mode=activity exit=0
+pair=6 variant=baseline mode=edit-lines exit=0
+pair=6 variant=baseline mode=presentation-token exit=0
+pair=6 variant=candidate mode=1 exit=0
+pair=6 variant=candidate mode=streaming exit=0
+pair=6 variant=candidate mode=activity exit=0
+pair=6 variant=candidate mode=edit-lines exit=0
+pair=6 variant=candidate mode=presentation-token exit=0
+81633ef5bc18efb50a5e2a1193883f95b420cfffc91028f9ac1967f420808772  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round38v3-ab-base/out/Products/Release/WorkbenchChecks
+c97aa9e8125e0180192960ac25bee1146bbb06632c312af181cd8dec0a1c53dd  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round38v3-ab-cand/out/Products/Release/WorkbenchChecks
+porcelain_after=0
+DONE Tue Nov 17 20:35:54 CST 2026
+exit=0

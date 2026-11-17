@@ -495,9 +495,9 @@ public final class ConversationPresentationModel {
         if let previous, previous.epoch != input.epoch { tools = ToolVisibilityProjection() }
         if let previous, previous.epoch != input.epoch || previous.language != input.language {
             turns = ConversationProjection(); history = nil; historyTurns = [:]; tools.discardPrefix()
-            // Round 38 (review F1 hygiene): tool resolutions embed localized
-            // strings; the per-entry language token is the correctness gate,
-            // this drop just frees the stale-language entries eagerly.
+            // Round 38 (review F1, load-bearing): the raw-setting memo token
+            // covers setting flips; a .system system-language change instead
+            // moves Input.language, firing this reset — its correctness gate.
             narrativeCache.invalidateToolResolutions()
         }
         let resetEnded = timestamp()

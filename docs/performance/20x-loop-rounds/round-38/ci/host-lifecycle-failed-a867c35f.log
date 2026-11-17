@@ -1,0 +1,28 @@
+Host lifecycle fixture ready in 0.10 s
+/Users/<runner>/work/perch/perch/build/Perch Design Preview.app: replacing existing signature
+Persistent native design preview: /Users/<runner>/work/perch/perch/build/Perch Design Preview.app
+Running host lifecycle phase: activity-bar
+PASS: activity bar state transitions, pending/reconnect actions, composer turn feedback, factual tool activity and Recap target
+PASS: live footer phases, stable geometry, visible native motion, waiting/reduced/hidden pause, locale refresh and completed teardown
+Passed host lifecycle phase: activity-bar (21.30 s)
+Running host lifecycle phase: workspace-upgrade
+PASS: file task/identity and reading restoration, 720/360 light/dark source views, one-shot inactivity and five native workspace surfaces
+Passed host lifecycle phase: workspace-upgrade (5.96 s)
+Running host lifecycle phase: file-reader
+PASS: native file window, 480/720/1100 light/dark widths, chrome <100pt, selection, tabs, batch close, close cancellation and restored frame
+Passed host lifecycle phase: file-reader (5.47 s)
+Running host lifecycle phase: workflow-polish
+PASS: shared reader routes/line/tab/frame identity, per-tab quote persistence, main-selection isolation, close-tab and focused keyboard search
+Passed host lifecycle phase: workflow-polish (5.06 s)
+Running host lifecycle phase: document-reading
+Document restored offset from 3600.0
+Document reading UI passed: relative links, anchors, search, typography, selection, positions, library and narrow/light/dark windows
+Passed host lifecycle phase: document-reading (11.31 s)
+Running host lifecycle phase: task-context
+compiled/TaskContextChecks.swift:195: Precondition failed: Expanding the session overview must persist per session and reveal the full overview
+Cleaning up host lifecycle preferences
+Host lifecycle cleanup complete
+Traceback (most recent call last):
+  File "/Users/<runner>/work/perch/perch/scripts/check-host-lifecycle.py", line 141, in <module>
+    raise subprocess.CalledProcessError(process.returncode, command)
+subprocess.CalledProcessError: Command '['/Users/<runner>/work/perch/perch/.local/host-fixture/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks', 'task-context']' died with <Signals.SIGTRAP: 5>.

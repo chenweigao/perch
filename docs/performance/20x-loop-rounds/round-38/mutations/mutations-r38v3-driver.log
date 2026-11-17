@@ -1,0 +1,14 @@
+=== control Tue Nov 17 20:43:50 CST 2026 ===
+control_build_exit=0
+control_exit=0 pass=110
+.local/round38/mutation-kills-r38v3.sh: line 25: 1085300 Illegal instruction     timeout 900 "$MUT/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks" > "$OUT/$name-checks.log" 2>&1
+resolution-no-validation exit=132 pass=9 kill_at=PresentationHistoryTests.swift:140
+.local/round38/mutation-kills-r38v3.sh: line 25: 1098337 Illegal instruction     timeout 900 "$MUT/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks" > "$OUT/$name-checks.log" 2>&1
+resolution-status-only-validation exit=132 pass=18 kill_at=ToolResolutionMemoTests.swift:47
+resolution-eviction-removal exit=0 pass=110 kill_at=?
+resolution-key-by-name exit=0 pass=110 kill_at=?
+resolution-language-token-drop exit=0 pass=110 kill_at=?
+=== control rerun (tree restored) Tue Nov 17 20:56:24 CST 2026 ===
+control_rebuild_exit=0
+control_rerun_exit=0 pass=110
+DONE Tue Nov 17 20:58:52 CST 2026

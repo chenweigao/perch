@@ -1,0 +1,75 @@
+#!/bin/bash
+# Round 38 v2 Mac mini formal A/B (ARBITRATION side, decides adoption):
+# narrative tool-resolution memo with full-value + LANGUAGE validation
+# (review F1 closure: resolutions embed L() output keyed to
+# AppLanguage.current; memo entries record the resolved language). base =
+# 6ac65f9 (round-37 evaluation merge). candidate = 4adc09f4 (v2; product
+# bytes changed vs v1 -> full six-pair re-run per protocol; v1 measured
+# chain_total -23.33% here). PRIMARY adoption metric = chain_total with
+# presentation_update/older_page/find metrics as guards. BOTH sides
+# pristine checkouts — no patch application, no dirty-tree abort mode
+# (r31b); every exit code recorded without pipe-swallowing (r31d). Six
+# alternating pairs x five modes, binaries IN PLACE (round-18).
+set -u
+cd "$HOME/_worktrees/20x-loop-20261112/perch"
+LOGS="$HOME/Library/Logs/perf-loop-20261116"
+RES="$LOGS/ab38v2"
+rm -rf "$RES"; mkdir -p "$RES"
+echo "=== prepare $(date) ==="
+git fetch origin
+git checkout -- . 2>/dev/null; git clean -fdq Sources/ Tests/
+echo "porcelain_preclean=$(git status --porcelain | wc -l | tr -d ' ')"
+git checkout --detach 6ac65f9
+echo "HEAD_base=$(git rev-parse HEAD)"
+rm -rf .build/round38v2-ab-base .build/round38v2-ab-cand
+echo "=== base build (pristine 529d41e) $(date) ==="
+swift build -c release --product WorkbenchChecks --scratch-path .build/round38v2-ab-base > "$RES/base-build.log" 2>&1
+base_build_exit=$?; echo "base_build_exit=$base_build_exit"
+shasum -a 256 Tests/WorkbenchCoreTests/PresentationBench.swift Tests/WorkbenchCoreTests/StreamingBench.swift Tests/WorkbenchCoreTests/ActivityBench.swift Tests/WorkbenchCoreTests/EditLineBench.swift Tests/WorkbenchCoreTests/BenchClock.swift Tests/WorkbenchCoreTests/LinkScanMaterializeTests.swift > "$RES/fixture-hashes-base.txt"
+echo "=== candidate checkout + build (740b5f2e) $(date) ==="
+git checkout --detach 4adc09f4
+echo "HEAD_cand=$(git rev-parse HEAD)"
+swift build -c release --product WorkbenchChecks --scratch-path .build/round38v2-ab-cand > "$RES/cand-build.log" 2>&1
+cand_build_exit=$?; echo "cand_build_exit=$cand_build_exit"
+shasum -a 256 Tests/WorkbenchCoreTests/PresentationBench.swift Tests/WorkbenchCoreTests/StreamingBench.swift Tests/WorkbenchCoreTests/ActivityBench.swift Tests/WorkbenchCoreTests/EditLineBench.swift Tests/WorkbenchCoreTests/BenchClock.swift Tests/WorkbenchCoreTests/LinkScanMaterializeTests.swift > "$RES/fixture-hashes-cand.txt"
+if [ "$base_build_exit" != 0 ] || [ "$cand_build_exit" != 0 ]; then
+  echo ABORT_BUILD
+  git checkout -- . 2>/dev/null; git clean -fdq Sources/ Tests/
+  rm -rf .build/round38v2-ab-base .build/round38v2-ab-cand
+  echo "porcelain_after=$(git status --porcelain | wc -l | tr -d ' ')"
+  echo "DONE $(date)"
+  exit 1
+fi
+BASE="$PWD/.build/round38v2-ab-base/out/Products/Release/WorkbenchChecks"
+CAND="$PWD/.build/round38v2-ab-cand/out/Products/Release/WorkbenchChecks"
+shasum -a 256 "$BASE" "$CAND" | tee "$RES/binary-hashes.txt"
+echo "=== checks both sides (base = round-30 pin set, record; cand = gate) $(date) ==="
+"$BASE" > "$RES/checks-base.log" 2>&1; base_checks_exit=$?
+echo "base_checks_exit=$base_checks_exit pass=$(grep -c '^PASS' "$RES/checks-base.log")"
+"$CAND" > "$RES/checks-cand.log" 2>&1; cand_checks_exit=$?
+echo "cand_checks_exit=$cand_checks_exit pass=$(grep -c '^PASS' "$RES/checks-cand.log")"
+grep -h 'prefix cache' "$RES/checks-cand.log"
+if [ "$base_checks_exit" != 0 ] || [ "$cand_checks_exit" != 0 ]; then
+  echo ABORT_CHECKS
+  git checkout -- . 2>/dev/null; git clean -fdq Sources/ Tests/
+  rm -rf .build/round38v2-ab-base .build/round38v2-ab-cand
+  echo "porcelain_after=$(git status --porcelain | wc -l | tr -d ' ')"
+  echo "DONE $(date)"
+  exit 1
+fi
+echo "=== pairs $(date) ==="
+for pair in 1 2 3 4 5 6; do
+  for variant in baseline candidate; do
+    bin="$BASE"
+    [ "$variant" = candidate ] && bin="$CAND"
+    for mode in 1 streaming activity edit-lines presentation-token; do
+      WORKBENCH_BENCH="$mode" "$bin" > "$RES/pair$pair-$variant-$mode.log" 2>&1
+      echo "pair=$pair variant=$variant mode=$mode exit=$?"
+    done
+  done
+done
+shasum -a 256 "$BASE" "$CAND" | tee "$RES/binary-hashes-final.txt"
+git checkout -- . 2>/dev/null; git clean -fdq Sources/ Tests/
+rm -rf .build/round38v2-ab-base .build/round38v2-ab-cand
+echo "porcelain_after=$(git status --porcelain | wc -l | tr -d ' ')"
+echo "DONE $(date)"

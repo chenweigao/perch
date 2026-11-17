@@ -1,0 +1,85 @@
+{
+ "instance_42": {
+  "head": "6b892550 (docs-only evidence commit; product bytes = 80969b9d which passed CI green at its own head run 44072482850)",
+  "run": 44076719609,
+  "gate_error": "Typeset/draw regression exceeds 15% at 32",
+  "superseded_by": "v2 push (4adc09f4) \u2014 not rerun",
+  "gate_values": {
+   "typeset_32": {
+    "baseline_totals": [
+     92.4,
+     133.5,
+     270.6
+    ],
+    "candidate_totals": [
+     112.4,
+     116.2,
+     139.9
+    ],
+    "best_ratio": 1.2164,
+    "limit": 1.15,
+    "median_ratio": 0.8708,
+    "baseline_span_x": 2.93,
+    "candidate_span_x": 1.24
+   },
+   "typeset_128": {
+    "baseline_totals": [
+     432.4,
+     501.0,
+     634.2
+    ],
+    "candidate_totals": [
+     372.7,
+     435.8,
+     520.7
+    ],
+    "best_ratio": 0.8619,
+    "limit": 1.15,
+    "median_ratio": 0.8699,
+    "baseline_span_x": 1.47,
+    "candidate_span_x": 1.4
+   }
+  }
+ },
+ "instance_44": {
+  "head": "4adc09f4 (v2; product = v1 + language token)",
+  "gate_error": "Typeset/draw regression exceeds 15% at 32",
+  "superseded_by": "v3 push (a867c35f) \u2014 not rerun",
+  "gate_values": {
+   "typeset_32": {
+    "baseline_totals": [
+     107.2,
+     150.2,
+     151.3
+    ],
+    "candidate_totals": [
+     138.2,
+     182.5,
+     220.2
+    ],
+    "best_ratio": 1.2885,
+    "limit": 1.15,
+    "median_ratio": 1.215,
+    "baseline_span_x": 1.41
+   },
+   "typeset_128": {
+    "baseline_totals": [
+     338.9,
+     491.1,
+     491.6
+    ],
+    "candidate_totals": [
+     494.2,
+     514.8,
+     590.6
+    ],
+    "best_ratio": 1.4583,
+    "limit": 1.15,
+    "median_ratio": 1.0484,
+    "baseline_span_x": 1.45
+   }
+  },
+  "run": "see gh run list (Functional checks @4adc09f4)"
+ },
+ "classification": "variance family (#37/#39 precedent): same product-family bytes green at other heads/attempts; failing size hops between runs; candidate medians inside limit; shared-runner math gate flaked 5 times across rounds 36-38 heads on 2026-11-17 (westus MacCloud pool). Zero gate changes."
+}

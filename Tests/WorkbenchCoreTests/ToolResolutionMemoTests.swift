@@ -49,12 +49,12 @@ func checkToolResolutionMemo() throws {
         precondition(!shared.stages.isEmpty, "step \(index): fixture must produce stages")
     }
     // Language-switch leg (review F1): resolutions embed localized strings
-    // (phase.label, shell headlines, L() fallbacks all read
-    // AppLanguage.current at derive time). After a UI language change the
-    // shared-cache path must re-derive and match the fresh-cache oracle.
-    // Platform disclosure: on Linux L() resolves to the identity key text,
-    // so this leg is vacuous-by-platform there (the per-entry language
-    // token is still exercised); on Darwin it runs against real bundles.
+    // (phase.label, shell headlines, L() fallbacks read AppLanguage.current
+    // at derive time); after a language change the shared-cache path must
+    // re-derive and match the fresh-cache oracle. Platform disclosure:
+    // Bundle.main carries no .lproj in ANY WorkbenchChecks binary (Linux or
+    // Darwin CLI), so L() returns key text and this leg is structural-only
+    // here; the behavior is observable exclusively in the bundled app.
     let defaultsKey = AppLanguage.defaultsKey
     let priorLanguage = UserDefaults.standard.string(forKey: defaultsKey)
     for language in ["en", "zh-Hans", "en"] {
