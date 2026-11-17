@@ -73,9 +73,14 @@ func checkPrependIncremental() throws {
     let pageFull = (0..<3).flatMap { turnRaw("B\($0)") }        // three whole older turns
     let pageC = (0..<2).flatMap { turnRaw("C\($0)", tools: 3) } // split across two pages
     // turnRaw(C0, tools: 3) is 5 messages (prompt, assistant, 3 results), so
-    // index 3 splits turn C0 itself: the back page carries a leading PARTIAL
-    // turn (two orphan results) that the front page later MERGES back.
-    let splitAt = 3
+    // index 2 splits turn C0 itself: the back page carries a leading PARTIAL
+    // turn (THREE orphan results) that the front page later MERGES back.
+    // splitAt=2 (v3, was 3): the partial turn's fold keys then OVERLAP the
+    // merged turn's (activity:tool:call-C0-0 is folded in both, traced), so
+    // the consumed-removal-before-leading-insertion ORDER of the round-36
+    // joined adoption is load-bearing and kill-pinned — at splitAt=3 the key
+    // sets were disjoint and the wrong-order mutant was fixture-equivalent.
+    let splitAt = 2
 
     let warm = ConversationPresentationModel(key: "s")
     var window = try decode(baseRaw)
