@@ -1,0 +1,9 @@
+# U+200B whitespace-set sweep (round-41 review F4)
+Linux Swift 6.3.3 full sweep (1,112,064 scalars): exactly ONE difference —
+  DIFF U+200B foundation=1 mirror=0 stdlibIsWS=0
+  foundationOnly=1 mirrorOnly=0; trim200B=[a]
+Mac (targeted probe, full sweep SIGKILLed by the host): same single DIFF line —
+  DIFF U+200B foundation=1 mirror=0 stdlib=0
+  trim200B=[a] trimFEFF=[a﻿]  (FEFF NOT in the set — probe confirms boundary)
+=> CharacterSet.whitespacesAndNewlines == stdlib isWhitespace set + {U+200B}
+   on BOTH toolchains; isFoundationWhitespaceScalar mirrors it exactly.

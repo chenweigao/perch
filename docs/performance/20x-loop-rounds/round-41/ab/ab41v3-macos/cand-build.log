@@ -1,0 +1,13 @@
+Fetching https://github.com/mgriebling/SwiftMath.git from cache
+Fetching https://github.com/swiftlang/swift-markdown.git from cache
+Fetching https://github.com/apple/swift-crypto.git from cache
+Fetching https://github.com/Lakr233/libghostty-spm.git from cache
+Fetching https://github.com/apple/swift-asn1.git from cache
+Fetched https://github.com/mgriebling/SwiftMath.git from cache (0.07s)
+... [67 lines elided] ...
+
+[#VariableNeverMutated]: <https://docs.swift.org/compiler/documentation/diagnostics/variable-never-mutated>
+[236 / 240] WorkbenchChecks-product
+[238 / 240] WorkbenchChecks-product
+[239 / 240] WorkbenchChecks-product
+Build complete! (74.11秒)
