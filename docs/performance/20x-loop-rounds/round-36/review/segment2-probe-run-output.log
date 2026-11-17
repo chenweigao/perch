@@ -1,0 +1,24 @@
+TRACE: adopt-fold-false-consumedRows-0-leading-1=28
+TRACE: adopt-fold-false-consumedRows-0-leading-2=20
+TRACE: adopt-fold-false-consumedRows-0-leading-3=20
+TRACE: adopt-fold-false-consumedRows-2-leading-1=6
+TRACE: adopt-fold-false-consumedRows-2-leading-2=7
+TRACE: adopt-fold-false-consumedRows-2-leading-3=7
+TRACE: adopt-fold-false-consumedRows-3-leading-1=1
+TRACE: adopt-fold-false-consumedRows-4-leading-1=11
+TRACE: adopt-fold-false-consumedRows-4-leading-2=10
+TRACE: adopt-fold-false-consumedRows-4-leading-3=13
+TRACE: adopt-fold-true-consumedRows-0-leading-1=20
+TRACE: adopt-fold-true-consumedRows-0-leading-2=14
+TRACE: adopt-fold-true-consumedRows-0-leading-3=23
+TRACE: adopt-fold-true-consumedRows-1-leading-1=1
+TRACE: adopt-fold-true-consumedRows-2-leading-1=22
+TRACE: adopt-fold-true-consumedRows-2-leading-2=17
+TRACE: adopt-fold-true-consumedRows-2-leading-3=25
+TRACE: capture-fold-false-consumed-0=51
+TRACE: capture-fold-false-consumed-1=41
+TRACE: capture-fold-true-consumed-0=45
+TRACE: capture-fold-true-consumed-1=51
+TRACE: consumed-prefix-verified=92
+TRACE: current-nonunique-fallback=3
+PASS: round-36 independent History differential 787 comparisons; actual-adoption vs full joined oracle, consumed-prefix assertions, both fold shapes, 3 leading turns, consumed no-fold turns, merge re-carried ids with changed parent, turn-memo mutation before capture, prior-after-capture mutations, empty prior/current/rows/leading, both overlay gates, absent memo, both uniqueness gates, 240 deterministic update sequences

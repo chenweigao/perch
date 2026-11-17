@@ -1,0 +1,69 @@
+{
+ "signature": "Typeset/draw regression exceeds 15% at 32 (typeset-32 best_ratio gate)",
+ "head": "4f6999e8 (docs-only; product bytes identical to 1226a2f8/84b0d8c8/8c748acd \u2014 three consecutive greens on this gate)",
+ "failed_job": "Native math performance regression (run 44046061784, job 133914494065); aggregator job 133919603282 failed solely on {\"math\": \"failure\"}",
+ "rounds": {
+  "baseline": [
+   {
+    "round": "round-1-baseline",
+    "total_ms": 266.1940833339713,
+    "cold_attach_total_ms": 162.91595833342853,
+    "draw_total_ms": 103.27812500054279
+   },
+   {
+    "round": "round-4-baseline",
+    "total_ms": 190.60420833386615,
+    "cold_attach_total_ms": 97.28783333355295,
+    "draw_total_ms": 93.3163750003132
+   },
+   {
+    "round": "round-5-baseline",
+    "total_ms": 141.0742083335208,
+    "cold_attach_total_ms": 73.29199999981029,
+    "draw_total_ms": 67.78220833371051
+   }
+  ],
+  "candidate": [
+   {
+    "round": "round-2-candidate",
+    "total_ms": 212.37320833324702,
+    "cold_attach_total_ms": 113.10966666701461,
+    "draw_total_ms": 99.26354166623241
+   },
+   {
+    "round": "round-3-candidate",
+    "total_ms": 162.71199999971486,
+    "cold_attach_total_ms": 84.37054166631697,
+    "draw_total_ms": 78.3414583333979
+   },
+   {
+    "round": "round-6-candidate",
+    "total_ms": 216.0967916664731,
+    "cold_attach_total_ms": 137.31433333339282,
+    "draw_total_ms": 78.78245833308029
+   }
+  ]
+ },
+ "gate": {
+  "best_old_ms": 141.0742083335208,
+  "best_new_ms": 162.71199999971486,
+  "best_ratio": 1.1533787920683491,
+  "limit": 1.15,
+  "margin_ms": 0.47666041616594157,
+  "margin_note": "failed by 0.47ms = 0.34pp over the 1.15 limit",
+  "baseline_span_x": 1.886908219996161,
+  "candidate_span_x": 1.3280937587077277,
+  "baseline_totals_sorted": [
+   141.0742083335208,
+   190.60420833386615,
+   266.1940833339713
+  ],
+  "candidate_totals_sorted": [
+   162.71199999971486,
+   212.37320833324702,
+   216.0967916664731
+  ],
+  "median_ratio": 1.1142104898400242
+ },
+ "classification": "variance family (round-35 #27 precedent): baseline best is its luckiest of three rounds (141.1 vs own span 1.89x incl. a 266.2 warm-up spike), candidate tight (1.33x) and its MEDIAN ratio 1.1142 is under the limit; docs-only head with identical product bytes passed this gate at three consecutive prior heads. Same-head attempt-2 rerun triggered."
+}

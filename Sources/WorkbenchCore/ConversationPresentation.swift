@@ -118,6 +118,19 @@ public final class ConversationPresentationModel {
         let source: ToolVisibilityProjection.Prefix?
         var cost = 0
         private var presentation: (activity: [String: ActivityNarrativeRow], foldsProcess: Bool, value: Presentation)?
+        /// Round 36: the prior History's joined presentation, captured at init
+        /// while the prior is still alive (by presented() time the replaced
+        /// History is usually already released). `joined` redoes an O(window)
+        /// string-keyed `parents.merge` per prepend because each page builds a
+        /// fresh History whose instance memo is empty; adopting the captured
+        /// foldParents by copy-on-write turns that into O(page) hash inserts
+        /// plus one rehash-free dictionary copy. Rows stay a flat rebuild (a
+        /// memcpy-optimal assembly COW adoption would not beat). Scope: the
+        /// captured memo must carry no summary overlays and the requesting
+        /// call must ask for the same fold shape with no overlays either —
+        /// overlay shapes take the existing full path.
+        private let joinedAdoption: (rows: [Row], foldParents: [String: String], foldsProcess: Bool,
+                                     consumedRowCount: Int, consumedFoldKeys: [String], leadingNew: Int)?
 
         init(turns: [HistoryTurn] = [], turnCount: Int = 0, source: ToolVisibilityProjection.Prefix? = nil,
              prior: History? = nil) {
@@ -179,6 +192,34 @@ public final class ConversationPresentationModel {
                 }
                 self.turnIndexBase = base
                 self.entryTurns = entryTurns
+                // Round 36: capture the prior's joined memo for presented()'s
+                // foldParents adoption. Requires the prior memo to exist, to
+                // carry no summary overlays, and to have been built by the
+                // per-turn joined path (prior.uniqueEntries) — the fallback
+                // whole-window fold has different rows/parents semantics.
+                if prior.uniqueEntries, let priorMemo = prior.presentation, priorMemo.activity.isEmpty {
+                    var consumedRowCount = 0
+                    var consumedFoldKeys: [String] = []
+                    var adopt = true
+                    if match.consumed > 0 {
+                        // Turn-level memo hit (the prior's joined called this
+                        // same turn with the same empty activity and fold
+                        // shape); empty activity never presents nil.
+                        if let consumedValue = prior.turns[0].presented(activity: [:],
+                                                                        foldsProcess: priorMemo.foldsProcess) {
+                            consumedRowCount = consumedValue.rows.count
+                            consumedFoldKeys = Array(consumedValue.foldParents.keys)
+                        } else {
+                            adopt = false
+                        }
+                    }
+                    joinedAdoption = adopt
+                        ? (priorMemo.value.rows, priorMemo.value.foldParents, priorMemo.foldsProcess,
+                           consumedRowCount, consumedFoldKeys, match.leadingNew)
+                        : nil
+                } else {
+                    joinedAdoption = nil
+                }
             } else {
                 var entryTurns: [String: Int] = [:]
                 entryTurns.reserveCapacity(rows.capacity)
@@ -187,6 +228,7 @@ public final class ConversationPresentationModel {
                 }
                 self.turnIndexBase = 0
                 self.entryTurns = entryTurns
+                joinedAdoption = nil
             }
             self.rows = rows; self.navigation = navigation
             uniqueEntries = self.entryTurns.count == rows.count
@@ -209,7 +251,16 @@ public final class ConversationPresentationModel {
             if let presentation, presentation.foldsProcess == foldsProcess, presentation.activity == relevant {
                 return presentation.value
             }
-            let value = uniqueEntries ? joined(byTurn, foldsProcess: foldsProcess) : nil
+            let value: Presentation?
+            if uniqueEntries, relevant.isEmpty, let adoption = joinedAdoption,
+               adoption.foldsProcess == foldsProcess {
+                // Round 36: adopt the prior joined memo's foldParents instead
+                // of re-merging every fold id in the window (see joinedAdoption).
+                value = joinedIncremental(adoption, foldsProcess: foldsProcess)
+                    ?? joined(byTurn, foldsProcess: foldsProcess)
+            } else {
+                value = uniqueEntries ? joined(byTurn, foldsProcess: foldsProcess) : nil
+            }
             let result = value ?? Presentation(displayed: Self.displayed(rows, activity: relevant),
                                                foldsProcess: foldsProcess, isRunning: false)
             presentation = (relevant, foldsProcess, result)
@@ -223,6 +274,40 @@ public final class ConversationPresentationModel {
                 rows.append(contentsOf: value.rows)
                 parents.merge(value.foldParents) { current, _ in current }
             }
+            return Presentation(rows: rows, foldParents: parents)
+        }
+
+        /// Round 36: joined's output for a prepending update, derived from the
+        /// adoption captured at init. Equivalence with the full merge:
+        /// - fold keys are unique across the window (uniqueEntries gate), so
+        ///   the only cross-turn repetition is a merged leading turn
+        ///   re-carrying the consumed turn's ids — removing consumed keys
+        ///   BEFORE inserting the leading ones makes the merged turn the sole
+        ///   holder, exactly as in the full build where the consumed turn is
+        ///   absent;
+        /// - the full merge lets the EARLIEST turn win a duplicate key; the
+        ///   leading turns are earlier than every adopted one, so leading
+        ///   parents are accumulated with the same current-wins rule among
+        ///   themselves and then overwrite the adopted (later-turn) entries;
+        /// - rows are the leading turns' presented rows followed by the
+        ///   adopted rows minus the consumed turn's presented row count,
+        ///   matching the full concatenation order turn-for-turn.
+        private func joinedIncremental(_ adoption: (rows: [Row], foldParents: [String: String], foldsProcess: Bool,
+                                                    consumedRowCount: Int, consumedFoldKeys: [String], leadingNew: Int),
+                                       foldsProcess: Bool) -> Presentation? {
+            var leadingRows: [Row] = []
+            var leadingParents: [String: String] = [:]
+            for index in 0..<adoption.leadingNew {
+                guard let value = turns[index].presented(activity: [:], foldsProcess: foldsProcess) else { return nil }
+                leadingRows.append(contentsOf: value.rows)
+                leadingParents.merge(value.foldParents) { current, _ in current }
+            }
+            var parents = adoption.foldParents  // COW copy on first mutation; no rehash
+            for key in adoption.consumedFoldKeys { parents.removeValue(forKey: key) }
+            for (key, parent) in leadingParents { parents[key] = parent }
+            var rows = leadingRows
+            rows.reserveCapacity(leadingRows.count + adoption.rows.count - adoption.consumedRowCount)
+            rows.append(contentsOf: adoption.rows.dropFirst(adoption.consumedRowCount))
             return Presentation(rows: rows, foldParents: parents)
         }
 

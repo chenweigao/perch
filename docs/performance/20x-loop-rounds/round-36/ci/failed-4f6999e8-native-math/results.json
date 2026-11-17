@@ -1,0 +1,23 @@
+{
+  "suite": "macos",
+  "group": "core-math",
+  "scope": "offline synthetic checks; no SSH, real models or frame-rate certification",
+  "commit": "4c6b966f5660d756204a4dd8797b83063b50a89a",
+  "dirty": false,
+  "checks": [
+    {
+      "name": "math-performance",
+      "command": [
+        "bash",
+        "scripts/check-math-performance.sh",
+        "/Users/<runner>/work/perch/perch/.local/functional-math/math-performance"
+      ],
+      "log": "math-performance.log",
+      "exit_code": 1,
+      "seconds": 569.47,
+      "passed": false
+    }
+  ],
+  "status": "failed",
+  "seconds": 569.48
+}

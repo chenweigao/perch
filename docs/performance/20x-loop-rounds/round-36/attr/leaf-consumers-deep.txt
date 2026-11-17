@@ -1,0 +1,71 @@
+== ARC(release+retain+bridge): leaf samples=6307 (37.26% of prepend) ==
+    1567   24.8%  ConversationPresentationModel.update(_:)
+    1519   24.1%  bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(sw
+     455    7.2%  KimiConversation.displayMessages.getter
+     435    6.9%  _DictionaryStorage.__deallocating_deinit
+     345    5.5%  benchR36PagingProfile()
+     329    5.2%  ConversationPresentationModel.History.init(turns:turnCount:source:prior:)
+     211    3.3%  ToolVisibilityProjection.Pass.normalize(_:)
+     186    2.9%  static ConversationTimelineEntry.make(_:isRunning:)
+     172    2.7%  ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+     154    2.4%  ConversationPresentationModel.History.presented(activity:foldsProcess:)
+     133    2.1%  closure #1 in static ConversationPresentationModel.Presentation.parents(of:into:)
+     125    2.0%  static ConversationPresentationModel.cost(_:)
+
+== breadcrumbs(NSString bridge): leaf samples=449 (2.65% of prepend) ==
+     437   97.3%  benchR36PagingProfile()
+      12    2.7%  ConversationActivity.init(messages:isRunning:liveTools:running:online:isThinking:isResponding:p
+
+== string hash: leaf samples=1443 (8.53% of prepend) ==
+    1007   69.8%  String.hash(into:)
+     259   17.9%  ConversationPresentationModel.History.joined(_:foldsProcess:)
+      24    1.7%  ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+      20    1.4%  ToolVisibilityProjection.Pass.collect(_:)
+      18    1.2%  ToolVisibilityProjection.Pass.normalize(_:)
+      18    1.2%  closure #1 in static ConversationPresentationModel.Presentation.parents(of:into:)
+      15    1.0%  ConversationPresentationModel.update(_:)
+      13    0.9%  AppLanguage.localization.getter
+      12    0.8%  static ToolVisibilityProjection.identities(in:)
+      10    0.7%  static ShellActivity.groupingPhase(_:)
+      10    0.7%  ToolVisibilityProjection.Pass.present(id:call:result:)
+       9    0.6%  ConversationPresentationModel.History.init(turns:turnCount:source:prior:)
+
+== string compare: leaf samples=1373 (8.11% of prepend) ==
+     385   28.0%  ConversationPresentationModel.History.joined(_:foldsProcess:)
+     312   22.7%  static KimiPart.__derived_struct_equals(_:_:)
+     189   13.8%  ToolVisibilityProjection.canReuse(_:messages:split:sessionID:activeIDs:online:)
+     122    8.9%  closure #1 in ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+      72    5.2%  ToolVisibilityProjection.update(_:splittingAt:sessionID:live:running:online:)
+      62    4.5%  ToolVisibilityProjection.Pass.normalize(_:)
+      36    2.6%  static ConversationTimelineEntry.make(_:isRunning:)
+      25    1.8%  closure #1 in static ConversationPresentationModel.Presentation.parents(of:into:)
+      23    1.7%  ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+      21    1.5%  static KimiMessage.__derived_struct_equals(_:_:)
+      18    1.3%  ConversationPresentationModel.History.init(turns:turnCount:source:prior:)
+       9    0.7%  static ToolVisibilityProjection.identities(in:)
+
+== dict find: leaf samples=779 (4.60% of prepend) ==
+     550   70.6%  ConversationPresentationModel.History.joined(_:foldsProcess:)
+      44    5.6%  ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+      37    4.7%  ToolVisibilityProjection.Pass.collect(_:)
+      30    3.9%  closure #1 in static ConversationPresentationModel.Presentation.parents(of:into:)
+      27    3.5%  ConversationPresentationModel.History.presented(activity:foldsProcess:)
+      18    2.3%  ToolVisibilityProjection.Pass.present(id:call:result:)
+      15    1.9%  ConversationPresentationModel.History.init(turns:turnCount:source:prior:)
+      13    1.7%  ConversationPresentationModel.update(_:)
+      12    1.5%  static ConversationPresentationModel.row(_:tools:activity:)
+       9    1.2%  ToolVisibilityProjection.Pass.normalize(_:)
+       7    0.9%  AppLanguage.localization.getter
+       2    0.3%  JSONValue.subscript.getter
+
+== array-dict teardown: leaf samples=311 (1.84% of prepend) ==
+     269   86.5%  bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(sw
+      21    6.8%  closure #1 in static ConversationPresentationModel.cost(_:)
+       7    2.3%  visible #1 (_:) in static ConversationTimelineEntry.make(_:isRunning:)
+       5    1.6%  +[NSBundle preferredLocalizationsFromArray:forPreferences:]
+       3    1.0%  static ConversationPresentationModel.cost(_:)
+       3    1.0%  static ToolPresentation.processPhase(_:)
+       1    0.3%  _tryCastFromClassToObjCBridgeable(swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> 
+       1    0.3%  static ShellActivity.command(_:)
+       1    0.3%  -[NSBundle _localizedStringForKey:value:table:localizations:]
+

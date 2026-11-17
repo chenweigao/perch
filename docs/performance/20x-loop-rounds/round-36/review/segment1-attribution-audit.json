@@ -1,0 +1,15 @@
+{
+  "prepend_samples": 16925,
+  "region_sum": 13368,
+  "region_disjoint_total_matches": false,
+  "analyzer_identical_except_docstring": true,
+  "hash_claim_samples": 1129,
+  "hash_claim_fraction_of_prepend": 6.670605612998523,
+  "claimed_joined_sum": 2113,
+  "claimed_joined_fraction": 12.484490398818316,
+  "archived_deep_hash_group": 1443,
+  "archived_direct_joined_hash": 259,
+  "archived_deep_String_hash_bucket": 1007,
+  "claimed_67_8_denominator_implied": 1665.1917404129792,
+  "limitation": "Archived deep table stops at String.hash(into:); 1129 and its claimed total-hash denominator are not independently recoverable from committed tables. Raw Time Profiler XML is not in candidate."
+}

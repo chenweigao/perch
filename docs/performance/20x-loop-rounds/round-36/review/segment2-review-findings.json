@@ -1,0 +1,8 @@
+{
+  "verdict": "PENDING",
+  "candidate": "84b0d8c8",
+  "base": "fd79884",
+  "findings": [{"id":"R1","severity":"RECORD","status":"CLOSED_VERIFIED","title":"继承第一段：归因百分比转写与深层统计证据不足","evidence":"第一段记录 1129/16925=6.6706056%，非6.75%；缺 String.hash 继续下钻统计归档。84b0d8c8 复核通过：1129/16925=6.6706056%，1129/1664=67.8485577%；报告和design-notes数值对齐，归档深走查16行百分比逐项正确、合计1658，截断尾部6符合most_common(16)。脚本语法与String.hash pass-through/分母逻辑一致。XML留Mac，本轮按指定面仅验证内部一致性及报告数字，不声称重建原始采样。","inherited_from":"/home/<dev>/.t3/worktrees/perch/t3-35f15e29-4aae08c3e04066aa/review-artifacts/review-findings.json"}],
+  "verified": ["本轮初始 HEAD=84b0d8c812cd4ca2b521fce7e933aa276f706baa，git status clean，已读本工作树AGENTS.md；仅写本树review-artifacts。", "继承第一段：产品diff仅ConversationPresentation.swift、测试diff仅PrependIncrementalTests.swift；AgentWorkbench与门槛脚本零触碰；必读完成。"],
+  "outstanding": ["joinedIncremental与全量joined等价性审计：重携顺序、parent优先级、memo形态/rows前缀门、uniqueEntries/fold-id、捕获时序、空边界", "独立release WorkbenchChecks构建运行（109 PASS+1 SKIP）", "双端样本级A/B全指标复算及v1 exit143披露", "R1报告/设计笔记/深层归档内部一致性复核"]
+}

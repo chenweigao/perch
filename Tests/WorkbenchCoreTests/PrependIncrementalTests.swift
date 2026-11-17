@@ -73,13 +73,19 @@ func checkPrependIncremental() throws {
     let pageFull = (0..<3).flatMap { turnRaw("B\($0)") }        // three whole older turns
     let pageC = (0..<2).flatMap { turnRaw("C\($0)", tools: 3) } // split across two pages
     // turnRaw(C0, tools: 3) is 5 messages (prompt, assistant, 3 results), so
-    // index 3 splits turn C0 itself: the back page carries a leading PARTIAL
-    // turn (two orphan results) that the front page later MERGES back.
-    let splitAt = 3
+    // index 2 splits turn C0 itself: the back page carries a leading PARTIAL
+    // turn (THREE orphan results) that the front page later MERGES back.
+    // splitAt=2 (v3, was 3): the partial turn's fold keys then OVERLAP the
+    // merged turn's (activity:tool:call-C0-0 is folded in both, traced), so
+    // the consumed-removal-before-leading-insertion ORDER of the round-36
+    // joined adoption is load-bearing and kill-pinned — at splitAt=3 the key
+    // sets were disjoint and the wrong-order mutant was fixture-equivalent.
+    let splitAt = 2
 
     let warm = ConversationPresentationModel(key: "s")
     var window = try decode(baseRaw)
     var step = 0
+    var sawFoldParents = false
     func compare(_ label: String, live: [KimiLiveTool] = [rememberedLive],
                  running: Set<String> = ["call-LIVE-T"],
                  online: Bool = true, language: String = "zh") throws {
@@ -93,9 +99,12 @@ func checkPrependIncremental() throws {
         precondition(w.rows == f.rows, "step \(step) (\(label)): rows diverged between incremental and full rebuild")
         precondition(w.navigation == f.navigation, "step \(step) (\(label)): navigation diverged")
         precondition(w.narrativeKey == f.narrativeKey, "step \(step) (\(label)): narrative key diverged")
-        precondition(w.presented(activity: [:], foldsProcess: true, isRunning: true)
-                     == f.presented(activity: [:], foldsProcess: true, isRunning: true),
+        let wFolded = w.presented(activity: [:], foldsProcess: true, isRunning: true)
+        precondition(wFolded == f.presented(activity: [:], foldsProcess: true, isRunning: true),
                      "step \(step) (\(label)): folded presentation diverged")
+        // Anti-blind guard: the fold-parents differential below is only
+        // meaningful while the fixture actually produces process folds.
+        sawFoldParents = sawFoldParents || !wFolded.foldParents.isEmpty
         precondition(w.presented(activity: [:], foldsProcess: false, isRunning: true)
                      == f.presented(activity: [:], foldsProcess: false, isRunning: true),
                      "step \(step) (\(label)): unfolded presentation diverged")
@@ -116,6 +125,15 @@ func checkPrependIncremental() throws {
                      == f.presented(activity: overlay, foldsProcess: true, isRunning: true),
                      "step \(step) (\(label)): overlay presentation diverged (entryTurns indexing)")
         precondition(!w.rows.isEmpty, "step \(step) (\(label)): fixture must produce rows")
+        // Re-seed the warm History's presentation memo with the PLAIN folded
+        // shape: the round-36 joined adoption captured at the NEXT update's
+        // init requires an overlay-free prior memo, and the overlay compare
+        // above would otherwise leave a non-empty memo and silently disable
+        // the adopted path for every subsequent step (blind differential).
+        let wReseed = w.presented(activity: [:], foldsProcess: true, isRunning: true)
+        precondition(wReseed == f.presented(activity: [:], foldsProcess: true, isRunning: true),
+                     "step \(step) (\(label)): reseeded folded presentation diverged")
+        sawFoldParents = sawFoldParents || !wReseed.foldParents.isEmpty
     }
 
     // 1. baseline, then pure full-turn prepends (the plain incremental path)
@@ -315,5 +333,41 @@ func checkPrependIncremental() throws {
     }
     projCompare("D-tail-result-flips-separable", try decode(rawD), splitAt: 4)
 
-    print("PASS: prepend incremental indexes — warm-vs-fresh differential equality over 9 scenario groups with narrative-overlay comparisons (pure prepends, page-split partial turn, the merge that consumes the cached leading turn, remembered live tool whose observedByTurn placement reads owner+base, interior edit rebuild, turn-boundary growth, connection flips, language reset, trailing streaming deltas) plus the poisoning phase (duplicate tool identity, duplicate page message ids, anchored-live separates rejection) and the projection-level consumed-term differential (observe-under-own-split → grow → compaction consumes the tool's turn → tail result flips separable) against a discardPrefix-based full-rebuild reference with identical observed history")
+    precondition(sawFoldParents,
+                 "fixture never produced fold parents — the foldParents differential would be blind")
+
+    // 11. OVERLAY-LAST memo (round-36 capture gate): when the previous
+    // snapshot's final presented() call left an overlay-built memo, the
+    // joined adoption captured at the next prepend's init MUST refuse it —
+    // an overlay memo's rows carry narrative annotations (and possibly
+    // anchor removals), so adopting them for a plain request would diverge
+    // from the full rebuild. The gate mutant (capture regardless of the
+    // prior memo's activity) dies on the comparison below.
+    let warm3 = ConversationPresentationModel(key: "s4")
+    func overlayLastInput(_ msgs: [KimiMessage]) -> ConversationPresentationModel.Input {
+        ConversationPresentationModel.Input(messages: msgs, live: [rememberedLive],
+                                            running: ["call-LIVE-T"], isRunning: true,
+                                            online: true, epoch: "bench", language: "zh")
+    }
+    var window3 = try decode(baseRaw)
+    let w3a = warm3.update(overlayLastInput(window3))
+    var overlay3: [String: ActivityNarrativeRow] = [:]
+    for id in w3a.rows.map(\.entry.id) {
+        overlay3[id] = ActivityNarrativeRow(narrative: .init(turnID: "u", stageID: "external-\(id)",
+                                                             phase: .editing, headline: "外部摘要",
+                                                             source: .commentary, lifecycle: .streaming),
+                                            isAnchor: false, stageClosed: false)
+    }
+    // leave the overlay memo as the LAST presented state (no plain reseed)
+    _ = w3a.presented(activity: overlay3, foldsProcess: true, isRunning: true)
+    window3 = try decode(pageFull) + window3   // pure prepend: alignment fires
+    let w3b = warm3.update(overlayLastInput(window3))
+    let f3b = ConversationPresentationModel(key: "s4").update(overlayLastInput(window3))
+    precondition(w3b.presented(activity: [:], foldsProcess: true, isRunning: true)
+                 == f3b.presented(activity: [:], foldsProcess: true, isRunning: true),
+                 "overlay-last memo leaked into the adopted joined presentation")
+    precondition(w3b.rows == f3b.rows && w3b.navigation == f3b.navigation,
+                 "overlay-last: rows/navigation diverged")
+
+    print("PASS: prepend incremental indexes — warm-vs-fresh differential equality over 9 scenario groups with narrative-overlay comparisons (pure prepends, page-split partial turn, the merge that consumes the cached leading turn, remembered live tool whose observedByTurn placement reads owner+base, interior edit rebuild, turn-boundary growth, connection flips, language reset, trailing streaming deltas) plus the poisoning phase (duplicate tool identity, duplicate page message ids, anchored-live separates rejection) and the projection-level consumed-term differential (observe-under-own-split → grow → compaction consumes the tool's turn → tail result flips separable) against a discardPrefix-based full-rebuild reference with identical observed history, and the overlay-last memo capture-gate differential (an overlay-built prior memo must never feed the joined adoption)")
 }

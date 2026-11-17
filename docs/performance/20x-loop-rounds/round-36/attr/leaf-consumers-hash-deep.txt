@@ -1,0 +1,18 @@
+prepend samples: 16925
+string-hash leaves total: 1664 (9.83% of prepend)
+    1129   67.8% of group    6.67% of prepend  ConversationPresentationModel.History.joined(_:foldsProcess:)
+      81    4.9% of group    0.48% of prepend  ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+      75    4.5% of group    0.44% of prepend  closure #1 in static ConversationPresentationModel.Presentation.parents(of:into:)
+      60    3.6% of group    0.35% of prepend  ToolVisibilityProjection.Pass.normalize(_:)
+      55    3.3% of group    0.32% of prepend  ToolVisibilityProjection.Pass.collect(_:)
+      41    2.5% of group    0.24% of prepend  AppLanguage.localization.getter
+      34    2.0% of group    0.20% of prepend  ConversationPresentationModel.update(_:)
+      33    2.0% of group    0.19% of prepend  static ConversationPresentationModel.row(_:tools:activity:)
+      31    1.9% of group    0.18% of prepend  ToolVisibilityProjection.Pass.present(id:call:result:)
+      26    1.6% of group    0.15% of prepend  ConversationPresentationModel.History.init(turns:turnCount:source:prior:)
+      25    1.5% of group    0.15% of prepend  static ToolVisibilityProjection.identities(in:)
+      19    1.1% of group    0.11% of prepend  static ShellActivity.groupingPhase(_:)
+      17    1.0% of group    0.10% of prepend  closure #1 in ActivityNarrativeSnapshot.rows.getter
+      15    0.9% of group    0.09% of prepend  static ActivityNarrativeProjection.make(entries:tools:isRunning:external:cache:)
+      10    0.6% of group    0.06% of prepend  JSONValue.subscript.getter
+       7    0.4% of group    0.04% of prepend  static ToolVisibilityProjection.visibleTools(in:live:running:online:)
