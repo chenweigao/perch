@@ -1,0 +1,30 @@
+=== prepare Tue Nov 17 17:48:32 CST 2026 ===
+From github.com:chenweigao/perch
+   fd798842..b8e2d7a7  main       -> origin/main
+ * [new branch]        perf/20x-loop-37-20261117 -> origin/perf/20x-loop-37-20261117
+Previous HEAD position was f40aa5dd docs(performance): round-36 CI math-flake forensics (instance #37) — variance signature + same-head attempt-2 green
+HEAD is now at b8e2d7a7 Merge pull request #358 from chenweigao/perf/20x-loop-36-20261117
+HEAD=b8e2d7a7b445dcb6a30f6c338413616dbb4c018a
+porcelain_before=0
+porcelain_preclean=0
+=== apply temporary profile loop modes ===
+porcelain_applied=2
+=== build Tue Nov 17 17:48:37 CST 2026 ===
+build_exit=0
+cd4dd4cdcae9a43b42c1db2eef0c98698ece76eb6cb93c2c39a6dadabbfc0ce0  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round37-profile/out/Products/Release/WorkbenchChecks
+=== timing context runs (5s, untraced) Tue Nov 17 17:49:54 CST 2026 ===
+r37_profile shape=paging cycles=57 prepends=1140
+=== record paging Tue Nov 17 17:50:01 CST 2026 ===
+record_paging_exit=0
+Recording completed. Saving output file...
+Output file saved as: paging.trace
+Finished export to the file: /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/round37/paging-time-profile.xml
+total 16392
+drwxr-xr-x   4 <mini>  staff      128 Nov 17 17:50 .
+drwxr-xr-x  34 <mini>  staff     1088 Nov 17 17:49 ..
+-rw-r--r--   1 <mini>  staff  7659053 Nov 17 17:50 paging-time-profile.xml
+drwxr-xr-x  10 <mini>  staff      320 Nov 17 17:50 paging.trace
+=== revert Tue Nov 17 17:50:30 CST 2026 ===
+porcelain_after=0
+DONE Tue Nov 17 17:50:30 CST 2026
+exit=0

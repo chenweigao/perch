@@ -1,0 +1,20 @@
+=== prepare Tue Nov 17 17:29:43 CST 2026 ===
+From github.com:chenweigao/perch
+   1226a2f8..f40aa5dd  perf/20x-loop-36-20261117 -> origin/perf/20x-loop-36-20261117
+Previous HEAD position was 1226a2f8 test(core): round-36 v3 — splitAt=2 merge fixture pins the fold-key re-carry order
+HEAD is now at f40aa5dd docs(performance): round-36 CI math-flake forensics (instance #37) — variance signature + same-head attempt-2 green
+HEAD=f40aa5dd05232056f3fdacdaae0f062357151e83
+porcelain_before=0
+=== math gate Tue Nov 17 17:29:49 CST 2026 ===
+math_exit=0
+  },
+  "scope": "same-runner sequential synthetic A/B; window timings are not hardware input latency or FPS"
+}
+status: passed
+  typeset-32: ratio=1.0114 best_ratio=1.0084
+  typeset-128: ratio=0.9819 best_ratio=0.9979
+  typeset-512: ratio=1.0009 best_ratio=1.002
+input_comparison: {"baseline": "4577fdca07cf3b6f5dfd5f0f5d84367d2ce13fb9c24bb934f26f5dc966ee0e66", "candidate": "4a139ca750db4269cc7ea28f061b4338c4fd9991519c526a07a7fa55a802f752", "relative_performance_gates": "applied"}
+porcelain_after=0
+DONE Tue Nov 17 17:32:30 CST 2026
+exit=0
