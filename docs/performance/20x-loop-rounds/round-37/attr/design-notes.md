@@ -56,9 +56,14 @@ joinedIncremental ARC 1.21%，符合设计预估 2-3% 下沿）。
 **剩余构成（prepend 相）**：
 - ARC/bridge 42.9%：update() 内联 15.14%（主体=旧窗口 16k 元素释放链——
   previous=input 替换时旧 messages 缓冲析构，值语义固有；Input API=红线）
-  + displayMessages.getter 3.37%（**符号化伪影判定收口**：源码核实
-  handle.update→model.update→cache.retain 全程无该 getter 调用；live=nil
-  路径 O(1)；F3 口径 release 内联归属不可靠，不立项）+ History
+  + displayMessages.getter 3.37%（**归因未决——评审 F1 更正**：初稿
+  「伪影收口」失实，harness 实际三处调用该 getter（r37-attr.job:122/148/153）
+  且 in_flight_turn 非空 ⇒ 走 O(窗口) messages+[live] 拼接路径；prepend 相
+  样本或含 warm 段相位边界污染（next-marker 规则，round-34 14.5% 先例）；
+  无探针/DWARF 实验不得宣称伪影（round-33 F3 撤回先例）——未决推断、
+  暂不选题；分页 20 页循环体内确无调用；产品侧流式形态每更新支付该
+  拼接（AgentWorkbench 调用、getter 本体在 WorkbenchCore）⇒ 交 round-38
+  流式复剖裁决）+ History
   deinit/init 3.9% + 字典析构 3.1% + harness 2.8%（调用方形态）+ 散点。
 - string-compare 7.49%：KimiPart derived equals 2.78%（**cost-reuse 循环
   line 601 的整窗逐消息深比较**——retained-cost 复用门）+ sameWindow 族
@@ -67,12 +72,15 @@ joinedIncremental ARC 1.21%，符合设计预估 2-3% 下沿）。
 - narrative 5.68%（round-20 否决在案）；teardown 8.83%（临时体析构，固有）；
   timeline-make 2.26%（O(页) 已增量）；model-update 4.23%（编排胶水）。
 
-**双重验证发现（入队列）**：cost-reuse 循环（line 601 深 ==，~2.8%）与 TV
-sameWindow 验证（~5%）对**同一后缀字节各验证一遍**。统一/复用其一可省
-~3%，但：(a) cost == 是 retainedPayloadCost（缓存准入，budget-0 钉死族）
-的语义门，弱化=准入行为变化=红线；(b) sameWindow 是 chunk 复用正确性门；
-(c) 统一需 TV↔model 间新 API（架构耦合）。⇒ 需红线评估+设计论证，非最小
-修改，本轮不立项。物理同一性快路径（buffer 地址比较+精确回退）估算收益
+**双层验证发现（入队列；评审 interim 更正措辞）**：cost-reuse 循环
+（line 601 深值 ==，~2.8%）与 TV chunk 复用验证（~5%）每次 prepend 各自
+扫描同一后缀窗口；TV 侧为**位态结构层优先**（sameWindowBits 73B/消息，
+round-33 实证）+深值回退（KimiProtocol.swift:314-321），与 cost 侧深值 ==
+**深度与语义不同**——初稿「同一后缀字节各深走一遍」失准。去重可行性
+取决于位态层能否覆盖 cost 准入等值需求（budget-0 钉死族），需红线评估+
+精确语义分析：(a) cost == 是 retainedPayloadCost（缓存准入）语义门；
+(b) sameWindow 是 chunk 复用正确性门；(c) 统一需 TV↔model 新 API
+（架构耦合）。⇒ 非最小修改，本轮不立项。物理同一性快路径（buffer 地址比较+精确回退）估算收益
 ≈2.8-3.5%，低于分类器可信阈（spread 4-10%），单独立项预期不采纳。
 
 **裁决：评估轮（round-34 先例）**——可攻单点均 ≤3.5%（低于噪声带可信
