@@ -1,0 +1,41 @@
+#!/bin/bash
+# Round-35 v2 quiet-machine math gate retest (round-24/27/30/32 protocol): CI
+# run 44014279965 at 0581fea failed "Typeset/draw regression exceeds 15% at
+# 32". Signature: VARIANCE family — baseline rounds themselves span 2.4x
+# (cold_attachment medians 2.4792/1.0332/1.5420, round-1 warm-up spike) while
+# candidate rounds are tight (1.3741/1.5084/1.4551) and the candidate MEDIAN
+# is FASTER (1.4551 vs 1.5420 = 0.944); the gate trips on the baseline's
+# lucky-fast round-4 best. Round-35 delta = presentation-layer incremental
+# indexes (ToolVisibilityProjection/History) + tests — the math gate measures
+# isolated synthetic typeset/draw, zero code-path intersection. Real gate,
+# quiet Aqua session, PR base ref.
+set -u
+cd "$HOME/_worktrees/20x-loop-20261112/perch"
+echo "=== prepare $(date) ==="
+git fetch origin
+git checkout --detach 0581fea
+git checkout -- . 2>/dev/null; git clean -fdq
+echo "HEAD=$(git rev-parse HEAD)"
+echo "porcelain_before=$(git status --porcelain | wc -l | tr -d ' ')"
+export WORKBENCH_MATH_BASELINE_REF=529d41e77a76bb72f53580e294481102039342e2
+rm -rf /tmp/r35-math-quiet
+rm -rf "$PWD/.local/math-performance-sources" "$PWD/build/Math Performance baseline.app" "$PWD/build/Math Performance candidate.app"
+echo "=== math gate $(date) ==="
+bash scripts/check-math-performance.sh /tmp/r35-math-quiet > /tmp/r35-math-quiet.log 2>&1
+echo "math_exit=$?"
+tail -3 /tmp/r35-math-quiet.log
+python3 - <<'PYEOF'
+import json
+try:
+    s = json.load(open('/tmp/r35-math-quiet/summary.json'))
+    print("status:", s.get("status"))
+    comp = s.get("comparison") or {}
+    for k, v in comp.items():
+        if isinstance(v, dict) and v.get("best_ratio") is not None:
+            print(f"  {k}: ratio={round(v.get('ratio',0),4)} best_ratio={round(v['best_ratio'],4)}")
+    print("input_comparison:", json.dumps(s.get("input_comparison")))
+except Exception as e:
+    print("summary parse:", e)
+PYEOF
+echo "porcelain_after=$(git status --porcelain | wc -l | tr -d ' ')"
+echo "DONE $(date)"

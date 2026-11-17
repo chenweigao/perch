@@ -1,0 +1,59 @@
+PASS: step reading preserves order, edit identities, historical patches and outcome-aware churn
+PASS: phase reading groups Bash and thoughts, preserves edit receipts, separates historical failures from pending work and uses grounded command labels
+PASS: live public summaries, completed process folding, manual expansion, uniform folding of edits and failures
+PASS: PI steady streaming cadence, Unicode boundaries, replacement and immediate completion
+PASS: parsed-block release retains Unicode, styling, links and complete rich Markdown
+PASS: incremental reply parse matches full parses at every streaming prefix
+PASS: live progress, missing summaries, thinking-only output, tool-only notice and provider model groups
+PASS: process fold groups completed turns, preserves order, keeps the running turn live
+PASS: presentation parity, same-ID edits, pagination, epoch/language/live handoff, scoped LRU, oversized active state and metrics
+
+*** Signal 4: Backtracing from 0x563fca170c3c... done ***
+
+*** Swift runtime failure: precondition failure ***
+
+Platform: x86_64 Linux (Alibaba Cloud Linux 3 (Soaring Falcon))
+
+Thread 0 "WorkbenchChecks" crashed:
+
+  0 [inlined] [system] 0x0000563fca170c3c Swift runtime failure: precondition failure in WorkbenchChecks at //<compiler-generated>
+  1                    0x0000563fca170c3c checkConversationPresentationHistory() + 24124 in WorkbenchChecks at /home/<dev>/.t3/worktrees/perch/t3-b3eb4bba-c5db753ed6879e15/Tests/WorkbenchCoreTests/PresentationHistoryTests.swift:174:25
+  2 [ra]               0x0000563fca18cb99 specialized static ProtocolTests.main() + 376 in WorkbenchChecks at /home/<dev>/.t3/worktrees/perch/t3-b3eb4bba-c5db753ed6879e15/Tests/WorkbenchCoreTests/ProtocolTests.swift:42:13
+  3 [async] [system]   0x0000563fca185ec0 specialized thunk for @escaping @convention(thin) @async () -> () in WorkbenchChecks at //<compiler-generated>
+  4 [async]            0x00007fea354a9190 completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*) in libswift_Concurrency.so
+...
+
+
+Registers:
+
+rax 0x0000000000000001  1
+rdx 0x0000563fca886990  b0 35 87 ca 3f 56 00 00 60 aa 6e 33 ea 7f 00 00  °5·Ê?V··`ªn3ê···
+rcx 0x0000000000000281  641
+rbx 0x00007fea336eaa60  00 8f 88 ca 3f 56 00 00 40 12 88 ca 3f 56 00 00  ···Ê?V··@··Ê?V··
+rsi 0x0000563fca887770  90 2b 88 ca 3f 56 00 00 81 02 00 00 00 00 00 00  ·+·Ê?V··········
+rdi 0x0000000000000000  0
+rbp 0x00007ffcfff2ab20  80 ab f2 ff fc 7f 00 00 99 cb 18 ca 3f 56 00 00  ·«òÿü····Ë·Ê?V··
+rsp 0x00007ffcfff2a390  04 07 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ················
+ r8 0x0000000000000000  0
+ r9 0x0000000200000000  8589934592
+r10 0x0000000100000003  4294967299
+r11 0x0000000000000000  0
+r12 0x0000000000000000  0
+r13 0x0000563fca876ec0  18 93 66 ca 3f 56 00 00 03 00 00 00 02 00 00 00  ··fÊ?V··········
+r14 0x0000563fca8735c0  60 aa 6e 33 ea 7f 00 00 80 69 88 ca 3f 56 00 00  `ªn3ê····i·Ê?V··
+r15 0x0000000000000001  1
+rip 0x0000563fca170c3c  0f 0b 48 8d bd c0 fc ff ff e8 66 c2 f6 ff 48 8b  ··H·½ÀüÿÿèfÂöÿH·
+
+rflags 0x0000000000010206  PF
+
+cs 0x0033  fs 0x0000  gs 0x0000
+
+
+Images (48 omitted):
+
+0x0000563fc9e00000–0x0000563fca619bc0 438b5ab1fa1be11fb669cf4f2167daa65ef3dfa3 WorkbenchChecks         /home/<dev>/.t3/worktrees/perch/t3-b3eb4bba-c5db753ed6879e15/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+0x00007fea3541d000–0x00007fea354b0660 ab7a387eca696d31db096d9ebebea096c2cf1bc3 libswift_Concurrency.so /home/<dev>/.local/swift/6.3.3/usr/lib/swift/linux/libswift_Concurrency.so
+
+Backtrace took 1.00s
+
+timeout: the monitored command dumped core

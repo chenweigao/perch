@@ -1,0 +1,8 @@
+{
+  "verdict": "PENDING",
+  "candidate": "0581fea7cbd69a35bca10bc79a683e3f1171193c",
+  "base": "529d41e",
+  "findings": [],
+  "verified": ["Candidate HEAD and clean starting worktree confirmed", "AGENTS.md and round-34 attribution correction read", "Main-checkout design notes read-only"],
+  "outstanding": ["Source equivalence and invalidation audit", "Release WorkbenchChecks", "Mutation experiments", "A/B receipts and classifier recalculation"]
+}
