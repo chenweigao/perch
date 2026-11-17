@@ -1,0 +1,64 @@
+{
+  "cpu_count" : 3,
+  "dependencies" : {
+    "swift-cmark" : {
+      "revision" : "924936d0427cb25a61169739a7660230bffa6ea6",
+      "version" : "0.8.0"
+    },
+    "swift-markdown" : {
+      "revision" : "3c6f9523da3a1ec2fd829673e472d95b8097a3b8",
+      "version" : "0.8.0"
+    },
+    "swiftmath" : {
+      "revision" : "fa8244ed032f4a1ade4cb0571bf87d2f1a9fd2d7",
+      "version" : "1.7.3"
+    }
+  },
+  "fixture" : "synthetic; no sessions or network",
+  "measurements" : {
+    "cold_attachment" : {
+      "max_ms" : 25.491583333291601,
+      "median_ms" : 2.3567083333091432,
+      "p95_ms" : 6.2050416667034369,
+      "total_ms" : 369.82883333269001
+    },
+    "cold_cpu" : {
+      "max_ms" : 23.519999999999996,
+      "median_ms" : 2.1659999999999968,
+      "p95_ms" : 5.6100000000000136,
+      "total_ms" : 339.40200000000033
+    },
+    "draw_cpu" : {
+      "max_ms" : 16.185999999999979,
+      "median_ms" : 2.2680000000000291,
+      "p95_ms" : 8.0519999999999072,
+      "total_ms" : 395.83899999999966
+    },
+    "first_light_dark_draw" : {
+      "max_ms" : 18.073208333248658,
+      "median_ms" : 2.48570833332451,
+      "p95_ms" : 8.7432916666330129,
+      "total_ms" : 425.03420833304517
+    },
+    "formula_count" : 128,
+    "rss_after_bytes" : 92667904,
+    "rss_before_bytes" : 26066944,
+    "warm_attachment" : {
+      "max_ms" : 0.069291666704884847,
+      "median_ms" : 0.0049166666258315672,
+      "p95_ms" : 0.024458333314214542,
+      "total_ms" : 0.24787500012735109
+    }
+  },
+  "mode" : "typeset",
+  "os" : "Version 27.0.1 (Build 26A434)",
+  "physical_memory_bytes" : 7516192768,
+  "revision" : "fd798842025f420c4bcf56404df27140a086bded",
+  "scope" : "isolated synthetic AppKit\/SwiftUI work; not hardware input latency or certified FPS",
+  "source_input_sha256" : "4577fdca07cf3b6f5dfd5f0f5d84367d2ce13fb9c24bb934f26f5dc966ee0e66",
+  "status" : "passed",
+  "suffix_search" : false,
+  "swiftmath_patch_sha256" : "68686f9cd8fbe4b1134ace3a22f162828b9d4bd89eb84816f050379aa06bb855",
+  "toolchain" : "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+  "variant" : "baseline"
+}
