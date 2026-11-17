@@ -130,16 +130,37 @@ public final class ToolVisibilityProjection {
     /// The prefix's turns by their first message, reused when a page of older
     /// messages or a new prompt changes the prefix around them.
     private var chunks: [String: Chunk] = [:]
+    /// Round 35: prepend/append-aware incremental global indexes for
+    /// `projectTurns`. `owner` maps tool identity -> turn index RELATIVE to
+    /// `ownerBase` (absolute = relative + base), so adding turns at either
+    /// end shifts the base instead of rehashing every identity in the window;
+    /// the identity set is carried alongside for the same reason. Valid only
+    /// for the exact sequence of prior calls on this instance: any turn
+    /// whose chunk rebuilt, any merged/split turn, or changed observed/
+    /// anchor/online/session state falls back to the full build — the
+    /// incremental path only ever adds a fast route, never a new result.
+    private var cachedTurnIDs: [String] = []
+    private var cachedOwner: [String: Int] = [:]
+    private var cachedOwnerBase = 0
+    private var cachedIdentities: Set<String>?
+    private var cachedObserved: [String: ObservedLive]?
+    private var cachedAnchor: String?
+    private var cachedOnline: Bool?
     public init() {}
     public var retainedLiveTools: [KimiLiveTool] { order.compactMap { observed[$0]?.tool } }
 
+    private func discardIndexes() {
+        cachedTurnIDs = []; cachedOwner = [:]; cachedOwnerBase = 0
+        cachedIdentities = nil; cachedObserved = nil; cachedAnchor = nil; cachedOnline = nil
+    }
+
     /// Localized fallback names are part of the output; a language change must
     /// not reuse a prefix projected in the previous language.
-    public func discardPrefix() { prefix = nil; chunks = [:] }
+    public func discardPrefix() { prefix = nil; chunks = [:]; discardIndexes() }
 
     public func update(_ messages: [KimiMessage], sessionID: String, live: [KimiLiveTool] = [],
                        running: Set<String> = [], online: Bool = true) -> Snapshot {
-        prefix = nil; chunks = [:]
+        prefix = nil; chunks = [:]; discardIndexes()
         return project(messages, split: nil, sessionID: sessionID, live: live, running: running, online: online).snapshot
     }
 
@@ -204,29 +225,137 @@ public final class ToolVisibilityProjection {
         guard turnAnchors[anchor] == nil else { return nil }
         var candidates: [Chunk?] = []
         var identities: [Set<String>] = []
-        var owner: [String: Int] = [:]
-        for (index, range) in bounds.enumerated() {
+        for range in bounds {
             let source = messages[range]
             let previous = chunks[source.first!.id]
             let candidate = previous.flatMap { $0.source.count == source.count && KimiMessage.sameWindow(source, $0.source) ? $0 : nil }
             // An equal window is adopted so the next comparison stays on the
             // bytes a copy carries, even when this turn is projected again.
             candidate?.source = source
-            let own = candidate?.identities ?? Self.identities(in: source)
-            for id in own where owner.updateValue(index, forKey: id) != nil { return nil }
-            candidates.append(candidate); identities.append(own)
+            identities.append(candidate?.identities ?? Self.identities(in: source))
+            candidates.append(candidate)
+        }
+        // Round 35: incremental global indexes. Alignment = a suffix of the
+        // previous call's turn-id sequence appears contiguously in this call's
+        // turns with every aligned turn's chunk verified unchanged
+        // (candidate != nil); turns may be added at the front (a prepended
+        // page) and/or the end (a new prompt). At most ONE cached leading
+        // turn may be missing: a page boundary can split a turn, and the
+        // next page MERGES its head into that turn (new first-message id,
+        // rebuilt chunk) — the merged turn counts as new, and the consumed
+        // turn's owner entries are dropped before the new inserts, keeping
+        // the duplicate rejection exactly the full build's. Owner values are
+        // relative to ownerBase, so the positional shift is a base adjustment
+        // instead of rehashing every identity in the window. Any deeper
+        // misalignment (more than the leading turn consumed, a rebuilt chunk
+        // inside the aligned run, changed anchor or connection state) takes
+        // the full-build path below, unchanged.
+        let turnIDs = bounds.map { messages[$0.lowerBound].id }
+        var alignment: Range<Int>?
+        var consumedLeading = 0
+        var ownerBase = 0
+        if !cachedTurnIDs.isEmpty, cachedAnchor == anchor, cachedOnline == online {
+            for consumed in 0..<min(2, cachedTurnIDs.count) {
+                let suffixCount = cachedTurnIDs.count - consumed
+                guard turnIDs.count >= suffixCount else { continue }
+                let maxOffset = turnIDs.count - suffixCount
+                for offset in 0...maxOffset where turnIDs[offset] == cachedTurnIDs[consumed] {
+                    if (0..<suffixCount).allSatisfy({ turnIDs[offset + $0] == cachedTurnIDs[consumed + $0] })
+                        && (offset..<(offset + suffixCount)).allSatisfy({ candidates[$0] != nil }) {
+                        alignment = offset..<(offset + suffixCount)
+                        consumedLeading = consumed
+                        break
+                    }
+                }
+                if alignment != nil { break }
+            }
+        }
+        // Identities of the consumed leading turn (merged into a new turn by
+        // a page boundary): dropped from the incremental indexes before the
+        // new turns insert their own. A missing chunk falls back to the full
+        // build rather than guessing.
+        var consumedIdentities: Set<String>?
+        if alignment != nil, consumedLeading > 0 {
+            if let consumedChunk = chunks[cachedTurnIDs[0]] {
+                consumedIdentities = consumedChunk.identities
+            } else {
+                alignment = nil
+            }
+        }
+        let owner: [String: Int]
+        if let alignment {
+            // The aligned cached turns keep their relative values; the base
+            // absorbs the positional shift (new leading turns).
+            // Aligned turns keep their relative values: cached turn j moves
+            // from absolute (j + cachedOwnerBase... rel j - cachedOwnerBase)
+            // to alignment.lowerBound + (j - consumedLeading), so the base
+            // shifts by (lowerBound - consumedLeading).
+            ownerBase = cachedOwnerBase + alignment.lowerBound - consumedLeading
+            var incremental = cachedOwner  // COW copy; old relative values stay valid
+            if let consumedIdentities {
+                let consumedRelative = 0 - cachedOwnerBase
+                for id in consumedIdentities where incremental[id] == consumedRelative {
+                    incremental.removeValue(forKey: id)
+                }
+            }
+            var duplicate = false
+            for index in 0..<bounds.count where !alignment.contains(index) {
+                for id in identities[index] where incremental.updateValue(index - ownerBase, forKey: id) != nil {
+                    duplicate = true
+                    break
+                }
+                if duplicate { break }
+            }
+            // Same rejection the full build applies: an identity owned by two
+            // turns projects nothing (the whole-window path handles it).
+            if duplicate { return nil }
+            owner = incremental
+        } else {
+            var full: [String: Int] = [:]
+            for (index, own) in identities.enumerated() {
+                for id in own where full.updateValue(index, forKey: id) != nil { return nil }
+            }
+            owner = full
         }
         // A live tool appended after its turn is placed there only while no
         // other turn holds its call or result.
         for (turn, ids) in anchored {
             guard let index = turnAnchors[turn] else { continue }
-            for id in ids where owner[id].map({ $0 != index }) == true { return nil }
+            for id in ids where owner[id].map({ $0 + ownerBase != index }) == true { return nil }
         }
-        let prefixIdentities = Set(owner.keys).union(observed.compactMap { $0.value.anchor != anchor ? $0.key : nil })
+        let prefixIdentities: Set<String>
+        if let alignment, let cached = cachedIdentities, cachedObserved == observed {
+            // cached = old owner keys ∪ observed term; the observed term is
+            // unchanged (observed equal, anchor equal by the alignment guard),
+            // so drop the consumed turn's identities and union in only the
+            // new turns' (a merged turn re-adds whatever it still holds).
+            // Drop the consumed turn's identities, union in the new turns'
+            // (a merged turn re-adds whatever it still holds), then RESTORE
+            // the observed term (review finding: a consumed turn's tool id
+            // may also be a remembered live tool's id — subtracting without
+            // restoring would shrink the set below the full build's, which
+            // always unions the observed term). The term is O(observed) —
+            // the live tool set — and observed/anchor equality is guarded
+            // above, so the result is exactly Set(owner.keys) ∪ term as in
+            // the full build.
+            var set = cached
+            if let consumedIdentities { set.subtract(consumedIdentities) }
+            for index in 0..<bounds.count where !alignment.contains(index) {
+                set.formUnion(identities[index])
+            }
+            // Restore the observed term: subtracting a consumed turn's chunk
+            // identities can drop ids that the full build re-derives from
+            // observed entries whose anchor differs from the current split
+            // (review finding, round-35 v3).
+            set.formUnion(observed.compactMap { $0.value.anchor != anchor ? $0.key : nil })
+            prefixIdentities = set
+        } else {
+            prefixIdentities = Set(owner.keys).union(observed.compactMap { $0.value.anchor != anchor ? $0.key : nil })
+        }
         guard separates(messages[split...], from: prefixIdentities, anchor: anchor) else { return nil }
         var observedByTurn: [Int: [String: ObservedLive]] = [:]
         for (id, entry) in observed {
-            if let index = owner[id] { observedByTurn[index, default: [:]][id] = entry }
+            if let relative = owner[id] { observedByTurn[relative + ownerBase, default: [:]][id] = entry }
             if let turn = entry.anchor, let index = turnAnchors[turn] { observedByTurn[index, default: [:]][id] = entry }
         }
         var next: [String: Chunk] = [:]
@@ -253,6 +382,15 @@ public final class ToolVisibilityProjection {
             result.append(chunk)
         }
         chunks = next
+        // Refresh the incremental indexes only on success, keeping them in
+        // lockstep with `chunks` (both reflect this call's result).
+        cachedTurnIDs = turnIDs
+        cachedOwner = owner
+        cachedOwnerBase = ownerBase
+        cachedIdentities = prefixIdentities
+        cachedObserved = observed
+        cachedAnchor = anchor
+        cachedOnline = online
         return Prefix(messages: nil, tools: nil, chunks: result, source: messages[..<split], anchor: anchor,
                       sessionID: sessionID, online: online, identities: prefixIdentities,
                       active: activeIDs.intersection(prefixIdentities),
@@ -272,6 +410,7 @@ public final class ToolVisibilityProjection {
     private func observe(_ live: [KimiLiveTool], sessionID: String, anchor: String?) {
         if self.sessionID != sessionID {
             self.sessionID = sessionID; observed = [:]; order = []; prefix = nil; chunks = [:]
+            discardIndexes()
         }
         for tool in live {
             if observed[tool.id] == nil { order.append(tool.id) }

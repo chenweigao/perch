@@ -1,0 +1,59 @@
+PASS: step reading preserves order, edit identities, historical patches and outcome-aware churn
+PASS: phase reading groups Bash and thoughts, preserves edit receipts, separates historical failures from pending work and uses grounded command labels
+PASS: live public summaries, completed process folding, manual expansion, uniform folding of edits and failures
+PASS: PI steady streaming cadence, Unicode boundaries, replacement and immediate completion
+PASS: parsed-block release retains Unicode, styling, links and complete rich Markdown
+PASS: incremental reply parse matches full parses at every streaming prefix
+PASS: live progress, missing summaries, thinking-only output, tool-only notice and provider model groups
+PASS: process fold groups completed turns, preserves order, keeps the running turn live
+PASS: presentation parity, same-ID edits, pagination, epoch/language/live handoff, scoped LRU, oversized active state and metrics
+
+*** Signal 4: Backtracing from 0x556e18d7413c... done ***
+
+*** Swift runtime failure: precondition failure ***
+
+Platform: x86_64 Linux (Alibaba Cloud Linux 3 (Soaring Falcon))
+
+Thread 0 "WorkbenchChecks" crashed:
+
+  0 [inlined] [system] 0x0000556e18d7413c Swift runtime failure: precondition failure in WorkbenchChecks at //<compiler-generated>
+  1                    0x0000556e18d7413c checkConversationPresentationHistory() + 24124 in WorkbenchChecks at /tmp/r35-mut/Tests/WorkbenchCoreTests/PresentationHistoryTests.swift:174:25
+  2 [ra]               0x0000556e18d90099 specialized static ProtocolTests.main() + 376 in WorkbenchChecks at /tmp/r35-mut/Tests/WorkbenchCoreTests/ProtocolTests.swift:42:13
+  3 [async] [system]   0x0000556e18d893c0 specialized thunk for @escaping @convention(thin) @async () -> () in WorkbenchChecks at //<compiler-generated>
+  4 [async]            0x00007fd6c73ec190 completeTaskAndRelease(swift::AsyncContext*, swift::SwiftError*) in libswift_Concurrency.so
+...
+
+
+Registers:
+
+rax 0x0000000000000001  1
+rdx 0x0000556e199876a0  60 0a 63 c5 d6 7f 00 00 60 0a 63 c5 d6 7f 00 00  `·cÅÖ···`·cÅÖ···
+rcx 0x0000000000000921  2337
+rbx 0x00007fd6c5630a60  70 dd 98 19 6e 55 00 00 20 3e 97 19 6e 55 00 00  pÝ··nU·· >··nU··
+rsi 0x0000556e19988480  00 d8 96 19 6e 55 00 00 21 09 00 00 00 00 00 00  ·Ø··nU··!·······
+rdi 0x0000000000000000  0
+rbp 0x00007ffd920f18c0  20 19 0f 92 fd 7f 00 00 99 00 d9 18 6e 55 00 00   ···ý·····Ù·nU··
+rsp 0x00007ffd920f1130  04 07 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ················
+ r8 0x0000000000000000  0
+ r9 0x0000000200000000  8589934592
+r10 0x0000000100000003  4294967299
+r11 0x0000000000000000  0
+r12 0x0000000000000000  0
+r13 0x0000556e199792f0  d0 ca 26 19 6e 55 00 00 03 00 00 00 02 00 00 00  ÐÊ&·nU··········
+r14 0x0000556e19988490  60 0a 63 c5 d6 7f 00 00 60 0a 63 c5 d6 7f 00 00  `·cÅÖ···`·cÅÖ···
+r15 0x0000000000000001  1
+rip 0x0000556e18d7413c  0f 0b 48 8d bd c0 fc ff ff e8 e6 8d f6 ff 48 8b  ··H·½Àüÿÿèæ·öÿH·
+
+rflags 0x0000000000010206  PF
+
+cs 0x0033  fs 0x0000  gs 0x0000
+
+
+Images (48 omitted):
+
+0x0000556e18a00000–0x0000556e1921d288 214a605e59380963ead5ea2efaddd7ed000c9a37 WorkbenchChecks         /tmp/r35-mut/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+0x00007fd6c7360000–0x00007fd6c73f3660 ab7a387eca696d31db096d9ebebea096c2cf1bc3 libswift_Concurrency.so /home/<dev>/.local/swift/6.3.3/usr/lib/swift/linux/libswift_Concurrency.so
+
+Backtrace took 1.31s
+
+timeout: the monitored command dumped core

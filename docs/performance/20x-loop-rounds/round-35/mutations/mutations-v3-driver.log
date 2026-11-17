@@ -1,0 +1,20 @@
+=== control Tue Nov 17 13:32:00 CST 2026 ===
+control_build_exit=0
+control_exit=0 pass=109
+tv-base-shift-removal exit=0 pass=109 kill_at=?
+tv-base-off-by-consumed exit=0 pass=109 kill_at=?
+tv-consumed-removal-skip exit=0 pass=109 kill_at=?
+tv-identities-no-subtract exit=0 pass=109 kill_at=?
+.local/round35/mutation-kills-v3.sh: line 22: 1612276 Illegal instruction     timeout 900 "$MUT/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks" > "$OUT/$name-checks.log" 2>&1
+history-base-shift-removal exit=132 pass=9 kill_at=PresentationHistoryTests.swift:174
+.local/round35/mutation-kills-v3.sh: line 22: 1617610 Illegal instruction     timeout 900 "$MUT/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks" > "$OUT/$name-checks.log" 2>&1
+history-base-off-by-consumed exit=132 pass=17 kill_at=PrependIncrementalTests.swift:115
+history-consumed-removal-skip exit=0 pass=109 kill_at=?
+.local/round35/mutation-kills-v3.sh: line 22: 1629033 Illegal instruction     timeout 900 "$MUT/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks" > "$OUT/$name-checks.log" 2>&1
+history-suffix-check-weakened exit=132 pass=17 kill_at=PrependIncrementalTests.swift:115
+.local/round35/mutation-kills-v3.sh: line 22: 1634680 Illegal instruction     timeout 900 "$MUT/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks" > "$OUT/$name-checks.log" 2>&1
+tv-identities-no-restore exit=132 pass=17 kill_at=PrependIncrementalTests.swift:267
+=== control rerun (tree restored) Tue Nov 17 13:44:33 CST 2026 ===
+control_rebuild_exit=0
+control_rerun_exit=0 pass=109
+DONE Tue Nov 17 13:45:39 CST 2026

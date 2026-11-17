@@ -1,0 +1,14 @@
+Building for production...
+[0/2] Write swift-version--2C0D084D88D86C41.txt
+[1/3] Write sources
+[3/4] Compiling WorkbenchCore ActivityNarrative.swift
+/home/<dev>/.t3/worktrees/perch/t3-b3eb4bba-c5db753ed6879e15/Sources/WorkbenchCore/ConversationEntryCache.swift:181:13: warning: variable 'length' was never mutated; consider changing to 'let' constant
+179 | 
+180 |     private static func appendLengthPrefixed(_ bytes: inout [UInt8], _ field: String) {
+181 |         var length = UInt64(field.utf8.count)
+    |             `- warning: variable 'length' was never mutated; consider changing to 'let' constant
+182 |         for shift in stride(from: 56, through: 0, by: -8) {
+183 |             bytes.append(UInt8(truncatingIfNeeded: length >> shift))
+[3/5] Write Objects.LinkFileList
+[4/5] Linking WorkbenchChecks
+Build of product 'WorkbenchChecks' complete! (59.13s)

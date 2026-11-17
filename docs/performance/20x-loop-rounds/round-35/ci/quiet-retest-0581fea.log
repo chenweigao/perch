@@ -1,0 +1,17 @@
+=== prepare Tue Nov 17 12:27:17 CST 2026 ===
+HEAD is now at 0581fea7 perf(core): round-35 v2 — fix merge-case base shift; widen overlay pin to all rows
+HEAD=0581fea7cbd69a35bca10bc79a683e3f1171193c
+porcelain_before=0
+=== math gate Tue Nov 17 12:27:22 CST 2026 ===
+math_exit=0
+  },
+  "scope": "same-runner sequential synthetic A/B; window timings are not hardware input latency or FPS"
+}
+status: passed
+  typeset-32: ratio=0.9467 best_ratio=0.9958
+  typeset-128: ratio=0.986 best_ratio=0.9897
+  typeset-512: ratio=0.9915 best_ratio=1.0027
+input_comparison: {"baseline": "3af67029b36e1f5f845961cc3dd91c7245ba2c4062e0e44520ee3cfa457731f4", "candidate": "3e793e51f06b3c6844294562eaa9afe089b5e5074274b2d32716e2fa275ba7c8", "relative_performance_gates": "applied"}
+porcelain_after=0
+DONE Tue Nov 17 12:30:04 CST 2026
+exit=0
