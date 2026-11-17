@@ -1,0 +1,5 @@
+# round-39 harness fidelity dry-run (Linux dev machine, d8eec30 tree + temp harness patch, Tue Nov 17 21:36:34 CST 2026)
+r39_profile shape=streaming cycles=6 updates=1230
+r39_chain_median_ms=1.824 min_ms=1.707 max_ms=434.452 find_median_ms=0.504
+  chain_total                 median_ms=    1.13
+  find_bar_query_update       median_ms=    0.49

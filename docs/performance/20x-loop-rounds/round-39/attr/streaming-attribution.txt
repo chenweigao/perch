@@ -1,0 +1,48 @@
+profile=streaming total_samples=20527
+
+== phase [chain] n=20527 (100.0% of trace) ==
+    5015  24.43%  setup-wire-decode
+    3440  16.76%  arc-copy
+    2600  12.67%  utf16-bridge
+    1929   9.40%  string-compare
+    1867   9.10%  teardown
+    1089   5.31%  cf-match
+     935   4.55%  alloc
+     841   4.10%  input-compare
+     710   3.46%  string-hash
+     567   2.76%  dict-find
+     399   1.94%  timeline-make
+     251   1.22%  narrative
+     192   0.94%  tool-visibility
+     143   0.70%  find-search
+     129   0.63%  turn-summary
+     123   0.60%  model-update
+      86   0.42%  find-verify
+      74   0.36%  outside
+      72   0.35%  setup-json
+      31   0.15%  activity-init
+      15   0.07%  presented-fold
+  -- top leaves --
+    1253   6.10%  swift_release
+    1015   4.94%  swift_retain
+     925   4.51%  swift_bridgeObjectRelease
+     819   3.99%  closure #1 in closure #1 in static KimiMessage.sameWindow(_:_:)
+     609   2.97%  swift_bridgeObjectRetain
+     503   2.45%  DYLD-STUB$$swift_bridgeObjectRelease
+     481   2.34%  DYLD-STUB$$swift_bridgeObjectRetain
+     402   1.96%  __CFStringFoldCharacterClusterAtIndex
+     396   1.93%  _platform_memmove
+     383   1.87%  _StringGuts.append(_:)
+     342   1.67%  specialized static JSONScanner._slowpath_stringValue(from:appendingTo:fullSource:)
+     334   1.63%  validateUTF8(_:)
+     327   1.59%  _xzm_free_tc
+     317   1.54%  _stringCompareFastUTF8Abnormal(_:_:expecting:)
+  -- hash/dict consumers --
+     242   1.18%  String.hash(into:)
+     122   0.59%  JSONDecoderImpl.KeyedContainer.decodeIfPresent(_:forKey:)
+      80   0.39%  static JSONDecoderImpl.KeyedContainer.stringify(objectRegion:using:codingPathNode:keyDecod
+      73   0.36%  ToolVisibilityProjection.Pass.collect(_:)
+      55   0.27%  JSONDecoderImpl.KeyedContainer.decodeIfPresent<A>(_:forKey:)
+      52   0.25%  ToolVisibilityProjection.Pass.normalize(_:)
+      45   0.22%  JSONDecoderImpl.KeyedContainer.decode(_:forKey:)
+      44   0.21%  ToolVisibilityProjection.Pass.present(id:call:result:)
