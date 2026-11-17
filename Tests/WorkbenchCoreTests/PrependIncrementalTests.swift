@@ -80,6 +80,7 @@ func checkPrependIncremental() throws {
     let warm = ConversationPresentationModel(key: "s")
     var window = try decode(baseRaw)
     var step = 0
+    var sawFoldParents = false
     func compare(_ label: String, live: [KimiLiveTool] = [rememberedLive],
                  running: Set<String> = ["call-LIVE-T"],
                  online: Bool = true, language: String = "zh") throws {
@@ -93,9 +94,12 @@ func checkPrependIncremental() throws {
         precondition(w.rows == f.rows, "step \(step) (\(label)): rows diverged between incremental and full rebuild")
         precondition(w.navigation == f.navigation, "step \(step) (\(label)): navigation diverged")
         precondition(w.narrativeKey == f.narrativeKey, "step \(step) (\(label)): narrative key diverged")
-        precondition(w.presented(activity: [:], foldsProcess: true, isRunning: true)
-                     == f.presented(activity: [:], foldsProcess: true, isRunning: true),
+        let wFolded = w.presented(activity: [:], foldsProcess: true, isRunning: true)
+        precondition(wFolded == f.presented(activity: [:], foldsProcess: true, isRunning: true),
                      "step \(step) (\(label)): folded presentation diverged")
+        // Anti-blind guard: the fold-parents differential below is only
+        // meaningful while the fixture actually produces process folds.
+        sawFoldParents = sawFoldParents || !wFolded.foldParents.isEmpty
         precondition(w.presented(activity: [:], foldsProcess: false, isRunning: true)
                      == f.presented(activity: [:], foldsProcess: false, isRunning: true),
                      "step \(step) (\(label)): unfolded presentation diverged")
@@ -116,6 +120,15 @@ func checkPrependIncremental() throws {
                      == f.presented(activity: overlay, foldsProcess: true, isRunning: true),
                      "step \(step) (\(label)): overlay presentation diverged (entryTurns indexing)")
         precondition(!w.rows.isEmpty, "step \(step) (\(label)): fixture must produce rows")
+        // Re-seed the warm History's presentation memo with the PLAIN folded
+        // shape: the round-36 joined adoption captured at the NEXT update's
+        // init requires an overlay-free prior memo, and the overlay compare
+        // above would otherwise leave a non-empty memo and silently disable
+        // the adopted path for every subsequent step (blind differential).
+        let wReseed = w.presented(activity: [:], foldsProcess: true, isRunning: true)
+        precondition(wReseed == f.presented(activity: [:], foldsProcess: true, isRunning: true),
+                     "step \(step) (\(label)): reseeded folded presentation diverged")
+        sawFoldParents = sawFoldParents || !wReseed.foldParents.isEmpty
     }
 
     // 1. baseline, then pure full-turn prepends (the plain incremental path)
@@ -314,6 +327,9 @@ func checkPrependIncremental() throws {
         fatalError("fixture: a-L must be present")
     }
     projCompare("D-tail-result-flips-separable", try decode(rawD), splitAt: 4)
+
+    precondition(sawFoldParents,
+                 "fixture never produced fold parents — the foldParents differential would be blind")
 
     print("PASS: prepend incremental indexes — warm-vs-fresh differential equality over 9 scenario groups with narrative-overlay comparisons (pure prepends, page-split partial turn, the merge that consumes the cached leading turn, remembered live tool whose observedByTurn placement reads owner+base, interior edit rebuild, turn-boundary growth, connection flips, language reset, trailing streaming deltas) plus the poisoning phase (duplicate tool identity, duplicate page message ids, anchored-live separates rejection) and the projection-level consumed-term differential (observe-under-own-split → grow → compaction consumes the tool's turn → tail result flips separable) against a discardPrefix-based full-rebuild reference with identical observed history")
 }
