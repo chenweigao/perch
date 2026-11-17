@@ -331,5 +331,38 @@ func checkPrependIncremental() throws {
     precondition(sawFoldParents,
                  "fixture never produced fold parents — the foldParents differential would be blind")
 
-    print("PASS: prepend incremental indexes — warm-vs-fresh differential equality over 9 scenario groups with narrative-overlay comparisons (pure prepends, page-split partial turn, the merge that consumes the cached leading turn, remembered live tool whose observedByTurn placement reads owner+base, interior edit rebuild, turn-boundary growth, connection flips, language reset, trailing streaming deltas) plus the poisoning phase (duplicate tool identity, duplicate page message ids, anchored-live separates rejection) and the projection-level consumed-term differential (observe-under-own-split → grow → compaction consumes the tool's turn → tail result flips separable) against a discardPrefix-based full-rebuild reference with identical observed history")
+    // 11. OVERLAY-LAST memo (round-36 capture gate): when the previous
+    // snapshot's final presented() call left an overlay-built memo, the
+    // joined adoption captured at the next prepend's init MUST refuse it —
+    // an overlay memo's rows carry narrative annotations (and possibly
+    // anchor removals), so adopting them for a plain request would diverge
+    // from the full rebuild. The gate mutant (capture regardless of the
+    // prior memo's activity) dies on the comparison below.
+    let warm3 = ConversationPresentationModel(key: "s4")
+    func overlayLastInput(_ msgs: [KimiMessage]) -> ConversationPresentationModel.Input {
+        ConversationPresentationModel.Input(messages: msgs, live: [rememberedLive],
+                                            running: ["call-LIVE-T"], isRunning: true,
+                                            online: true, epoch: "bench", language: "zh")
+    }
+    var window3 = try decode(baseRaw)
+    let w3a = warm3.update(overlayLastInput(window3))
+    var overlay3: [String: ActivityNarrativeRow] = [:]
+    for id in w3a.rows.map(\.entry.id) {
+        overlay3[id] = ActivityNarrativeRow(narrative: .init(turnID: "u", stageID: "external-\(id)",
+                                                             phase: .editing, headline: "外部摘要",
+                                                             source: .commentary, lifecycle: .streaming),
+                                            isAnchor: false, stageClosed: false)
+    }
+    // leave the overlay memo as the LAST presented state (no plain reseed)
+    _ = w3a.presented(activity: overlay3, foldsProcess: true, isRunning: true)
+    window3 = try decode(pageFull) + window3   // pure prepend: alignment fires
+    let w3b = warm3.update(overlayLastInput(window3))
+    let f3b = ConversationPresentationModel(key: "s4").update(overlayLastInput(window3))
+    precondition(w3b.presented(activity: [:], foldsProcess: true, isRunning: true)
+                 == f3b.presented(activity: [:], foldsProcess: true, isRunning: true),
+                 "overlay-last memo leaked into the adopted joined presentation")
+    precondition(w3b.rows == f3b.rows && w3b.navigation == f3b.navigation,
+                 "overlay-last: rows/navigation diverged")
+
+    print("PASS: prepend incremental indexes — warm-vs-fresh differential equality over 9 scenario groups with narrative-overlay comparisons (pure prepends, page-split partial turn, the merge that consumes the cached leading turn, remembered live tool whose observedByTurn placement reads owner+base, interior edit rebuild, turn-boundary growth, connection flips, language reset, trailing streaming deltas) plus the poisoning phase (duplicate tool identity, duplicate page message ids, anchored-live separates rejection) and the projection-level consumed-term differential (observe-under-own-split → grow → compaction consumes the tool's turn → tail result flips separable) against a discardPrefix-based full-rebuild reference with identical observed history, and the overlay-last memo capture-gate differential (an overlay-built prior memo must never feed the joined adoption)")
 }
