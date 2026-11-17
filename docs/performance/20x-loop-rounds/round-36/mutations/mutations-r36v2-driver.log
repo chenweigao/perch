@@ -1,0 +1,17 @@
+=== control Tue Nov 17 15:24:32 CST 2026 ===
+control_build_exit=0
+control_exit=0 pass=109
+.local/round36/mutation-kills-r36v2.sh: line 24: 2570168 Illegal instruction     timeout 900 "$MUT/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks" > "$OUT/$name-checks.log" 2>&1
+joined-consumed-removal-skip exit=132 pass=17 kill_at=PrependIncrementalTests.swift:98
+joined-wrong-order exit=0 pass=109 kill_at=?
+.local/round36/mutation-kills-r36v2.sh: line 24: 2582271 Illegal instruction     timeout 900 "$MUT/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks" > "$OUT/$name-checks.log" 2>&1
+joined-gate-activity-removal exit=132 pass=17 kill_at=PrependIncrementalTests.swift:361
+.local/round36/mutation-kills-r36v2.sh: line 24: 2594048 Illegal instruction     timeout 900 "$MUT/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks" > "$OUT/$name-checks.log" 2>&1
+joined-dropfirst-count-skip exit=132 pass=17 kill_at=PrependIncrementalTests.swift:98
+.local/round36/mutation-kills-r36v2.sh: line 24: 2611436 Illegal instruction     timeout 900 "$MUT/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks" > "$OUT/$name-checks.log" 2>&1
+joined-leading-insert-skip exit=132 pass=17 kill_at=PrependIncrementalTests.swift:98
+joined-prior-unique-gate-removal exit=0 pass=109 kill_at=?
+=== control rerun (tree restored) Tue Nov 17 15:33:57 CST 2026 ===
+control_rebuild_exit=0
+control_rerun_exit=0 pass=109
+DONE Tue Nov 17 15:35:02 CST 2026

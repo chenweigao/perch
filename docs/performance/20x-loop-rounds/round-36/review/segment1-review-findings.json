@@ -1,0 +1,15 @@
+{
+  "verdict": "PENDING",
+  "candidate": "8c748acd",
+  "base": "fd79884",
+  "findings": [
+    {"id":"R1","severity":"RECORD","title":"归因百分比转写与深层统计证据不足","locations":["docs/performance/20x-loop-rounds/2026-11-17-round-36.md:24","docs/performance/20x-loop-rounds/round-36/attr/design-notes.md:61"],"evidence":"1129 / 16925 * 100 = 6.6706056%, 非 6.75%；leaf-consumers-deep.txt string hash 总数为 1443，其中 joined=259、String.hash=1007；归档缺从 String.hash 继续下钻得到 joined=1129 / 全哈希67.8%的计数输出或脚本。现阶段仅记录，待审计完成后确定等级与更正。"}
+  ],
+  "verified": [
+    "HEAD=8c748acd4baceab37c325265b606ddf3f62b2ce6；独立评审分支 t3/review-20x-r36-fold-adoption，初始仅 review-artifacts untracked",
+    "Sources diff 仅 ConversationPresentation.swift；Tests diff 仅 PrependIncrementalTests.swift；0c42b7d3..8c748acd Sources/Tests 零差异；未改 AgentWorkbench 或门槛脚本",
+    "已读 AGENTS.md、round-36 报告与 attr 全部必读、round-35 v3/钉死与 INDEX 后记",
+    "Swift 6.3.3 在 /home/<dev>/.local/swift/6.3.3/usr/bin；独立 release build 已启动，所有 scratch/log 在 review-artifacts"
+  ],
+  "outstanding": ["完成 memo/唯一 fold-id/消费行数等价性审计","运行独立 checks 与门/时序补充验证","复算双端全部 A/B 指标、统计量及 positives","确认归因数字与缺失深层证据处置"]
+}
