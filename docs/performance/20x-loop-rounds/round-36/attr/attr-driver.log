@@ -1,0 +1,30 @@
+=== prepare Tue Nov 17 14:16:04 CST 2026 ===
+From github.com:chenweigao/perch
+   529d41e7..fd798842  main       -> origin/main
+ * [new branch]        perf/20x-loop-36-20261117 -> origin/perf/20x-loop-36-20261117
+Previous HEAD position was 740b5f2e perf(core): round-35 v3 — restore observed term in incremental prefixIdentities (review finding) + projection-level consumed-term kill pin
+HEAD is now at fd798842 Merge pull request #357 from chenweigao/perf/20x-loop-35-20261117
+HEAD=fd798842025f420c4bcf56404df27140a086bded
+porcelain_before=0
+porcelain_preclean=0
+=== apply temporary profile loop modes ===
+porcelain_applied=2
+=== build Tue Nov 17 14:16:09 CST 2026 ===
+build_exit=0
+589018d0d086c7501def5868e93ea4e39f8dc5250c939bac5fad33ad232b3484  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round36-profile/out/Products/Release/WorkbenchChecks
+=== timing context runs (5s, untraced) Tue Nov 17 14:17:26 CST 2026 ===
+r36_profile shape=paging cycles=51 prepends=1020
+=== record paging Tue Nov 17 14:17:32 CST 2026 ===
+record_paging_exit=0
+Recording completed. Saving output file...
+Output file saved as: paging.trace
+Finished export to the file: /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/round36/paging-time-profile.xml
+total 16392
+drwxr-xr-x   4 <mini>  staff      128 Nov 17 14:17 .
+drwxr-xr-x  33 <mini>  staff     1056 Nov 17 14:17 ..
+-rw-r--r--   1 <mini>  staff  7471257 Nov 17 14:18 paging-time-profile.xml
+drwxr-xr-x  10 <mini>  staff      320 Nov 17 14:17 paging.trace
+=== revert Tue Nov 17 14:18:01 CST 2026 ===
+porcelain_after=0
+DONE Tue Nov 17 14:18:02 CST 2026
+exit=0

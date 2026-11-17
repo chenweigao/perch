@@ -1,0 +1,75 @@
+== ARC release/retain: leaf samples=2777 (16.41% of prepend) ==
+     664   23.9% of group  _ContiguousArrayStorage.__deallocating_deinit
+     474   17.1% of group  ConversationPresentationModel.update(_:)
+     284   10.2% of group  specialized UnsafeMutablePointer.initialize(from:count:)
+     217    7.8% of group  specialized _ContiguousArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForA
+     195    7.0% of group  _DictionaryStorage.__deallocating_deinit
+     195    7.0% of group  initializeWithCopy for ClosedRange<>.Index
+      93    3.3% of group  ToolVisibilityProjection.Pass.normalize(_:)
+      81    2.9% of group  ConversationPresentationModel.History.presented(activity:foldsProcess:)
+      75    2.7% of group  closure #1 in static ConversationPresentationModel.Presentation.parents(of:into:)
+      52    1.9% of group  ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+
+== bridgeObject ARC: leaf samples=3530 (20.86% of prepend) ==
+     842   23.9% of group  _ContiguousArrayStorage.__deallocating_deinit
+     713   20.2% of group  ConversationPresentationModel.update(_:)
+     300    8.5% of group  specialized UnsafeMutablePointer.initialize(from:count:)
+     261    7.4% of group  specialized _ContiguousArrayBuffer._consumeAndCreateNew(bufferIsUnique:minimumCapacity:growForA
+     240    6.8% of group  _DictionaryStorage.__deallocating_deinit
+     193    5.5% of group  initializeWithCopy for ClosedRange<>.Index
+     116    3.3% of group  ToolVisibilityProjection.Pass.normalize(_:)
+     115    3.3% of group  ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+      73    2.1% of group  ConversationPresentationModel.History.presented(activity:foldsProcess:)
+      66    1.9% of group  specialized flush #1 (running:) in static ConversationTimelineEntry.make(_:isRunning:)
+
+== string breadcrumbs: leaf samples=449 (2.65% of prepend) ==
+     449  100.0% of group  _StringGuts.createAndLoadBreadcrumbs_time_here_is_String_to_NSString_bridging_overhead(_:)
+
+== string compare: leaf samples=1373 (8.11% of prepend) ==
+     771   56.2% of group  static String.== infix(_:_:)
+     189   13.8% of group  ToolVisibilityProjection.canReuse(_:messages:split:sessionID:activeIDs:online:)
+     122    8.9% of group  closure #1 in ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+     101    7.4% of group  ConversationPresentationModel.History.joined(_:foldsProcess:)
+      72    5.2% of group  ToolVisibilityProjection.update(_:splittingAt:sessionID:live:running:online:)
+      27    2.0% of group  specialized static ConversationTimelineEntry.make(_:isRunning:)
+      17    1.2% of group  ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+       8    0.6% of group  KimiMessage.coalescingAdjacentAssistantParts()
+       8    0.6% of group  AppLanguage.localization.getter
+       7    0.5% of group  specialized static ToolPresentation.isExploration(_:)
+
+== string hash: leaf samples=1443 (8.53% of prepend) ==
+    1007   69.8% of group  String.hash(into:)
+     259   17.9% of group  ConversationPresentationModel.History.joined(_:foldsProcess:)
+      24    1.7% of group  ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+      20    1.4% of group  ToolVisibilityProjection.Pass.collect(_:)
+      18    1.2% of group  ToolVisibilityProjection.Pass.normalize(_:)
+      18    1.2% of group  closure #1 in static ConversationPresentationModel.Presentation.parents(of:into:)
+      15    1.0% of group  ConversationPresentationModel.update(_:)
+      13    0.9% of group  AppLanguage.localization.getter
+      12    0.8% of group  specialized static ToolVisibilityProjection.identities(in:)
+      10    0.7% of group  static ShellActivity.groupingPhase(_:)
+
+== dict find: leaf samples=779 (4.60% of prepend) ==
+     550   70.6% of group  ConversationPresentationModel.History.joined(_:foldsProcess:)
+      44    5.6% of group  ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+      37    4.7% of group  ToolVisibilityProjection.Pass.collect(_:)
+      30    3.9% of group  closure #1 in static ConversationPresentationModel.Presentation.parents(of:into:)
+      27    3.5% of group  ConversationPresentationModel.History.presented(activity:foldsProcess:)
+      18    2.3% of group  ToolVisibilityProjection.Pass.present(id:call:result:)
+      15    1.9% of group  ConversationPresentationModel.History.init(turns:turnCount:source:prior:)
+      13    1.7% of group  ConversationPresentationModel.update(_:)
+       9    1.2% of group  ToolVisibilityProjection.Pass.normalize(_:)
+       7    0.9% of group  specialized static ConversationPresentationModel.row(_:tools:activity:)
+
+== destroy/teardown: leaf samples=735 (4.34% of prepend) ==
+     218   29.7% of group  _ContiguousArrayStorage.__deallocating_deinit
+     211   28.7% of group  ConversationPresentationModel.update(_:)
+     129   17.6% of group  bool swift::RefCounts<swift::RefCountBitsT<(swift::RefCountInlinedness)1>>::doDecrementSlow<(sw
+      80   10.9% of group  specialized UnsafeMutablePointer.deinitialize(count:)
+      22    3.0% of group  ConversationPresentationHandle.update(key:input:cache:)
+      10    1.4% of group  ToolVisibilityProjection.Pass.normalize(_:)
+      10    1.4% of group  void tuple_destroy<false, false>(swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> c
+       8    1.1% of group  static ConversationPresentationModel.cost(_:)
+       7    1.0% of group  ToolVisibilityProjection.Pass.present(id:call:result:)
+       6    0.8% of group  specialized flush #1 (running:) in static ConversationTimelineEntry.make(_:isRunning:)
+
