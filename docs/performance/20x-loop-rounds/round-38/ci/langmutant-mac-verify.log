@@ -1,0 +1,17 @@
+=== prepare Tue Nov 17 21:00:25 CST 2026 ===
+HEAD is now at a867c35f perf(core): round-38 v3 — cheap language token (rawValue) for the resolution memo
+HEAD=a867c35fe5ef2d2a5fb5834db4c551740baa23b2
+porcelain_preclean=0
+mutant applied
+mutant_apply_exit=0
+=== build mutant Tue Nov 17 21:00:30 CST 2026 ===
+build_exit=0
+=== run checks (expect NONZERO: language leg kill) Tue Nov 17 21:01:46 CST 2026 ===
+mutant_checks_exit=0
+pass_count=111
+=== control rebuild (tree restored) Tue Nov 17 21:02:00 CST 2026 ===
+control_build_exit=0
+control_exit=0 pass=111
+porcelain_after=0
+DONE Tue Nov 17 21:03:14 CST 2026
+exit=0

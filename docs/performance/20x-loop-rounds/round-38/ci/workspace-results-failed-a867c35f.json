@@ -1,0 +1,42 @@
+{
+  "suite": "macos",
+  "group": "host-workspace",
+  "scope": "offline synthetic checks; no SSH, real models or frame-rate certification",
+  "commit": "aea83b752d8a4c52ad4b650adf14b16b50d6f3b2",
+  "dirty": false,
+  "checks": [
+    {
+      "name": "host-lifecycle",
+      "command": [
+        "/opt/homebrew/opt/python@3.15/bin/python3.15",
+        "scripts/check-host-lifecycle.py",
+        "--app",
+        "/Users/<runner>/work/perch/perch/.local/host-fixture/HostLifecycleChecks.app",
+        "--phase",
+        "activity-bar",
+        "--phase",
+        "workspace-upgrade",
+        "--phase",
+        "file-reader",
+        "--phase",
+        "workflow-polish",
+        "--phase",
+        "document-reading",
+        "--phase",
+        "task-context",
+        "--phase",
+        "task-detail",
+        "--phase",
+        "task-summary",
+        "--phase",
+        "native-design"
+      ],
+      "log": "host-lifecycle.log",
+      "exit_code": 1,
+      "seconds": 60.35,
+      "passed": false
+    }
+  ],
+  "status": "failed",
+  "seconds": 60.36
+}

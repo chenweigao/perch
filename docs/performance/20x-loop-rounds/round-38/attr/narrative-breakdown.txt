@@ -1,0 +1,36 @@
+narrative-inclusive samples: 2851 (23.21% of decode-free)
+
+== innermost frames within narrative-inclusive samples ==
+     101    3.5% of narr  objc_msgSend
+      70    2.5% of narr  Hasher.combine(bytes:)
+      67    2.4% of narr  _platform_strcmp$VARIANT$Base
+      59    2.1% of narr  tryCast(swift::OpaqueValue*, swift::TargetMetadata<swift::InProcess> const*, swift::OpaqueValue*, sw
+      58    2.0% of narr  swift_bridgeObjectRelease
+      57    2.0% of narr  swift_release
+      52    1.8% of narr  _CFStringGetCStringPtrInternal
+      50    1.8% of narr  swift_retain
+      50    1.8% of narr  _CFRelease
+      42    1.5% of narr  _platform_memmove
+      39    1.4% of narr  _CFRetain
+      37    1.3% of narr  _xzm_malloc_tc
+      34    1.2% of narr  _xzm_free_tc
+      34    1.2% of narr  __CF_IS_OBJC
+      32    1.1% of narr  objc_release
+      31    1.1% of narr  swift_bridgeObjectRetain
+
+== narrative-machinery frames as innermost ==
+       3    0.1%  closure #1 in ActivityNarrativeSnapshot.applying(_:)
+       1    0.0%  initializeWithCopy for ActivityNarrative
+       1    0.0%  localHeadline #1 (_:target:) in static ActivityNarrativeProjection.make(entries:tools:isRunning:exte
+       1    0.0%  initializeWithCopy for ActivityNarrativeStage
+       1    0.0%  destroy for ActivityNarrative
+
+== which narrative entry points (outermost narrative frame) ==
+    2730   95.8%  static ActivityNarrativeProjection.make(entries:tools:isRunning:external:cache:)
+      51    1.8%  outlined consume of (activity: [String : ActivityNarrativeRow], foldsProcess: Bool, value: Conversat
+      28    1.0%  ActivityNarrativeSnapshot.rows.getter
+      23    0.8%  outlined init with copy of ActivityNarrativeRow?
+       8    0.3%  outlined init with copy of ActivityNarrativeRow
+       5    0.2%  destroy for ActivityNarrativeStage
+       3    0.1%  outlined destroy of ActivityNarrativeRow
+       1    0.0%  default argument 3 of static ActivityNarrativeProjection.make(entries:tools:isRunning:external:cache

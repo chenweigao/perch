@@ -1,0 +1,11 @@
+candidate_rebuild_exit=0
+candidate_rebuild_head=4adc09f47ee7143503977a6d15397ee1c977b5c5
+candidate_rebuild_porcelain=2
+ M docs/performance/20x-loop-rounds/2026-11-17-round-38.md
+?? docs/performance/20x-loop-rounds/round-38/attr/fidelity-dryrun-linux.log
+dcba49950ebe0633fcebeed39db386db6d1966ab3383b19761ae958ce6b89b59  .build/x86_64-unknown-linux-gnu/release/WorkbenchChecks
+baseline_rebuild_head=6ac65f9736b5d90867c026dbecf512ce685c092e
+baseline_rebuild_porcelain=2
+?? build.log
+?? rebuild.log
+9c16d9acc926f3c5b102f88558fc6677e98e97b1cb9e5ff5846463855bba4e0c  /tmp/r38v2-ab-base/.build/x86_64-unknown-linux-gnu/release/WorkbenchChecks

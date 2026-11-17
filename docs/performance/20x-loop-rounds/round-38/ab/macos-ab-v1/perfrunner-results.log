@@ -1,0 +1,85 @@
+=== prepare Tue Nov 17 19:16:42 CST 2026 ===
+From github.com:chenweigao/perch
+   e120f6f0..80969b9d  perf/20x-loop-38-20261117 -> origin/perf/20x-loop-38-20261117
+porcelain_preclean=0
+HEAD is now at 6ac65f97 Merge pull request #359 from chenweigao/perf/20x-loop-37-20261117
+HEAD_base=6ac65f9736b5d90867c026dbecf512ce685c092e
+=== base build (pristine 529d41e) Tue Nov 17 19:16:48 CST 2026 ===
+base_build_exit=0
+=== candidate checkout + build (740b5f2e) Tue Nov 17 19:18:04 CST 2026 ===
+Previous HEAD position was 6ac65f97 Merge pull request #359 from chenweigao/perf/20x-loop-37-20261117
+HEAD is now at 80969b9d perf(core): round-38 v1 — memoize narrative tool-step resolution with full-value validation
+HEAD_cand=80969b9dbae372ed714718a69edc0e09d7215837
+cand_build_exit=0
+890d33eccb86c21ffb022e13e168bf45638e322333fbdbedf682f6c2a6526724  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round38v1-ab-base/out/Products/Release/WorkbenchChecks
+1d5e1521d591ec21eadbc6790e456201b0ffc4e96c8aaa2ad713b6ea5e91b2a6  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round38v1-ab-cand/out/Products/Release/WorkbenchChecks
+=== checks both sides (base = round-30 pin set, record; cand = gate) Tue Nov 17 19:19:22 CST 2026 ===
+base_checks_exit=0 pass=110
+cand_checks_exit=0 pass=111
+PASS: prefix cache — round-30 key encoding at prefix-table level (canonical-reorder DICTIONARY-LEVEL retrieval refusal), round-12 window predicate as the only reuse gate (same-count edit / NFD rebuild / count change refused), reference adoption (=== node), exact retention-inclusive accounting (INDEPENDENTLY hand-computed window walk + node excerpts + expanded payload costs incl. fileId/offsets/element-stride storage + entry-ID dictionary keys + node key + query bytes), replace accounting, generation-guarded store, budget-0 oracle, concrete LRU, oversized node AND key refusal, heavy window+payload JSONValue retention (24KB-budget refusal), REVIEW-shape refusals (fileId window / 2000-empty-part window / 4096-offset payload), query-storage normalization over a turn-advance chain of independently decoded queries (single shared buffer), mechanism SENTINELS (hits() must consume the shared node; turn advance must convert Entries.shared payloads — perf-only bypass mutants die), locale invalidation, removeAll, 8x100 concurrency single-copy accounting, four-regime (all-three-tiers budget-0 oracle/shared-cold/fresh/shared-warm) find-bar equality on 8 queries at canonical AND byte level, shared-warm non-vacuity, round-33 concat-guard consumption on ALL FIVE routes (rebuild/shared-adoption/running-true-adoption/instance-earlier/advance SHARE the node's hits storage; non-empty suffix concatenates independently; caller mutation COWs), and the staleness matrix (prefix edit/options/running/turn-boundary across instances + within-instance advance over an adopted shared node) against the budget-0 oracle
+=== pairs Tue Nov 17 19:19:46 CST 2026 ===
+pair=1 variant=baseline mode=1 exit=0
+pair=1 variant=baseline mode=streaming exit=0
+pair=1 variant=baseline mode=activity exit=0
+pair=1 variant=baseline mode=edit-lines exit=0
+pair=1 variant=baseline mode=presentation-token exit=0
+pair=1 variant=candidate mode=1 exit=0
+pair=1 variant=candidate mode=streaming exit=0
+pair=1 variant=candidate mode=activity exit=0
+pair=1 variant=candidate mode=edit-lines exit=0
+pair=1 variant=candidate mode=presentation-token exit=0
+pair=2 variant=baseline mode=1 exit=0
+pair=2 variant=baseline mode=streaming exit=0
+pair=2 variant=baseline mode=activity exit=0
+pair=2 variant=baseline mode=edit-lines exit=0
+pair=2 variant=baseline mode=presentation-token exit=0
+pair=2 variant=candidate mode=1 exit=0
+pair=2 variant=candidate mode=streaming exit=0
+pair=2 variant=candidate mode=activity exit=0
+pair=2 variant=candidate mode=edit-lines exit=0
+pair=2 variant=candidate mode=presentation-token exit=0
+pair=3 variant=baseline mode=1 exit=0
+pair=3 variant=baseline mode=streaming exit=0
+pair=3 variant=baseline mode=activity exit=0
+pair=3 variant=baseline mode=edit-lines exit=0
+pair=3 variant=baseline mode=presentation-token exit=0
+pair=3 variant=candidate mode=1 exit=0
+pair=3 variant=candidate mode=streaming exit=0
+pair=3 variant=candidate mode=activity exit=0
+pair=3 variant=candidate mode=edit-lines exit=0
+pair=3 variant=candidate mode=presentation-token exit=0
+pair=4 variant=baseline mode=1 exit=0
+pair=4 variant=baseline mode=streaming exit=0
+pair=4 variant=baseline mode=activity exit=0
+pair=4 variant=baseline mode=edit-lines exit=0
+pair=4 variant=baseline mode=presentation-token exit=0
+pair=4 variant=candidate mode=1 exit=0
+pair=4 variant=candidate mode=streaming exit=0
+pair=4 variant=candidate mode=activity exit=0
+pair=4 variant=candidate mode=edit-lines exit=0
+pair=4 variant=candidate mode=presentation-token exit=0
+pair=5 variant=baseline mode=1 exit=0
+pair=5 variant=baseline mode=streaming exit=0
+pair=5 variant=baseline mode=activity exit=0
+pair=5 variant=baseline mode=edit-lines exit=0
+pair=5 variant=baseline mode=presentation-token exit=0
+pair=5 variant=candidate mode=1 exit=0
+pair=5 variant=candidate mode=streaming exit=0
+pair=5 variant=candidate mode=activity exit=0
+pair=5 variant=candidate mode=edit-lines exit=0
+pair=5 variant=candidate mode=presentation-token exit=0
+pair=6 variant=baseline mode=1 exit=0
+pair=6 variant=baseline mode=streaming exit=0
+pair=6 variant=baseline mode=activity exit=0
+pair=6 variant=baseline mode=edit-lines exit=0
+pair=6 variant=baseline mode=presentation-token exit=0
+pair=6 variant=candidate mode=1 exit=0
+pair=6 variant=candidate mode=streaming exit=0
+pair=6 variant=candidate mode=activity exit=0
+pair=6 variant=candidate mode=edit-lines exit=0
+pair=6 variant=candidate mode=presentation-token exit=0
+890d33eccb86c21ffb022e13e168bf45638e322333fbdbedf682f6c2a6526724  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round38v1-ab-base/out/Products/Release/WorkbenchChecks
+1d5e1521d591ec21eadbc6790e456201b0ffc4e96c8aaa2ad713b6ea5e91b2a6  /Users/<mini>/_worktrees/20x-loop-20261112/perch/.build/round38v1-ab-cand/out/Products/Release/WorkbenchChecks
+porcelain_after=0
+DONE Tue Nov 17 19:21:04 CST 2026
+exit=0

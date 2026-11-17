@@ -1,0 +1,5 @@
+# round-38 harness fidelity dry-run (Linux dev machine, v2 tree 4adc09f4 + temp harness patch, Tue Nov 17 20:06:20 CST 2026)
+r38_profile shape=streaming cycles=6 updates=1230
+r38_chain_median_ms=1.840 min_ms=1.738 max_ms=429.631 find_median_ms=0.507
+  chain_total                 median_ms=    1.16
+  find_bar_query_update       median_ms=    0.50

@@ -70,6 +70,56 @@ public final class NarrativeTextCache: @unchecked Sendable {
         value(&narratives, text, make)
     }
 
+    /// One tool step's pure resolution against the live tool table: everything
+    /// `make` derives from the VisibleTool value alone (phase, compact target,
+    /// shell headline, incidental flag). The stage-assembly decisions around it
+    /// depend on prior stages and are NOT part of the resolution.
+    struct ToolResolution: Equatable, Sendable {
+        let phase: ActivityNarrativePhase
+        let target: String
+        let headline: String
+        let incidental: Bool
+    }
+
+    private var toolResolutions: [String: (tool: VisibleTool, language: String, resolution: ToolResolution)] = [:]
+
+    /// A tool step's resolution, reusable while the tool VALUE and the UI
+    /// language are unchanged. Streaming deltas revisit every completed tool
+    /// of the live turn on each update while only the running tool's value
+    /// moves; the full-value check (same doctrine as steps(for:)) recomputes
+    /// exactly when status, input, output or progress moved. Unlike steps,
+    /// the resolution embeds LOCALIZED strings (phase.label, shell headlines,
+    /// L() fallbacks read AppLanguage.current at derive time), so the entry
+    /// also records the language token and misses when it moved — a
+    /// language switch re-derives every resolution (review F1; token
+    /// semantics: see the capture site in make()).
+    func resolution(for tool: VisibleTool, language: String, derive: () -> ToolResolution) -> ToolResolution {
+        lock.lock()
+        if let hit = toolResolutions[tool.id], hit.tool == tool, hit.language == language {
+            lock.unlock(); return hit.resolution
+        }
+        lock.unlock()
+        let derived = derive()
+        lock.lock()
+        if toolResolutions.count > 65536 { toolResolutions.removeAll() }
+        toolResolutions[tool.id] = (tool, language, derived)
+        lock.unlock()
+        return derived
+    }
+
+    /// Drop every tool resolution (localized strings) while keeping the
+    /// language-neutral steps and text tables. Called on the model's
+    /// language/epoch reset. Load-bearing layer 2 of the F1 guard: a
+    /// system-language change under the .system setting does not move the
+    /// raw-value token, but it does move Input.language (locale + resolved
+    /// localization), which fires the reset that calls this. Layer 1 is the
+    /// per-entry token in resolution(for:language:).
+    func invalidateToolResolutions() {
+        lock.lock()
+        toolResolutions.removeAll()
+        lock.unlock()
+    }
+
     /// An entry's ordered fold steps, reusable while the entry's messages and
     /// presentation are unchanged. Full values, not an id hash, are the validation:
     /// a reused id with edited content or a running state change must recompute.
@@ -574,6 +624,17 @@ public enum ActivityNarrativeProjection {
 
         var stages: [Builder] = []
         var entryStageIDs: [String: String] = [:]
+        // Captured once per call: the resolution memo validates against this
+        // token because its headlines embed L() output (AppLanguage.current).
+        // The token is the cheap raw setting, not the resolved localization:
+        // resolving reads the global defaults domain + Bundle localization
+        // preferences (~20µs measured on the append benches). Two layers keep
+        // this sound: (1) a settings change (en/zh-Hans/system) flips the raw
+        // value and misses every entry; (2) a system-language change under
+        // the .system setting flips Input.language (callers compose it from
+        // the locale identifier + resolved localization), which fires the
+        // model's language reset → invalidateToolResolutions() below.
+        let resolutionLanguage = AppLanguage.current.rawValue
 
         // Keywords matched against agent text in either language, not UI labels.
         // Only unresolved tool states (missingResult / disconnected) mark a stage
@@ -676,19 +737,31 @@ public enum ActivityNarrativeProjection {
                     }
                 case .tool(let part):
                     guard let id = part.toolCallId, let tool = tools[id] else { continue }
-                    let nextPhase = toolPhase(tool)
-                    let target = ToolPresentation.compactTarget(tool)
-                    let shellCommand = ShellActivity.command(tool)
-                    let shell = shellCommand.flatMap(ShellActivity.parse)
-                    let headline: String
-                    if shellCommand != nil, nextPhase != .blocked {
-                        let description = tool.input?["description"].string?.trimmingCharacters(in: .whitespacesAndNewlines)
-                        headline = description.flatMap { $0.isEmpty ? nil : $0 }
-                            ?? shell?.headline ?? L("准备命令环境")
-                    } else { headline = localHeadline(nextPhase, target: target) }
-                    // Waiting/setup commands are evidence within the current task,
-                    // not a new semantic stage that displaces explicit progress.
-                    let incidental = shellCommand != nil && (shell?.category == nil || shell?.category == "wait") && nextPhase != .blocked
+                    // Round 38: the tool step's resolution is a pure function of
+                    // the tool value AND the UI language; memoize it with
+                    // full-value + language validation so a streaming delta
+                    // only re-derives the tools that moved.
+                    let resolution = cache.resolution(for: tool, language: resolutionLanguage) {
+                        let phaseValue = toolPhase(tool)
+                        let targetValue = ToolPresentation.compactTarget(tool)
+                        let shellCommand = ShellActivity.command(tool)
+                        let shell = shellCommand.flatMap(ShellActivity.parse)
+                        let headlineValue: String
+                        if shellCommand != nil, phaseValue != .blocked {
+                            let description = tool.input?["description"].string?.trimmingCharacters(in: .whitespacesAndNewlines)
+                            headlineValue = description.flatMap { $0.isEmpty ? nil : $0 }
+                                ?? shell?.headline ?? L("准备命令环境")
+                        } else { headlineValue = localHeadline(phaseValue, target: targetValue) }
+                        // Waiting/setup commands are evidence within the current task,
+                        // not a new semantic stage that displaces explicit progress.
+                        let incidentalValue = shellCommand != nil && (shell?.category == nil || shell?.category == "wait") && phaseValue != .blocked
+                        return NarrativeTextCache.ToolResolution(phase: phaseValue, target: targetValue,
+                                                                 headline: headlineValue, incidental: incidentalValue)
+                    }
+                    let nextPhase = resolution.phase
+                    let target = resolution.target
+                    let headline = resolution.headline
+                    let incidental = resolution.incidental
                     let needsStage = stages.isEmpty || (!incidental && stages.last!.narrative.phase != nextPhase && !stages.last!.toolIDs.isEmpty)
                     if needsStage {
                         appendStage(id: "stage:\(turnID):tool:\(id)", phase: nextPhase, subject: target,
