@@ -201,17 +201,29 @@ func checkCommentaryDerivation() throws {
     // shapes: scalar growth through "**"/"# " prefixes legitimately retires
     // strict BEFORE any binding rejection is reached, so the review-F3
     // shapes arrive as whole-string observations.
-    let reviewSequences: [(label: String, steps: [[String]], varyMetadata: Bool)] = [
-        ("review-F1-colon", [["# # ："], ["# # ：x"]], false),
-        ("review-F1-colon-space", [["# # : "], ["# # : x"]], false),
-        ("review-F3-marker-bind", [["# \u{0301}x"], ["# \u{0301}xy"]], false),
-        ("review-F3-bold-bind", [["**\u{0301}x"], ["**\u{0301}xy"], ["**\u{0301}xy验证"]], false),
-        ("review-F4-zwsp", [["a"], ["a\u{200B}"], ["a\u{200B}b"]], false),
+    let reviewSequences: [(label: String, steps: [[String]], varyMetadata: Bool, expectStrict: Bool)] = [
+        ("review-F1-colon", [["# # ："], ["# # ：x"]], false, false),
+        ("review-F1-colon-space", [["# # : "], ["# # : x"]], false, false),
+        ("review-F3-marker-bind", [["# \u{0301}x"], ["# \u{0301}xy"]], false, true),
+        ("review-F3-bold-bind", [["**\u{0301}x"], ["**\u{0301}xy"], ["**\u{0301}xy验证"]], false, false),
+        ("review-F4-zwsp", [["a"], ["a\u{200B}"], ["a\u{200B}b"]], false, false),
+        // Re-review F3': U+102B (Mc) — String.hasPrefix("**") ACCEPTS (no
+        // fusion with '*'), while beginsBindingMark conservatively reports
+        // binding; the marker decision must use the product's own predicate,
+        // and the global-replacement "**" then retires the entry.
+        ("rereview-F3-bold-myanmar", [["**\u{102B}x"], ["**\u{102B}xy"]], false, true),
+        ("rereview-F3-hash-bold-myanmar", [["# **\u{102B}x"], ["# **\u{102B}xy"]], false, true),
+        ("rereview-F3-detail-bold-myanmar", [["h：**\u{102B}x"], ["h：**\u{102B}xy"]], false, true),
     ]
     for item in reviewSequences {
         let cache = NarrativeTextCache()
         try run(item.steps, cache: cache, label: item.label, varyMetadata: item.varyMetadata,
                 byteCompare: !item.varyMetadata)
+        if item.expectStrict,
+           let entryID = try progressEntryID(textMessages(item.steps.last!)),
+           let stats = cache.commentaryStats(entryID: entryID) {
+            precondition(stats.strict, "sequence [\(item.label)] must retire the derivator (anti-blind)")
+        }
     }
     // The F2 reproduction proper: a byte-level NFC↔NFD re-encoding mid-stream
     // (built from explicit escapes so the two encodings are guaranteed
@@ -240,10 +252,14 @@ func checkCommentaryDerivation() throws {
     }
 
     // ---- reseed shapes ----------------------------------------------------
-    // (The multi-part defensive gate and the two-step reseed-then-seed
-    // contract are internal to CommentaryDerivation; they are covered
-    // end-to-end by the edit/shrink sequences below, whose reseed counters
-    // must be positive while every observation stays equal.)
+    // (The two-step reseed-then-seed contract is covered end-to-end by the
+    // edit/shrink sequences below: their reseed counters must be positive
+    // while every observation stays equal. NOTE: the multi-part defensive
+    // gate — `currentParts.count > 1` → clearState+fallback — is UNREACHABLE
+    // through make() because ConversationTimelineEntry.make gives every text
+    // part its own single-part entry, so no sequence here can exercise it;
+    // it is defensive code documented as untested, not a covered contract.
+    // Review re-review M1 closure.)
     var reseedsSeen = 0
     do {
         // Mid-stream EDIT of the growing part (non-prefix) → reseed.

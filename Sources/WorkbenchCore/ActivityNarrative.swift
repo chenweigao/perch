@@ -820,6 +820,10 @@ final class CommentaryDerivation {
         [0x23, 0x20],              // "# "
         [0x2A, 0x2A],              // "**" — global replacement, never incremental
     ]
+    /// markerBytes as Strings — kept in sync by the byte re-derivation in
+    /// checkCommentaryDerivation's sibling pins; markerMatches decides with
+    /// these via the product's own String.hasPrefix.
+    private static let markerStrings: [String] = ["### ", "## ", "# ", "**"]
     private static let phaseHoldback = NarrativePhaseScan.maxKeywordBytes + 3
     private static let delimPatterns: [[UInt8]] = [[0xEF, 0xBC, 0x9A], [0x3A, 0x20]]
 
@@ -888,9 +892,9 @@ final class CommentaryDerivation {
                 let lead = Self.leadingRun(in: buf, from: 0, limit: buf.count, trimSet: false)
                 let trail = Self.trailingRun(in: buf, limit: buf.count, from: 0, trimSet: false)
                 if lead + trail >= buf.count { return -1 }  // all-whitespace: undetermined
-                for (index, marker) in Self.markerBytes.enumerated() {
-                    if Self.markerMatches(buf: buf, at: lead, limit: buf.count - trail, marker: marker) {
-                        return index == 3 ? -2 : lead + marker.count  // -2: "**" → strict
+                for index in Self.markerBytes.indices {
+                    if Self.markerMatches(in: buf, at: lead, limit: buf.count - trail, markerIndex: index) {
+                        return index == 3 ? -2 : lead + Self.markerBytes[index].count  // -2: "**" → strict
                     }
                 }
                 if buf.count - trail - lead >= 4 { return lead }
@@ -1119,35 +1123,40 @@ final class CommentaryDerivation {
         return true
     }
 
-    /// Grapheme-aware marker match (review F3). The marker matches only when
-    /// its bytes are present AND its last character is its own grapheme: a
-    /// following binding scalar (Extend/ZWJ/SpacingMark/pinned fusers) fuses
-    /// onto that last character, and the grapheme-aware `hasPrefix(marker)`
-    /// clean() uses then REJECTS the marker ("# \u{0301}x" keeps its "# ").
-    /// Rejecting here routes ws+binding shapes into the collapse machine's
-    /// strict trigger and keeps "**"-prefixed binding shapes literal —
-    /// exactly what the from-scratch clean() does. The following scalar is
-    /// complete below `limit` because marker ends and limits are both
-    /// scalar-aligned.
-    private static func markerMatches(buf: UnsafeBufferPointer<UInt8>, at: Int, limit: Int, marker: [UInt8]) -> Bool {
-        guard hasPrefix(in: buf, at: at, limit: limit, pattern: marker) else { return false }
-        let after = at + marker.count
-        guard after < limit else { return true }
-        if buf[after] >= 0x80, String.beginsBindingMark(in: buf, at: after) { return false }
-        return true
+    /// Marker match by the PRODUCT'S OWN predicate (review F3 + re-review
+    /// F3'). clean()'s gate is `text.hasPrefix(marker)` on the trimmed
+    /// string; neither the raw byte prefix (accepts "# ◌́x", which
+    /// grapheme-aware hasPrefix rejects — the space fuses with the Extend
+    /// mark) nor a beginsBindingMark rejection (rejects "**◌\u{102B}x",
+    /// where hasPrefix ACCEPTS: beginsBindingMark is a conservative
+    /// over-approximation of fusion — safe when it routes to fallback,
+    /// unsafe as a definitive rejection while staying incremental) is
+    /// exact. So: byte-match first (cheap filter), then materialize the
+    /// decision window — the marker plus the next 8 bytes of the trimmed
+    /// view — and ask String.hasPrefix itself. Window sufficiency: a
+    /// fusion that changes the marker's last Character must begin at the
+    /// first scalar after the marker (≤4 bytes, inside the window); a cut
+    /// inside a longer fused cluster can only keep that cluster unequal
+    /// to the bare marker character, preserving the answer. `limit` is the
+    /// caller's trimmed-view end (clean() never sees trailing whitespace).
+    private static func markerMatches<C: RandomAccessCollection>(in bytes: C, at: Int, limit: Int, markerIndex: Int) -> Bool
+    where C.Element == UInt8, C.Index == Int {
+        let marker = markerBytes[markerIndex]
+        guard hasPrefix(in: bytes, at: at, limit: limit, pattern: marker) else { return false }
+        let windowEnd = min(limit, at + marker.count + 8)
+        let window = String(decoding: bytes[at..<windowEnd], as: UTF8.self)
+        return window.hasPrefix(markerStrings[markerIndex])
     }
 
     /// The head marker removal clean() would apply at `at`; sets `strict` for
     /// "**" (a GLOBAL replacement — not incrementally trackable).
     private func markerSkip(in bytes: [UInt8], at: Int, limit: Int) -> Int {
-        bytes.withUnsafeBufferPointer { buf in
-            for (index, marker) in Self.markerBytes.enumerated()
-            where Self.markerMatches(buf: buf, at: at, limit: limit, marker: marker) {
-                if index == 3 { strict = true }
-                return marker.count
-            }
-            return 0
+        for (index, marker) in Self.markerBytes.enumerated()
+        where Self.markerMatches(in: bytes, at: at, limit: limit, markerIndex: index) {
+            if index == 3 { strict = true }
+            return marker.count
         }
+        return 0
     }
 
     // MARK: - Scans and output composition
@@ -1157,13 +1166,13 @@ final class CommentaryDerivation {
     /// parts are collapsed and trimmed, the junctions are single spaces).
     private func resolveHeadSkip2(lenTrimmed: Int) {
         guard !headSkip2Fixed else { return }
-        for (index, marker) in Self.markerBytes.enumerated()
-        where joined.withUnsafeBufferPointer({ Self.markerMatches(buf: $0, at: 0, limit: lenTrimmed, marker: marker) }) {
+        for index in Self.markerBytes.indices
+        where Self.markerMatches(in: joined, at: 0, limit: lenTrimmed, markerIndex: index) {
             if index == 3 { strict = true; return }
             // A full match implies a following non-trim byte (cleaned parts
             // end non-trimmed), so the marker skip is final; the ws+colon run
             // behind it is final only once closed by a non-trim byte.
-            let runEnd = marker.count + Self.leadingRun(in: joined, from: marker.count, limit: lenTrimmed, trimSet: true)
+            let runEnd = Self.markerBytes[index].count + Self.leadingRun(in: joined, from: Self.markerBytes[index].count, limit: lenTrimmed, trimSet: true)
             headSkip2 = runEnd
             headSkip2Fixed = runEnd < lenTrimmed
             return
