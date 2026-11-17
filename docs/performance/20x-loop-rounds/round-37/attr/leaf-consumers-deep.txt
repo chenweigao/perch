@@ -1,0 +1,74 @@
+== ARC(release+retain+bridge): samples=6713 (42.91% of prepend) ==
+    2369   35.3%   15.14%-of-prepend  ConversationPresentationModel.update(_:)
+     527    7.9%    3.37%-of-prepend  KimiConversation.displayMessages.getter
+     478    7.1%    3.06%-of-prepend  _DictionaryStorage.__deallocating_deinit
+     442    6.6%    2.83%-of-prepend  benchR37PagingProfile()
+     322    4.8%    2.06%-of-prepend  ConversationPresentationModel.History.deinit
+     292    4.3%    1.87%-of-prepend  ConversationPresentationModel.History.init(turns:turnCount:source:prior:)
+     260    3.9%    1.66%-of-prepend  static ConversationTimelineEntry.make(_:isRunning:)
+     249    3.7%    1.59%-of-prepend  ToolVisibilityProjection.Pass.normalize(_:)
+     190    2.8%    1.21%-of-prepend  ConversationPresentationModel.History.joinedIncremental(_:foldsProcess:)
+     189    2.8%    1.21%-of-prepend  closure #1 in static ConversationPresentationModel.Presentation.parents(of:into:)
+     183    2.7%    1.17%-of-prepend  ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+     157    2.3%    1.00%-of-prepend  static ConversationPresentationModel.cost(_:)
+
+== string hash (deep, String.hash pass-through): samples=652 (4.17% of prepend) ==
+      81   12.4%    0.52%-of-prepend  closure #1 in static ConversationPresentationModel.Presentation.parents(of:into:)
+      72   11.0%    0.46%-of-prepend  ToolVisibilityProjection.Pass.normalize(_:)
+      72   11.0%    0.46%-of-prepend  ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+      64    9.8%    0.41%-of-prepend  ConversationPresentationModel.History.joined(_:foldsProcess:)
+      56    8.6%    0.36%-of-prepend  ToolVisibilityProjection.Pass.collect(_:)
+      55    8.4%    0.35%-of-prepend  AppLanguage.localization.getter
+      38    5.8%    0.24%-of-prepend  static ConversationPresentationModel.row(_:tools:activity:)
+      37    5.7%    0.24%-of-prepend  ToolVisibilityProjection.Pass.present(id:call:result:)
+      30    4.6%    0.19%-of-prepend  static ToolVisibilityProjection.identities(in:)
+      28    4.3%    0.18%-of-prepend  ConversationPresentationModel.History.init(turns:turnCount:source:prior:)
+      24    3.7%    0.15%-of-prepend  ConversationPresentationModel.update(_:)
+      18    2.8%    0.12%-of-prepend  ConversationPresentationModel.History.joinedIncremental(_:foldsProcess:)
+
+== string compare: samples=1219 (7.79% of prepend) ==
+     435   35.7%    2.78%-of-prepend  static KimiPart.__derived_struct_equals(_:_:)
+     192   15.8%    1.23%-of-prepend  ToolVisibilityProjection.canReuse(_:messages:split:sessionID:activeIDs:online:)
+     141   11.6%    0.90%-of-prepend  closure #1 in ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+      84    6.9%    0.54%-of-prepend  ToolVisibilityProjection.update(_:splittingAt:sessionID:live:running:online:)
+      75    6.2%    0.48%-of-prepend  ToolVisibilityProjection.Pass.normalize(_:)
+      35    2.9%    0.22%-of-prepend  static ConversationTimelineEntry.make(_:isRunning:)
+      33    2.7%    0.21%-of-prepend  ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+      33    2.7%    0.21%-of-prepend  ConversationPresentationModel.History.joined(_:foldsProcess:)
+      21    1.7%    0.13%-of-prepend  static KimiMessage.__derived_struct_equals(_:_:)
+      20    1.6%    0.13%-of-prepend  ConversationPresentationModel.History.init(turns:turnCount:source:prior:)
+      18    1.5%    0.12%-of-prepend  closure #1 in static ConversationPresentationModel.Presentation.parents(of:into:)
+      17    1.4%    0.11%-of-prepend  static ToolVisibilityProjection.identities(in:)
+
+== dict find: samples=272 (1.74% of prepend) ==
+      48   17.6%    0.31%-of-prepend  ToolVisibilityProjection.Pass.collect(_:)
+      43   15.8%    0.27%-of-prepend  ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+      37   13.6%    0.24%-of-prepend  closure #1 in static ConversationPresentationModel.Presentation.parents(of:into:)
+      24    8.8%    0.15%-of-prepend  ConversationPresentationModel.History.joined(_:foldsProcess:)
+      20    7.4%    0.13%-of-prepend  ConversationPresentationModel.update(_:)
+      20    7.4%    0.13%-of-prepend  ConversationPresentationModel.History.init(turns:turnCount:source:prior:)
+      19    7.0%    0.12%-of-prepend  ToolVisibilityProjection.Pass.normalize(_:)
+      15    5.5%    0.10%-of-prepend  static ConversationPresentationModel.row(_:tools:activity:)
+      14    5.1%    0.09%-of-prepend  ToolVisibilityProjection.Pass.present(id:call:result:)
+       7    2.6%    0.04%-of-prepend  AppLanguage.localization.getter
+       5    1.8%    0.03%-of-prepend  static ActivityNarrativeProjection.make(entries:tools:isRunning:external:cache:)
+       5    1.8%    0.03%-of-prepend  ConversationPresentationModel.History.joinedIncremental(_:foldsProcess:)
+
+== breadcrumbs(NSString): samples=533 (3.41% of prepend) ==
+     514   96.4%    3.29%-of-prepend  benchR37PagingProfile()
+      19    3.6%    0.12%-of-prepend  ConversationActivity.init(messages:isRunning:liveTools:running:online:isThinking:isResponding:p
+
+== array/dict teardown: samples=569 (3.64% of prepend) ==
+     192   33.7%    1.23%-of-prepend  _DictionaryStorage.__deallocating_deinit
+      85   14.9%    0.54%-of-prepend  ConversationPresentationModel.update(_:)
+      79   13.9%    0.50%-of-prepend  closure #1 in static ConversationPresentationModel.cost(_:)
+      40    7.0%    0.26%-of-prepend  ConversationPresentationModel.HistoryTurn.__deallocating_deinit
+      30    5.3%    0.19%-of-prepend  ConversationPresentationModel.History.deinit
+      21    3.7%    0.13%-of-prepend  ToolVisibilityProjection.Chunk.deinit
+      12    2.1%    0.08%-of-prepend  _DictionaryStorage.deinit
+      11    1.9%    0.07%-of-prepend  ConversationTimelineEntry.id.getter
+      11    1.9%    0.07%-of-prepend  ConversationPresentationModel.Snapshot.__deallocating_deinit
+      10    1.8%    0.06%-of-prepend  static ConversationTimelineEntry.make(_:isRunning:)
+       9    1.6%    0.06%-of-prepend  visible #1 (_:) in static ConversationTimelineEntry.make(_:isRunning:)
+       7    1.2%    0.04%-of-prepend  static AppLanguage.resolveSystemLanguage(_:)
+
