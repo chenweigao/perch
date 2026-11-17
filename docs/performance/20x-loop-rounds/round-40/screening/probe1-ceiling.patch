@@ -1,0 +1,40 @@
+diff --git a/Sources/WorkbenchCore/ConversationPresentation.swift b/Sources/WorkbenchCore/ConversationPresentation.swift
+index 66cef0fd..37e19cdd 100644
+--- a/Sources/WorkbenchCore/ConversationPresentation.swift
++++ b/Sources/WorkbenchCore/ConversationPresentation.swift
+@@ -461,6 +461,7 @@ public final class ConversationPresentationModel {
+     private var historyTurns: [String: HistoryTurn] = [:]
+     /// Per-conversation narrative memo; lives and dies with the model.
+     private let narrativeCache = NarrativeTextCache()
++    private var tailProbeCache: (prefixCount: Int, lastID: String, entries: [ConversationTimelineEntry])?
+     public init(key: String, metricsHandler: ((ConversationPresentationUpdateMetrics) -> Void)? = nil) {
+         self.key = key
+         self.metricsHandler = metricsHandler
+@@ -550,7 +551,26 @@ public final class ConversationPresentationModel {
+                                                       navigation: timeline.navigation)],
+                                   turnCount: timeline.reusedTurnCount + timeline.rebuiltTurnCount, source: parts.prefix)
+             }
+-            entries = ConversationTimelineEntry.make(parts.tail.messages, isRunning: input.isRunning)
++            // CEILING PROBE 1 (temporary, timing-only): reuse entries derived
++            // from all but the last tail message; re-make only the last.
++            do {
++                let tailMessages = parts.tail.messages
++                let prefixCount = tailMessages.count - 1
++                if input.isRunning, prefixCount > 0,
++                   let cache = tailProbeCache, cache.prefixCount == prefixCount,
++                   cache.lastID == tailMessages[prefixCount - 1].id {
++                    entries = cache.entries + ConversationTimelineEntry.make(Array(tailMessages.suffix(1)), isRunning: input.isRunning)
++                } else {
++                    if prefixCount > 0 {
++                        let prefixEntries = ConversationTimelineEntry.make(Array(tailMessages.prefix(prefixCount)), isRunning: input.isRunning)
++                        entries = prefixEntries + ConversationTimelineEntry.make(Array(tailMessages.suffix(1)), isRunning: input.isRunning)
++                        tailProbeCache = (prefixCount, tailMessages[prefixCount - 1].id, prefixEntries)
++                    } else {
++                        entries = ConversationTimelineEntry.make(tailMessages, isRunning: input.isRunning)
++                        tailProbeCache = nil
++                    }
++                }
++            }
+             rebuiltTurnCount += 1
+             visibleTools = parts.tail.tools
+             navigation = earlier!.navigation + (ConversationTurnSummary.make(parts.tail.messages, entries: entries).map { [$0] } ?? [])
