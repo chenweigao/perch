@@ -49,7 +49,6 @@ struct ProtocolTests {
         try checkConversationPrefixCache()
         try checkPrependIncremental()
         try checkToolResolutionMemo()
-        try checkCommentaryDerivation()
         checkCollapsedWhitespace()
         try checkTurnExcerpt()
         checkCompactionSummaryDisplay()
@@ -57,6 +56,12 @@ struct ProtocolTests {
         try checkNarrativeByteKeyedTables()
         try checkNarrativePhaseSinglePass()
         try checkNarrativeDelimiterScan()
+        // Round 41: runs AFTER the narrative golden/fuzz checks on purpose —
+        // its oracle inserts canonically-keyed table values (including an
+        // NFD "e\u{0301}" from the review-F2 re-encoding sequence) and the
+        // byte-key digest golden was captured without them; content-addressed
+        // tables make check order observable through stored ENCODINGS.
+        try checkCommentaryDerivation()
         checkLocalizationResolutionChain()
         try checkTaskRecaps()
         checkReviewContext()

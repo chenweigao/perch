@@ -824,14 +824,22 @@ final class CommentaryDerivation {
     private static let delimPatterns: [[UInt8]] = [[0xEF, 0xBC, 0x9A], [0x3A, 0x20]]
 
     static func isWhitespaceScalar(_ scalar: UInt32) -> Bool {
-        // CharacterSet.whitespacesAndNewlines == ASCII {09-0D, 20} ∪ the
+        // The stdlib Character.isWhitespace set: ASCII {09-0D, 20} ∪ the
         // non-ASCII set pinned in String.isNonASCIIWhitespace (Zs minus 0x20,
-        // plus NEL/LS/PS). The differential fuzz pins this against the real
-        // trimmingCharacters behavior on both platforms.
+        // plus NEL/LS/PS). This is what the collapse machine's strict
+        // triggers mirror (collapsedWhitespace splits on \.isWhitespace).
         scalar == 0x20 || (0x09...0x0D).contains(scalar) || String.isNonASCIIWhitespace(scalar)
     }
+    static func isFoundationWhitespaceScalar(_ scalar: UInt32) -> Bool {
+        // CharacterSet.whitespacesAndNewlines — what trimmingCharacters uses
+        // — is the stdlib set PLUS U+200B on BOTH supported toolchains
+        // (ZERO WIDTH SPACE is not Unicode White_Space, but corelibs AND
+        // Darwin Foundation both include it; targeted sweep on both, round-41
+        // review F4). Trim runs must mirror Foundation, not the stdlib set.
+        isWhitespaceScalar(scalar) || scalar == 0x200B
+    }
     static func isTrimScalar(_ scalar: UInt32) -> Bool {
-        isWhitespaceScalar(scalar) || scalar == 0x3A || scalar == 0xFF1A
+        isFoundationWhitespaceScalar(scalar) || scalar == 0x3A || scalar == 0xFF1A
     }
     private static func scalarLength(_ lead: UInt8) -> Int {
         lead < 0x80 ? 1 : (lead <= 0xDF ? 2 : (lead <= 0xEF ? 3 : 4))
@@ -854,7 +862,15 @@ final class CommentaryDerivation {
         if parts.count == 1, currentParts.count == 1 {
             let stored = parts[0]
             let growing = currentParts[0]
-            shape = growing == stored ? .unchanged : (Self.isBytePrefix(stored, of: growing) ? .growth : .reseed)
+            // Byte-level classification ONLY (review F2): Swift's canonical
+            // == accepts NFC/NFD re-encoding, but every derivator offset is a
+            // BYTE offset into the stored encoding — a canonically-equal
+            // re-encode must reseed, never classify unchanged/growth.
+            if Self.isBytePrefix(stored, of: growing) {
+                shape = growing.utf8.count == stored.utf8.count ? .unchanged : .growth
+            } else {
+                shape = .reseed
+            }
         } else if parts.isEmpty, currentParts.isEmpty {
             shape = .unchanged
         }
@@ -873,7 +889,7 @@ final class CommentaryDerivation {
                 let trail = Self.trailingRun(in: buf, limit: buf.count, from: 0, trimSet: false)
                 if lead + trail >= buf.count { return -1 }  // all-whitespace: undetermined
                 for (index, marker) in Self.markerBytes.enumerated() {
-                    if Self.hasPrefix(in: buf, at: lead, limit: buf.count - trail, pattern: marker) {
+                    if Self.markerMatches(buf: buf, at: lead, limit: buf.count - trail, marker: marker) {
                         return index == 3 ? -2 : lead + marker.count  // -2: "**" → strict
                     }
                 }
@@ -1065,7 +1081,7 @@ final class CommentaryDerivation {
         var i = from
         while i < limit {
             guard let (value, len) = decodeScalar(in: bytes, at: i), i + len <= limit else { break }
-            guard trimSet ? isTrimScalar(value) : isWhitespaceScalar(value) else { break }
+            guard trimSet ? isTrimScalar(value) : isFoundationWhitespaceScalar(value) else { break }
             i += len
         }
         return i - from
@@ -1080,7 +1096,7 @@ final class CommentaryDerivation {
             var walked = 0
             while start > from, bytes[start] & 0xC0 == 0x80 { start -= 1; walked += 1; if walked > 3 { return limit - i } }
             guard let (value, len) = decodeScalar(in: bytes, at: start), start + len == i else { return limit - i }
-            guard trimSet ? isTrimScalar(value) : isWhitespaceScalar(value) else { break }
+            guard trimSet ? isTrimScalar(value) : isFoundationWhitespaceScalar(value) else { break }
             i = start
         }
         return limit - i
@@ -1103,15 +1119,35 @@ final class CommentaryDerivation {
         return true
     }
 
+    /// Grapheme-aware marker match (review F3). The marker matches only when
+    /// its bytes are present AND its last character is its own grapheme: a
+    /// following binding scalar (Extend/ZWJ/SpacingMark/pinned fusers) fuses
+    /// onto that last character, and the grapheme-aware `hasPrefix(marker)`
+    /// clean() uses then REJECTS the marker ("# \u{0301}x" keeps its "# ").
+    /// Rejecting here routes ws+binding shapes into the collapse machine's
+    /// strict trigger and keeps "**"-prefixed binding shapes literal —
+    /// exactly what the from-scratch clean() does. The following scalar is
+    /// complete below `limit` because marker ends and limits are both
+    /// scalar-aligned.
+    private static func markerMatches(buf: UnsafeBufferPointer<UInt8>, at: Int, limit: Int, marker: [UInt8]) -> Bool {
+        guard hasPrefix(in: buf, at: at, limit: limit, pattern: marker) else { return false }
+        let after = at + marker.count
+        guard after < limit else { return true }
+        if buf[after] >= 0x80, String.beginsBindingMark(in: buf, at: after) { return false }
+        return true
+    }
+
     /// The head marker removal clean() would apply at `at`; sets `strict` for
     /// "**" (a GLOBAL replacement — not incrementally trackable).
     private func markerSkip(in bytes: [UInt8], at: Int, limit: Int) -> Int {
-        for (index, marker) in Self.markerBytes.enumerated()
-        where Self.hasPrefix(in: bytes, at: at, limit: limit, pattern: marker) {
-            if index == 3 { strict = true }
-            return marker.count
+        bytes.withUnsafeBufferPointer { buf in
+            for (index, marker) in Self.markerBytes.enumerated()
+            where Self.markerMatches(buf: buf, at: at, limit: limit, marker: marker) {
+                if index == 3 { strict = true }
+                return marker.count
+            }
+            return 0
         }
-        return 0
     }
 
     // MARK: - Scans and output composition
@@ -1122,7 +1158,7 @@ final class CommentaryDerivation {
     private func resolveHeadSkip2(lenTrimmed: Int) {
         guard !headSkip2Fixed else { return }
         for (index, marker) in Self.markerBytes.enumerated()
-        where Self.hasPrefix(in: joined, at: 0, limit: lenTrimmed, pattern: marker) {
+        where joined.withUnsafeBufferPointer({ Self.markerMatches(buf: $0, at: 0, limit: lenTrimmed, marker: marker) }) {
             if index == 3 { strict = true; return }
             // A full match implies a following non-trim byte (cleaned parts
             // end non-trimmed), so the marker skip is final; the ws+colon run
@@ -1170,7 +1206,11 @@ final class CommentaryDerivation {
     /// reached; the narrower pattern's guard covers its shorter span.
     private func runDelimScan(lenTrimmed: Int) {
         joined.withUnsafeBufferPointer { buf in
-            var pos = delimScanPos
+            // The scan operates on L == joined[headSkip2...]: an occurrence
+            // inside the skipped head does not exist for narrativeText's
+            // clean(text), and slicing joined[headSkip2..<pos] with
+            // pos < headSkip2 is a reversed (fatal) range (review F1).
+            var pos = max(delimScanPos, headSkip2)
             while pos + 2 <= lenTrimmed - 1 {
                 for (kind, pattern) in Self.delimPatterns.enumerated() where delimFound[kind] == nil {
                     guard pos + pattern.count <= lenTrimmed - 1 else { continue }
