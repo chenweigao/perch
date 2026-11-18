@@ -1,0 +1,19 @@
+# Round-45 instrumentation probe — WORKBENCH_TV_PROBE=1, WORKBENCH_BENCH=streaming
+# Binary: base 84e1d2e9 + probe.patch, release, Mac mini (27.0.1), .build/r45-probe
+# Probe was reverted from the product tree after this run (no product change ships).
+
+TVPROBE canReuse-hit updates=50 prefixHits=48 ptRuns=2 ptFails=0 reused=0 rebuilt=460 empty=2 present=0 whole=0 | reuse=48
+TVPROBE canReuse-hit updates=100 prefixHits=84 ptRuns=16 ptFails=0 reused=1846 rebuilt=1864 empty=8 present=8 whole=0 | count=8 reuse=84
+TVPROBE canReuse-hit updates=150 prefixHits=134 ptRuns=16 ptFails=0 reused=1846 rebuilt=1864 empty=8 present=8 whole=0 | count=8 reuse=134
+
+# Reading:
+# - 150 tools.update(splittingAt:) calls over the streaming bench (two presentation
+#   models), 134 served by canReuse; 16 fall through to projectTurns.
+# - projectTurns runs split 8 / 8:
+#     * chunks EMPTY (cold cache)   -> 8 runs, every turn rebuilt (all 1,864 rebuilds)
+#     * chunks PRESENT (warm cache) -> 8 runs, every turn reused (1,846 reuses, 0 rebuilds)
+# - canReuse failures are all `count` (prefix.source.count != split), 8 occurrences;
+#   no session/anchor/online/active/observed/separates/sameWindow failures.
+# - whole (non-split update) was never called in this bench run.
+# => The 6.36% inclusive share of projectTurns in the round-43 trace is dominated by
+#    cold-cache full builds (necessary first projection), not per-delta overhead.

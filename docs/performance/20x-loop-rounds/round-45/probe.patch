@@ -1,0 +1,101 @@
+diff --git a/Sources/WorkbenchCore/ToolVisibilityProjection.swift b/Sources/WorkbenchCore/ToolVisibilityProjection.swift
+index 9daf8315..61f28e28 100644
+--- a/Sources/WorkbenchCore/ToolVisibilityProjection.swift
++++ b/Sources/WorkbenchCore/ToolVisibilityProjection.swift
+@@ -1,5 +1,23 @@
+ import Foundation
+ 
++private enum TVProbe {
++    nonisolated(unsafe) static var updates = 0
++    nonisolated(unsafe) static var prefixHits = 0
++    nonisolated(unsafe) static var projectTurnsRuns = 0
++    nonisolated(unsafe) static var projectTurnsFails = 0
++    nonisolated(unsafe) static var chunksReused = 0
++    nonisolated(unsafe) static var chunksRebuilt = 0
++    nonisolated(unsafe) static var failures: [String: Int] = [:]
++    nonisolated(unsafe) static var chunksEmpty = 0
++    nonisolated(unsafe) static var chunksPresent = 0
++    nonisolated(unsafe) static var wholeUpdates = 0
++    static var enabled: Bool { ProcessInfo.processInfo.environment["WORKBENCH_TV_PROBE"] != nil }
++    static func report(_ tag: String) {
++        let details = failures.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: " ")
++        FileHandle.standardError.write(Data("TVPROBE \(tag) updates=\(updates) prefixHits=\(prefixHits) ptRuns=\(projectTurnsRuns) ptFails=\(projectTurnsFails) reused=\(chunksReused) rebuilt=\(chunksRebuilt) empty=\(chunksEmpty) present=\(chunksPresent) whole=\(wholeUpdates) | \(details)\n".utf8))
++    }
++}
++
+ public struct VisibleTool: Identifiable, Equatable {
+     public enum Status: Hashable { case running, succeeded, returned, failed, missingResult, disconnected, awaitingApproval }
+     public let id: String
+@@ -160,6 +178,7 @@ public final class ToolVisibilityProjection {
+ 
+     public func update(_ messages: [KimiMessage], sessionID: String, live: [KimiLiveTool] = [],
+                        running: Set<String> = [], online: Bool = true) -> Snapshot {
++        if TVProbe.enabled { TVProbe.wholeUpdates += 1 }
+         prefix = nil; chunks = [:]; discardIndexes()
+         return project(messages, split: nil, sessionID: sessionID, live: live, running: running, online: online).snapshot
+     }
+@@ -177,12 +196,19 @@ public final class ToolVisibilityProjection {
+                      && !messages[(split + 1)...].contains(where: \.isUserPrompt), "Split at the latest user prompt")
+         observe(live, sessionID: sessionID, anchor: messages[split].id)
+         let activeIDs = running.union(live.map(\.id))
++        if TVProbe.enabled { TVProbe.updates += 1 }
+         if let prefix, canReuse(prefix, messages: messages, split: split, sessionID: sessionID,
+                                 activeIDs: activeIDs, online: online) {
++            if TVProbe.enabled {
++                TVProbe.prefixHits += 1
++                if TVProbe.updates % 50 == 0 { TVProbe.report("canReuse-hit") }
++            }
+             let tail = normalize(messages[split...], activeIDs: activeIDs, online: online, anchor: prefix.anchor)
+             return Split(prefix: prefix, tail: tail, separable: true)
+         }
++        if TVProbe.enabled { TVProbe.projectTurnsRuns += 1 }
+         if let prefix = projectTurns(messages, split: split, sessionID: sessionID, activeIDs: activeIDs, online: online) {
++            if TVProbe.enabled, TVProbe.updates % 50 == 0 { TVProbe.report("projectTurns-hit") }
+             self.prefix = prefix
+             let tail = normalize(messages[split...], activeIDs: activeIDs, online: online, anchor: prefix.anchor)
+             return Split(prefix: prefix, tail: tail, separable: true)
+@@ -203,6 +229,7 @@ public final class ToolVisibilityProjection {
+     private func projectTurns(_ messages: [KimiMessage], split: Int, sessionID: String,
+                               activeIDs: Set<String>, online: Bool) -> Prefix? {
+         let anchor = messages[split].id
++        if TVProbe.enabled { if chunks.isEmpty { TVProbe.chunksEmpty += 1 } else { TVProbe.chunksPresent += 1 } }
+         var anchored: [String: [String]] = [:]
+         for id in order {
+             // The whole projection emits a live tool without a turn before the first prompt.
+@@ -370,7 +397,9 @@ public final class ToolVisibilityProjection {
+             if let candidate = candidates[index], candidate.anchor == turnAnchor, candidate.online == online,
+                candidate.active == active, candidate.observed == relevant {
+                 chunk = candidate
++                if TVProbe.enabled { TVProbe.chunksReused += 1 }
+             } else {
++                if TVProbe.enabled { TVProbe.chunksRebuilt += 1 }
+                 var pass = Pass(observed: observed, order: order, activeIDs: activeIDs, online: online)
+                 for message in source { pass.collect(message) }
+                 for message in source { pass.normalize(message) }
+@@ -431,9 +460,26 @@ public final class ToolVisibilityProjection {
+ 
+     private func canReuse(_ prefix: Prefix, messages: [KimiMessage], split: Int, sessionID: String,
+                           activeIDs: Set<String>, online: Bool) -> Bool {
++        if TVProbe.enabled {
++            var reason = "reuse"
++            if prefix.sessionID != sessionID { reason = "session" }
++            else if prefix.source.count != split { reason = "count" }
++            else if prefix.anchor != messages[split].id { reason = "anchor" }
++            else if prefix.online != online { reason = "online" }
++            else if activeIDs.intersection(prefix.identities) != prefix.active { reason = "active" }
++            else if observedForPrefix(identities: prefix.identities, anchor: prefix.anchor) != prefix.observed { reason = "observed" }
++            TVProbe.failures[reason, default: 0] += 1
++        }
+         guard prefix.sessionID == sessionID, prefix.source.count == split, prefix.anchor == messages[split].id,
+               prefix.online == online, activeIDs.intersection(prefix.identities) == prefix.active,
+               observedForPrefix(identities: prefix.identities, anchor: prefix.anchor) == prefix.observed else { return false }
++        if TVProbe.enabled {
++            if !separates(messages[split...], from: prefix.identities, anchor: prefix.anchor) {
++                TVProbe.failures["separates", default: 0] += 1
++            } else if !KimiMessage.sameWindow(messages[..<split], prefix.source) {
++                TVProbe.failures["sameWindow", default: 0] += 1
++            }
++        }
+         guard separates(messages[split...], from: prefix.identities, anchor: prefix.anchor),
+               KimiMessage.sameWindow(messages[..<split], prefix.source) else { return false }
+         // An equal window is adopted so the next token compares copied bytes.
