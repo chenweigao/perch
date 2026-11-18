@@ -39,6 +39,18 @@ ACP CLI 桥同样被拒——不是参数或权限问题，是 **orchestrator �
 5. **长命令用前台 + 显式 timeout**，避免被自动转入后台后回合提前结束；
    必须后台时，先完成 T3 调用。
 
+## 验证记录（2026-11-18 18:10，cron 触发回合）
+
+用一次性定时任务（CronCreate，id `01M7Q1YS9DWB9C09BAZ1CY3M1M`）验证“定时触发的回合
+能否创建子代理”：
+
+- ① `t3_thread_configure`（只读）→ 成功返回线程配置；
+- ② `delegate_task` → `{"_tag":"OrchestratorMcpFailure","code":"parent_not_active",
+  "message":"The calling provider no longer owns an active thread run."}`
+
+结论：**定时任务触发的回合也不算活跃 run**。目前唯一可用的入口仍是用户消息触发的
+回合；cron 只能用来做非 T3 的工作（构建、测量、`gh` 操作），不能用来派评审。
+
 ## 影响
 
 - 每轮评审最多在“用户回合开头”推进一次；因此循环的节奏是
