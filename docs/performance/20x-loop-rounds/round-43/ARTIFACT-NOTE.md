@@ -12,6 +12,9 @@
   (cold then warm) to mirror the product's multi-caller shape; r41-attr called it once.
   Reported fidelity ratio improves from 1.25 (r41) to ~1.0 against the bench components
   (commentary 0.4383 + find 0.271 + model.update).
+- **Portable**: `portable/results-9ed2ac1c.json`, 10/10 checks exit 0, `dirty=false`,
+  run at settle head `85bc1ee0` (product tree = `9ed2ac1c`). Command:
+  `python3 scripts/check-functional.py portable --output <dir>`.
 - **Sanitization**: personal paths and embedded email addresses redacted per the
   commit-hook contract (`/home/<dev>`, `/Users/<mini>`, `<redacted-email>`). No real
   session data, no remote connections.
