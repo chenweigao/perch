@@ -1,0 +1,13 @@
+start=2026-11-18T17:23:24+08:00
+pre_porcelain=0
+From github.com:chenweigao/perch
+ * branch              main       -> FETCH_HEAD
+ * branch              style/loop-main -> FETCH_HEAD
+HEAD is now at 92b718d5 fix(style): give inspector title native room
+code_head=92b718d551175694f05b415ab0aeced277354e33
+build=passed
+workbench_checks=passed
+Traceback (most recent call last):
+  File "<stdin>", line 6, in <module>
+AssertionError
+exit=1

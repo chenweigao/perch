@@ -1,0 +1,44 @@
+#!/bin/bash
+set -euo pipefail
+
+support="$HOME/Library/PerfRunner/results/style-r2-support"
+output="$HOME/Library/PerfRunner/results/style-r2-after-v1"
+before="$HOME/Library/PerfRunner/results/style-r2-before-v2"
+candidate_revision=$(cat "$support/candidate-revision.txt")
+export PERCH_STYLE_CAPTURE_NODE="$HOME/.local/opt/node-v24.18.0-darwin-arm64/bin/node"
+
+[[ "$candidate_revision" =~ ^[0-9a-f]{40}$ ]]
+test -e "$before.done"
+test "$(tail -1 "$before.log")" = 'exit=0'
+python3 - "$before/capture/manifest.json" <<'PY'
+import json
+from pathlib import Path
+import sys
+assert json.loads(Path(sys.argv[1]).read_text())["status"] == "passed"
+PY
+printf 'start=%s\n' "$(date -Iseconds)"
+cd "$HOME/_worktrees/20x-loop-20261112/perch"
+pre_porcelain=$(git status --porcelain=v1 | wc -l | tr -d ' ')
+printf 'pre_porcelain=%s\n' "$pre_porcelain"
+test "$pre_porcelain" = 0
+git fetch origin main style/loop-main
+test "$(git rev-parse origin/style/loop-main)" = "$candidate_revision"
+git checkout --detach "$candidate_revision"
+test "$(git rev-parse HEAD)" = "$candidate_revision"
+printf 'code_head=%s\n' "$(git rev-parse HEAD)"
+test ! -e "$output"
+test -x "$PERCH_STYLE_CAPTURE_NODE"
+mkdir -p "$output"
+cp "$support/candidate-revision.txt" "$output/candidate-revision.txt"
+cp "$support/expected-differences.md" "$output/expected-differences-before.md"
+cp "$support/allowed-regions-before.json" "$output/allowed-regions-before.json"
+printf 'capture_driver_sha256=%s\n' "$(shasum -a 256 "$support/capture-matrix.py" | cut -d ' ' -f1)"
+printf 'expected_list_sha256=%s\n' "$(shasum -a 256 "$support/expected-differences.md" | cut -d ' ' -f1)"
+printf 'allowed_regions_sha256=%s\n' "$(shasum -a 256 "$support/allowed-regions-before.json" | cut -d ' ' -f1)"
+python3 "$support/capture-matrix.py" --output "$output/capture" \
+    --host-app "$output/HostLifecycleChecks.app" --build-host --build-previews
+printf 'host_binary_sha256=%s\n' "$(shasum -a 256 "$output/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks" | cut -d ' ' -f1)"
+post_porcelain=$(git status --porcelain=v1 | wc -l | tr -d ' ')
+printf 'post_porcelain=%s\n' "$post_porcelain"
+test "$post_porcelain" = 0
+printf 'end=%s\n' "$(date -Iseconds)"

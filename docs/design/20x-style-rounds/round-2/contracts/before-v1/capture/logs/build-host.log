@@ -1,0 +1,8 @@
+Command: ['python3', 'scripts/check-host-lifecycle.py', '--app', PosixPath('/Users/developer/_worktrees/20x-loop-20261112/perch/.local/style-loop/HostLifecycleChecks.app'), '--build-only']
+usage: check-host-lifecycle.py [-h] [--app APP] [--build-only]
+                               [--preview-reading-design] [--release]
+                               [--phase {startup,seed,restart,removal,connection-controls,connection-restart,architecture,interactions,streaming-rendering,streaming-cadence,git-write,reading-design,reading-controls,goal-header,reading-canvas,sidebar-scroll,activity-bar,reply-selection,frame-hitch,workspace-upgrade,file-reader,code-reader,workflow-polish,document-reading,task-context,task-detail,task-summary,native-design}]
+                               [--preview-file-reader]
+                               [--preview-document-reader]
+                               [--preview-native-design]
+check-host-lifecycle.py: error: --build-only requires a new --app path and no --phase

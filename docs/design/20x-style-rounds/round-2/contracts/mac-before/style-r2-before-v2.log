@@ -1,0 +1,19 @@
+start=2026-11-18T16:42:03+08:00
+pre_porcelain=0
+From github.com:chenweigao/perch
+ * branch              main       -> FETCH_HEAD
+ * branch              style/loop-main -> FETCH_HEAD
+HEAD is now at 0a83a8d0 fix(style): preserve recap label intrinsic width
+code_head=0a83a8d01c31e904d7952af4cacea2b88173aa1d
+capture_driver_sha256=21a8bb612056e9ce591525894401d957c2d8d869ef761eb26ecfef4529938473
+expected_list_sha256=31bf8ee69518b0c539718890ad0e4d6d99262a712c100f4d7b5fa41aaead1098
+{
+  "status": "passed",
+  "output": "/Users/developer/Library/PerfRunner/results/style-r2-before-v2/capture",
+  "comparisons": 22,
+  "seconds": 405.62
+}
+host_binary_sha256=2918fe788e738bd82acf005201e45e26cfdd86b74bed579bf01d7d51be6cabdf
+post_porcelain=0
+end=2026-11-18T16:48:54+08:00
+exit=0

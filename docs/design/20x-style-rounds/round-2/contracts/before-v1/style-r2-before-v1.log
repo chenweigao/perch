@@ -1,0 +1,37 @@
+start=2026-11-18T16:34:01+08:00
+pre_porcelain=0
+From github.com:chenweigao/perch
+ * branch              main            -> FETCH_HEAD
+ * branch              style/loop-main -> FETCH_HEAD
+ + b96cfdfa...0a83a8d0 style/loop-main -> origin/style/loop-main  (forced update)
+Warning: you are leaving 1 commit behind, not connected to
+any of your branches:
+
+  b96cfdfa fix(style): preserve recap label intrinsic width
+
+If you want to keep it by creating a new branch, this may be a good time
+to do so with:
+
+ git branch <new-branch-name> b96cfdfa
+
+HEAD is now at 0a83a8d0 fix(style): preserve recap label intrinsic width
+code_head=0a83a8d01c31e904d7952af4cacea2b88173aa1d
+capture_driver_sha256=21a8bb612056e9ce591525894401d957c2d8d869ef761eb26ecfef4529938473
+expected_list_sha256=31bf8ee69518b0c539718890ad0e4d6d99262a712c100f4d7b5fa41aaead1098
+{
+  "status": "failed",
+  "output": "/Users/developer/Library/PerfRunner/results/style-r2-before-v1/capture",
+  "comparisons": 0,
+  "seconds": 0.19
+}
+Traceback (most recent call last):
+  File "/Users/developer/Library/PerfRunner/results/style-r2-support/capture-matrix.py", line 24, in <module>
+    main()
+  File "/Users/developer/Library/PerfRunner/results/style-r2-support/capture-matrix.py", line 20, in main
+    capture_module.main()
+  File "/Users/developer/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 200, in main
+    run("build-host", ["python3", "scripts/check-host-lifecycle.py", "--app", host_app, "--build-only"], timeout=900)
+  File "/Users/developer/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 135, in run
+    raise RuntimeError(f"{name} failed; see {log_path}")
+RuntimeError: build-host failed; see /Users/developer/Library/PerfRunner/results/style-r2-before-v1/capture/logs/build-host.log
+exit=1

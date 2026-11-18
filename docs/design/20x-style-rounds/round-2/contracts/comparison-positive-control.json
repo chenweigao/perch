@@ -1,0 +1,17 @@
+{
+  "scope": "Comparator control only; synthetic PNG copies, not GUI or product evidence",
+  "mutation": {
+    "scene": "main-english",
+    "point": [
+      64,
+      160
+    ],
+    "repeat_count": 2,
+    "manifest_hashes_updated": true
+  },
+  "helper_exit": 1,
+  "unexpected_pixels": 1,
+  "all_metadata_and_manifest_checks_passed": true,
+  "outside_region_rejection": "passed",
+  "raw_control": "$HOME/code/_evidence/style-loop-round-2-20261118/comparison-positive-control/"
+}

@@ -1,0 +1,9 @@
+{
+  "scope": "Publication copies only; raw text and screenshots are not rewritten",
+  "archived_files": 5,
+  "path_redacted_files": [
+    "style-r2-after-v1.log"
+  ],
+  "unchanged_png_sha256": {},
+  "excluded": "App bundles and non-evidence binary files"
+}

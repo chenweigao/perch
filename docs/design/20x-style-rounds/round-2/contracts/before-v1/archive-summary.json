@@ -1,0 +1,11 @@
+{
+  "scope": "Publication copies only; raw text and screenshots are not rewritten",
+  "archived_files": 6,
+  "path_redacted_files": [
+    "capture/logs/build-host.log",
+    "capture/manifest.json",
+    "style-r2-before-v1.log"
+  ],
+  "unchanged_png_sha256": {},
+  "excluded": "App bundles and non-evidence binary files"
+}

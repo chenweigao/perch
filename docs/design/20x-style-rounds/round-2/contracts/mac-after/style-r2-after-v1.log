@@ -1,0 +1,22 @@
+start=2026-11-18T17:16:31+08:00
+pre_porcelain=0
+From github.com:chenweigao/perch
+ * branch              main            -> FETCH_HEAD
+ * branch              style/loop-main -> FETCH_HEAD
+   0a83a8d0..92b718d5  style/loop-main -> origin/style/loop-main
+Previous HEAD position was 0a83a8d0 fix(style): preserve recap label intrinsic width
+HEAD is now at 92b718d5 fix(style): give inspector title native room
+code_head=92b718d551175694f05b415ab0aeced277354e33
+capture_driver_sha256=21a8bb612056e9ce591525894401d957c2d8d869ef761eb26ecfef4529938473
+expected_list_sha256=31bf8ee69518b0c539718890ad0e4d6d99262a712c100f4d7b5fa41aaead1098
+allowed_regions_sha256=f03ac93a74196675275ad7b602b58575b479117e466b7549cb54868b5c7f6b90
+{
+  "status": "passed",
+  "output": "/Users/developer/Library/PerfRunner/results/style-r2-after-v1/capture",
+  "comparisons": 22,
+  "seconds": 402.101
+}
+host_binary_sha256=94b6873e251db8b376a16a7adf9d193500c371e015d2f4ba739921d3e25d5ecb
+post_porcelain=0
+end=2026-11-18T17:23:24+08:00
+exit=0

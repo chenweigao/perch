@@ -1,0 +1,52 @@
+#!/bin/bash
+set -euo pipefail
+
+baseline_revision=0a83a8d01c31e904d7952af4cacea2b88173aa1d
+support="$HOME/Library/PerfRunner/results/style-r2-support"
+output="$HOME/Library/PerfRunner/results/style-r2-gates-v1"
+after="$HOME/Library/PerfRunner/results/style-r2-after-v1"
+candidate_revision=$(cat "$support/candidate-revision.txt")
+export PERCH_STYLE_CAPTURE_NODE="$HOME/.local/opt/node-v24.18.0-darwin-arm64/bin/node"
+
+[[ "$candidate_revision" =~ ^[0-9a-f]{40}$ ]]
+test -e "$after.done"
+test "$(tail -1 "$after.log")" = 'exit=0'
+printf 'start=%s\n' "$(date -Iseconds)"
+cd "$HOME/_worktrees/20x-loop-20261112/perch"
+pre_porcelain=$(git status --porcelain=v1 | wc -l | tr -d ' ')
+printf 'pre_porcelain=%s\n' "$pre_porcelain"
+test "$pre_porcelain" = 0
+git fetch origin main style/loop-main
+test "$(git rev-parse origin/style/loop-main)" = "$candidate_revision"
+git checkout --detach "$candidate_revision"
+test "$(git rev-parse HEAD)" = "$candidate_revision"
+printf 'code_head=%s\n' "$(git rev-parse HEAD)"
+test ! -e "$output"
+mkdir -p "$output/native-design"
+git diff "$baseline_revision" HEAD -- Sources ':(exclude)Sources/AgentWorkbench' > "$output/sources-redline.diff"
+test ! -s "$output/sources-redline.diff"
+git diff "$baseline_revision" HEAD -- scripts .github > "$output/measurement-ci-redline.diff"
+test ! -s "$output/measurement-ci-redline.diff"
+bash scripts/build.sh > "$output/build.log" 2>&1
+printf 'build=passed\n'
+swift run WorkbenchChecks > "$output/workbench-checks.log" 2>&1
+printf 'workbench_checks=passed\n'
+python3 scripts/check-radius-tokens.py > "$output/radius.log" 2>&1
+python3 scripts/check-localization.py > "$output/localization.log" 2>&1
+python3 scripts/check-app-launch.py --app build/Perch.app --output "$output/app-launch" > "$output/app-launch.log" 2>&1
+python3 - "$output/app-launch/result.json" "$candidate_revision" <<'PY'
+import json
+from pathlib import Path
+import sys
+result = json.loads(Path(sys.argv[1]).read_text())
+assert result["passed"] and result["completed_launches"] == 5
+assert result["revision"] == sys.argv[2]
+PY
+printf 'cold_launches=5/5\n'
+export PERCH_DESIGN_CAPTURES="$output/native-design"
+python3 scripts/check-host-lifecycle.py --app "$after/HostLifecycleChecks.app" --phase native-design > "$output/native-design.log" 2>&1
+printf 'native_design=passed\n'
+post_porcelain=$(git status --porcelain=v1 | wc -l | tr -d ' ')
+printf 'post_porcelain=%s\n' "$post_porcelain"
+test "$post_porcelain" = 0
+printf 'end=%s\n' "$(date -Iseconds)"

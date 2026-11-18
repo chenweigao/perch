@@ -1,0 +1,27 @@
+#!/bin/bash
+set -euo pipefail
+
+baseline_revision=0a83a8d01c31e904d7952af4cacea2b88173aa1d
+support="$HOME/Library/PerfRunner/results/style-r2-support"
+output="$HOME/Library/PerfRunner/results/style-r2-before-v1"
+
+printf 'start=%s\n' "$(date -Iseconds)"
+cd "$HOME/_worktrees/20x-loop-20261112/perch"
+pre_porcelain=$(git status --porcelain=v1 | wc -l | tr -d ' ')
+printf 'pre_porcelain=%s\n' "$pre_porcelain"
+test "$pre_porcelain" = 0
+git fetch origin main style/loop-main
+git checkout --detach "$baseline_revision"
+test "$(git rev-parse HEAD)" = "$baseline_revision"
+printf 'code_head=%s\n' "$(git rev-parse HEAD)"
+test ! -e "$output"
+mkdir -p "$output"
+printf 'capture_driver_sha256=%s\n' "$(shasum -a 256 "$support/capture-matrix.py" | cut -d ' ' -f1)"
+printf 'expected_list_sha256=%s\n' "$(shasum -a 256 "$support/expected-differences.md" | cut -d ' ' -f1)"
+cp "$support/expected-differences.md" "$output/expected-differences-before.md"
+swift "$support/title-metrics.swift" > "$output/title-metrics.json"
+python3 "$support/capture-matrix.py" --output "$output/capture" --build-host --build-previews
+post_porcelain=$(git status --porcelain=v1 | wc -l | tr -d ' ')
+printf 'post_porcelain=%s\n' "$post_porcelain"
+test "$post_porcelain" = 0
+printf 'end=%s\n' "$(date -Iseconds)"

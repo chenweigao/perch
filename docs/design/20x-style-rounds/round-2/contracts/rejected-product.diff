@@ -1,0 +1,13 @@
+diff --git a/Sources/AgentWorkbench/WorkspaceInspector.swift b/Sources/AgentWorkbench/WorkspaceInspector.swift
+index 78d9fdd4..4c0b3aba 100644
+--- a/Sources/AgentWorkbench/WorkspaceInspector.swift
++++ b/Sources/AgentWorkbench/WorkspaceInspector.swift
+@@ -191,7 +191,7 @@ struct ChangesInspectorView: View {
+     }
+ 
+     private var header: some View {
+-        HStack(spacing: 6) {
++        HStack(spacing: 0) {
+             Button { model.taskContextWindow.showPage(.task, model: model) } label: {
+                 Image(systemName: "chevron.left")
+                     .font(.system(size: WorkbenchTheme.Typography.caption, weight: .semibold))

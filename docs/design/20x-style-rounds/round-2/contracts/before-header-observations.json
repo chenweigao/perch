@@ -1,0 +1,74 @@
+[
+  {
+    "source": "docs/design/20x-style-rounds/round-2/before/main-english/repeat-1/capture.png",
+    "sha256": "856d302793697fb69053e47813dbf4fb1662a8fce98380e40bd576df039ac023",
+    "crop": [
+      1218,
+      40,
+      1530,
+      130
+    ],
+    "scale": 2,
+    "annotation": "red outline marks the predeclared header region"
+  },
+  {
+    "source": "docs/design/20x-style-rounds/round-2/before/main-english-dark/repeat-1/capture.png",
+    "sha256": "da5a247dff465edac9d90a8a42e8df932a7c4215e65d482d0bba55619e8b2fa0",
+    "crop": [
+      1218,
+      40,
+      1530,
+      130
+    ],
+    "scale": 2,
+    "annotation": "red outline marks the predeclared header region"
+  },
+  {
+    "source": "docs/design/20x-style-rounds/round-2/before/main-english-large-type-dark/repeat-1/capture.png",
+    "sha256": "934c761ffdc40f9035e55015bfd3d8aba383bd3d5caab8a3524beef68b581c7e",
+    "crop": [
+      1218,
+      40,
+      1530,
+      130
+    ],
+    "scale": 2,
+    "annotation": "red outline marks the predeclared header region"
+  },
+  {
+    "source": "docs/design/20x-style-rounds/round-2/before/main-large-type-dark/repeat-1/capture.png",
+    "sha256": "d43ea53ea304b452bebe6724cbc3a5e80e7c2ebe0e23c8eb6e34726e9c04c463",
+    "crop": [
+      1218,
+      40,
+      1530,
+      130
+    ],
+    "scale": 2,
+    "annotation": "red outline marks the predeclared header region"
+  },
+  {
+    "source": "docs/design/20x-style-rounds/round-2/before/main-find/repeat-1/capture.png",
+    "sha256": "b087c73072d38672a3b96a9d35944b813b1d9efbf86bc73b428d1381053c0b17",
+    "crop": [
+      1218,
+      40,
+      1530,
+      130
+    ],
+    "scale": 2,
+    "annotation": "red outline marks the predeclared header region"
+  },
+  {
+    "source": "docs/design/20x-style-rounds/round-2/before/main-scroll/repeat-1/capture.png",
+    "sha256": "cc9a3116a8347aa641b2732d5982c8c9fe7658532936b9eb121a78982598b531",
+    "crop": [
+      1218,
+      40,
+      1530,
+      130
+    ],
+    "scale": 2,
+    "annotation": "red outline marks the predeclared header region"
+  }
+]

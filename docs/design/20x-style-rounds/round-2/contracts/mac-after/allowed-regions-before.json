@@ -1,0 +1,20 @@
+{
+  "phase": "Declared from valid before captures, before the product edit",
+  "baseline_commit": "0a83a8d01c31e904d7952af4cacea2b88173aa1d",
+  "reference": "before/manifest.json and before header observations; unchanged 1536x900 fixture geometry",
+  "coordinate_system": "PNG pixels, half-open rectangles; backing scale 1",
+  "description": "Only the changes inspector header, x=1218..1530 and y=44..96; excludes toolbar and file rows",
+  "scenarios": {
+    "main-light": [1218, 44, 1530, 96],
+    "main-dark": [1218, 44, 1530, 96],
+    "main-english": [1218, 44, 1530, 96],
+    "main-large-type": [1218, 44, 1530, 96],
+    "main-english-dark": [1218, 44, 1530, 96],
+    "main-english-large-type": [1218, 44, 1530, 96],
+    "main-english-large-type-dark": [1218, 44, 1530, 96],
+    "main-large-type-dark": [1218, 44, 1530, 96],
+    "main-find": [1218, 44, 1530, 96],
+    "main-find-dark": [1218, 44, 1530, 96],
+    "main-scroll": [1218, 44, 1530, 96]
+  }
+}
