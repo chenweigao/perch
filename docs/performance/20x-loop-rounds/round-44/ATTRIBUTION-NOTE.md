@@ -87,13 +87,13 @@
   (including compiler value ops `outlined` / `destroy for` / `initializeWithCopy for` /
   `deinit`); a stack with no whitelisted frame is reported as `<unattributed>` (0 this
   round). Category assignment follows the whitelist: find-bar > harness > product.
-  Final values: **find-bar 20.52% (2399), harness 8.52% (996), product 29.39% (3436),
-  unresolved 1.22% (143)** — the four add up to the 6,974 sampled bucket rows;
+  Values at that stage (find-bar 20.52 / harness 8.52 / product 29.39 / unresolved 1.22)
+  are **superseded by pass 7** — the four add up to the 6,974 sampled bucket rows;
   `Array.+` stays 1003 (8.58%) split 938 / 49 / 16.
 
 - **Attribution pass 7 (review round 6)**: the closed-world list is now **derived from
-  `Sources/WorkbenchCore/*.swift`** (405 type names, stdlib extensions such as `Array` /
-  `String` excluded) and matched on **symbol boundaries** (so `Buffer` cannot match inside
+  `Sources/WorkbenchCore/*.swift`** (393 derived names after excluding `Array` / `Result` /
+  `String`; `PRODUCT_PATS` totals 402 with the nine hand-written member patterns) and matched on **symbol boundaries** (so `Buffer` cannot match inside
   `ArrayBuffer`). `consumer()` applies the value-op filter **before** the
   `ConversationSearch` special case, which removes the 32 samples that had been admitted as
   `destroy for ConversationSearch.Entry` (13), `ConversationSearch.__deallocating_deinit`
