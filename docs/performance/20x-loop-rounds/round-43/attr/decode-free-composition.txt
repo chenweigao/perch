@@ -1,0 +1,48 @@
+total=20743 decode-ancestry=9052 (43.64%) decode-free=11691
+
+== decode-free innermost-region composition (n=11691) ==
+     2394  20.48%  utf16-bridge
+     2256  19.30%  arc-copy
+     1280  10.95%  cf-match
+     1044   8.93%  teardown
+     1038   8.88%  string-compare
+      876   7.49%  input-compare
+      581   4.97%  string-hash
+      401   3.43%  timeline-make
+      387   3.31%  alloc
+      316   2.70%  narrative
+      311   2.66%  dict-find
+      219   1.87%  tool-visibility
+      166   1.42%  turn-summary
+      129   1.10%  model-update
+       73   0.62%  find-verify
+       68   0.58%  outside
+       68   0.58%  find-search
+       30   0.26%  activity-init
+       29   0.25%  presented-fold
+        9   0.08%  history-join
+        7   0.06%  apply-event
+
+== product-function inclusive shares (decode-free denominator) ==
+      951   8.13%  displayMessages.getter
+      956   8.18%  DisplayMemoBox.value
+       15   0.13%  KimiInFlight.appendDelta
+     1213  10.38%  KimiMessage.sameWindow
+        0   0.00%  KimiMessage.sameWindowBits
+      244   2.09%  sameRendered family
+      588   5.03%  TV.canReuse
+      744   6.36%  TV.projectTurns
+      548   4.69%  TV.Pass.normalize
+     1338  11.44%  ConversationTimelineEntry.make
+      126   1.08%  History.presented
+      613   5.24%  Snapshot.presented
+     5512  47.15%  ConversationPresentationModel
+      856   7.32%  ActivityNarrativeProjection.make
+      331   2.83%  NarrativeTextCache
+      136   1.16%  CommentaryDerivation
+       52   0.44%  ActivityNarrativeSnapshot.clean
+        0   0.00%  ActivityNarrativeSnapshot.narrativeText
+        6   0.05%  NarrativePhaseScan
+      264   2.26%  ConversationActivity.init
+     3850  32.93%  ConversationSearch.search
+     1949  16.67%  ToolVisibilityProjection

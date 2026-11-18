@@ -1,0 +1,48 @@
+profile=r43-stream total_samples=20743
+
+== phase [chain] n=20743 (100.0% of trace) ==
+    4905  23.65%  setup-wire-decode
+    3312  15.97%  arc-copy
+    2626  12.66%  utf16-bridge
+    1981   9.55%  string-compare
+    1859   8.96%  teardown
+    1290   6.22%  cf-match
+     951   4.58%  alloc
+     876   4.22%  input-compare
+     782   3.77%  string-hash
+     569   2.74%  dict-find
+     401   1.93%  timeline-make
+     316   1.52%  narrative
+     219   1.06%  tool-visibility
+     166   0.80%  turn-summary
+     129   0.62%  model-update
+      73   0.35%  find-verify
+      68   0.33%  outside
+      68   0.33%  find-search
+      65   0.31%  setup-json
+      30   0.14%  activity-init
+      29   0.14%  presented-fold
+  -- top leaves --
+    1281   6.18%  swift_release
+     944   4.55%  swift_retain
+     866   4.17%  swift_bridgeObjectRelease
+     859   4.14%  closure #1 in closure #1 in static KimiMessage.sameWindow(_:_:)
+     623   3.00%  swift_bridgeObjectRetain
+     527   2.54%  DYLD-STUB$$swift_bridgeObjectRelease
+     479   2.31%  DYLD-STUB$$swift_bridgeObjectRetain
+     404   1.95%  __CFStringFoldCharacterClusterAtIndex
+     396   1.91%  _stringCompareFastUTF8Abnormal(_:_:expecting:)
+     370   1.78%  validateUTF8(_:)
+     357   1.72%  _platform_memmove
+     356   1.72%  _xzm_free_tc
+     344   1.66%  Hasher.combine(bytes:)
+     319   1.54%  specialized static JSONScanner._slowpath_stringValue(from:appendingTo:fullSource:)
+  -- hash/dict consumers --
+     245   1.18%  String.hash(into:)
+     119   0.57%  JSONDecoderImpl.KeyedContainer.decodeIfPresent(_:forKey:)
+     115   0.55%  specialized RenderedSourceCache.rendered(_:produce:)
+      93   0.45%  _StringGuts.createAndLoadBreadcrumbs_time_here_is_String_to_NSString_bridging_overhead(_:)
+      79   0.38%  static JSONDecoderImpl.KeyedContainer.stringify(objectRegion:using:codingPathNode:keyDecod
+      61   0.29%  ToolVisibilityProjection.Pass.collect(_:)
+      52   0.25%  ToolVisibilityProjection.Pass.normalize(_:)
+      44   0.21%  JSONDecoderImpl.KeyedContainer.decodeIfPresent<A>(_:forKey:)

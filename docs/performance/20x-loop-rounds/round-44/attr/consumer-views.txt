@@ -1,0 +1,41 @@
+decode-free n=11691
+
+== target buckets: 6974 samples (59.65%) ==
+
+== Array.+ samples split by caller (n=1003, 8.58% of decode-free) ==
+    938  93.52% of Array.+ |  8.02% of decode-free  closure #1 in KimiConversation.displayMessages.getter
+     49   4.89% of Array.+ |  0.42% of decode-free  ConversationPresentationModel.Snapshot.presented(activity:foldsProcess:isRunning:preservingEntries:)
+     16   1.60% of Array.+ |  0.14% of decode-free  ConversationPresentationModel.update(_:)
+
+== find-bar line (search + detector internals) ==
+   1099  9.40%  ConversationSearch.hits(in:query:running:options:)
+    724  6.19%  ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)
+    542  4.64%  closure #1 in closure #1 in ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)
+      5  0.04%  specialized static ConversationSearch.sources(of:role:)
+      3  0.03%  specialized static ConversationSearch.role(of:)
+      2  0.02%  closure #4 in static ConversationSearch.sources(of:role:)
+      2  0.02%  closure #2 in ConversationSearch.hits(in:query:running:options:)
+      1  0.01%  closure #1 in static ConversationSearch.renderedText(_:)
+      1  0.01%  static ConversationSearch.sameRenderedSources(_:_:)
+  total 2379 = 20.35% of decode-free
+
+== category totals over the four buckets (n=6974) ==
+   2379 20.35% of decode-free  find-bar line
+   1005  8.60% of decode-free  harness
+    143  1.22% of decode-free  unresolved
+   3447 29.48% of decode-free  product
+  (sum 6974 vs 6974 sampled; difference = consumers below the print cut)
+
+== product consumers (each < the table) ==
+    942  8.06%  closure #1 in KimiConversation.displayMessages.getter
+    277  2.37%  closure #1 in static ConversationPresentationModel.Presentation.parents(of:into:)
+    249  2.13%  ConversationPresentationModel.update(_:)
+    240  2.05%  specialized flush #1 (running:) in static ConversationTimelineEntry.make(_:isRunning:)
+    196  1.68%  ToolVisibilityProjection.Pass.normalize(_:)
+    160  1.37%  KimiMessage.coalescingAdjacentAssistantParts()
+    123  1.05%  closure #1 in static ConversationPresentationModel.cost(_:)
+    105  0.90%  static ConversationPresentationModel.cost(_:)
+    100  0.86%  specialized static KimiMessage.sameRenderedMessage(_:_:)
+     95  0.81%  specialized static ActivityNarrativeProjection.make(entries:tools:isRunning:external:cache:)
+     91  0.78%  ConversationTimelineEntry.id.getter
+     75  0.64%  specialized static ConversationTimelineEntry.make(_:isRunning:)
