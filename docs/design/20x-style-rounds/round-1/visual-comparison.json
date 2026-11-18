@@ -1,0 +1,248 @@
+{
+  "before_commit": "9c3fbb0adf6cc7d2e9f82eb5fe21008ae0530deb",
+  "after_commit": "b96cfdfaa5308b2a2cd705f7e7ec209e4a82d55f",
+  "comparison": "decoded visible pixels composited over white; fixed frame and fixture metadata",
+  "scenarios": [
+    {
+      "group": "composer-dark",
+      "before": "docs/design/20x-style-rounds/round-0/baseline/composer-dark/repeat-1/capture.png",
+      "after": "docs/design/20x-style-rounds/round-1/after/composer-dark/repeat-1/capture.png",
+      "dimensions": [
+        760,
+        500
+      ],
+      "changed_pixels": 0,
+      "changed_bounds": null,
+      "comparable": true,
+      "allowed_change": false
+    },
+    {
+      "group": "composer-light",
+      "before": "docs/design/20x-style-rounds/round-0/baseline/composer-light/repeat-1/capture.png",
+      "after": "docs/design/20x-style-rounds/round-1/after/composer-light/repeat-1/capture.png",
+      "dimensions": [
+        760,
+        500
+      ],
+      "changed_pixels": 0,
+      "changed_bounds": null,
+      "comparable": true,
+      "allowed_change": false
+    },
+    {
+      "group": "main-dark",
+      "before": "docs/design/20x-style-rounds/round-0/baseline/main-dark/repeat-1/capture.png",
+      "after": "docs/design/20x-style-rounds/round-1/after/main-dark/repeat-1/capture.png",
+      "dimensions": [
+        1536,
+        900
+      ],
+      "changed_pixels": 0,
+      "changed_bounds": null,
+      "comparable": true,
+      "allowed_change": false
+    },
+    {
+      "group": "main-dashboard",
+      "before": "docs/design/20x-style-rounds/round-0/baseline/main-dashboard/repeat-1/capture.png",
+      "after": "docs/design/20x-style-rounds/round-1/after/main-dashboard/repeat-1/capture.png",
+      "dimensions": [
+        1536,
+        900
+      ],
+      "changed_pixels": 0,
+      "changed_bounds": null,
+      "comparable": true,
+      "allowed_change": false
+    },
+    {
+      "group": "main-english",
+      "before": "docs/design/20x-style-rounds/round-0/baseline/main-english/repeat-1/capture.png",
+      "after": "docs/design/20x-style-rounds/round-1/after/main-english/repeat-1/capture.png",
+      "dimensions": [
+        1536,
+        900
+      ],
+      "changed_pixels": 0,
+      "changed_bounds": null,
+      "comparable": true,
+      "allowed_change": false
+    },
+    {
+      "group": "main-find",
+      "before": "docs/design/20x-style-rounds/round-0/baseline/main-find/repeat-1/capture.png",
+      "after": "docs/design/20x-style-rounds/round-1/after/main-find/repeat-1/capture.png",
+      "dimensions": [
+        1536,
+        900
+      ],
+      "changed_pixels": 0,
+      "changed_bounds": null,
+      "comparable": true,
+      "allowed_change": false
+    },
+    {
+      "group": "main-find-dark",
+      "before": "docs/design/20x-style-rounds/round-0/baseline/main-find-dark/repeat-1/capture.png",
+      "after": "docs/design/20x-style-rounds/round-1/after/main-find-dark/repeat-1/capture.png",
+      "dimensions": [
+        1536,
+        900
+      ],
+      "changed_pixels": 0,
+      "changed_bounds": null,
+      "comparable": true,
+      "allowed_change": false
+    },
+    {
+      "group": "main-inspector-closed",
+      "before": "docs/design/20x-style-rounds/round-0/baseline/main-inspector-closed/repeat-1/capture.png",
+      "after": "docs/design/20x-style-rounds/round-1/after/main-inspector-closed/repeat-1/capture.png",
+      "dimensions": [
+        1536,
+        900
+      ],
+      "changed_pixels": 0,
+      "changed_bounds": null,
+      "comparable": true,
+      "allowed_change": false
+    },
+    {
+      "group": "main-large-type",
+      "before": "docs/design/20x-style-rounds/round-0/baseline/main-large-type/repeat-1/capture.png",
+      "after": "docs/design/20x-style-rounds/round-1/after/main-large-type/repeat-1/capture.png",
+      "dimensions": [
+        1536,
+        900
+      ],
+      "changed_pixels": 1325,
+      "changed_bounds": [
+        347,
+        457,
+        496,
+        477
+      ],
+      "comparable": true,
+      "allowed_change": true
+    },
+    {
+      "group": "main-light",
+      "before": "docs/design/20x-style-rounds/round-0/baseline/main-light/repeat-1/capture.png",
+      "after": "docs/design/20x-style-rounds/round-1/after/main-light/repeat-1/capture.png",
+      "dimensions": [
+        1536,
+        900
+      ],
+      "changed_pixels": 0,
+      "changed_bounds": null,
+      "comparable": true,
+      "allowed_change": false
+    },
+    {
+      "group": "main-scroll",
+      "before": "docs/design/20x-style-rounds/round-0/baseline/main-scroll/repeat-1/capture.png",
+      "after": "docs/design/20x-style-rounds/round-1/after/main-scroll/repeat-1/capture.png",
+      "dimensions": [
+        1536,
+        900
+      ],
+      "changed_pixels": 0,
+      "changed_bounds": null,
+      "comparable": true,
+      "allowed_change": false
+    },
+    {
+      "group": "sidebar-dark",
+      "before": "docs/design/20x-style-rounds/round-0/baseline/sidebar-dark/repeat-1/capture.png",
+      "after": "docs/design/20x-style-rounds/round-1/after/sidebar-dark/repeat-1/capture.png",
+      "dimensions": [
+        1100,
+        760
+      ],
+      "changed_pixels": 0,
+      "changed_bounds": null,
+      "comparable": true,
+      "allowed_change": false
+    },
+    {
+      "group": "sidebar-english",
+      "before": "docs/design/20x-style-rounds/round-0/baseline/sidebar-english/repeat-1/capture.png",
+      "after": "docs/design/20x-style-rounds/round-1/after/sidebar-english/repeat-1/capture.png",
+      "dimensions": [
+        1100,
+        760
+      ],
+      "changed_pixels": 0,
+      "changed_bounds": null,
+      "comparable": true,
+      "allowed_change": false
+    },
+    {
+      "group": "sidebar-light",
+      "before": "docs/design/20x-style-rounds/round-0/baseline/sidebar-light/repeat-1/capture.png",
+      "after": "docs/design/20x-style-rounds/round-1/after/sidebar-light/repeat-1/capture.png",
+      "dimensions": [
+        1100,
+        760
+      ],
+      "changed_pixels": 0,
+      "changed_bounds": null,
+      "comparable": true,
+      "allowed_change": false
+    },
+    {
+      "group": "workbench-dark",
+      "before": "docs/design/20x-style-rounds/round-0/baseline/workbench-dark/repeat-1/capture.png",
+      "after": "docs/design/20x-style-rounds/round-1/after/workbench-dark/repeat-1/capture.png",
+      "dimensions": [
+        1120,
+        820
+      ],
+      "changed_pixels": 0,
+      "changed_bounds": null,
+      "comparable": true,
+      "allowed_change": false
+    },
+    {
+      "group": "workbench-empty-light",
+      "before": "docs/design/20x-style-rounds/round-0/baseline/workbench-empty-light/repeat-1/capture.png",
+      "after": "docs/design/20x-style-rounds/round-1/after/workbench-empty-light/repeat-1/capture.png",
+      "dimensions": [
+        1120,
+        820
+      ],
+      "changed_pixels": 0,
+      "changed_bounds": null,
+      "comparable": true,
+      "allowed_change": false
+    },
+    {
+      "group": "workbench-english",
+      "before": "docs/design/20x-style-rounds/round-0/baseline/workbench-english/repeat-1/capture.png",
+      "after": "docs/design/20x-style-rounds/round-1/after/workbench-english/repeat-1/capture.png",
+      "dimensions": [
+        1120,
+        820
+      ],
+      "changed_pixels": 0,
+      "changed_bounds": null,
+      "comparable": true,
+      "allowed_change": false
+    },
+    {
+      "group": "workbench-light",
+      "before": "docs/design/20x-style-rounds/round-0/baseline/workbench-light/repeat-1/capture.png",
+      "after": "docs/design/20x-style-rounds/round-1/after/workbench-light/repeat-1/capture.png",
+      "dimensions": [
+        1120,
+        820
+      ],
+      "changed_pixels": 0,
+      "changed_bounds": null,
+      "comparable": true,
+      "allowed_change": false
+    }
+  ],
+  "unexpected_changes": [],
+  "incomparable": []
+}

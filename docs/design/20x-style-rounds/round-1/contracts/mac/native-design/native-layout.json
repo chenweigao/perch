@@ -1,0 +1,93 @@
+{
+  "chrome" : {
+    "actions" : {
+      "height" : 32,
+      "maxX" : 1518,
+      "midY" : 26,
+      "minX" : 1372,
+      "top" : 10
+    },
+    "closeButton" : {
+      "height" : 14,
+      "maxX" : 33,
+      "midY" : 26,
+      "minX" : 19,
+      "top" : 19
+    },
+    "conversation" : {
+      "height" : 888,
+      "maxX" : 1530,
+      "midY" : 450,
+      "minX" : 276,
+      "top" : 6
+    },
+    "sidebar" : {
+      "height" : 842,
+      "maxX" : 266,
+      "midY" : 473,
+      "minX" : 6,
+      "top" : 52
+    },
+    "sidebarToggle" : {
+      "height" : 37,
+      "maxX" : 130,
+      "midY" : 25.5,
+      "minX" : 98,
+      "top" : 7
+    },
+    "title" : {
+      "height" : 32,
+      "maxX" : 536,
+      "midY" : 26,
+      "minX" : 300,
+      "top" : 10
+    },
+    "titlebarHeight" : 52,
+    "windowCornerRadius" : 16
+  },
+  "composerText" : {
+    "height" : 40,
+    "width" : 800,
+    "x" : 347,
+    "y" : 790
+  },
+  "conversation" : {
+    "height" : 888,
+    "width" : 1254,
+    "x" : 276,
+    "y" : 6
+  },
+  "inspector" : {
+    "height" : 888,
+    "width" : 312,
+    "x" : 1218,
+    "y" : 6
+  },
+  "inspectorClosedComposerText" : {
+    "height" : 40,
+    "width" : 800,
+    "x" : 503,
+    "y" : 790
+  },
+  "inspectorClosedConversation" : {
+    "height" : 888,
+    "width" : 1254,
+    "x" : 276,
+    "y" : 6
+  },
+  "reply" : {
+    "height" : 26,
+    "width" : 800,
+    "x" : 347,
+    "y" : 308
+  },
+  "scope" : "native window geometry; view-cache PNGs exclude composited Liquid Glass, *-composited-*.png include it",
+  "sidebarWidth" : 260,
+  "titleX" : 300,
+  "window" : {
+    "height" : 900,
+    "width" : 1536,
+    "x" : 0,
+    "y" : 0
+  }
+}

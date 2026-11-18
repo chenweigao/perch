@@ -657,7 +657,7 @@ struct RecapActionButton: View {
                 Image(systemName: "sparkles")
                 Text("Recap")
             }.font(.system(size: WorkbenchTheme.Reading.captionSize, weight: .medium))
-                .padding(.horizontal, 6).frame(height: 24).contentShape(Rectangle())
+                .fixedSize().padding(.horizontal, 6).frame(height: 24).contentShape(Rectangle())
         }.buttonStyle(WorkbenchDisclosureButtonStyle())
             .foregroundStyle(WorkbenchTheme.quiet)
             .help("总结本次任务，不会向 Agent 发送消息")

@@ -1,0 +1,371 @@
+{
+  "verdict": "PASS",
+  "product_revision": "b96cfdfaa5308b2a2cd705f7e7ec209e4a82d55f",
+  "product_baseline": "1ae2d6405e3dd145e6b9779ce77b47cd81cf5e6c",
+  "baseline_capture_revision": "9c3fbb0adf6cc7d2e9f82eb5fe21008ae0530deb",
+  "review_date": "2026-11-18",
+  "scope": {
+    "round": 1,
+    "candidate": "S01",
+    "branch": "style/loop-main",
+    "role": "独立评审子代理",
+    "applicable_instructions": ["AGENTS.md", "本次用户指定的独立评审边界"],
+    "review_areas": [
+      "契约证据的完整性、内部一致性与可独立核对部分",
+      "产品 Sources、WorkbenchCore、测量与 CI 脚本红线",
+      "原始截图、机位、fixture 元数据与预期差异清单的一致性",
+      "本轮是否触碰已裁决方向及是否如实披露回归覆盖"
+    ],
+    "allowed_product_diff": "仅 Sources/AgentWorkbench/ConversationActivityBar.swift:660 的 RecapActionButton label 增加 .fixedSize()。",
+    "only_write_path": "docs/design/20x-style-rounds/round-1/review-1.json",
+    "excluded": [
+      "审美裁决或重新打开既有设计决定",
+      "重派 round 0、追加委派、创建 goal、PR、提交或合并",
+      "Mac GUI、真实连接、构建或功能测试重跑",
+      "修改产品源代码、README、INDEX、测量或 CI 脚本",
+      "读取、改写或删除保留的旧 round-0 未跟踪产物"
+    ]
+  },
+  "checks": [
+    {
+      "id": "revision_and_baseline",
+      "status": "PASS",
+      "validation_kind": "本地只读 Git 核对",
+      "result": "分支与 HEAD 均符合指定锚点；HEAD 的直接父提交为产品基线 1ae2d640。旧截图 manifest 如实保留实际截图头 9c3fbb0a，没有将旧图冒记为新基线头。",
+      "details": [
+        "独立比较 9c3fbb0a 与 1ae2d640 的 Sources、Resources、Tests、scripts、.github、Package.swift、Package.resolved，均为零 diff，旧截图对应的产品及 fixture 代码可比。",
+        "初始及写入前 git status 的已跟踪修改只有 INDEX；round-1 是未提交收尾证据，不是产品修改。",
+        "本轮产品头相对产品基线的全仓库提交 diff 仅有一个文件、一行替换。"
+      ],
+      "evidence": [
+        "Git: git branch --show-current; git rev-parse HEAD; git log -6",
+        "Git: git diff --name-status 1ae2d640 b96cfdfaa5308b2a2cd705f7e7ec209e4a82d55f",
+        "docs/design/20x-style-rounds/round-0/baseline/manifest.json:2",
+        "docs/design/20x-style-rounds/round-1/after/manifest.json:2"
+      ]
+    },
+    {
+      "id": "product_redlines",
+      "status": "PASS",
+      "validation_kind": "本地只读完整产品 diff，与空红线产物交叉核对",
+      "result": "唯一修改是在原 HStack label 的 font 后增加 .fixedSize()；24pt frame、按钮样式、foreground、help、accessibility 与 popover 均未改。WorkbenchCore、Sources 其他目录、Resources、Tests、remote、windows、scripts 与 .github 均无本轮产品 diff，也没有未提交的产品或脚本 diff。",
+      "evidence": [
+        "Sources/AgentWorkbench/ConversationActivityBar.swift:649-669",
+        "docs/design/20x-style-rounds/round-1/contracts/sources-redline.diff",
+        "docs/design/20x-style-rounds/round-1/contracts/mac/workbench-core-redline.diff",
+        "Git: git diff --no-ext-diff 1ae2d640 b96cfdfaa5308b2a2cd705f7e7ec209e4a82d55f",
+        "Git: git diff --name-only HEAD -- Sources scripts Tests .github Resources Package.swift Package.resolved remote windows"
+      ]
+    },
+    {
+      "id": "recorded_perfrunner_jobs",
+      "status": "PASS",
+      "validation_kind": "审阅恢复的原作业日志；未重派或重跑",
+      "result": "capture/gates 均明确 checkout b96cfdfa，porcelain 前后均为 0，最终 exit=0；日志、manifest 及后续产品作业的代码头一致。capture 的 18 组结果与磁盘文件独立核对一致。",
+      "details": {
+        "capture_start_utc": "2026-11-18T06:30:22Z",
+        "capture_end_utc": "2026-11-18T06:36:21Z",
+        "capture_manifest_seconds": 330.716,
+        "gates_start_utc": "2026-11-18T06:36:22Z",
+        "gates_end_utc": "2026-11-18T06:39:28Z",
+        "manifest_commands": "4 个构建 + 36 个 fixture 进程 + 36 个 screencapture；76 个对应日志均存在。",
+        "capture_exit_interpretation": "36 个 screencapture 均 exit 0；36 个 fixture 进程的 -15 是 ready 与截图成功之后的主动 SIGTERM，不冒记为功能测试 exit 0。该顺序与现有 capture 脚本一致。"
+      },
+      "evidence": [
+        "docs/design/20x-style-rounds/round-1/contracts/style-r1-capture-v1.log:15-26",
+        "docs/design/20x-style-rounds/round-1/contracts/style-r1-gates-v1.log:4-14",
+        "docs/design/20x-style-rounds/round-1/after/manifest.json",
+        "scripts/capture-style-loop.py:153-195"
+      ]
+    },
+    {
+      "id": "recorded_mac_build_and_checks",
+      "status": "PASS",
+      "validation_kind": "审阅已完成作业的构建与检查日志；未重构建",
+      "result": "生产 release 构建有 AgentWorkbench 链接、Build complete、应用签名与产物路径；release WorkbenchChecks 有真实逐项 PASS，最终协议/命令契约通过。既有 host/workbench/sidebar/composer 的构建日志与 manifest 中四个 exit 0 对应。",
+      "notes": "日志中的编译器与 build-system warnings 未被隐去；没有将它们写成无警告构建，也未修改这些无关问题。",
+      "evidence": [
+        "docs/design/20x-style-rounds/round-1/contracts/mac/build.log:117-123",
+        "docs/design/20x-style-rounds/round-1/contracts/mac/workbench-checks.log:1-125",
+        "docs/design/20x-style-rounds/round-1/after/logs/build-host.log",
+        "docs/design/20x-style-rounds/round-1/after/logs/build-workbench.log",
+        "docs/design/20x-style-rounds/round-1/after/logs/build-sidebar.log",
+        "docs/design/20x-style-rounds/round-1/after/logs/build-composer.log"
+      ]
+    },
+    {
+      "id": "recorded_production_cold_launches",
+      "status": "PASS",
+      "validation_kind": "结果、5 份 console 与现有检查脚本交叉核对；未启动应用",
+      "result": "五次独立 production WindowGroup 冷启动结果为 5/5，revision 为 v0.8.1-282-gb96cfdfa。五份 console 均存在，均包含 sandbox_extension_issue_file_to_process 的 Operation not permitted 信息；该信息未使检查失败，不能宣称 console 无异常文本。",
+      "limits": "现有脚本的成功条件是隔离偏好域中的生产进程在每次 10 秒观察期内不提前退出；不是五次完整 UI 交互、真实连接或响应性认证。",
+      "evidence": [
+        "docs/design/20x-style-rounds/round-1/contracts/mac/app-launch.log",
+        "docs/design/20x-style-rounds/round-1/contracts/mac/app-launch/result.json",
+        "docs/design/20x-style-rounds/round-1/contracts/mac/app-launch/launch-1/console.log",
+        "docs/design/20x-style-rounds/round-1/contracts/mac/app-launch/launch-2/console.log",
+        "docs/design/20x-style-rounds/round-1/contracts/mac/app-launch/launch-3/console.log",
+        "docs/design/20x-style-rounds/round-1/contracts/mac/app-launch/launch-4/console.log",
+        "docs/design/20x-style-rounds/round-1/contracts/mac/app-launch/launch-5/console.log",
+        "scripts/check-app-launch.py:19-57"
+      ]
+    },
+    {
+      "id": "recorded_native_appearance_and_geometry",
+      "status": "PASS",
+      "validation_kind": "原 native-design 日志、几何 JSON、现有断言与 12 张归档 PNG 的只读校验",
+      "result": "正常 native-design 阶段完整结束并清理偏好；明暗设置切换、reply/composer 对齐、inspector 内部归属及开合后居中断言成立。几何 JSON 与原日志中的 chrome 数值一致。",
+      "details": {
+        "window_size": [1536, 900],
+        "reply_and_composer_x": 347,
+        "reply_and_composer_width": 800,
+        "inspector_frame": [1218, 6, 312, 888],
+        "sheet_frame": [276, 6, 1254, 888],
+        "closed_inspector_composer_x": 503,
+        "closed_inspector_shift": 156,
+        "window_corner_radius": 16,
+        "titlebar_height": 52,
+        "control_vertical_centers": "title/actions/close 为 26，sidebarToggle 为 25.5；误差小于 2pt。",
+        "archived_pngs": "12 张均可解码；正常窗 1536×900、narrow 836×900、compact 700×900、hover 280×179。"
+      },
+      "limits": "native-layout 明确将这些常规 PNG 标为 view-cache，不能拿来单独证明窗口服务器合成的 Liquid Glass；本轮全矩阵的系统 screencapture 是独立视觉证据。不将窗口调度、几何或截图当作 FPS。",
+      "evidence": [
+        "docs/design/20x-style-rounds/round-1/contracts/mac/native-design.log:4-16",
+        "docs/design/20x-style-rounds/round-1/contracts/mac/native-design/native-layout.json",
+        "docs/design/20x-style-rounds/round-1/contracts/mac/native-design/",
+        "Tests/HostLifecycleChecks/NativeDesignChecks.swift:265-425",
+        "Tests/HostLifecycleChecks/NativeDesignChecks.swift:475-494"
+      ]
+    },
+    {
+      "id": "recorded_linux_portable",
+      "status": "PASS",
+      "validation_kind": "10 个归档日志与 results.json 逐项核对；未重跑 portable",
+      "result": "同一 b96cfdfa 的 portable/all 共 10/10，十份日志齐全且均 exit 0。version、bridge、codex-schema、installer、model-metadata、localization、localization-tests、radius、preview-sources、acceptance-supervisor 均有对应实际输出。",
+      "details": [
+        "bridge 224 tests OK；installer 7 tests OK；model-metadata 4 tests OK；localization-tests 4 tests OK；acceptance-supervisor 57 tests OK。",
+        "localization 覆盖 1534 scoped/L() keys；radius 6 个 literal；preview-sources 检查 21 个构建/局部 target；codex schema 声明 36 个 bridge methods。",
+        "acceptance-supervisor 中 portable --group 的 usage error 是 test_portable_rejects_macos_groups 的预期负例，不是被忽略的失败。",
+        "dirty=true 如实保留；本地独立 Git 检查只见未提交证据/INDEX 与保留产物，没有产品或脚本 dirty diff。不能由 results.json 的 dirty 字段单独证明历史运行时 dirty 文件列表。"
+      ],
+      "limits": "仅离线 synthetic checks；不认证 SSH、真实模型或帧率。",
+      "evidence": [
+        "docs/design/20x-style-rounds/round-1/contracts/linux-portable/results.json",
+        "docs/design/20x-style-rounds/round-1/contracts/linux-portable/",
+        "Tests/Performance/test_functional_groups.py:108-114"
+      ]
+    },
+    {
+      "id": "independent_capture_integrity_and_metadata",
+      "status": "PASS",
+      "validation_kind": "独立 Pillow 解码、PNG chunk CRC、SHA-256、JSON 与命令参数校验；没有导入项目 PNG 比较器",
+      "result": "从既有 capture 脚本的有效矩阵独立确定 18 组，未用 visual-comparison 的条目数代替盘点。before/after 各 36 张 PNG，共 72 张均通过解码、CRC、尺寸与 manifest SHA-256 核对；两侧每组 repeat 均字节一致。",
+      "details": {
+        "groups": 18,
+        "decoded_matrix_pngs": 72,
+        "after_repeat_byte_identical_groups": 18,
+        "window_records_checked": 72,
+        "after_ready_window_agreements": 36,
+        "unique_after_window_numbers": 36,
+        "metadata_fields_compared": ["window_frame", "content_bounds", "backing_scale", "appearance", "dark", "effective_dark", "locale", "large_type"],
+        "camera": "所有 window_frame 原点均为 [48,72]，content_bounds 原点 [0,0]，backing_scale=1；主窗 1536×900、workbench 1120×820、sidebar 1100×760、composer 760×500。",
+        "fixture_parameters": "main-large-type 为 zh-Hans/light/large_type=true；main-english、workbench-english、sidebar-english 为 en/light/default；dark 的 requested/effective/NSAppearance 三者一致。每项环境变量、场景参数、ready window_number 与 screencapture -l/输出路径对应。",
+        "before_local_copies": "round-1/before 的 light/dark/large-type 共 6 张 PNG 与 round-0/baseline 原字节一致，对应 window.json 内容一致。",
+        "effective_variants": "18 个可见像素摘要全部不同；14 个非默认变体与各自 light 有实际可见差异，包括 inspector-closed、scroll、Workbench empty、有效英文变体，没有把保留的旧 no-op 产物计入覆盖。",
+        "png_color_metadata": "72 张矩阵原图均为 RGBA，sRGB chunk 一致；本次不存在只由不可见 RGB 或色彩 metadata 导致的 before/after 变化。"
+      },
+      "evidence": [
+        "docs/design/20x-style-rounds/round-0/baseline/manifest.json",
+        "docs/design/20x-style-rounds/round-1/after/manifest.json",
+        "docs/design/20x-style-rounds/round-1/before/",
+        "docs/design/20x-style-rounds/round-1/after/",
+        "Tests/HostLifecycleChecks/StyleCapture.swift:32-63",
+        "Tests/HostLifecycleChecks/NativeDesignChecks.swift:457-473",
+        "scripts/capture-style-loop.py:20-27",
+        "scripts/capture-style-loop.py:205-230"
+      ]
+    },
+    {
+      "id": "independent_visible_pixel_conformance",
+      "status": "PASS",
+      "validation_kind": "独立解码后的逐像素比较，白底 alpha 合成并取右/下排他 bbox",
+      "result": "唯一变化是 main-large-type 的 1325 个像素，bbox [347,457,496,477)。另外 17 组不只是可见像素为零差异，before/after PNG 原字节也完全相同；raw RGBA 变化同样只有 1325 像素。无清单外区域、默认字号、颜色或玻璃变化。",
+      "composition": "逐通道 (component*alpha + 255*(255-alpha) + 127) // 255；不计透明区域不可见 RGB。",
+      "scenario_results": [
+        {"group": "composer-dark", "changed_pixels": 0, "changed_bounds": null},
+        {"group": "composer-light", "changed_pixels": 0, "changed_bounds": null},
+        {"group": "main-dark", "changed_pixels": 0, "changed_bounds": null},
+        {"group": "main-dashboard", "changed_pixels": 0, "changed_bounds": null},
+        {"group": "main-english", "changed_pixels": 0, "changed_bounds": null},
+        {"group": "main-find", "changed_pixels": 0, "changed_bounds": null},
+        {"group": "main-find-dark", "changed_pixels": 0, "changed_bounds": null},
+        {"group": "main-inspector-closed", "changed_pixels": 0, "changed_bounds": null},
+        {"group": "main-large-type", "changed_pixels": 1325, "changed_bounds": [347, 457, 496, 477]},
+        {"group": "main-light", "changed_pixels": 0, "changed_bounds": null},
+        {"group": "main-scroll", "changed_pixels": 0, "changed_bounds": null},
+        {"group": "sidebar-dark", "changed_pixels": 0, "changed_bounds": null},
+        {"group": "sidebar-english", "changed_pixels": 0, "changed_bounds": null},
+        {"group": "sidebar-light", "changed_pixels": 0, "changed_bounds": null},
+        {"group": "workbench-dark", "changed_pixels": 0, "changed_bounds": null},
+        {"group": "workbench-empty-light", "changed_pixels": 0, "changed_bounds": null},
+        {"group": "workbench-english", "changed_pixels": 0, "changed_bounds": null},
+        {"group": "workbench-light", "changed_pixels": 0, "changed_bounds": null}
+      ],
+      "evidence": [
+        "docs/design/20x-style-rounds/round-1/expected-differences.md:3-18",
+        "docs/design/20x-style-rounds/round-1/visual-comparison.json",
+        "docs/design/20x-style-rounds/round-0/baseline/main-large-type/repeat-1/capture.png",
+        "docs/design/20x-style-rounds/round-1/after/main-large-type/repeat-1/capture.png"
+      ]
+    },
+    {
+      "id": "recap_label_and_adjacent_actions",
+      "status": "PASS",
+      "validation_kind": "原 PNG 的英文 OCR 与像素组件、平移一致性核对；未修改原图",
+      "result": "18pt 中文 fixture 的原图中，before OCR 为 Re..，after 为完整 Recap（91 confidence）；默认 light/dark 与英文 14pt 原图的标签均识别为完整 Recap。放大字号的相邻图标没有被换图、缩放、重叠或移到另一行。",
+      "details": {
+        "before_action_ink_x_span": [354, 489],
+        "after_action_ink_x_span": [347, 496],
+        "ink_width_increase_pixels": 14,
+        "vertical_ink_span_before_and_after": [457, 477],
+        "icons": "copy/quote/regenerate/sparkles 的原像素在平移 [-7,0] 后完全一致；Re 前缀也保持相同原像素。",
+        "after_horizontal_ink_gaps_pixels": [9, 11, 15, 7],
+        "interpretation": "新增宽度对应完整文字；相邻关系与垂直位置保留，未发现操作行重叠或换行，符合清单允许的固有宽度排布。"
+      },
+      "evidence": [
+        "docs/design/20x-style-rounds/round-1/before/main-large-type/repeat-1/capture.png",
+        "docs/design/20x-style-rounds/round-1/after/main-large-type/repeat-1/capture.png",
+        "docs/design/20x-style-rounds/round-1/after/main-light/repeat-1/capture.png",
+        "docs/design/20x-style-rounds/round-1/after/main-dark/repeat-1/capture.png",
+        "docs/design/20x-style-rounds/round-1/after/main-english/repeat-1/capture.png",
+        "Sources/AgentWorkbench/ConversationActivityBar.swift:655-665"
+      ]
+    },
+    {
+      "id": "annotated_crop_provenance",
+      "status": "PASS",
+      "validation_kind": "与原图裁剪的精确模板匹配及逐像素核对",
+      "result": "recap-before-after.png 为 840×520 的带标注派生图。原 PNG 的 [310,426,590,503) 裁剪经 3× NEAREST 得到 840×231 的两块图，分别在派生图 [0,25] 与 [0,285]，每块 194040 像素零差异。标注位于裁剪块之外，未将标注、缩放或覆盖后的图当作原截图比较。",
+      "evidence": [
+        "docs/design/20x-style-rounds/round-1/recap-before-after.png",
+        "docs/design/20x-style-rounds/round-1/before/main-large-type/repeat-1/capture.png",
+        "docs/design/20x-style-rounds/round-1/after/main-large-type/repeat-1/capture.png",
+        "docs/design/20x-style-rounds/round-1/README.md:49-55"
+      ]
+    },
+    {
+      "id": "settled_direction_non_interference",
+      "status": "PASS",
+      "validation_kind": "完整产品 diff 与允许区域外零像素差异；不是重新裁定基线外观",
+      "result": "本轮没有触碰或重新打开任何已裁决方向。唯一 modifier 位于 settled reply 操作 label；其余布局、主题与默认行为的实现未变，允许操作行之外的截图亦未变。",
+      "unchanged_directions": [
+        "一个系统 Liquid Glass backdrop，以及 glassUnderlay 四档",
+        "独立 light/dark Fill、Stroke、Elevation",
+        "宽 sidebar 不独立成卡、描边或阴影，平面中性选中",
+        "workspace sheet 与 toolbar 的既有关系、framePanel 同心圆角",
+        "inspector 是留白内部辅助道，无独立卡、竖线或阴影",
+        "composer 与控件保留原生玻璃",
+        "产品外观默认跟系统、Settings 可覆盖，验收/preview 默认 light",
+        "SSH 凭据、远端 pane/agent 生命周期与权限边界"
+      ],
+      "evidence": [
+        "AGENTS.md:3-29",
+        "docs/design/20x-style-rounds/round-1/expected-differences.md:11-18",
+        "Sources/AgentWorkbench/ConversationActivityBar.swift:660",
+        "Git: 完整 1ae2d640..b96cfdfa 产品 diff",
+        "本评审 independent_visible_pixel_conformance 检查"
+      ]
+    },
+    {
+      "id": "regression_coverage_and_retained_queue",
+      "status": "LIMITED",
+      "blocking": false,
+      "validation_kind": "实际 fixture 参数、原图、OCR、源码与队列逐项核对",
+      "result": "中文 14pt/light 与 dark、中文 18pt/light、英文 UI locale 的 14pt/light 主窗口代表图成立；18pt 中文 fixture 中英文 Recap 完整显示。该证据满足本次 S01 操作行评审，不等于全窗口或中英×14/18pt×明暗全部组合的无截断认证。",
+      "known_baseline_issues_not_resolved": [
+        "S02：main-english 原 PNG 仍识别到 Current workspac...；期望完整文本是 Current workspace diff。该组 before/after 字节一致，INDEX 仍列为待执行。",
+        "S03：workbench-english 原 PNG 的 Machine picker 仍识别到 All...；catalog 的完整值是 All machines。该组 before/after 字节一致，INDEX 仍列为待执行。"
+      ],
+      "not_covered": [
+        "英文 locale 的 18pt 完整主窗口",
+        "18pt dark 主窗口与完整语言/字号/外观笛卡尔积",
+        "2× backing scale 及其他窗口宽度下的 S01 标签",
+        "英文自然语言回复全文：main-english 改的是 UI locale，现有 synthetic 会话正文仍是中文",
+        "所有中文文字都无截断的通用 OCR 认证：本机只有 eng OCR，未把它当作中文校对能力"
+      ],
+      "contract_interpretation": "expected-differences 开头把区域限定为 settled reply 操作行；结合用户明确保留 S02/S03 队列，本次 PASS 不将清单的中英文不截断扩大解释为这些旧问题已经解决。未以未跑过的组合替用户契约背书。",
+      "evidence": [
+        "docs/design/20x-style-rounds/round-1/README.md:57-63",
+        "docs/design/20x-style-rounds/round-1/expected-differences.md:3-16",
+        "docs/design/20x-style-loop/INDEX.md:23-25",
+        "docs/design/20x-style-rounds/round-1/after/main-english/repeat-1/capture.png",
+        "docs/design/20x-style-rounds/round-1/after/main-large-type/repeat-1/window.json",
+        "docs/design/20x-style-rounds/round-1/after/workbench-english/repeat-1/capture.png",
+        "Resources/Localization/en.lproj/Localizable.strings:760",
+        "Resources/Localization/en.lproj/Localizable.strings:2073",
+        "Tests/HostLifecycleChecks/NativeDesignChecks.swift:87-89"
+      ]
+    },
+    {
+      "id": "predeclared_scope_and_chronology_limit",
+      "status": "LIMITED",
+      "blocking": false,
+      "result": "实测差异严格符合当前预期清单和 S01 队列项，没有事后扩大允许区域的迹象。当前未提交 expected-differences.md 的 mtime 为 06:31:02.973665Z，早于最早 after PNG 的 06:32:34Z；原 capture 作业开始为 06:30:22Z。",
+      "limits": "文件副本的 mtime 不是不可变的首次写入记录。本次可确认清单内容与实测一致、现有 mtime 早于截图，但不能独立认证 README 所述在原截图作业之前已写入的首次时点，也没有声称完成跨机原始保管链认证。",
+      "evidence": [
+        "docs/design/20x-style-rounds/round-1/expected-differences.md",
+        "docs/design/20x-style-rounds/round-1/README.md:14",
+        "docs/design/20x-style-rounds/round-1/contracts/style-r1-capture-v1.log:1",
+        "docs/design/20x-style-rounds/round-1/after/main-light/repeat-1/capture.png"
+      ]
+    },
+    {
+      "id": "publication_and_fixture_boundary",
+      "status": "PASS",
+      "validation_kind": "读取既有发布日志并只读重扫本轮发布副本；核对实际 fixture 源码与图片",
+      "result": "已有日志为 240 files / 0 findings；本次写评审前独立执行 python3 -B scripts/check-public-source.py --snapshot docs/design/20x-style-rounds/round-1，结果同为 240 files / 0 findings。主窗是 disposable Git repo 与注入请求闭包；preview 是固定虚构会话/本地草稿。图片中的 fixture 文件、会话与 UI 内容对应这些源码，不是借发布扫描器的零结果来推断图片隐私。",
+      "late_evidence": "最终复查发现并行新增 contracts/public-source-tree.log，输出 4357 files / 0 findings；日志本身没有命令记录，按新增归档输出核对，未声称本评审重跑全仓库审计。包含评审文件和该新增日志的本轮目录只读扫描为 242 files / 0 findings。",
+      "limits": "发布副本的文本日志与元数据已做路径脱敏，未读取分支外未脱敏原件。PNG SHA-256 与所记录 manifest 一致，派生图来源成立，但模式扫描不认证图片全部隐私、未知凭据格式、所有权或许可。",
+      "evidence": [
+        "docs/design/20x-style-rounds/round-1/contracts/public-source.log",
+        "docs/design/20x-style-rounds/round-1/contracts/public-source-tree.log",
+        "docs/design/20x-style-rounds/round-1/README.md:71-74",
+        "scripts/check-public-source.py:50-102",
+        "Tests/HostLifecycleChecks/NativeDesignChecks.swift:6-120",
+        "Tests/WorkbenchPreview/App.swift:7-75",
+        "Tests/SidebarPreview/App.swift:20-126",
+        "Tests/ComposerPreview/App.swift:17-56"
+      ]
+    }
+  ],
+  "findings": [],
+  "limitations": [
+    "PASS 限于本次用户指定的 S01 契约、红线、清单一致性与不触碰既定方向；不表示全窗口所有既有截断均解决。",
+    "Mac 构建、WorkbenchChecks、冷启动、native-design 与 Linux portable 的 PASS 是已完成作业证据的复核，不是本代理重新执行；未运行 Mac GUI、真实连接、重构建、性能或 CI 作业。",
+    "本次图片检查是独立解码、hash/CRC、逐像素、裁剪模板、组件几何与 eng OCR；未使用 GUI 查看器，也未进行审美判断。",
+    "未覆盖英文 18pt 全主窗、18pt dark、2× backing scale、其他 S01 窗宽或完整组合矩阵；S02/S03 继续保留在队列。",
+    "未独立认证预期清单首次写入时间、未脱敏原件或远端二进制身份；没有将发布副本的内部一致性包装成完整取证证明。"
+  ],
+  "integrity_guard": {
+    "scope": "评审开始时本轮已有的 240 个证据文件加当时的 INDEX；本评审唯一写入 review-1.json。并行新增文件和 INDEX 追加说明单独记录，不删除或改写。",
+    "pre_write_file_count": 241,
+    "pre_write_sha256": "634c551dd5e8299137237ce7b9a099e6eb329309fbd6cdb417090387c7b6a32a",
+    "method": "依相对路径排序的 round-1 已有文件，最后追加 INDEX；逐项累计 relative_path UTF-8、NUL 和文件 SHA-256 原始摘要，再取 SHA-256。",
+    "verified_before_write": "写入前的只读检查点，上述文件摘要一致，分支/HEAD 固定，产品及脚本未提交 diff 为空。随后观察到下列并行补充，不把整个工作区描述为静止不变。",
+    "verified_after_write": "原有 240 个 round-1 证据文件及 INDEX 原有 48 行字节不变；在内存中取 INDEX 原 48 行、排除新增日志后，同一算法复原的摘要仍为 pre_write_sha256。该核对没有修改 INDEX 或新增日志。",
+    "parallel_changes_observed": [
+      {
+        "path": "docs/design/20x-style-loop/INDEX.md",
+        "change": "追加第 49-50 行目标/评审续作说明；原 48 行不变，S01/S02/S03 状态、19 轮计数及产品头未变。",
+        "reviewer_modified": false
+      },
+      {
+        "path": "docs/design/20x-style-rounds/round-1/contracts/public-source-tree.log",
+        "change": "新增 4357 files / 0 findings 的发布检查输出。",
+        "sha256": "6554fb97aa03ced1170f4c1874737167a69591e025803790c28489aa6f2668ce",
+        "reviewer_modified": false
+      }
+    ]
+  },
+  "summary": "未发现本轮 S01 的新增 P1/P2 finding 或阻断项。限定范围 PASS：Recap 固有宽度修复与预期一致；其余 17 场景零差异，红线与已裁决方向未触碰。已保留真实覆盖和证据局限，不为旧 S02/S03 或未跑过的验证背书。"
+}
