@@ -16,8 +16,12 @@ Usage: analyze_r44_consumers.py <xml> [bucket ...]
 """
 import sys
 from collections import Counter, defaultdict
+from pathlib import Path
 
-sys.path.insert(0, '.local/round43')
+# The round-43 analyzer is committed next to this evidence set; resolve it from
+# this file so the script runs from any working directory (repo root included).
+_ROUNDS = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(_ROUNDS / 'round-43' / 'attr'))
 from analyze_r43 import load, classify, REGIONS
 
 DECODE_LABELS = {"setup-wire-decode", "setup-json"}
