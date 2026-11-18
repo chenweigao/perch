@@ -51,6 +51,9 @@ RUNTIME_HELPER_PATS = (
     "Sequence.reduce", "Sequence.compactMap", "Sequence.map", "Sequence.forEach",
     "getCharacters", "TargetMetadata<", "getTypeContextDescriptor",
     "outlined consume", "outlined copy", "getEnumTagSinglePayload",
+    # Value-copy / destroy plumbing that appears as `outlined init with copy of X`
+    # once the `outlined ` modifier is stripped.
+    "init with copy", "consume of (", "destroy of ", "DefaultStringInterpolation",
     "allocateStringStorage", "mach_absolute_time", "_DictionaryStorage",
     "swift::TargetMetadata", "swift::metadata", "swift::_dynamicCast",
     "Array.append", "Array._reserveCapacity", "Set.insert",
@@ -71,16 +74,39 @@ def is_decode(fr):
     return any(any(p in f for p in DECODE_PATS) for f in fr)
 
 
+MODIFIER_PREFIXES = ("specialized ", "static ", "outlined ", "merged ")
+
+
+def unmodified(frame):
+    """Strip non-identifying symbol modifiers so the mechanism rules see
+    `Dictionary.subscript.setter` / `protocol witness ... String` instead of
+    `specialized Dictionary.subscript.setter` (round-44 review finding: the
+    raw startswith() test let a whole class of runtime frames through)."""
+    name = frame
+    while True:
+        for prefix in MODIFIER_PREFIXES:
+            if name.startswith(prefix):
+                name = name[len(prefix):]
+                break
+        else:
+            return name
+
+
 def is_mechanism(frame):
-    if any(p in frame for p in MECHANISM_PATS):
+    if frame.startswith("0x") or frame == "<deduplicated_symbol>":
+        return False  # unresolved: never claim it as a consumer
+    name = unmodified(frame)
+    if any(p in name for p in MECHANISM_PATS):
         return True
-    if any(p in frame for p in RUNTIME_HELPER_PATS):
+    if any(p in name for p in RUNTIME_HELPER_PATS):
         return True
-    return frame.startswith(RUNTIME_PREFIXES)
+    return name.startswith(RUNTIME_PREFIXES)
 
 
 def consumer(fr):
     for frame in fr:
+        if frame.startswith("0x") or frame == "<deduplicated_symbol>":
+            return "<unresolved-system>"
         if not is_mechanism(frame):
             return frame[:110]
     return "<no-consumer>"
