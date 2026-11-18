@@ -35,5 +35,7 @@ TVPROBE final updates=153 prefixHits=137 ptRuns=16 cold=8 warm=8 coldRebuilt=185
 # => Warm paths avoid whole-window rebuilding but do NOT have zero rebuilds.
 # - canReuse failures: all `count` (8) — prefix.source.count != split; no
 #   session/anchor/online/active/observed/separates/sameWindow failures.
-# - whole=0: the non-split update(_:messages:...) was never called in this bench.
+# - whole=0: STATIC VALIDATION (source inspection of StreamingBench), not a v2 counter —
+#   v2 no longer instruments the non-split path; the fixture always has a latest prompt
+#   at a positive split, so update(_:messages:...) is never called.
 # - Counts, not elapsed cost: this probe does not time cold vs warm work.
