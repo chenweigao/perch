@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-11-19T10:34:06+08:00",
+  "status": "PASS_EXACT_PHASE_ONE_ARCHIVE_AND_REMOTE_VERIFICATION",
+  "branch": "style/loop-main",
+  "real_tested_head": "4b64796633d4cee9db9ac10bbc1ea8b2f4ea4da1",
+  "archive_head": "d05f6a4c5e39dd26ce0e80996b7eb73ebf10a767",
+  "exact_lease_expected_remote": "4b64796633d4cee9db9ac10bbc1ea8b2f4ea4da1",
+  "explicit_refspec": "HEAD:refs/heads/style/loop-main",
+  "remote_head_equals_archive_head": true,
+  "source_tests_scripts_ci_package_diff_from_real_tested_head_empty": true,
+  "normal_pre_commit_and_pre_push_security_hooks_passed": true,
+  "original_reviews_and_seal_bytes_retained": true,
+  "all_original_hash_values_visible_in_lossless_publication": true,
+  "round_counted_complete_before_this_verification": false,
+  "remaining_rounds_before_counter_archive": 17,
+  "counter_update_now_eligible": true,
+  "next": "Amend this same round commit once more to archive final accounting; archive SHA is not newly GUI-tested."
+}

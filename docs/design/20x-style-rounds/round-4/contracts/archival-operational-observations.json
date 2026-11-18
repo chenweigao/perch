@@ -1,0 +1,23 @@
+{
+  "recorded_at": "2026-11-19T10:32:17+08:00",
+  "own_publication_cache_failure": {
+    "actual_scanner_exit": 1,
+    "files_checked": 578,
+    "findings": 1,
+    "finding_type": "personal-path",
+    "cause": "One task-generated Python import cache contained its local source filename; helper source and all review evidence were unchanged.",
+    "negative_receipt": "public-source-archive-publication-negative.log",
+    "cleanup_scope": "Only contracts/__pycache__/verify-review-seal-publication.cpython-312.pyc, created by this archival helper test, and its then-empty directory. No other cache, old fixture or user asset removed.",
+    "root_prevention": "Subsequent verification commands use PYTHONDONTWRITEBYTECODE=1 and python3 -B."
+  },
+  "original_seals_reviews_sources_and_security_semantics_unchanged": true,
+  "original_negative_receipts_retained": true,
+  "archive_commit_push_after_failure": "NOT_YET_EXECUTED; command stopped at snapshot failure before commit.",
+  "accounting_wrapper_observation": {
+    "recorded_at": "2026-11-19T10:36:52+08:00",
+    "actual_exit": 1,
+    "cause": "The final wrapper command referenced an unset shell variable after all accounting edits, JSON validation and exact quote checks had passed.",
+    "scope": "No commit/push executed by that wrapper after the unset-variable error; no original evidence or product change.",
+    "resolution": "Run the explicit verifier path in a new command with round/external variables initialized."
+  }
+}

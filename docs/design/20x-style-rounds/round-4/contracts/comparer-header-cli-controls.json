@@ -1,0 +1,86 @@
+{
+  "status": "passed",
+  "purpose": "Synthetic corruption controls, not delivery screenshots or a product verdict",
+  "source_matrix_head": "aad604b9ce5294b52951f189b3895b69edd12f31",
+  "protected_original_files": 225,
+  "protected_originals_unchanged": true,
+  "control_count": 5,
+  "checks": [
+    {
+      "case": "unchanged",
+      "layer": "full header CLI",
+      "synthetic_input": true,
+      "expected_exit": 0,
+      "actual_exit": 0,
+      "comparer_status": "passed",
+      "pass": true
+    },
+    {
+      "case": "header-pixel",
+      "layer": "full header CLI",
+      "synthetic_input": true,
+      "expected_exit": 0,
+      "actual_exit": 0,
+      "comparer_status": "passed",
+      "pass": true,
+      "changed_visible_pixels": 1,
+      "changed_rgba_pixels": 1,
+      "outside_allowed_visible_pixels": 0,
+      "outside_allowed_rgba_pixels": 0,
+      "changed_visible_bbox": [
+        1240,
+        64,
+        1241,
+        65
+      ]
+    },
+    {
+      "case": "file-row-pixel",
+      "layer": "full header CLI",
+      "synthetic_input": true,
+      "expected_exit": 1,
+      "actual_exit": 1,
+      "comparer_status": "failed",
+      "pass": true,
+      "changed_visible_pixels": 1,
+      "changed_rgba_pixels": 1,
+      "outside_allowed_visible_pixels": 1,
+      "outside_allowed_rgba_pixels": 1,
+      "changed_visible_bbox": [
+        1240,
+        120,
+        1241,
+        121
+      ]
+    },
+    {
+      "case": "composer-pixel",
+      "layer": "full header CLI",
+      "synthetic_input": true,
+      "expected_exit": 1,
+      "actual_exit": 1,
+      "comparer_status": "failed",
+      "pass": true,
+      "changed_visible_pixels": 1,
+      "changed_rgba_pixels": 1,
+      "outside_allowed_visible_pixels": 1,
+      "outside_allowed_rgba_pixels": 1,
+      "changed_visible_bbox": [
+        380,
+        250,
+        381,
+        251
+      ]
+    },
+    {
+      "case": "hash-corruption",
+      "layer": "full header CLI",
+      "synthetic_input": true,
+      "expected_exit": 1,
+      "actual_exit": 1,
+      "comparer_status": "failed",
+      "pass": true,
+      "diagnostic": "PNG hash mismatch: main-english repeat 1"
+    }
+  ]
+}

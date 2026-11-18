@@ -191,7 +191,7 @@ struct ChangesInspectorView: View {
     }
 
     private var header: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 0) {
             Button { model.taskContextWindow.showPage(.task, model: model) } label: {
                 Image(systemName: "chevron.left")
                     .font(.system(size: WorkbenchTheme.Typography.caption, weight: .semibold))

@@ -1,0 +1,3 @@
+contracts/__pycache__/verify-review-seal-publication.cpython-312.pyc:9: personal-path
+Checked 578 publication files; 1 finding(s). Matched values are never printed.
+Pattern checks do not verify image content, unknown credential formats, ownership or licensing.

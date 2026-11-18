@@ -1,0 +1,27 @@
+{
+  "status": "passed",
+  "tested_head": "4b64796633d4cee9db9ac10bbc1ea8b2f4ea4da1",
+  "baseline_head": "aad604b9ce5294b52951f189b3895b69edd12f31",
+  "checkout_clean_before_and_after": true,
+  "production_build": "passed",
+  "mac_workbench_checks": "passed",
+  "mac_radius_and_localization": "passed",
+  "cold_launches": {
+    "passed": true,
+    "completed": 5,
+    "bundle_describe_stamp": "v0.8.1-313-g4b647966",
+    "revision_is_describe_not_full_sha": true
+  },
+  "native_design": {
+    "passed": true,
+    "capture_mode_unset": true,
+    "original_png_count": 12,
+    "elapsed_seconds": 27.7
+  },
+  "host_binary_sha256": "491a4827a6ee270afcfde6f407fd4885938bcd1c1547d2917fa4a51586ff227a",
+  "published_product_source_matches_tested_commit": true,
+  "source_sha256": "f700991208bfbde54ad5b686254d0cd5c9600ede20ea94da50bfd03b8e05204c",
+  "protected_sources_diff_bytes": 0,
+  "measurement_ci_diff_bytes": 0,
+  "scope": "Synthetic PerfRunner checks; not a global OS appearance switch, real remote session, or universal type/width certification"
+}

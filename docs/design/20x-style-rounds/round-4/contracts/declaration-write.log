@@ -1,0 +1,11 @@
+round4_directory_exists_before_write=0
+write_started=2026-11-18T21:19:59+08:00
+baseline=aad604b9ce5294b52951f189b3895b69edd12f31
+Success. Updated the following files:
+A docs/design/20x-style-rounds/round-4/expected-differences.md
+A docs/design/20x-style-rounds/round-4/allowed-regions-before.json
+A docs/design/20x-style-rounds/round-4/README.md
+A docs/design/20x-style-rounds/round-4/contracts/style-r4-before-v1.job
+write_completed=2026-11-18T21:19:59+08:00
+8bc899da4c896f1cdc8a99520dbba081955dd5b6f10a3d84641c04841e5b7be4  docs/design/20x-style-rounds/round-4/expected-differences.md
+3002366930e124e2e335abd1d97730115b3dac31a7506f771087a36faafeb115  docs/design/20x-style-rounds/round-4/allowed-regions-before.json

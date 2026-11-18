@@ -1,0 +1,11 @@
+{
+  "baseline_head": "aad604b9ce5294b52951f189b3895b69edd12f31",
+  "source_changes": [
+    "Sources/AgentWorkbench/WorkspaceInspector.swift"
+  ],
+  "product_change": "Only ChangesInspectorView.header outer HStack spacing 6 to 0",
+  "source_sha256": "f700991208bfbde54ad5b686254d0cd5c9600ede20ea94da50bfd03b8e05204c",
+  "protected_sources_diff_bytes": 0,
+  "measurement_ci_diff_bytes": 0,
+  "round_not_complete": true
+}

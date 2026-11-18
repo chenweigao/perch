@@ -1,0 +1,15 @@
+{
+  "status": "resolved diagnostic error; capture and comparison inputs unchanged",
+  "initial_aggregate_exit": 1,
+  "initial_diagnostic": "AssertionError at line 5: incorrectly required all manifest commands to exit 0 after successful compare, render and archive",
+  "actual_before_and_after": {
+    "total_commands_each": 92,
+    "build_and_screencapture_exit_0_each": 48,
+    "capture_fixture_process_exit_minus_15_each": 44
+  },
+  "cause": "Existing capture driver intentionally terminates each persistent fixture after readiness and screencapture; its manifest records SIGTERM as -15",
+  "correction": "Classify fixture process exits separately from four builds and 44 screencaptures; do not change raw manifests or the existing capture driver",
+  "captures_redone": false,
+  "source_or_fixture_changed": false,
+  "before_after_comparison": "PASS: 22 scene pairs, no outside-allowed visible or RGBA pixels"
+}

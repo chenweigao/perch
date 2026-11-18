@@ -1,0 +1,302 @@
+{
+  "status": "passed",
+  "geometry_checks": [
+    {
+      "scene": "main-light",
+      "source": "main-light/repeat-1/capture.png",
+      "sha256": "bf70f755517a7791d72f901961cb541d0f79f2626cd15337f8a17afcadab99e5",
+      "crop_half_open": [
+        1218,
+        44,
+        1530,
+        96
+      ],
+      "scale": 3,
+      "resampling": "nearest",
+      "dimensions": [
+        1536,
+        900
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1536,
+          900
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1536,
+          900
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameAqua",
+        "dark": false,
+        "effective_dark": false,
+        "locale": "zh-Hans",
+        "large_type": false
+      }
+    },
+    {
+      "scene": "main-dark",
+      "source": "main-dark/repeat-1/capture.png",
+      "sha256": "885d686b3a9b87e6a3b7d451569cbb528cbdc2b4dd4bacbf65d9d814aecd02f8",
+      "crop_half_open": [
+        1218,
+        44,
+        1530,
+        96
+      ],
+      "scale": 3,
+      "resampling": "nearest",
+      "dimensions": [
+        1536,
+        900
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1536,
+          900
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1536,
+          900
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameDarkAqua",
+        "dark": true,
+        "effective_dark": true,
+        "locale": "zh-Hans",
+        "large_type": false
+      }
+    },
+    {
+      "scene": "main-english",
+      "source": "main-english/repeat-1/capture.png",
+      "sha256": "856d302793697fb69053e47813dbf4fb1662a8fce98380e40bd576df039ac023",
+      "crop_half_open": [
+        1218,
+        44,
+        1530,
+        96
+      ],
+      "scale": 3,
+      "resampling": "nearest",
+      "dimensions": [
+        1536,
+        900
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1536,
+          900
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1536,
+          900
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameAqua",
+        "dark": false,
+        "effective_dark": false,
+        "locale": "en",
+        "large_type": false
+      }
+    },
+    {
+      "scene": "main-english-dark",
+      "source": "main-english-dark/repeat-1/capture.png",
+      "sha256": "da5a247dff465edac9d90a8a42e8df932a7c4215e65d482d0bba55619e8b2fa0",
+      "crop_half_open": [
+        1218,
+        44,
+        1530,
+        96
+      ],
+      "scale": 3,
+      "resampling": "nearest",
+      "dimensions": [
+        1536,
+        900
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1536,
+          900
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1536,
+          900
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameDarkAqua",
+        "dark": true,
+        "effective_dark": true,
+        "locale": "en",
+        "large_type": false
+      }
+    },
+    {
+      "scene": "main-large-type",
+      "source": "main-large-type/repeat-1/capture.png",
+      "sha256": "1b12606258f4ec660a33939249a7bdd83f9089d758ccaa33039cdbc134ffcf83",
+      "crop_half_open": [
+        1218,
+        44,
+        1530,
+        96
+      ],
+      "scale": 3,
+      "resampling": "nearest",
+      "dimensions": [
+        1536,
+        900
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1536,
+          900
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1536,
+          900
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameAqua",
+        "dark": false,
+        "effective_dark": false,
+        "locale": "zh-Hans",
+        "large_type": true
+      }
+    },
+    {
+      "scene": "main-large-type-dark",
+      "source": "main-large-type-dark/repeat-1/capture.png",
+      "sha256": "d43ea53ea304b452bebe6724cbc3a5e80e7c2ebe0e23c8eb6e34726e9c04c463",
+      "crop_half_open": [
+        1218,
+        44,
+        1530,
+        96
+      ],
+      "scale": 3,
+      "resampling": "nearest",
+      "dimensions": [
+        1536,
+        900
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1536,
+          900
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1536,
+          900
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameDarkAqua",
+        "dark": true,
+        "effective_dark": true,
+        "locale": "zh-Hans",
+        "large_type": true
+      }
+    },
+    {
+      "scene": "main-english-large-type",
+      "source": "main-english-large-type/repeat-1/capture.png",
+      "sha256": "693684882f0dea5f0723f158ac8ba4031b44a956f84e62cde441b4ff9ae5f6fd",
+      "crop_half_open": [
+        1218,
+        44,
+        1530,
+        96
+      ],
+      "scale": 3,
+      "resampling": "nearest",
+      "dimensions": [
+        1536,
+        900
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1536,
+          900
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1536,
+          900
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameAqua",
+        "dark": false,
+        "effective_dark": false,
+        "locale": "en",
+        "large_type": true
+      }
+    },
+    {
+      "scene": "main-english-large-type-dark",
+      "source": "main-english-large-type-dark/repeat-1/capture.png",
+      "sha256": "934c761ffdc40f9035e55015bfd3d8aba383bd3d5caab8a3524beef68b581c7e",
+      "crop_half_open": [
+        1218,
+        44,
+        1530,
+        96
+      ],
+      "scale": 3,
+      "resampling": "nearest",
+      "dimensions": [
+        1536,
+        900
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1536,
+          900
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1536,
+          900
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameDarkAqua",
+        "dark": true,
+        "effective_dark": true,
+        "locale": "en",
+        "large_type": true
+      }
+    }
+  ],
+  "visual_confirmation": "Explicitly inspected the eight 3x nearest header crops and main-english-large-type full capture; Chinese title/count complete, English title truncated in all four combinations. The frozen rectangle covers the header only. See before-validation.md for fixture boundaries."
+}

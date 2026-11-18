@@ -1,0 +1,57 @@
+{
+  "status": "passed",
+  "purpose": "Comparer controls, never delivery screenshot evidence",
+  "source_matrices": "unmodified round-3 after-A originals",
+  "source_matrix_head": "025dc61cafa32e0e61eef2c4ef3ca8ea3a063d5e",
+  "reader_sha256": "9d4e7eeba751edccac29645cf7099bdafa3b53d54952f2bc6d62a365134b1237",
+  "control_count": 5,
+  "synthetic_inputs_kept_external": true,
+  "legacy_originals_unchanged": true,
+  "full_header_cli_control": "Completed separately against fresh round-4 before; see comparer-header-cli-controls.json",
+  "checks": [
+    {
+      "case": "PNG hash corruption",
+      "layer": "full CLI",
+      "expected": "rejected",
+      "status": "passed",
+      "exit": 1,
+      "diagnostic": "PNG hash mismatch: main-light repeat 1"
+    },
+    {
+      "case": "Valid metadata/hash/repeats with one changed visible pixel",
+      "layer": "full CLI stability",
+      "expected": "rejected",
+      "status": "passed",
+      "exit": 1,
+      "outside_visible_pixels": 1,
+      "outside_rgba_pixels": 1
+    },
+    {
+      "case": "one header pixel",
+      "layer": "header comparison function",
+      "synthetic_arrays": true,
+      "expected": "allowed",
+      "status": "passed",
+      "outside_visible_pixels": 0,
+      "outside_rgba_pixels": 0
+    },
+    {
+      "case": "one body pixel",
+      "layer": "header comparison function",
+      "synthetic_arrays": true,
+      "expected": "rejected",
+      "status": "passed",
+      "outside_visible_pixels": 1,
+      "outside_rgba_pixels": 1
+    },
+    {
+      "case": "one Composer pixel",
+      "layer": "header comparison function",
+      "synthetic_arrays": true,
+      "expected": "rejected",
+      "status": "passed",
+      "outside_visible_pixels": 1,
+      "outside_rgba_pixels": 1
+    }
+  ]
+}

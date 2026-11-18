@@ -1,0 +1,16 @@
+start=2026-11-18T21:51:27+08:00
+pre_porcelain=0
+From github.com:chenweigao/perch
+ * branch              main       -> FETCH_HEAD
+ * branch              style/loop-main -> FETCH_HEAD
+HEAD is now at 4b647966 fix(style): reclaim inspector header title width
+code_head=4b64796633d4cee9db9ac10bbc1ea8b2f4ea4da1
+bundle_describe_stamp=v0.8.1-313-g4b647966
+host_binary_sha256=491a4827a6ee270afcfde6f407fd4885938bcd1c1547d2917fa4a51586ff227a
+build=passed
+workbench_checks=passed
+cold_launches=5/5
+native_design=passed
+post_porcelain=0
+end=2026-11-18T21:54:34+08:00
+exit=0

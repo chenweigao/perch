@@ -1,0 +1,25 @@
+{
+  "status": "candidate archive validation, not a complete round verdict",
+  "original_evidence_preserved": true,
+  "initial_staged_whitespace_exit": 2,
+  "original_whitespace_diagnostics": [
+    "before/logs/build-host.log:67: compiler excerpt has trailing whitespace",
+    "before/logs/build-sidebar.log:43: compiler excerpt has trailing whitespace",
+    "contracts/source-change.diff:7: original unified-diff context line contains its prefix space"
+  ],
+  "authored_whitespace_check": "Candidate check excluded exactly the three original evidence files above. Review archive additionally excludes exactly the two new original logs below; all remaining authored/staged paths pass.",
+  "review_archive_initial_whitespace_exit": 2,
+  "review_archive_original_whitespace_diagnostics": [
+    "after/logs/build-host.log:67: original compiler excerpt has trailing whitespace",
+    "contracts/mac-gates/build.log:43: original compiler excerpt has trailing whitespace"
+  ],
+  "review_archive_authored_whitespace": "PASS with precisely these five original-evidence path exclusions across both phases; raw and publication log whitespace retained",
+  "diagnostic_receipt_publication": "The full negative whitespace output is retained externally. Its publication summary omits two repeated compiler-context lines, which otherwise reproduce trailing whitespace in the diagnostic receipt itself; original compiler logs are unchanged.",
+  "linux_portable": "10/10 PASS on the one-line product candidate",
+  "linux_portable_provenance": "Executed before candidate commit, HEAD is the baseline and dirty is true; source-scope.json records the exact one-line source hash. Scripts and other Sources are unchanged. Do not claim a clean Linux checkout.",
+  "initial_publication_findings": "11 personal-path findings in two Linux portable text files; original inputs retained externally, publication copies path-redacted with the existing archive helper",
+  "negative_publication_receipt": "public-source-candidate.log is retained as the initial failure, not a PASS receipt",
+  "linux_workbench_checks": "NOT_RUN: no Swift SDK; actual WorkbenchChecks reserved for the new Mac gates job",
+  "mac_after_and_gates": "NOT_RUN at candidate archive time",
+  "completed_round_count_unchanged": true
+}

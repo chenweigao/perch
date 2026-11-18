@@ -1,0 +1,23 @@
+{
+  "scope": "Publication copies only; raw text and screenshots are not rewritten",
+  "archived_files": 30,
+  "path_redacted_files": [
+    "build.log",
+    "native-design.log"
+  ],
+  "unchanged_png_sha256": {
+    "native-design/native-cite-dark.png": "6f3956aef2d423c45b804b30d39a9620ec2735078803185f92964b4f054b9d24",
+    "native-design/native-cite-light.png": "d20cc2c910b583bc6b459682dcd15d82584baf958bbfca87cd053528d6e66000",
+    "native-design/native-compact-light.png": "f748cc6e5b7f3bdd1954c165bb065809688f494b2222bb70411db831b4df3341",
+    "native-design/native-dark.png": "84e9efba76d1d602243a3548bcb495560b4d1fa142bdd52c9a950936bb27b6ae",
+    "native-design/native-fit-dark.png": "342d80f3d54c1a73e30afeb4ce9332dd68c29f632b41261bd25fd4a7bc4e4e7c",
+    "native-design/native-fit-light.png": "d1281b314236d3b6739c98d6e7e5758dee22b308aa62882e87ef6335f04c173d",
+    "native-design/native-inspector-closed-light.png": "33aeec328d72be15b77fe37cc07d3751d2952712270b4d905b2cd995b7352837",
+    "native-design/native-light.png": "9583fedf31c91f345ef33155100468c31ec3e7e905cfcb494bf2f8272fea2495",
+    "native-design/native-narrow-light.png": "f76e434c6f8ff8eaedaa3db42cc87da45ec4e399bb2fccb58fce15ba7b92e6b0",
+    "native-design/native-task-overview-expanded-light.png": "22385b1ee94c6cc6763416175f618afb868bff0da74b25719bb6e54cff157b18",
+    "native-design/native-task-overview-light.png": "4a5473846d96f3494fa0223f256a642e80bf2742a0f4caeee2f36592f0897a1f",
+    "native-design/sidebar-hover-preview.png": "afeb2835ff4af2a6a0962020e409912ca4d16ee2fd8a2f4487899e90c2e95bf4"
+  },
+  "excluded": "App bundles and non-evidence binary files"
+}

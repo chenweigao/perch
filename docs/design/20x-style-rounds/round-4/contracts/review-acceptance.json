@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "accepted_at": "2026-11-19T10:21:40+08:00",
+  "branch": "style/loop-main",
+  "real_tested_head": "4b64796633d4cee9db9ac10bbc1ea8b2f4ea4da1",
+  "original_review_file": "docs/design/20x-style-rounds/round-4/review-4.json",
+  "original_review_sha256": "91f8ff0b5e89c86f4793abe0c32e02d40f2446bb334ab5d7a25d123d85be261c",
+  "original_review_verdict_retained": "FAIL",
+  "supplement_review_file": "docs/design/20x-style-rounds/round-4/review-4-image-recheck.json",
+  "supplement_review_sha256": "cd58aa98a1a14bbe29931a4d6f27445c531f46f9da4a09ab55036de145900add",
+  "supplement_verdict": "PASS_LIMITED",
+  "combined_finite_independent_contract_closed": true,
+  "new_findings": {
+    "P1": 0,
+    "P2": 0,
+    "P3": 0
+  },
+  "independent_eye_executed": true,
+  "scope_and_all_uncertified_boundaries_preserved": [
+    "Aesthetic approval or reopening settled glass/sidebar/inspector/radius/appearance decisions.",
+    "Whole-product no-truncation/no-overlap, S03 resolution, or other languages/scenes beyond the eight supplied header combinations and two English whole-window pairs.",
+    "All-app18pt, arbitrary Dynamic Type, arbitrary inspector widths, larger file counts or additional backing scales; the header remains fixed14pt/title and12pt/count at1536x900 scale1.",
+    "Global OS light/dark switching, universal system-following behavior, or complete manual interaction of all ordinary previews.",
+    "Full window-server-composited Liquid Glass optical acceptance from the12 native-design view-cache PNGs.",
+    "Real SSH, real agents/user sessions, credentials, permission bypass, connection lifecycle runtime, performance/FPS or new PerfRunner execution.",
+    "Linux Swift/WorkbenchChecks execution, clean4b647966 Linux test provenance, reconstructed historical dirty checkout, reproducible builds or newly tested archive heads.",
+    "Immutable forensic custody, retroactive round3 first-write attestation, or re-created complete initial postprocess traceback.",
+    "Image privacy, unknown credential formats, ownership, authorization/licensing, or full historical5942-file repository audit.",
+    "Future stability across all environments based on fixed synthetic captures.",
+    "Parent archival/amend/push, fresh remote archive verification, loop continuation, goal operation or round completion/counter advancement."
+  ],
+  "new_seal_sha256": "8ce41000660971c326b46db1425884de2bf92b0242c16f643be1559659d91d96",
+  "new_seal_inputs_verified_before_archive": 2801,
+  "authored_docs_originals_preserved_before_archive": [
+    {
+      "source": "docs/design/20x-style-loop/INDEX.md",
+      "preserved_copy": "docs/design/20x-style-rounds/round-4/contracts/recheck-original-authored/INDEX.md",
+      "sha256": "afd4f32a709594f5c35629c670c93a964ed098d1fda51593d47657bf759ea163"
+    },
+    {
+      "source": "docs/design/20x-style-rounds/round-4/README.md",
+      "preserved_copy": "docs/design/20x-style-rounds/round-4/contracts/recheck-original-authored/README.md",
+      "sha256": "dd0e525aafaebdd6f01993630b7bbbe538615a21d61a07ce8b7a4fdde3998f91"
+    },
+    {
+      "source": "docs/design/20x-style-rounds/round-4/contracts/visual-validation.md",
+      "preserved_copy": "docs/design/20x-style-rounds/round-4/contracts/recheck-original-authored/visual-validation.md",
+      "sha256": "c5dc422b310a5beac62d20951d2689a650bc4773c2f4f6bb65297b9e7b922a96"
+    },
+    {
+      "source": "docs/design/20x-style-rounds/round-4/contracts/regression-observations.md",
+      "preserved_copy": "docs/design/20x-style-rounds/round-4/contracts/recheck-original-authored/regression-observations.md",
+      "sha256": "5b782d0308ebcd6d96f8e74469963e2b57aac7204c1102d2a194e131c4fa8831"
+    },
+    {
+      "source": "docs/design/20x-style-rounds/round-4/review-disposition.md",
+      "preserved_copy": "docs/design/20x-style-rounds/round-4/contracts/recheck-original-authored/review-disposition.md",
+      "sha256": "f5e222939e97ae22e64b23d5d7dafdaecd8aed07ad3f7fc71cf45f8e36bc47df"
+    }
+  ],
+  "source_tests_scripts_ci_package_diff_to_real_tested_head_empty": true,
+  "new_review_operational_negative_diagnostics_retained": 3,
+  "parent_inspection_negative_diagnostic_retained": "One jq projection expected an object for original_findings_disposition_review, whose actual type is an array; evidence was unchanged and all exact original quote checks independently passed.",
+  "review_completion_and_archive_dates_separate": true,
+  "goal_status_actually_verified_on_resume": "active",
+  "archive_commit_push_and_remote_verification": "PENDING",
+  "round_counted_complete": false,
+  "remaining_rounds_to_report": 17
+}

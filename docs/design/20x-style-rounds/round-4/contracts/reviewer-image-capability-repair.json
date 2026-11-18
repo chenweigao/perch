@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-11-18T22:38:27+08:00",
+  "provider_instance_id": "acpRegistry_kimi_code",
+  "model_alias": "aone/gpt-6.1-sol",
+  "provider_id": "aone-response",
+  "model_id": "gpt-6.1-sol",
+  "kimi_version": "2.5.3",
+  "repair": {
+    "capabilities_before": [
+      "thinking",
+      "tool_use",
+      "always_thinking"
+    ],
+    "capabilities_after": [
+      "image_in",
+      "thinking",
+      "tool_use",
+      "always_thinking"
+    ],
+    "overrides_capabilities_before": [
+      "thinking",
+      "tool_use",
+      "always_thinking"
+    ],
+    "overrides_capabilities_after": [
+      "image_in",
+      "thinking",
+      "tool_use",
+      "always_thinking"
+    ],
+    "default_effort_before_and_after": "max",
+    "config_sha256_before": "037ccb192f5c3a01e90d64dab7d5638ca006b8fb815196fa6c924145f42089cf",
+    "config_sha256_after": "6de176a7a5698a664c6f7b3124801212451f173dcc0065b5afaac30a1279e2ed",
+    "config_mode_before": "0o644",
+    "config_mode_after": "0o644",
+    "unaffected_fields_sha256": "436a63d721de3973cffba9d3b0dadba29426038521b76dd24b1c05ae679f9993",
+    "unaffected_fields_unchanged": true,
+    "default_model_unchanged": true,
+    "endpoint_credentials_and_permissions_unchanged": true,
+    "credential_values_read_to_output_or_copied": false
+  },
+  "negative_probe_v1": {
+    "cli_exit": 0,
+    "required_tool_in_prompt": "Read",
+    "actual_read_result": "Only text files can be read; use ReadMediaFile for image and video files.",
+    "actual_image_observation_completed": false,
+    "cause": "Probe prompt required the text-only tool; not an upstream model image rejection.",
+    "raw_output_sha256": "0ca3f9e3f8212adf17d5eef73490173b34d4797aa9907cb7a8c8e9c756a717b1",
+    "raw_output_retained": true
+  },
+  "actual_probe_v2": {
+    "cli_exit": 0,
+    "tool_calls": [
+      {
+        "type": "function",
+        "id": "call_okSiJkG1Kd67798B4OL6eETF",
+        "function": {
+          "name": "ReadMediaFile",
+          "arguments": "{\"path\":\"fixture.png\"}"
+        }
+      }
+    ],
+    "media_payload_types": [
+      "text",
+      "image_url",
+      "text"
+    ],
+    "image_url_returned": true,
+    "synthetic_fixture_sha256": "870e1f64acbb6d319c51e53b17e21af52e626d5c889c5f17ed911890e22ce2e9",
+    "synthetic_fixture_dimensions": [
+      400,
+      270
+    ],
+    "actual_answer": "背景色：白色。\n\n- 左上：1 个红色圆形。\n- 右上：1 个蓝色正方形。\n- 左下：3 个绿色圆形，横向排列。\n- 右下：1 个紫色三角形，尖端朝上。",
+    "expected_shapes_colors_counts_match": true,
+    "read_other_files_or_ran_commands": false,
+    "raw_output_sha256": "f502e164b830aef956430481c2456135815635d3bed24dbcdf5dc50b45f200c7",
+    "raw_output_retained": true
+  },
+  "certification_boundary": "Actual one-image CLI transport/vision capability smoke test only; not independent S02 title/count/no-overlap acceptance, not compositor/privacy/OS/global-platform certification. Original review FAIL unchanged; dedicated missing-coverage review still required."
+}

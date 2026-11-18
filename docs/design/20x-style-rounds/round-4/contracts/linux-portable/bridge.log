@@ -1,0 +1,8 @@
+.............................................................................................................................../home/developer/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/copy.py:245: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmp5leyu_zz/isolated-dsh.stderr' mode='a' encoding='UTF-8'>
+  memo[id(memo)]=[x]
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+.................................................................................................
+----------------------------------------------------------------------
+Ran 224 tests in 1.757s
+
+OK

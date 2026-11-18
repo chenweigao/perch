@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-11-19T10:27:47+08:00",
+  "status": "PASS_LOSSLESS_PUBLICATION_AND_UNCHANGED_STRICT_SCANNER_CONTROLS",
+  "initial_commit_hook_rejection_retained": {
+    "exit": 1,
+    "confirmed_sha256_false_positive_findings": 10,
+    "rule": "generic-api-key",
+    "initial_full_stderr_location": "Parent session tool output; not claimed as a separately captured raw log."
+  },
+  "gitleaks_version": "8.30.1",
+  "same_gate_configuration": {
+    "extend_default_rules": true,
+    "ignore_file_empty": true,
+    "ignore_gitleaks_allow_comments": true,
+    "redact": 100
+  },
+  "security_scripts_hooks_configuration_rules_and_permissions_modified": false,
+  "all_original_hash_values_and_paths_remain_plaintext": true,
+  "lossless_original_bytes_verified": true,
+  "raw_original_seals_modified": false,
+  "raw_original_seals_retained_locally_and_externally": true,
+  "publication_copies": [
+    {
+      "original_path": "docs/design/20x-style-rounds/round-4/contracts/review-input-sha256.json",
+      "original_byte_sha256": "60f0e938812cb7750ee9d708a6ec4535ae3f7ca91e89d42bd5872f374be6992d",
+      "publication_path": "docs/design/20x-style-rounds/round-4/contracts/review-input-sha256-publication.json",
+      "publication_sha256": "38971c08b4e00d2deb1aab4002fc7cb005e396ec20ae0d0a16b9f0c79363ff57",
+      "protected_files": 2791,
+      "exact_original_bytes_reconstructed": true
+    },
+    {
+      "original_path": "docs/design/20x-style-rounds/round-4/contracts/review-image-input-sha256.json",
+      "original_byte_sha256": "8ce41000660971c326b46db1425884de2bf92b0242c16f643be1559659d91d96",
+      "publication_path": "docs/design/20x-style-rounds/round-4/contracts/review-image-input-sha256-publication.json",
+      "publication_sha256": "4b516498a3e3d75805683050a08d2c780d5263259f882da7f1b5995895298117",
+      "protected_files": 2801,
+      "exact_original_bytes_reconstructed": true
+    }
+  ],
+  "controls": [
+    {
+      "control": "original-seal-negative-receipt",
+      "actual_exit": 1,
+      "findings": 10,
+      "rule_ids": [
+        "generic-api-key"
+      ],
+      "expected_block": true,
+      "passed_expected_behavior": true,
+      "input_sha256": "796c1c291181520c71a279833419263c8431658bdbbd4bc0afca7b5facd94b56",
+      "credential_values_not_printed": true
+    },
+    {
+      "control": "lossless-plaintext-publication",
+      "actual_exit": 0,
+      "findings": 0,
+      "rule_ids": [],
+      "expected_block": false,
+      "passed_expected_behavior": true,
+      "input_sha256": "065987666be1fbbe5439dbd5fc92723103a6df1b3ede001f15f061660078c792",
+      "credential_values_not_printed": true
+    },
+    {
+      "control": "synthetic-secret-positive-control",
+      "actual_exit": 1,
+      "findings": 1,
+      "rule_ids": [
+        "github-pat"
+      ],
+      "expected_block": true,
+      "passed_expected_behavior": true,
+      "input_sha256": "36eef576458fb7f7196c8354d5f26560668b8b993a7171d59df73a140af9bf78",
+      "credential_values_not_printed": true
+    },
+    {
+      "control": "publication-plus-synthetic-secret-control",
+      "actual_exit": 1,
+      "findings": 1,
+      "rule_ids": [
+        "github-pat"
+      ],
+      "expected_block": true,
+      "passed_expected_behavior": true,
+      "input_sha256": "2a6d7b443d64910aeac39cf9d9ef5ce1b7bfbcd9ddf52e671ef74a3b2944676a",
+      "credential_values_not_printed": true
+    }
+  ],
+  "raw_reports_retained_externally": true,
+  "scope": "Fix evidence map-key/value serialization false positives without changing gates, disabling rules, adding allowances, masking/encrypting data, or rewriting original review/seal byte streams.",
+  "reconstruction_corruption_controls": [
+    {
+      "case": "changed-digest",
+      "rejected": true
+    },
+    {
+      "case": "duplicate-record",
+      "rejected": true
+    },
+    {
+      "case": "wrong-record-kind",
+      "rejected": true
+    },
+    {
+      "case": "changed-claimed-identity",
+      "rejected": true
+    },
+    {
+      "case": "changed-original-filename",
+      "rejected": true
+    },
+    {
+      "case": "rehashed-counterfeit",
+      "rejected": true
+    }
+  ],
+  "reconstruction_identity_bound_to_original_independent_review_hashes": true
+}

@@ -1,0 +1,36 @@
+#!/bin/bash
+set -euo pipefail
+
+baseline_revision=aad604b9ce5294b52951f189b3895b69edd12f31
+support="$HOME/Library/PerfRunner/results/style-r4-support-v1"
+output="$HOME/Library/PerfRunner/results/style-r4-before-v1"
+export PERCH_STYLE_CAPTURE_NODE="$HOME/.local/opt/node-v24.18.0-darwin-arm64/bin/node"
+
+printf 'start=%s\n' "$(date -Iseconds)"
+cd "$HOME/_worktrees/20x-loop-20261112/perch"
+pre_porcelain=$(git status --porcelain=v1 | wc -l | tr -d ' ')
+printf 'pre_porcelain=%s\n' "$pre_porcelain"
+test "$pre_porcelain" = 0
+git fetch origin main style/loop-main
+test "$(git rev-parse origin/style/loop-main)" = "$baseline_revision"
+git checkout --detach "$baseline_revision"
+test "$(git rev-parse HEAD)" = "$baseline_revision"
+printf 'code_head=%s\n' "$(git rev-parse HEAD)"
+test ! -e "$output"
+test -x "$PERCH_STYLE_CAPTURE_NODE"
+test "$(shasum -a 256 "$support/capture-matrix.py" | cut -d ' ' -f1)" = 21a8bb612056e9ce591525894401d957c2d8d869ef761eb26ecfef4529938473
+test "$(shasum -a 256 "$support/expected-differences.md" | cut -d ' ' -f1)" = "$(cat "$support/expected.sha256")"
+test "$(shasum -a 256 "$support/allowed-regions-before.json" | cut -d ' ' -f1)" = "$(cat "$support/allowed.sha256")"
+mkdir -p "$output"
+printf 'capture_driver_sha256=%s\n' "$(shasum -a 256 "$support/capture-matrix.py" | cut -d ' ' -f1)"
+printf 'expected_list_sha256=%s\n' "$(cat "$support/expected.sha256")"
+printf 'allowed_regions_sha256=%s\n' "$(cat "$support/allowed.sha256")"
+cp "$support/expected-differences.md" "$output/expected-differences-before.md"
+cp "$support/allowed-regions-before.json" "$output/allowed-regions-before.json"
+python3 "$support/capture-matrix.py" --output "$output/capture" \
+    --host-app "$output/HostLifecycleChecks.app" --build-host --build-previews
+printf 'host_binary_sha256=%s\n' "$(shasum -a 256 "$output/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks" | cut -d ' ' -f1)"
+post_porcelain=$(git status --porcelain=v1 | wc -l | tr -d ' ')
+printf 'post_porcelain=%s\n' "$post_porcelain"
+test "$post_porcelain" = 0
+printf 'end=%s\n' "$(date -Iseconds)"

@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-11-18T22:39:45+08:00",
+  "branch": "style/loop-main",
+  "actual_tested_and_current_head": "4b64796633d4cee9db9ac10bbc1ea8b2f4ea4da1",
+  "original_seal_sha256": "60f0e938812cb7750ee9d708a6ec4535ae3f7ca91e89d42bd5872f374be6992d",
+  "original_review_sha256": "91f8ff0b5e89c86f4793abe0c32e02d40f2446bb334ab5d7a25d123d85be261c",
+  "original_review_verdict_unchanged": "FAIL",
+  "original_seal_entries_checked": 2791,
+  "original_inputs_currently_unchanged": 2787,
+  "intentionally_changed_authored_docs": [
+    {
+      "path": "docs/design/20x-style-loop/INDEX.md",
+      "original_sha256": "d13261752c7d5642c5674ce5f54d9a647f21a93e3c40f6561127c203f66100c8",
+      "current_sha256": "afd4f32a709594f5c35629c670c93a964ed098d1fda51593d47657bf759ea163",
+      "original_copy": "docs/design/20x-style-rounds/round-4/contracts/review-original-authored/INDEX.md",
+      "original_bytes_preserved": true
+    },
+    {
+      "path": "docs/design/20x-style-rounds/round-4/README.md",
+      "original_sha256": "2704ed3aa8ffe8cec3e30eb31390eafe078a1361a3fce1b8b6a08f1af3e450ca",
+      "current_sha256": "dd0e525aafaebdd6f01993630b7bbbe538615a21d61a07ce8b7a4fdde3998f91",
+      "original_copy": "docs/design/20x-style-rounds/round-4/contracts/review-original-authored/README.md",
+      "original_bytes_preserved": true
+    },
+    {
+      "path": "docs/design/20x-style-rounds/round-4/contracts/regression-observations.md",
+      "original_sha256": "d8b41c5b815ed3e05d08a3e6864e891a9b0ae16062b6f75961987a444fcf2a42",
+      "current_sha256": "5b782d0308ebcd6d96f8e74469963e2b57aac7204c1102d2a194e131c4fa8831",
+      "original_copy": "docs/design/20x-style-rounds/round-4/contracts/review-original-authored/regression-observations.md",
+      "original_bytes_preserved": true
+    },
+    {
+      "path": "docs/design/20x-style-rounds/round-4/contracts/visual-validation.md",
+      "original_sha256": "43e3c2a16ff8dda52b86d9f75c21e79d44885e69309fee501c05606c456259b2",
+      "current_sha256": "c5dc422b310a5beac62d20951d2689a650bc4773c2f4f6bb65297b9e7b922a96",
+      "original_copy": "docs/design/20x-style-rounds/round-4/contracts/review-original-authored/visual-validation.md",
+      "original_bytes_preserved": true
+    }
+  ],
+  "all_original_input_bytes_reconstructable_from_preserved_copies": true,
+  "all_nine_findings_verbatim_retained": [
+    {
+      "id": "S02-R4-F01",
+      "severity": "P2",
+      "verbatim_retained": true
+    },
+    {
+      "id": "S02-R4-F02",
+      "severity": "P3",
+      "verbatim_retained": true
+    },
+    {
+      "id": "S02-R4-F03",
+      "severity": "P3",
+      "verbatim_retained": true
+    },
+    {
+      "id": "S02-R4-F04",
+      "severity": "P3",
+      "verbatim_retained": true
+    },
+    {
+      "id": "S02-R4-F05",
+      "severity": "P3",
+      "verbatim_retained": true
+    },
+    {
+      "id": "S02-R4-F06",
+      "severity": "P3",
+      "verbatim_retained": true
+    },
+    {
+      "id": "S02-R4-F07",
+      "severity": "P3",
+      "verbatim_retained": true
+    },
+    {
+      "id": "S02-R4-F08",
+      "severity": "P3",
+      "verbatim_retained": true
+    },
+    {
+      "id": "S02-R4-F09",
+      "severity": "P3",
+      "verbatim_retained": true
+    }
+  ],
+  "protected_product_tests_scripts_ci_package_diff_empty": true,
+  "round_counted_complete": false,
+  "remaining_rounds_to_report": 17,
+  "initial_document_patch_failure_retained": "README applied, then visual-validation full-line context did not match; remaining files checked unchanged and corrected. No product edit or gate failure."
+}

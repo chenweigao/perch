@@ -1,0 +1,31 @@
+start=2026-11-18T21:20:31+08:00
+pre_porcelain=0
+From github.com:chenweigao/perch
+ * branch              main            -> FETCH_HEAD
+ * branch              style/loop-main -> FETCH_HEAD
+ + 025dc61c...aad604b9 style/loop-main -> origin/style/loop-main  (forced update)
+Warning: you are leaving 1 commit behind, not connected to
+any of your branches:
+
+  025dc61c fix(style): pin Composer preview capture background
+
+If you want to keep it by creating a new branch, this may be a good time
+to do so with:
+
+ git branch <new-branch-name> 025dc61c
+
+HEAD is now at aad604b9 fix(style): pin Composer preview capture background
+code_head=aad604b9ce5294b52951f189b3895b69edd12f31
+capture_driver_sha256=21a8bb612056e9ce591525894401d957c2d8d869ef761eb26ecfef4529938473
+expected_list_sha256=8bc899da4c896f1cdc8a99520dbba081955dd5b6f10a3d84641c04841e5b7be4
+allowed_regions_sha256=3002366930e124e2e335abd1d97730115b3dac31a7506f771087a36faafeb115
+{
+  "status": "passed",
+  "output": "/Users/developer/Library/PerfRunner/results/style-r4-before-v1/capture",
+  "comparisons": 22,
+  "seconds": 404.416
+}
+host_binary_sha256=5c83ea549333b713e764d397a88646afac324ab1c061350b39d51336772d8eec
+post_porcelain=0
+end=2026-11-18T21:27:23+08:00
+exit=0

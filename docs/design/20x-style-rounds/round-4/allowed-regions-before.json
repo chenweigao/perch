@@ -1,0 +1,20 @@
+{
+  "phase": "Frozen before fresh round-4 capture and product edit; revalidate existing geometry against fresh before",
+  "baseline_head": "aad604b9ce5294b52951f189b3895b69edd12f31",
+  "coordinate_system": "PNG pixels, half-open rectangles, backing scale 1",
+  "reference_geometry": [1536, 900],
+  "description": "Only changes inspector header; excludes toolbar and file rows. All other 11 scenes have no allowed region.",
+  "scenarios": {
+    "main-light": [1218, 44, 1530, 96],
+    "main-dark": [1218, 44, 1530, 96],
+    "main-english": [1218, 44, 1530, 96],
+    "main-large-type": [1218, 44, 1530, 96],
+    "main-english-dark": [1218, 44, 1530, 96],
+    "main-english-large-type": [1218, 44, 1530, 96],
+    "main-english-large-type-dark": [1218, 44, 1530, 96],
+    "main-large-type-dark": [1218, 44, 1530, 96],
+    "main-find": [1218, 44, 1530, 96],
+    "main-find-dark": [1218, 44, 1530, 96],
+    "main-scroll": [1218, 44, 1530, 96]
+  }
+}

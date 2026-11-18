@@ -1,0 +1,10 @@
+{
+  "scope": "Publication copies only; raw text and screenshots are not rewritten",
+  "archived_files": 11,
+  "path_redacted_files": [
+    "bridge.log",
+    "results.json"
+  ],
+  "unchanged_png_sha256": {},
+  "excluded": "App bundles and non-evidence binary files"
+}

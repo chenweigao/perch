@@ -1,0 +1,67 @@
+#!/bin/bash
+set -euo pipefail
+
+baseline_revision=aad604b9ce5294b52951f189b3895b69edd12f31
+support="$HOME/Library/PerfRunner/results/style-r4-support-v1"
+output="$HOME/Library/PerfRunner/results/style-r4-gates-v1"
+after="$HOME/Library/PerfRunner/results/style-r4-after-v1"
+candidate_revision=$(cat "$support/candidate-revision.txt")
+unset PERCH_STYLE_CAPTURE PERCH_STYLE_DARK PERCH_STYLE_LARGE_TYPE PERCH_STYLE_LOCALE PERCH_STYLE_SCENARIO
+
+[[ "$candidate_revision" =~ ^[0-9a-f]{40}$ ]]
+test -e "$after.done"
+test "$(tail -1 "$after.log")" = 'exit=0'
+python3 - "$support/before-after-comparison.json" "$baseline_revision" "$candidate_revision" <<'PY'
+import json
+from pathlib import Path
+import sys
+result = json.loads(Path(sys.argv[1]).read_text())
+assert result["status"] == "passed" and result["mode"] == "header" and result["tolerance"] == 0
+assert result["before_head"] == sys.argv[2] and result["after_head"] == sys.argv[3]
+assert result["before_repeat_byte_pairs"] == result["after_repeat_byte_pairs"] == 22
+assert len(result["groups"]) == 22
+assert all(group["outside_allowed_visible_pixels"] == group["outside_allowed_rgba_pixels"] == 0 for group in result["groups"])
+PY
+printf 'start=%s\n' "$(date -Iseconds)"
+cd "$HOME/_worktrees/20x-loop-20261112/perch"
+pre_porcelain=$(git status --porcelain=v1 | wc -l | tr -d ' ')
+printf 'pre_porcelain=%s\n' "$pre_porcelain"
+test "$pre_porcelain" = 0
+git fetch origin main style/loop-main
+test "$(git rev-parse origin/style/loop-main)" = "$candidate_revision"
+git checkout --detach "$candidate_revision"
+test "$(git rev-parse HEAD)" = "$candidate_revision"
+printf 'code_head=%s\n' "$(git rev-parse HEAD)"
+expected_stamp=$(git describe --tags --dirty --always)
+printf 'bundle_describe_stamp=%s\n' "$expected_stamp"
+printf 'host_binary_sha256=%s\n' "$(shasum -a 256 "$after/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks" | cut -d ' ' -f1)"
+test ! -e "$output"
+mkdir -p "$output/native-design"
+cp "$support/before-after-comparison.json" "$output/before-after-comparison.json"
+git diff "$baseline_revision" HEAD -- Sources ':(exclude)Sources/AgentWorkbench' > "$output/sources-redline.diff"
+test ! -s "$output/sources-redline.diff"
+git diff "$baseline_revision" HEAD -- scripts .github > "$output/measurement-ci-redline.diff"
+test ! -s "$output/measurement-ci-redline.diff"
+bash scripts/build.sh > "$output/build.log" 2>&1
+printf 'build=passed\n'
+swift run WorkbenchChecks > "$output/workbench-checks.log" 2>&1
+printf 'workbench_checks=passed\n'
+python3 scripts/check-radius-tokens.py > "$output/radius.log" 2>&1
+python3 scripts/check-localization.py > "$output/localization.log" 2>&1
+python3 scripts/check-app-launch.py --app build/Perch.app --output "$output/app-launch" > "$output/app-launch.log" 2>&1
+python3 - "$output/app-launch/result.json" "$expected_stamp" <<'PY'
+import json
+from pathlib import Path
+import sys
+result = json.loads(Path(sys.argv[1]).read_text())
+assert result["passed"] and result["completed_launches"] == 5
+assert result["revision"] == sys.argv[2]
+PY
+printf 'cold_launches=5/5\n'
+export PERCH_DESIGN_CAPTURES="$output/native-design"
+python3 scripts/check-host-lifecycle.py --app "$after/HostLifecycleChecks.app" --phase native-design > "$output/native-design.log" 2>&1
+printf 'native_design=passed\n'
+post_porcelain=$(git status --porcelain=v1 | wc -l | tr -d ' ')
+printf 'post_porcelain=%s\n' "$post_porcelain"
+test "$post_porcelain" = 0
+printf 'end=%s\n' "$(date -Iseconds)"
