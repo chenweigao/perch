@@ -77,5 +77,6 @@ round 43–45 的产出是**证据收口**而非收益：memo pin 补强、叶�
   `round-44/ATTRIBUTION-NOTE.md`
 - round 45 探针：`round-45/probe.patch`（v2，含冷/温交叉统计与 atexit 最终行）、
   `round-45/probe-counters.txt`
+- 评审通道故障与处置协议：`REVIEW-CHANNEL-PROTOCOL.md`
 - 上一份停止报告（停止规则②，评审通道 `parent_not_active`，已随用户触发轮次解除）：
   `2026-11-18-loop-stop-report.md`
