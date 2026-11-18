@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+"""Round-44 leaf-bucket consumer attribution (lineage: analyze_r43.py).
+
+Round-39 F3 doctrine: generic leaf buckets (utf16-bridge / arc-copy / cf-match /
+teardown) are NOT mutually exclusive attack partitions — each sample must be
+attributed to the nearest enclosing NON-mechanism frame (its consumer) before
+any attackable share can be claimed.
+
+Method: reuse round-43's loader/classifier and decode-ancestry filter. For every
+decode-free sample whose innermost region is a target bucket, walk from the leaf
+upward skipping mechanism frames (generic buckets + Swift/CF runtime + allocator
+plumbing) and attribute the sample to the first remaining frame, truncated to a
+stable symbol prefix.
+
+Usage: analyze_r44_consumers.py <xml> [bucket ...]
+"""
+import sys
+from collections import Counter, defaultdict
+
+sys.path.insert(0, '.local/round43')
+from analyze_r43 import load, classify, REGIONS
+
+DECODE_LABELS = {"setup-wire-decode", "setup-json"}
+DECODE_PATS = []
+for label, pats in REGIONS:
+    if label in DECODE_LABELS:
+        DECODE_PATS.extend(pats)
+
+MECHANISM_LABELS = {
+    "cf-match", "string-hash", "dict-find", "string-compare",
+    "utf16-bridge", "arc-copy", "teardown", "alloc",
+}
+MECHANISM_PATS = []
+for label, pats in REGIONS:
+    if label in MECHANISM_LABELS:
+        MECHANISM_PATS.extend(pats)
+
+# Frames that are still runtime plumbing even when they are the nearest
+# non-generic-bucket frame (ARC slow paths, array grow/copy, string storage
+# helpers).  Round-44 first run showed these swallow 60-70% of the buckets,
+# so attribution must walk past them to real product code.
+RUNTIME_HELPER_PATS = (
+    "RefCounts<", "doDecrementSlow", "doIncrementSlow", "swift::RefCounts",
+    "_ContiguousArrayBuffer", "_Variant.setValue", "_Variant.find",
+    "Array._createNewBuffer", "UnsafeMutablePointer.initialize",
+    "_copyToContiguousArray", "String.write<A>", "String.+ infix",
+    "Sequence.reduce", "Sequence.compactMap", "Sequence.map", "Sequence.forEach",
+    "getCharacters", "TargetMetadata<", "getTypeContextDescriptor",
+    "outlined consume", "outlined copy", "getEnumTagSinglePayload",
+    "allocateStringStorage", "mach_absolute_time", "_DictionaryStorage",
+    "swift::TargetMetadata", "swift::metadata", "swift::_dynamicCast",
+    "Array.append", "Array._reserveCapacity", "Set.insert",
+)
+
+RUNTIME_PREFIXES = (
+    "swift_", "DYLD-STUB", "_platform_", "xzm_", "malloc", "free",
+    "dyld", "libsystem", "std::__1", "operator new", "operator delete",
+    "objc_", "_objc_", "os_", "_os_", "spinlock", "pthread", "dispatch_",
+    "swift_allocObject", "__swift", "outlined init", "outlined destroy",
+    "protocol witness", "specialized _ArrayBuffer", "ContiguousArrayStorage",
+    "_StringGuts", "String.", "Substring", "_HashTable", "__RawDictionary",
+    "_NativeDictionary", "Dictionary.", "Set.",
+)
+
+
+def is_decode(fr):
+    return any(any(p in f for p in DECODE_PATS) for f in fr)
+
+
+def is_mechanism(frame):
+    if any(p in frame for p in MECHANISM_PATS):
+        return True
+    if any(p in frame for p in RUNTIME_HELPER_PATS):
+        return True
+    return frame.startswith(RUNTIME_PREFIXES)
+
+
+def consumer(fr):
+    for frame in fr:
+        if not is_mechanism(frame):
+            return frame[:110]
+    return "<no-consumer>"
+
+
+def main():
+    path = sys.argv[1]
+    targets = sys.argv[2:] or ["utf16-bridge", "arc-copy", "cf-match", "teardown"]
+    rows = load(path)
+    frames = [fr for _, fr in rows]
+    free = [fr for fr in frames if not is_decode(fr)]
+    n = len(free)
+    print(f"total={len(frames)} decode-free={n}")
+
+    per_bucket = defaultdict(Counter)
+    totals = defaultdict(Counter)
+    for fr in free:
+        bucket = classify(fr)
+        if bucket not in targets:
+            continue
+        c = consumer(fr)
+        per_bucket[bucket][c] += 1
+        totals["ALL"][c] += 1
+
+    for bucket in targets:
+        counts = per_bucket[bucket]
+        subtotal = sum(counts.values())
+        print(f"\n== bucket [{bucket}] n={subtotal} ({100.0*subtotal/n:.2f}% of decode-free) ==")
+        for name, c in counts.most_common(18):
+            print(f"  {c:5d} {100.0*c/max(subtotal,1):6.2f}% of bucket | "
+                  f"{100.0*c/n:5.2f}% of decode-free  {name}")
+
+    print(f"\n== union of target buckets ==")
+    for name, c in totals["ALL"].most_common(25):
+        print(f"  {c:5d} {100.0*c/n:5.2f}% of decode-free  {name}")
+
+
+if __name__ == "__main__":
+    main()

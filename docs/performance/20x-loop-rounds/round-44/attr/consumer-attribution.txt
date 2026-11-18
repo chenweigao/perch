@@ -1,0 +1,108 @@
+total=20743 decode-free=11691
+
+== bucket [utf16-bridge] n=2394 (20.48% of decode-free) ==
+    501  20.93% of bucket |  4.29% of decode-free  specialized static Array.+ infix(_:_:)
+    484  20.22% of bucket |  4.14% of decode-free  ConversationSearch.hits(in:query:running:options:)
+    309  12.91% of bucket |  2.64% of decode-free  benchR43Profile()
+    125   5.22% of bucket |  1.07% of decode-free  specialized Dictionary.subscript.setter
+     92   3.84% of bucket |  0.79% of decode-free  ToolVisibilityProjection.Pass.normalize(_:)
+     88   3.68% of bucket |  0.75% of decode-free  specialized flush #1 (running:) in static ConversationTimelineEntry.make(_:isRunning:)
+     87   3.63% of bucket |  0.74% of decode-free  ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)
+     75   3.13% of bucket |  0.64% of decode-free  KimiMessage.coalescingAdjacentAssistantParts()
+     65   2.72% of bucket |  0.56% of decode-free  ConversationPresentationModel.update(_:)
+     64   2.67% of bucket |  0.55% of decode-free  static ConversationPresentationModel.cost(_:)
+     52   2.17% of bucket |  0.44% of decode-free  specialized static KimiMessage.sameRenderedMessage(_:_:)
+     40   1.67% of bucket |  0.34% of decode-free  ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+     35   1.46% of bucket |  0.30% of decode-free  specialized static ActivityNarrativeProjection.make(entries:tools:isRunning:external:cache:)
+     34   1.42% of bucket |  0.29% of decode-free  specialized static ConversationTimelineEntry.make(_:isRunning:)
+     25   1.04% of bucket |  0.21% of decode-free  ToolVisibilityProjection.Pass.collect(_:)
+     21   0.88% of bucket |  0.18% of decode-free  closure #1 in closure #1 in static KimiMessage.sameRenderedMessages(_:_:)
+     18   0.75% of bucket |  0.15% of decode-free  ToolVisibilityProjection.Pass.present(id:call:result:)
+     16   0.67% of bucket |  0.14% of decode-free  ToolVisibilityProjection.normalize(_:activeIDs:online:anchor:)
+
+== bucket [arc-copy] n=2256 (19.30% of decode-free) ==
+    501  22.21% of bucket |  4.29% of decode-free  specialized static Array.+ infix(_:_:)
+    374  16.58% of bucket |  3.20% of decode-free  ConversationSearch.hits(in:query:running:options:)
+    304  13.48% of bucket |  2.60% of decode-free  benchR43Profile()
+    162   7.18% of bucket |  1.39% of decode-free  specialized Dictionary.subscript.setter
+    109   4.83% of bucket |  0.93% of decode-free  specialized flush #1 (running:) in static ConversationTimelineEntry.make(_:isRunning:)
+     75   3.32% of bucket |  0.64% of decode-free  ToolVisibilityProjection.Pass.normalize(_:)
+     68   3.01% of bucket |  0.58% of decode-free  KimiMessage.coalescingAdjacentAssistantParts()
+     57   2.53% of bucket |  0.49% of decode-free  ConversationPresentationModel.update(_:)
+     40   1.77% of bucket |  0.34% of decode-free  specialized static KimiMessage.sameRenderedMessage(_:_:)
+     39   1.73% of bucket |  0.33% of decode-free  static ConversationPresentationModel.cost(_:)
+     38   1.68% of bucket |  0.33% of decode-free  specialized static ActivityNarrativeProjection.make(entries:tools:isRunning:external:cache:)
+     36   1.60% of bucket |  0.31% of decode-free  specialized static ConversationTimelineEntry.make(_:isRunning:)
+     35   1.55% of bucket |  0.30% of decode-free  specialized protocol witness for TextOutputStreamable.write<A>(to:) in conformance String
+     33   1.46% of bucket |  0.28% of decode-free  specialized Array.init<A>(_:)
+     26   1.15% of bucket |  0.22% of decode-free  ToolVisibilityProjection.Pass.collect(_:)
+     19   0.84% of bucket |  0.16% of decode-free  closure #8 in benchR43Profile()
+     18   0.80% of bucket |  0.15% of decode-free  ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+     18   0.80% of bucket |  0.15% of decode-free  closure #1 in static ConversationPresentationModel.cost(_:)
+
+== bucket [cf-match] n=1280 (10.95% of decode-free) ==
+    619  48.36% of bucket |  5.29% of decode-free  ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)
+    171  13.36% of bucket |  1.46% of decode-free  -[NSDataDetector enumerateMatchesInString:options:range:usingBlock:]
+     66   5.16% of bucket |  0.56% of decode-free  CoreNLP::WordDispatchTagger::getSubWordTaggerForCJKSubToken(NLToken const*)
+     49   3.83% of bucket |  0.42% of decode-free  _fetchNextToken
+     45   3.52% of bucket |  0.38% of decode-free  (anonymous namespace)::__btrie_find_common_prefix(btrie_t const*, unsigned int, unsigned char const*, unsigned
+     44   3.44% of bucket |  0.38% of decode-free  0x18fa130cc
+     40   3.12% of bucket |  0.34% of decode-free  DDLookupTableRefLookupCurrentWord
+     19   1.48% of bucket |  0.16% of decode-free  bool MeCab::(anonymous namespace)::connect<false>(unsigned long, mecab_node_t*, mecab_node_t**, mecab_node_t**
+     16   1.25% of bucket |  0.14% of decode-free  mecab_node_t* MeCab::Tokenizer<mecab_node_t, mecab_path_t>::lookup<false>(char const*, char const*, MeCab::All
+     15   1.17% of bucket |  0.13% of decode-free  _FillNextTokenInCache
+     10   0.78% of bucket |  0.09% of decode-free  0x18fa41578
+     10   0.78% of bucket |  0.09% of decode-free  0x18fa109e8
+      9   0.70% of bucket |  0.08% of decode-free  DDLexemCacheItemSet
+      8   0.62% of bucket |  0.07% of decode-free  CoreNLP::ICUTextBreakWithBuiltInRules::getCJTextRange(int, bool*)
+      6   0.47% of bucket |  0.05% of decode-free  CoreNLP::MeCabSubTokenizer::getNextToken(CFRange*)
+      6   0.47% of bucket |  0.05% of decode-free  utext_getNativeIndex
+      6   0.47% of bucket |  0.05% of decode-free  CoreNLP::MeCabSubTokenizer::skipNonWord(mecab_node_t const*) const
+      6   0.47% of bucket |  0.05% of decode-free  <deduplicated_symbol>
+
+== bucket [teardown] n=1044 (8.93% of decode-free) ==
+    333  31.90% of bucket |  2.85% of decode-free  benchR43Profile()
+    240  22.99% of bucket |  2.05% of decode-free  ConversationSearch.hits(in:query:running:options:)
+     85   8.14% of bucket |  0.73% of decode-free  closure #1 in static ConversationPresentationModel.cost(_:)
+     78   7.47% of bucket |  0.67% of decode-free  ConversationPresentationModel.update(_:)
+     38   3.64% of bucket |  0.33% of decode-free  specialized flush #1 (running:) in static ConversationTimelineEntry.make(_:isRunning:)
+     30   2.87% of bucket |  0.26% of decode-free  ConversationTimelineEntry.id.getter
+     18   1.72% of bucket |  0.15% of decode-free  ToolVisibilityProjection.Pass.normalize(_:)
+     17   1.63% of bucket |  0.15% of decode-free  specialized static ActivityNarrativeProjection.make(entries:tools:isRunning:external:cache:)
+     16   1.53% of bucket |  0.14% of decode-free  ToolVisibilityProjection.Pass.present(id:call:result:)
+     15   1.44% of bucket |  0.13% of decode-free  KimiMessage.coalescingAdjacentAssistantParts()
+     12   1.15% of bucket |  0.10% of decode-free  ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+      9   0.86% of bucket |  0.08% of decode-free  specialized Dictionary.subscript.setter
+      9   0.86% of bucket |  0.08% of decode-free  0x1a33740ed
+      8   0.77% of bucket |  0.07% of decode-free  specialized static KimiMessage.sameRenderedMessage(_:_:)
+      8   0.77% of bucket |  0.07% of decode-free  ToolVisibilityProjection.update(_:splittingAt:sessionID:live:running:online:)
+      7   0.67% of bucket |  0.06% of decode-free  0x18fa130cc
+      7   0.67% of bucket |  0.06% of decode-free  _xzm_reclaim_mark_used_locked
+      7   0.67% of bucket |  0.06% of decode-free  excerpt #1 (_:) in static ConversationTurnSummary.make(_:entries:)
+
+== union of target buckets ==
+   1098  9.39% of decode-free  ConversationSearch.hits(in:query:running:options:)
+   1002  8.57% of decode-free  specialized static Array.+ infix(_:_:)
+    946  8.09% of decode-free  benchR43Profile()
+    714  6.11% of decode-free  ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)
+    296  2.53% of decode-free  specialized Dictionary.subscript.setter
+    235  2.01% of decode-free  specialized flush #1 (running:) in static ConversationTimelineEntry.make(_:isRunning:)
+    200  1.71% of decode-free  ConversationPresentationModel.update(_:)
+    185  1.58% of decode-free  ToolVisibilityProjection.Pass.normalize(_:)
+    179  1.53% of decode-free  -[NSDataDetector enumerateMatchesInString:options:range:usingBlock:]
+    158  1.35% of decode-free  KimiMessage.coalescingAdjacentAssistantParts()
+    114  0.98% of decode-free  closure #1 in static ConversationPresentationModel.cost(_:)
+    105  0.90% of decode-free  static ConversationPresentationModel.cost(_:)
+    100  0.86% of decode-free  specialized static KimiMessage.sameRenderedMessage(_:_:)
+     90  0.77% of decode-free  specialized static ActivityNarrativeProjection.make(entries:tools:isRunning:external:cache:)
+     75  0.64% of decode-free  specialized static ConversationTimelineEntry.make(_:isRunning:)
+     70  0.60% of decode-free  ToolVisibilityProjection.projectTurns(_:split:sessionID:activeIDs:online:)
+     68  0.58% of decode-free  CoreNLP::WordDispatchTagger::getSubWordTaggerForCJKSubToken(NLToken const*)
+     51  0.44% of decode-free  0x18fa130cc
+     51  0.44% of decode-free  ToolVisibilityProjection.Pass.collect(_:)
+     49  0.42% of decode-free  _fetchNextToken
+     48  0.41% of decode-free  ToolVisibilityProjection.Pass.present(id:call:result:)
+     45  0.38% of decode-free  (anonymous namespace)::__btrie_find_common_prefix(btrie_t const*, unsigned int, unsigned char const*, unsigned
+     40  0.34% of decode-free  DDLookupTableRefLookupCurrentWord
+     40  0.34% of decode-free  specialized protocol witness for TextOutputStreamable.write<A>(to:) in conformance String
+     36  0.31% of decode-free  ConversationTimelineEntry.id.getter
