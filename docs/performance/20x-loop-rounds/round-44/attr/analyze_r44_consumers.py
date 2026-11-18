@@ -84,6 +84,51 @@ RUNTIME_PREFIXES = (
 )
 
 
+# Closed-world consumer whitelists (round-44 review 5): chasing individual
+# runtime symbols never terminates, so a consumer is now the nearest frame that
+# belongs to a KNOWN product module, the bench harness, or the find bar.
+# Everything else is mechanical by construction; a stack with no whitelisted
+# frame is reported as `<unattributed>` instead of being blamed on plumbing.
+PRODUCT_PATS = (
+    "ConversationPresentationModel", "ConversationPresentationHandle", "ConversationTimeline",
+    "ConversationTimelineEntry", "ConversationProjection", "ConversationActivity",
+    "ConversationSearch", "ConversationProcessFold", "ConversationTranscript",
+    "ToolVisibilityProjection", "ActivityNarrativeProjection", "ActivityNarrativeSnapshot",
+    "ActivitySummary", "CommentaryDerivation", "NarrativeTextCache", "NarrativePhaseScan",
+    "DisplayMemoBox", "KimiMessage", "KimiConversation", "KimiPart", "KimiEvent",
+    "KimiHistoryBatch", "KimiInFlight", "Presentation.parents", "Presentation.foldParents",
+    "presented(activity", "displayMessages", "collapsedWhitespace", "AppLanguage",
+    "RowProjection", "TurnSummary", "SummaryProjection", "RenderedSourceCache",
+    "ConversationPrefixCache", "ConversationEntryCache", "ConversationExport",
+)
+HARNESS_PATS = ("benchR43Profile", "benchStreamingDelta", "ProtocolTests", "stamp")
+FINDBAR_PATS = (
+    "ConversationSearch", "NSDataDetector", "CoreNLP", "MeCab", "DDScanner", "DDLookup",
+    "DDLexem", "DDCaching", "_DD", "unorm2", "ucptrie", "NL" "StringTokenizer", "utext",
+    "ubrk", "__btrie", "ReplyDocument", "_fetchNextToken", "_FillNextTokenInCache",
+    "u_count" "Char32", "CFStringFind", "CFStringFold",
+)
+
+VALUE_OP_PREFIXES = (
+    "outlined ", "destroy for ", "initializeWithCopy for ", "assignWithCopy for ",
+    "assignWithTake for ", "consume of ", "destroy of ", "value witness",
+    "protocol witness", "specialized destructiveProjectEnumData",
+)
+
+def is_value_op(frame):
+    return frame.startswith(VALUE_OP_PREFIXES) or "deinit" in frame
+
+def category(frame):
+    if is_value_op(frame):
+        return None
+    if any(p in frame for p in HARNESS_PATS):
+        return "harness"
+    if any(p in frame for p in FINDBAR_PATS):
+        return "findbar"
+    if any(p in frame for p in PRODUCT_PATS):
+        return "product"
+    return None
+
 def is_decode(fr):
     return any(any(p in f for p in DECODE_PATS) for f in fr)
 
@@ -109,6 +154,8 @@ def unmodified(frame):
 def is_mechanism(frame):
     if frame.startswith("0x") or frame == "<deduplicated_symbol>":
         return False  # unresolved: never claim it as a consumer
+    if category(frame) is not None:
+        return False
     # Match BOTH the raw symbol and the modifier-stripped one: stripping
     # `outlined `/`specialized ` must not disable rules written against the raw
     # spelling ("outlined consume", "specialized _ArrayBuffer"), and the
@@ -126,9 +173,15 @@ def consumer(fr):
     for frame in fr:
         if frame.startswith("0x") or frame == "<deduplicated_symbol>":
             return "<unresolved-system>"
-        if not is_mechanism(frame):
+        cat = category(frame)
+        # `ConversationSearch` is both the find-bar entry point and a product
+        # module; keep it selectable so detector internals do not become the name.
+        if cat in ("product", "harness") or "ConversationSearch" in frame:
             return frame[:110]
-    return "<no-consumer>"
+    for frame in fr:
+        if category(frame) == "findbar":
+            return frame[:110]
+    return "<unattributed>"
 
 
 def main():

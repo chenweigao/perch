@@ -78,3 +78,15 @@
   find-bar pattern. Final values: **find-bar 20.20% (2362), harness 8.52% (996),
   product 29.82% (3486), unresolved 1.11% (130)**; `Array.+` stays 1003 (8.58%) split
   938 / 49 / 16.
+
+- **Attribution pass 6 (review round 5, method change)**: appending individual runtime
+  symbols proved non-terminating (every round left 20-70 samples parked on generic
+  collection / CF string storage / ObjC container / stack-probe frames). The consumer
+  rule is now **closed-world**: a consumer is the first frame that belongs to a known
+  product module, the bench harness, or the find bar; every other frame is mechanical
+  (including compiler value ops `outlined` / `destroy for` / `initializeWithCopy for` /
+  `deinit`); a stack with no whitelisted frame is reported as `<unattributed>` (0 this
+  round). Category assignment follows the whitelist: find-bar > harness > product.
+  Final values: **find-bar 20.52% (2399), harness 8.52% (996), product 29.39% (3436),
+  unresolved 1.22% (143)** — the four add up to the 6,974 sampled bucket rows;
+  `Array.+` stays 1003 (8.58%) split 938 / 49 / 16.

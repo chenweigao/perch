@@ -36,19 +36,22 @@ FIND_BAR = ("ConversationSearch", "NSDataDetector", "CoreNLP", "MeCab", "DDLooku
 
 
 def next_ancestor(frames, predicate):
-    """First frame above the first frame matching `predicate` that is neither a
-    mechanism frame nor another instance of the same symbol family."""
+    """First frame above the `predicate` frame that is a known consumer
+    (product / harness / find-bar). Everything else is mechanical by the
+    closed-world rule, so the walk cannot stop on a plumbing symbol."""
     seen = False
     for frame in frames:
         if not seen:
             if predicate(frame):
                 seen = True
             continue
-        if is_mechanism(frame) or predicate(frame):
+        if predicate(frame) or is_mechanism(frame):
             continue
         if frame.startswith("0x"):
             return "<unresolved-system>"
-        return frame[:110]
+        from analyze_r44_consumers import category
+        if category(frame) is not None:
+            return frame[:110]
     return "<no-ancestor>"
 
 
@@ -62,8 +65,8 @@ def main():
     print(f"\n== target buckets: {len(concat)} samples ({100.0*len(concat)/n:.2f}%) ==")
 
     # 1) Array.+ split by its caller
-    plus = [fr for fr in concat if any("Array.+ infix" in f for f in fr)
-            and consumer(fr) and "Array.+ infix" in consumer(fr)]
+    # Array.+ is mechanical under the closed-world rule, so select by stack.
+    plus = [fr for fr in concat if any("Array.+ infix" in f for f in fr)]
     split = Counter(next_ancestor(fr, lambda f: "Array.+ infix" in f) for fr in plus)
     total_plus = sum(split.values())
     print(f"\n== Array.+ samples split by caller (n={total_plus}, "

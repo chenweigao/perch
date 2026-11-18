@@ -8,77 +8,39 @@ decode-free n=11691
      16   1.60% of Array.+ |  0.14% of decode-free  ConversationPresentationModel.update(_:)
 
 == find-bar line (search + detector internals) ==
-   1099  9.40%  ConversationSearch.hits(in:query:running:options:)
-    719  6.15%  ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)
-    179  1.53%  -[NSDataDetector enumerateMatchesInString:options:range:usingBlock:]
-     69  0.59%  CoreNLP::WordDispatchTagger::getSubWordTaggerForCJKSubToken(NLToken const*)
-     49  0.42%  _fetchNextToken
-     45  0.38%  (anonymous namespace)::__btrie_find_common_prefix(btrie_t const*, unsigned int, unsigned char const*, unsigned
-     40  0.34%  DDLookupTableRefLookupCurrentWord
-     19  0.16%  bool MeCab::(anonymous namespace)::connect<false>(unsigned long, mecab_node_t*, mecab_node_t**, mecab_node_t**
-     16  0.14%  mecab_node_t* MeCab::Tokenizer<mecab_node_t, mecab_path_t>::lookup<false>(char const*, char const*, MeCab::All
-     15  0.13%  _FillNextTokenInCache
-      9  0.08%  DDLexemCacheItemSet
-      8  0.07%  CoreNLP::ICUTextBreakWithBuiltInRules::getCJTextRange(int, bool*)
-      6  0.05%  CoreNLP::MeCabSubTokenizer::getNextToken(CFRange*)
-      6  0.05%  utext_getNativeIndex
-      6  0.05%  CoreNLP::MeCabSubTokenizer::skipNonWord(mecab_node_t const*) const
-      6  0.05%  specialized static ReplyDocument.contiguousUTF16(_:)
-      6  0.05%  MeCab::FreeList<mecab_node_t>::alloc()
-      5  0.04%  MeCab::Connector::cost(mecab_node_t const*, mecab_node_t const*) const
-      5  0.04%  unorm2_quickCheck
+   1085  9.28%  ConversationSearch.hits(in:query:running:options:)
+    717  6.13%  ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)
+    542  4.64%  closure #1 in closure #1 in ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)
+     13  0.11%  closure #4 in static ConversationSearch.sources(of:role:)
+     13  0.11%  destroy for ConversationSearch.Entry
+      7  0.06%  ConversationSearch.__deallocating_deinit
+      6  0.05%  outlined init with copy of ConversationSearch.Entry
       5  0.04%  specialized static ConversationSearch.sources(of:role:)
-      4  0.03%  bool MeCab::Viterbi::viterbi<false, false>(MeCab::Lattice*) const
       3  0.03%  specialized static ConversationSearch.role(of:)
-      3  0.03%  utext_setNativeIndex
-      2  0.02%  CoreNLP::(anonymous namespace)::calcRange(unsigned short const*, mecab_node_t const**, bool, unsigned long, Co
-      2  0.02%  ucptrie_getValueWidth
-      2  0.02%  closure #4 in static ConversationSearch.sources(of:role:)
-      2  0.02%  u_countChar32
-      2  0.02%  utext_close
-      2  0.02%  specialized static ReplyDocument.blocks(_:documentLinks:listDepth:)
-      2  0.02%  CoreNLP::WordDispatchTagger::getNextToken()
-      2  0.02%  CoreNLP::MeCabSubTokenizer::setString(CoreNLP::UStringPiece const*, CFRange)
-      2  0.02%  CoreNLP::NumberIterator::isLHS(mecab_node_t const*)
-      2  0.02%  MeCab::Viterbi::buildAllLattice(MeCab::Lattice*)
-      2  0.02%  closure #2 in ConversationSearch.hits(in:query:running:options:)
-      1  0.01%  CoreNLP::DefaultSubWordTagger::getNextToken(CFRange*)
-      1  0.01%  utext_current32
-      1  0.01%  MeCab::LatticeImpl::has_constraint() const
-      1  0.01%  NLStringTokenizerAdvanceToNextToken
-      1  0.01%  DDLexemCacheInsertItemInFreeArray
-      1  0.01%  MeCab::LatticeImpl::eos_node() const
-      1  0.01%  CoreNLP::ChineseSubWordTagger::getNextToken(CFRange*)
-      1  0.01%  MeCab::TaggerImpl::parseToNode(char const*, unsigned long)
-      1  0.01%  MeCab::TaggerImpl::initRequestType()
-      1  0.01%  CoreNLP::ICUTextBreakWithBuiltInRules::getNextTokenForDataDetector(bool&)
-      1  0.01%  CoreNLP::(anonymous namespace)::convertCharTypeToAttributes(mecab_node_t const*)
-      1  0.01%  CoreNLP::MeCabSubTokenizer::checkNodeIsNormalized(mecab_node_t const*)
-      1  0.01%  utext_setup
-      1  0.01%  DDCachingStringTokenizerResetStringWithOptions
-      1  0.01%  MeCab::LatticeImpl::set_sentence(char const*, unsigned long)
-      1  0.01%  utext_next32
-      1  0.01%  utext_clone
+      2  0.02%  outlined destroy of ConversationSearch.Earlier?
+      2  0.02%  outlined destroy of ConversationSearch.Entry
+      2  0.02%  outlined consume of ConversationSearch.Earlier?
+      1  0.01%  closure #1 in static ConversationSearch.renderedText(_:)
       1  0.01%  static ConversationSearch.sameRenderedSources(_:_:)
-  total 2362 = 20.20% of decode-free
+  total 2399 = 20.52% of decode-free
 
 == category totals over the four buckets (n=6974) ==
-   2362 20.20% of decode-free  find-bar line
+   2399 20.52% of decode-free  find-bar line
     996  8.52% of decode-free  harness
-    130  1.11% of decode-free  unresolved
-   3486 29.82% of decode-free  product
+    143  1.22% of decode-free  unresolved
+   3436 29.39% of decode-free  product
   (sum 6974 vs 6974 sampled; difference = consumers below the print cut)
 
 == product consumers (each < the table) ==
-   1003  8.58%  specialized static Array.+ infix(_:_:)
+    942  8.06%  closure #1 in KimiConversation.displayMessages.getter
     277  2.37%  closure #1 in static ConversationPresentationModel.Presentation.parents(of:into:)
-    240  2.05%  specialized flush #1 (running:) in static ConversationTimelineEntry.make(_:isRunning:)
-    233  1.99%  ConversationPresentationModel.update(_:)
-    195  1.67%  ToolVisibilityProjection.Pass.normalize(_:)
+    249  2.13%  ConversationPresentationModel.update(_:)
+    247  2.11%  specialized flush #1 (running:) in static ConversationTimelineEntry.make(_:isRunning:)
+    196  1.68%  ToolVisibilityProjection.Pass.normalize(_:)
     160  1.37%  KimiMessage.coalescingAdjacentAssistantParts()
     123  1.05%  closure #1 in static ConversationPresentationModel.cost(_:)
     105  0.90%  static ConversationPresentationModel.cost(_:)
     100  0.86%  specialized static KimiMessage.sameRenderedMessage(_:_:)
-     95  0.81%  specialized static ActivityNarrativeProjection.make(entries:tools:isRunning:external:cache:)
+     99  0.85%  specialized static ActivityNarrativeProjection.make(entries:tools:isRunning:external:cache:)
      91  0.78%  ConversationTimelineEntry.id.getter
      75  0.64%  specialized static ConversationTimelineEntry.make(_:isRunning:)
