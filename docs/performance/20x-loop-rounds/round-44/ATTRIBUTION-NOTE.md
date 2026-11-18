@@ -45,8 +45,8 @@
   earlier "≤2%" bound is withdrawn.
 - **`cost(_:)` is not the verification cost**: it computes payload length
   (`ConversationPresentation.swift:657-670`); the deep `==` lives in the update loop at
-  `:605`. Raw share 219/11,691 = **1.873% → 1.87%**; the table's 1.88% is the sum of the
-  two displayed leaf shares (0.98 + 0.90).
+  `:605`. Current raw share 228/11,691 = **1.950% → 1.95%**; the table's figure is the
+  sum of the two displayed leaf shares (1.05 + 0.90).
 - **Rounding**: the four displayed bucket shares sum to 59.66%; the raw union is
   6,974 / 11,691 = 59.6527% → **59.65%**. Both are reported and labelled.
 - **Analyzer portability**: `attr/analyze_r44_consumers.py` resolves the round-43 lineage
@@ -66,5 +66,15 @@
   `RUNTIME_HELPER_PATS` (plus `initializeWithCopy`, `_xzm_`, `UnsafeMutableBufferPointer`).
   The classifier also gained `benchStreamingDelta` / `ProtocolTests.main()` as harness and
   `unorm2` / `ucptrie` / `NLStringTokenizer` as detector plumbing. Final values:
-  `Array.+` **8.58%** (1003), harness category **8.50%**, find-bar **20.13%**, product
-  **29.93%**, unresolved **1.09%**.
+  `Array.+` **8.58%** (1003). (Harness/find-bar/product totals at that stage were
+  8.50 / 20.13 / 29.93 — superseded by pass 5.)
+
+- **Attribution pass 5 (review round 4)**: the remaining generic plumbing — `Sequence.flatMap`
+  (9), `Collection.map<` (1), `_realloc` (3), `_CFRelease` (2), `CFAllocatorDeallocate` (1),
+  `_StringObject.sharedUTF8` (3), `_forceBridgeFromObjectiveC` (4), `String.init(decoding`
+  (2), `Array._getElement` (2), plus `Array.subscript.getter`, `Array.+=`, Objective-C
+  bridges, `dealloc]`, `NSLock`, `_UnsafeBitset`, `MutableCollection<>.sort`, `xrealloc` —
+  was excluded, and `u_countChar32` / `DDCachingStringTokenizer` were added to the
+  find-bar pattern. Final values: **find-bar 20.20% (2362), harness 8.52% (996),
+  product 29.82% (3486), unresolved 1.11% (130)**; `Array.+` stays 1003 (8.58%) split
+  938 / 49 / 16.

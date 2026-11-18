@@ -9,9 +9,9 @@ decode-free n=11691
 
 == find-bar line (search + detector internals) ==
    1099  9.40%  ConversationSearch.hits(in:query:running:options:)
-    718  6.14%  ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)
+    719  6.15%  ConversationSearch.search(_:query:regex:options:isRunning:cached:into:)
     179  1.53%  -[NSDataDetector enumerateMatchesInString:options:range:usingBlock:]
-     68  0.58%  CoreNLP::WordDispatchTagger::getSubWordTaggerForCJKSubToken(NLToken const*)
+     69  0.59%  CoreNLP::WordDispatchTagger::getSubWordTaggerForCJKSubToken(NLToken const*)
      49  0.42%  _fetchNextToken
      45  0.38%  (anonymous namespace)::__btrie_find_common_prefix(btrie_t const*, unsigned int, unsigned char const*, unsigned
      40  0.34%  DDLookupTableRefLookupCurrentWord
@@ -27,12 +27,14 @@ decode-free n=11691
       6  0.05%  MeCab::FreeList<mecab_node_t>::alloc()
       5  0.04%  MeCab::Connector::cost(mecab_node_t const*, mecab_node_t const*) const
       5  0.04%  unorm2_quickCheck
+      5  0.04%  specialized static ConversationSearch.sources(of:role:)
       4  0.03%  bool MeCab::Viterbi::viterbi<false, false>(MeCab::Lattice*) const
-      3  0.03%  specialized static ConversationSearch.sources(of:role:)
+      3  0.03%  specialized static ConversationSearch.role(of:)
       3  0.03%  utext_setNativeIndex
       2  0.02%  CoreNLP::(anonymous namespace)::calcRange(unsigned short const*, mecab_node_t const**, bool, unsigned long, Co
       2  0.02%  ucptrie_getValueWidth
       2  0.02%  closure #4 in static ConversationSearch.sources(of:role:)
+      2  0.02%  u_countChar32
       2  0.02%  utext_close
       2  0.02%  specialized static ReplyDocument.blocks(_:documentLinks:listDepth:)
       2  0.02%  CoreNLP::WordDispatchTagger::getNextToken()
@@ -45,7 +47,6 @@ decode-free n=11691
       1  0.01%  MeCab::LatticeImpl::has_constraint() const
       1  0.01%  NLStringTokenizerAdvanceToNextToken
       1  0.01%  DDLexemCacheInsertItemInFreeArray
-      1  0.01%  specialized static ConversationSearch.role(of:)
       1  0.01%  MeCab::LatticeImpl::eos_node() const
       1  0.01%  CoreNLP::ChineseSubWordTagger::getNextToken(CFRange*)
       1  0.01%  MeCab::TaggerImpl::parseToNode(char const*, unsigned long)
@@ -54,23 +55,24 @@ decode-free n=11691
       1  0.01%  CoreNLP::(anonymous namespace)::convertCharTypeToAttributes(mecab_node_t const*)
       1  0.01%  CoreNLP::MeCabSubTokenizer::checkNodeIsNormalized(mecab_node_t const*)
       1  0.01%  utext_setup
+      1  0.01%  DDCachingStringTokenizerResetStringWithOptions
       1  0.01%  MeCab::LatticeImpl::set_sentence(char const*, unsigned long)
       1  0.01%  utext_next32
       1  0.01%  utext_clone
       1  0.01%  static ConversationSearch.sameRenderedSources(_:_:)
-  total 2353 = 20.13% of decode-free
+  total 2362 = 20.20% of decode-free
 
 == category totals over the four buckets (n=6974) ==
-   2353 20.13% of decode-free  find-bar line
-    994  8.50% of decode-free  harness
-    128  1.09% of decode-free  unresolved
-   3499 29.93% of decode-free  product
+   2362 20.20% of decode-free  find-bar line
+    996  8.52% of decode-free  harness
+    130  1.11% of decode-free  unresolved
+   3486 29.82% of decode-free  product
   (sum 6974 vs 6974 sampled; difference = consumers below the print cut)
 
 == product consumers (each < the table) ==
    1003  8.58%  specialized static Array.+ infix(_:_:)
     277  2.37%  closure #1 in static ConversationPresentationModel.Presentation.parents(of:into:)
-    235  2.01%  specialized flush #1 (running:) in static ConversationTimelineEntry.make(_:isRunning:)
+    240  2.05%  specialized flush #1 (running:) in static ConversationTimelineEntry.make(_:isRunning:)
     233  1.99%  ConversationPresentationModel.update(_:)
     195  1.67%  ToolVisibilityProjection.Pass.normalize(_:)
     160  1.37%  KimiMessage.coalescingAdjacentAssistantParts()

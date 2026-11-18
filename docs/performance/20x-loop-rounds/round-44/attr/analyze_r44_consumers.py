@@ -61,6 +61,13 @@ RUNTIME_HELPER_PATS = (
     "UnsafeMutableBufferPointer", "UnsafeMutablePointer.initialize", "initializeWithCopy",
     "_makeUniqueAndReserveCapacity", "Array.reserveCapacity", "_copyCollectionToContiguousArray",
     "_copySequenceContents", "Sequence._copySequenceContents", "_NativeSet", "_xzm_",
+    # Round-44 review 4: generic-sequence/pair plumbing and CF/String bridges.
+    "Sequence.flatMap", "Collection.map<", "_realloc", "_CFRelease", "CFAllocatorDeallocate",
+    "_StringObject.sharedUTF8", "_forceBridgeFromObjectiveC", "String.init(decoding",
+    "Array._getElement", "Array.subscript.getter", "Array.+=",
+    "_unconditionallyBridgeFromObjectiveC", "_conditionallyBridgeFromObjectiveC",
+    "xrealloc", "NSLock.__allocating_init", "dealloc]", "_UnsafeBitset",
+    "MutableCollection<>.sort",
     "allocateStringStorage", "mach_absolute_time", "_DictionaryStorage",
     "swift::TargetMetadata", "swift::metadata", "swift::_dynamicCast",
     "Array.append", "Array._reserveCapacity", "Set.insert",
