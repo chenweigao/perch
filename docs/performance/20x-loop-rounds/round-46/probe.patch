@@ -1,0 +1,50 @@
+diff --git a/Sources/WorkbenchCore/ConversationPresentation.swift b/Sources/WorkbenchCore/ConversationPresentation.swift
+index 66cef0fd..c28e801a 100644
+--- a/Sources/WorkbenchCore/ConversationPresentation.swift
++++ b/Sources/WorkbenchCore/ConversationPresentation.swift
+@@ -1,6 +1,18 @@
+ import Dispatch
+ import Foundation
+ 
++private enum ParentsProbe {
++    nonisolated(unsafe) static var calls = 0
++    nonisolated(unsafe) static var mapEntries = 0
++    nonisolated(unsafe) static var foldedRows = 0
++    nonisolated(unsafe) static var changes = 0
++    nonisolated(unsafe) static var registered = false
++    static var enabled: Bool { ProcessInfo.processInfo.environment["WORKBENCH_PARENTS_PROBE"] != nil }
++    static func report(_ tag: String) {
++        FileHandle.standardError.write(Data("PARENTSPROBE \(tag) calls=\(calls) mapEntries=\(mapEntries) foldedRows=\(foldedRows) changes=\(changes)\n".utf8))
++    }
++}
++
+ public struct ConversationPresentationUpdateMetrics: Equatable {
+     public let cacheHit: Bool
+     public let inputComparisonNanoseconds: UInt64
+@@ -361,7 +373,25 @@ public final class ConversationPresentationModel {
+         }
+ 
+         static func parents(of rows: [Row], into map: [String: String] = [:]) -> [String: String] {
+-            rows.reduce(into: map) { map, row in
++            if ParentsProbe.enabled {
++                if !ParentsProbe.registered {
++                    ParentsProbe.registered = true
++                    atexit { ParentsProbe.report("final") }
++                }
++                ParentsProbe.calls += 1
++                ParentsProbe.mapEntries += map.count
++                var changed = 0, folds = 0
++                for row in rows {
++                    for folded in row.foldedRows ?? [] {
++                        folds += 1
++                        if map[folded.entry.id] != row.entry.id { changed += 1 }
++                    }
++                }
++                ParentsProbe.foldedRows += folds
++                ParentsProbe.changes += changed
++                if ParentsProbe.calls % 50 == 0 { ParentsProbe.report("milestone") }
++            }
++            return rows.reduce(into: map) { map, row in
+                 for folded in row.foldedRows ?? [] { map[folded.entry.id] = row.entry.id }
+             }
+         }
