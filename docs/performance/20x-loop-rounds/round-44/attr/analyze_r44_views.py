@@ -27,7 +27,9 @@ TARGETS = ("utf16-bridge", "arc-copy", "cf-match", "teardown")
 FIND_BAR = ("ConversationSearch", "NSDataDetector", "CoreNLP", "MeCab", "DDLookup",
             "_fetchNextToken", "_FillNextTokenInCache", "__btrie", "DDLexem", "utext_",
             "ICUTextBreak", "DDScanner", "DDToken", "computeLexems", "ubrk_", "u_str",
-            "ReplyDocument")
+            "ReplyDocument",
+            # ICU / NL tokenizer plumbing reached from the detector (review round 3)
+            "unorm2", "ucptrie", "NLStringTokenizer")
 
 
 def next_ancestor(frames, predicate):
@@ -77,15 +79,17 @@ def main():
     print(f"  total {findbar} = {100.0*findbar/n:.2f}% of decode-free")
 
     # 3) unresolved / harness / product split
-    # Closures and `stamp` inside the harness carry the parent name, not a prefix.
-    harness = sum(c for name, c in consumers.items()
-                  if "benchR43Profile" in name or name.startswith("stamp"))
+    # Closures, `stamp`, the bench driver and the test entry point all belong to
+    # the harness rather than to product code (review rounds 2-3).
+    HARNESS = ("benchR43Profile", "benchStreamingDelta", "ProtocolTests.main")
+    def is_harness(name):
+        return any(h in name for h in HARNESS) or name.startswith("stamp")
+    harness = sum(c for name, c in consumers.items() if is_harness(name))
     unresolved = sum(c for name, c in consumers.items()
                      if name.startswith("<unresolved") or name.startswith("<no-"))
     product = sum(c for name, c in consumers.items()
                   if not any(p in name for p in FIND_BAR)
-                  and "benchR43Profile" not in name and not name.startswith("stamp")
-                  and not name.startswith("<"))
+                  and not is_harness(name) and not name.startswith("<"))
     print(f"\n== category totals over the four buckets (n={len(concat)}) ==")
     for label, value in [("find-bar line", findbar), ("harness", harness),
                          ("unresolved", unresolved), ("product", product)]:
@@ -97,8 +101,7 @@ def main():
     print(f"\n== product consumers (each < the table) ==")
     ranked = sorted(((c, name) for name, c in consumers.items()
                      if not any(p in name for p in FIND_BAR)
-                     and "benchR43Profile" not in name and not name.startswith("stamp")
-                     and not name.startswith("<")), reverse=True)
+                     and not is_harness(name) and not name.startswith("<")), reverse=True)
     for c, name in ranked[:12]:
         print(f"  {c:5d} {100.0*c/n:5.2f}%  {name}")
 

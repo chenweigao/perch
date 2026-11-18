@@ -57,6 +57,10 @@ RUNTIME_HELPER_PATS = (
     # Allocator / array / dictionary storage plumbing (round-44 review #2):
     "_xzm_reclaim", "_ArrayBuffer", "consumeAndCreateNew", "Array.init",
     "ContiguousArrayStorage", "allocateStringStorage", "getCharacters",
+    # Round-44 review 3: remaining copy/grow/allocate plumbing.
+    "UnsafeMutableBufferPointer", "UnsafeMutablePointer.initialize", "initializeWithCopy",
+    "_makeUniqueAndReserveCapacity", "Array.reserveCapacity", "_copyCollectionToContiguousArray",
+    "_copySequenceContents", "Sequence._copySequenceContents", "_NativeSet", "_xzm_",
     "allocateStringStorage", "mach_absolute_time", "_DictionaryStorage",
     "swift::TargetMetadata", "swift::metadata", "swift::_dynamicCast",
     "Array.append", "Array._reserveCapacity", "Set.insert",

@@ -24,15 +24,13 @@
   longer matched, and `"consume of ("` missed `consume of ToolVisibilityProjection.Split?`.
   Fix: match **both** the raw and the stripped name against every pattern, and add
   `_ArrayBuffer`, `consumeAndCreateNew`, `Array.init`, `_xzm_reclaim`, `consume of `,
-  `ContiguousArrayStorage`, `allocateStringStorage`, `getCharacters`. Corrected union
-  values: `Array.+` 8.57%, harness main symbol 8.10% (category 8.36% including its
-  closures and `stamp`), make flush 2.01%, `update` 1.99%, find-bar line 20.00%,
-  product 30.20%.
+  `ContiguousArrayStorage`, `allocateStringStorage`, `getCharacters`. (Superseded by
+  pass 4 below; at that stage the union read `Array.+` 8.57% and harness 8.10%.)
 - **`Array.+ infix` is not unique to `displayMessages`** (review round 1, F2); the chain
-  has several array concatenations. Current split of the 1,002 samples:
-  **937 (8.01%) under `closure #1 in KimiConversation.displayMessages.getter`,
+  has several array concatenations. Split of the 1,003 samples (after pass 4):
+  **938 (8.02%) under `closure #1 in KimiConversation.displayMessages.getter`,
   49 (0.42%) under `ConversationPresentationModel.Snapshot.presented`,
-  16 (0.14%) under `ConversationPresentationModel.update`**.
+  16 (0.14%) under `ConversationPresentationModel.update`** (1003 samples, 8.58%).
 - **`Dictionary.subscript.setter` concentration**: under pass-2 attribution, 276 of the
   296 setter samples (**93.243%**) belong to
   `closure #1 in ConversationPresentationModel.Presentation.parents`; the parents total is
@@ -59,3 +57,14 @@
 - **Sanitization**: personal paths and embedded email addresses redacted per the
   commit-hook contract (`/home/<dev>`, `/Users/<mini>`, `<redacted-email>`). No real
   session data, no remote connections.
+
+- **Attribution pass 4 (review round 3)**: further mechanical frames were still being
+  counted as consumers: `UnsafeMutableBufferPointer.initialize` (23),
+  `Array._makeUniqueAndReserveCapacity…` (11), `Array.reserveCapacity` (11),
+  `_copyCollectionToContiguousArray` (9), `Sequence._copySequenceContents` (6),
+  `_xzm_segment_group_span_mark_used` (6), `_NativeSet.resize` (3). All were added to
+  `RUNTIME_HELPER_PATS` (plus `initializeWithCopy`, `_xzm_`, `UnsafeMutableBufferPointer`).
+  The classifier also gained `benchStreamingDelta` / `ProtocolTests.main()` as harness and
+  `unorm2` / `ucptrie` / `NLStringTokenizer` as detector plumbing. Final values:
+  `Array.+` **8.58%** (1003), harness category **8.50%**, find-bar **20.13%**, product
+  **29.93%**, unresolved **1.09%**.
