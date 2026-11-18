@@ -26,19 +26,20 @@ model:"aone/gpt-6.1-sol"}` 连续 **3 个 goal 轮次、5 次尝试**返回同�
 | --- | --- |
 | 已完成轮次 | round 11 – 43（33 轮，全部合并） |
 | 当前轮 | round 44（评估轮，零产品改动） |
-| PR | [#366](https://github.com/chenweigao/perch/pull/366)，head `865d6f4c` |
-| 该 PR 门槛 | CI 进行中（3 成功 / 3 进行中）；mergeable=MERGEABLE；**独立评审 = 未完成** |
+| PR | [#366](https://github.com/chenweigao/perch/pull/366)，head `3890d81f`（停止记录后追加本报告） |
+| 该 PR 门槛 | CI 15/15 SUCCESS（含第 50 例 flake 重跑转绿）；mergeable=MERGEABLE；**独立复核两轮均返回意见、最新一轮已照改待再核** |
 | 停止计数 | 2/3（round 43、44 无超噪声可采纳收益） |
 | 未合并轮次 | round 44（blocked on 评审门槛） |
 
 round-44 的实质内容（已归档、可独立复核）：
 
-- 叶机械桶消费方归因：四桶（utf16-bridge / arc-copy / cf-match / teardown，舍入后
-  59.65% of decode-free）分解为 find-bar 线 19.86%、harness 8.05%、未解析 1.09%、
-  产品 30.65%；产品侧最大单点 `Array.+` 8.43%（95% 来自 displayMessages 冷拼接，
-  round-43 已按 API 红线裁决），其次 `Presentation.parents` 2.37%。
+- 叶机械桶消费方归因：四桶（utf16-bridge / arc-copy / cf-match / teardown，显示值之和
+  59.66%；原始 union 6974/11691 = 59.65%）分解为 find-bar 线 20.00%、harness 8.36%、
+  未解析 1.09%、产品 30.20%；产品侧最大单点 `Array.+` 8.57%（93.51% 来自 displayMessages
+  冷拼接，round-43 已按 API 红线裁决），其次 `Presentation.parents` 2.37%。
 - 验证族统一净估：**≤2% 上界已撤回**（扫描范围随路径而变，需按路径插桩）。
-- 分析器两版错误（运行时机械帧、修饰前缀漏过）与两轮评审更正全部如实入档。
+- 分析器三轮错误（运行时机械帧、修饰前缀漏过、剥离后原始拼写规则失效）与两轮评审
+  更正全部如实入档。
 
 ## 为什么停止而不是继续
 
@@ -57,8 +58,10 @@ round-44 的实质内容（已归档、可独立复核）：
    Array.+ 拆分 / F3 扫描范围与 ≤2% 撤回 / F5 汇总与撤回 / 文档一致性）；
 2. 处理其发现 → 三门槛齐备 → `gh pr merge --merge --delete-branch`；
 3. round-45 候选已用本轮数据收窄：`ToolVisibilityProjection.projectTurns`（6.36%，
-   流式链每 delta 重做各 turn chunk 验证；`canReuse` 5.03% 与其**从不共现**，
-   `sameWindow` 另有 5.59% 在 find-bar 红线内）——先做源码级范围确认再决定立项或探针。
+   流式链中该函数 inclusive 份额；**栈共现层面**与 `canReuse` 5.03% 从不共现，
+   但这不等于「同一次更新不会先后执行两者」——源码显示 `projectTurns` 只在 `canReuse`
+   失败后进入）；`sameWindow` 合计 10.38%，其中 5.59% 属 find-bar 红线、4.79% 在
+   `TV.update`/`canReuse`。先做源码级范围确认再决定立项或探针。
 
 ## 本轮之前的完整战绩（供续接）
 

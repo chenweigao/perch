@@ -25,8 +25,9 @@ from analyze_r44_consumers import (load, classify, consumer, is_decode, is_mecha
 
 TARGETS = ("utf16-bridge", "arc-copy", "cf-match", "teardown")
 FIND_BAR = ("ConversationSearch", "NSDataDetector", "CoreNLP", "MeCab", "DDLookup",
-            "_fetchNextToken", "__btrie", "DDLexem", "utext_", "ICUTextBreak", "DDScanner",
-            "DDToken", "computeLexems", "ubrk_", "u_str")
+            "_fetchNextToken", "_FillNextTokenInCache", "__btrie", "DDLexem", "utext_",
+            "ICUTextBreak", "DDScanner", "DDToken", "computeLexems", "ubrk_", "u_str",
+            "ReplyDocument")
 
 
 def next_ancestor(frames, predicate):
@@ -76,12 +77,14 @@ def main():
     print(f"  total {findbar} = {100.0*findbar/n:.2f}% of decode-free")
 
     # 3) unresolved / harness / product split
-    harness = sum(c for name, c in consumers.items() if name.startswith("benchR43Profile"))
+    # Closures and `stamp` inside the harness carry the parent name, not a prefix.
+    harness = sum(c for name, c in consumers.items()
+                  if "benchR43Profile" in name or name.startswith("stamp"))
     unresolved = sum(c for name, c in consumers.items()
                      if name.startswith("<unresolved") or name.startswith("<no-"))
     product = sum(c for name, c in consumers.items()
                   if not any(p in name for p in FIND_BAR)
-                  and not name.startswith("benchR43Profile")
+                  and "benchR43Profile" not in name and not name.startswith("stamp")
                   and not name.startswith("<"))
     print(f"\n== category totals over the four buckets (n={len(concat)}) ==")
     for label, value in [("find-bar line", findbar), ("harness", harness),
@@ -94,7 +97,7 @@ def main():
     print(f"\n== product consumers (each < the table) ==")
     ranked = sorted(((c, name) for name, c in consumers.items()
                      if not any(p in name for p in FIND_BAR)
-                     and not name.startswith("benchR43Profile")
+                     and "benchR43Profile" not in name and not name.startswith("stamp")
                      and not name.startswith("<")), reverse=True)
     for c, name in ranked[:12]:
         print(f"  {c:5d} {100.0*c/n:5.2f}%  {name}")

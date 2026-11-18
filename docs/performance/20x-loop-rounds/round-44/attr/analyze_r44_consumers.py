@@ -53,7 +53,10 @@ RUNTIME_HELPER_PATS = (
     "outlined consume", "outlined copy", "getEnumTagSinglePayload",
     # Value-copy / destroy plumbing that appears as `outlined init with copy of X`
     # once the `outlined ` modifier is stripped.
-    "init with copy", "consume of (", "destroy of ", "DefaultStringInterpolation",
+    "init with copy", "consume of ", "destroy of ", "DefaultStringInterpolation",
+    # Allocator / array / dictionary storage plumbing (round-44 review #2):
+    "_xzm_reclaim", "_ArrayBuffer", "consumeAndCreateNew", "Array.init",
+    "ContiguousArrayStorage", "allocateStringStorage", "getCharacters",
     "allocateStringStorage", "mach_absolute_time", "_DictionaryStorage",
     "swift::TargetMetadata", "swift::metadata", "swift::_dynamicCast",
     "Array.append", "Array._reserveCapacity", "Set.insert",
@@ -95,12 +98,17 @@ def unmodified(frame):
 def is_mechanism(frame):
     if frame.startswith("0x") or frame == "<deduplicated_symbol>":
         return False  # unresolved: never claim it as a consumer
-    name = unmodified(frame)
-    if any(p in name for p in MECHANISM_PATS):
+    # Match BOTH the raw symbol and the modifier-stripped one: stripping
+    # `outlined `/`specialized ` must not disable rules written against the raw
+    # spelling ("outlined consume", "specialized _ArrayBuffer"), and the
+    # stripped form is what exposes `Dictionary.` / `protocol witness ... String`
+    # (round-44 review rounds 1 and 2).
+    names = (frame, unmodified(frame))
+    if any(p in n for n in names for p in MECHANISM_PATS):
         return True
-    if any(p in name for p in RUNTIME_HELPER_PATS):
+    if any(p in n for n in names for p in RUNTIME_HELPER_PATS):
         return True
-    return name.startswith(RUNTIME_PREFIXES)
+    return any(n.startswith(RUNTIME_PREFIXES) for n in names)
 
 
 def consumer(fr):
