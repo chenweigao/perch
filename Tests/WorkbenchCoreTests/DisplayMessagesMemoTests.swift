@@ -85,6 +85,13 @@ func checkDisplayMessagesMemo() throws {
         let cold = try replayed()
         precondition(warmA == cold && warmB == cold,
             "displayMessages memo diverged [\(label)] step \(steps): warm==\(warmA == cold) counts \(warmA.count)/\(warmB.count)/\(cold.count)")
+        // Per-lineage anti-blind (review MINOR-1.3): EVERY step asserts the
+        // current box exercised both paths — a forking step recomputes
+        // (miss) then hits on the second read; a non-forking step inherits
+        // the lineage's counters.
+        let st = memo.displayMemoStats
+        precondition(st.hits >= 1 && st.misses >= 1,
+                     "per-lineage anti-blind failed at [\(label)]: \(st)")
         steps += 1
     }
 
@@ -115,6 +122,18 @@ func checkDisplayMessagesMemo() throws {
         let sub = try delta("子代理文本", offset: 999_999, agent: "worker-1")
         try step("subagent-ignored") { _ = $0.apply(sub) }
         try step("prepend-page") { $0.prepend(page) }
+        // Batch prepend (review MINOR-1.2): the KimiHistoryBatch mutator's
+        // fork path. The batch reduces pages against the state captured at
+        // init; the replay oracle reaches the identical state before the op.
+        let olderPageJSON: [String: Any] = ["has_more": false, "items": [
+            ["id": "u-1", "role": "user", "created_at": "-4", "content": [["type": "text", "text": "最旧的请求"]]],
+            ["id": "a-1", "role": "assistant", "created_at": "-3", "content": [["type": "text", "text": "最旧的回复"]]],
+        ]]
+        let olderPage = try decoder.decode(KimiPage<KimiMessage>.self,
+                                           from: JSONSerialization.data(withJSONObject: olderPageJSON))
+        var batch = KimiHistoryBatch(memo)
+        batch.add(olderPage)
+        try step("prepend-batch") { $0.prepend(batch) }
     }
 
     // Anti-blind: boxes are per-lineage (each forking mutation replaces
@@ -172,6 +191,27 @@ func checkDisplayMessagesMemo() throws {
         compareDedup(noLive, try makeConversation(live: nil), "nil-live")
     }
 
+    // ---- concurrent COLD reads on one shared box (review MINOR-1.1) ------
+    // The forking leg below can never exercise simultaneous cold computes,
+    // cache publication, or warm hits on a SHARED box (each thread forks
+    // before reading). Here eight threads read the SAME unmuted copy: the
+    // first readers race the cold compute (first store wins), the rest hit.
+    do {
+        let shared = try makeConversation(live: live0)
+        let oracle = try makeConversation(live: live0).displayMessages
+        let mismatch = LockedCounter()
+        DispatchQueue.concurrentPerform(iterations: 8) { _ in
+            for _ in 0..<25 {
+                if shared.displayMessages != oracle { mismatch.increment() }
+            }
+        }
+        precondition(mismatch.value == 0,
+                     "concurrent shared-box reads diverged \(mismatch.value) times")
+        let st = shared.displayMemoStats
+        precondition(st.misses >= 1 && st.hits >= 1,
+                     "concurrent shared-box reads must exercise both paths, got \(st)")
+    }
+
     // ---- concurrency: four threads share ONE box, per-thread replay oracle --
     do {
         let shared = try makeConversation(live: live0)
@@ -209,8 +249,9 @@ func checkDisplayMessagesMemo() throws {
     precondition(stats.hits > 0 && stats.misses > 0,
                  "memo must demonstrably hit and miss, got \(stats)")
     print("PASS: displayMessages memo — \(steps) replay-oracle differential steps + copy divergence + "
-        + "reconcile fork + dedup/nil-live + 4-thread shared-box concurrency, all equal to "
-        + "cold replayed computation (hits \(stats.hits), misses \(stats.misses))")
+        + "reconcile fork + batch prepend + dedup/nil-live + 8-thread shared-box cold "
+        + "reads + 4-thread forking concurrency, all equal to cold replayed "
+        + "computation (final-lineage hits \(stats.hits), misses \(stats.misses))")
 }
 
 /// Minimal atomic counter for the concurrency leg.
