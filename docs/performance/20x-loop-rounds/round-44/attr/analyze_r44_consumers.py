@@ -14,6 +14,8 @@ stable symbol prefix.
 
 Usage: analyze_r44_consumers.py <xml> [bucket ...]
 """
+import pathlib
+import re
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -89,17 +91,31 @@ RUNTIME_PREFIXES = (
 # belongs to a KNOWN product module, the bench harness, or the find bar.
 # Everything else is mechanical by construction; a stack with no whitelisted
 # frame is reported as `<unattributed>` instead of being blamed on plumbing.
-PRODUCT_PATS = (
-    "ConversationPresentationModel", "ConversationPresentationHandle", "ConversationTimeline",
-    "ConversationTimelineEntry", "ConversationProjection", "ConversationActivity",
-    "ConversationSearch", "ConversationProcessFold", "ConversationTranscript",
-    "ToolVisibilityProjection", "ActivityNarrativeProjection", "ActivityNarrativeSnapshot",
-    "ActivitySummary", "CommentaryDerivation", "NarrativeTextCache", "NarrativePhaseScan",
-    "DisplayMemoBox", "KimiMessage", "KimiConversation", "KimiPart", "KimiEvent",
-    "KimiHistoryBatch", "KimiInFlight", "Presentation.parents", "Presentation.foldParents",
-    "presented(activity", "displayMessages", "collapsedWhitespace", "AppLanguage",
-    "RowProjection", "TurnSummary", "SummaryProjection", "RenderedSourceCache",
-    "ConversationPrefixCache", "ConversationEntryCache", "ConversationExport",
+def _workbench_core_symbols():
+    """Type names from Sources/WorkbenchCore, so the product whitelist follows
+    the module instead of a hand-maintained list (review 6 finding F1)."""
+    # .../docs/performance/20x-loop-rounds/round-44/attr/<this file>
+    root = pathlib.Path(__file__).resolve().parents[5]
+    names = set()
+    for swift in (root / "Sources" / "WorkbenchCore").glob("*.swift"):
+        for line in swift.read_text(errors="ignore").splitlines():
+            m = re.match(r"\s*(?:public |internal |private |fileprivate )?"
+                         r"(?:final )?(?:struct|class|enum|actor|extension)\s+([A-Z][A-Za-z0-9_]*)", line)
+            if m:
+                names.add(m.group(1))
+    # Extensions of stdlib types are product code, but their names are not
+    # product identifiers: matching `Array`/`String` would admit runtime frames.
+    STDLIB = {"Array", "Bool", "Character", "Collection", "Dictionary", "Double", "Float",
+              "Int", "Int32", "Int64", "Optional", "Range", "Result", "Sequence", "Set",
+              "String", "Substring", "UInt", "UInt8", "UInt16", "UInt32", "UInt64", "Void",
+              "Unicode", "ClosedRange", "ArraySlice", "Dictionary", "Hashable", "Equatable"}
+    return tuple(sorted(names - STDLIB))
+
+PRODUCT_PATS = _workbench_core_symbols() + (
+    # Free-function / member spellings that carry no type name.
+    "displayMessages", "collapsedWhitespace", "presented(activity", "presentedFold",
+    "Presentation.parents", "Presentation.foldParents", "sameRenderedPayload",
+    "L(_:locale", "L(_:",
 )
 HARNESS_PATS = ("benchR43Profile", "benchStreamingDelta", "ProtocolTests", "stamp")
 FINDBAR_PATS = (
@@ -113,10 +129,25 @@ VALUE_OP_PREFIXES = (
     "outlined ", "destroy for ", "initializeWithCopy for ", "assignWithCopy for ",
     "assignWithTake for ", "consume of ", "destroy of ", "value witness",
     "protocol witness", "specialized destructiveProjectEnumData",
+    "getEnumTagSinglePayload for ", "getEnumTag for ", "thunk for ",
+    "storeEnumTagSinglePayload for ", "specialized getEnumTag",
+    "unbox ", "reabstraction thunk",
 )
 
 def is_value_op(frame):
     return frame.startswith(VALUE_OP_PREFIXES) or "deinit" in frame
+
+_PRODUCT_RE = None
+
+def _product_match(frame):
+    """Symbol-boundary match: `Buffer` must not match inside `ArrayBuffer`, so a
+    type name only counts when it starts a symbol component (review 6)."""
+    global _PRODUCT_RE
+    if _PRODUCT_RE is None:
+        names = sorted((n for n in PRODUCT_PATS if len(n) >= 4), key=len, reverse=True)
+        _PRODUCT_RE = re.compile(
+            r"(?:^|[^A-Za-z0-9_])(?:" + "|".join(map(re.escape, names)) + r")(?:$|[^A-Za-z0-9_])")
+    return _PRODUCT_RE.search(frame) is not None
 
 def category(frame):
     if is_value_op(frame):
@@ -125,7 +156,7 @@ def category(frame):
         return "harness"
     if any(p in frame for p in FINDBAR_PATS):
         return "findbar"
-    if any(p in frame for p in PRODUCT_PATS):
+    if _product_match(frame):
         return "product"
     return None
 
@@ -173,6 +204,9 @@ def consumer(fr):
     for frame in fr:
         if frame.startswith("0x") or frame == "<deduplicated_symbol>":
             return "<unresolved-system>"
+        # Value ops name product types but are compiler-generated: never consumers.
+        if is_value_op(frame):
+            continue
         cat = category(frame)
         # `ConversationSearch` is both the find-bar entry point and a product
         # module; keep it selectable so detector internals do not become the name.
