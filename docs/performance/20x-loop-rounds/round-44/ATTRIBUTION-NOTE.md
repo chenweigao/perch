@@ -75,9 +75,9 @@
   (2), `Array._getElement` (2), plus `Array.subscript.getter`, `Array.+=`, Objective-C
   bridges, `dealloc]`, `NSLock`, `_UnsafeBitset`, `MutableCollection<>.sort`, `xrealloc` —
   was excluded, and `u_countChar32` / `DDCachingStringTokenizer` were added to the
-  find-bar pattern. Final values: **find-bar 20.20% (2362), harness 8.52% (996),
-  product 29.82% (3486), unresolved 1.11% (130)**; `Array.+` stays 1003 (8.58%) split
-  938 / 49 / 16.
+  find-bar pattern. Values at that stage: **find-bar 20.20% (2362), harness 8.52% (996),
+  product 29.82% (3486), unresolved 1.11% (130)** — **superseded by pass 6, then pass 7**;
+  `Array.+` stays 1003 (8.58%) split 938 / 49 / 16.
 
 - **Attribution pass 6 (review round 5, method change)**: appending individual runtime
   symbols proved non-terminating (every round left 20-70 samples parked on generic
