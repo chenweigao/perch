@@ -1,0 +1,35 @@
+{
+  "status": "passed",
+  "verified_at": "2026-11-18T21:12:14+08:00",
+  "tested_candidate_head": "025dc61cafa32e0e61eef2c4ef3ca8ea3a063d5e",
+  "review_sha256": "272cc7215e163faad8752dba52e478e269d9a09e66b6099284b7128bf3139ff4",
+  "review_verdict": "PASS_LIMITED",
+  "finding_verbatim_count": 5,
+  "blocking_findings": [],
+  "sealed_inputs_before_disposition": 1719,
+  "unchanged_protected_inputs_after_disposition": 1717,
+  "deliberate_document_updates": [
+    {
+      "file": "docs/design/20x-style-loop/INDEX.md",
+      "sealed_sha256": "7c83b41c0232d95295ab4f3c1b47f11d131847c97d00439d65d52b0e7fdaf5a1",
+      "current_sha256": "85d6ca3b50e52ca32200aba05f4c698b6ab27bac4bd2d2ac7a98ed753f94ce43",
+      "reason": "post-review disposition and same-round archive/count update; no product edits"
+    },
+    {
+      "file": "docs/design/20x-style-rounds/round-3/README.md",
+      "sealed_sha256": "07addd660bf27b8dee9389e2bc2ab92dedb3bf74d07c44198af985f276a41b59",
+      "current_sha256": "1b08ae97c2d92058ad503c6d86979275d1ebf9a8ed97f79c99338565674ba982",
+      "reason": "post-review disposition and same-round archive/count update; no product edits"
+    }
+  ],
+  "product_and_capture_source_diff_bytes": 0,
+  "tested_source_trees": {
+    "Sources": "afe25a04549efcff91f09f9a4b5fe065a31958ac",
+    "Tests": "7c2434314f1a9ca254bcb31b46471b5823f3fb24",
+    "scripts": "c5f82fbc80acac432db6bea36ee59959097af92b",
+    ".github": "d854a50519239938e67fb157cddc89d02ec7e5b0"
+  },
+  "legacy_tracked_evidence_diff_bytes": 0,
+  "rerun_gui_or_review": false,
+  "archive_head": "resolve final commit containing review-3.json; cannot self-embed its own commit SHA"
+}

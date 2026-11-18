@@ -1,0 +1,41 @@
+{
+  "observed_at": "2026-11-18T21:14:56+08:00",
+  "candidate_head_unchanged": "025dc61cafa32e0e61eef2c4ef3ca8ea3a063d5e",
+  "first_archive_attempt": "stopped before commit/push at staged diff whitespace check",
+  "whole_staged_diff_check_exit": 2,
+  "diagnostics": [
+    {
+      "file": "docs/design/20x-style-rounds/round-3/after-a/logs/build-host.log",
+      "line": 67,
+      "diagnostic": "trailing whitespace.",
+      "preserved_original_evidence": true
+    },
+    {
+      "file": "docs/design/20x-style-rounds/round-3/after-b/logs/build-host.log",
+      "line": 67,
+      "diagnostic": "trailing whitespace.",
+      "preserved_original_evidence": true
+    },
+    {
+      "file": "docs/design/20x-style-rounds/round-3/contracts/capture-background-source.diff",
+      "line": 19,
+      "diagnostic": "trailing whitespace.",
+      "preserved_original_evidence": true
+    },
+    {
+      "file": "docs/design/20x-style-rounds/round-3/contracts/mac-gates/build.log",
+      "line": 43,
+      "diagnostic": "trailing whitespace.",
+      "preserved_original_evidence": true
+    }
+  ],
+  "authored_changes_and_all_other_files_check_exit": 0,
+  "preservation": "No original logs or captured source diff normalized. Exact whole-check stdout retained externally.",
+  "excluded_original_evidence_only": [
+    "docs/design/20x-style-rounds/round-3/after-a/logs/build-host.log",
+    "docs/design/20x-style-rounds/round-3/after-b/logs/build-host.log",
+    "docs/design/20x-style-rounds/round-3/contracts/capture-background-source.diff",
+    "docs/design/20x-style-rounds/round-3/contracts/mac-gates/build.log"
+  ],
+  "source_and_measurement_semantic_changes": false
+}

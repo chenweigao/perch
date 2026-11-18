@@ -1,0 +1,33 @@
+#!/bin/bash
+set -euo pipefail
+
+baseline_revision=5a4478eb317dc50321fbe4c28c034beaf5d53ec1
+support="$HOME/Library/PerfRunner/results/style-r3-support-v1"
+output="$HOME/Library/PerfRunner/results/style-r3-before-v1"
+export PERCH_STYLE_CAPTURE_NODE="$HOME/.local/opt/node-v24.18.0-darwin-arm64/bin/node"
+
+printf 'start=%s\n' "$(date -Iseconds)"
+cd "$HOME/_worktrees/20x-loop-20261112/perch"
+pre_porcelain=$(git status --porcelain=v1 | wc -l | tr -d ' ')
+printf 'pre_porcelain=%s\n' "$pre_porcelain"
+test "$pre_porcelain" = 0
+git fetch origin main style/loop-main
+test "$(git rev-parse origin/style/loop-main)" = "$baseline_revision"
+git checkout --detach "$baseline_revision"
+test "$(git rev-parse HEAD)" = "$baseline_revision"
+printf 'code_head=%s\n' "$(git rev-parse HEAD)"
+test ! -e "$output"
+test -x "$PERCH_STYLE_CAPTURE_NODE"
+test -f "$support/capture-matrix.py"
+test -f "$support/expected-differences.md"
+mkdir -p "$output"
+printf 'capture_driver_sha256=%s\n' "$(shasum -a 256 "$support/capture-matrix.py" | cut -d ' ' -f1)"
+printf 'expected_list_sha256=%s\n' "$(shasum -a 256 "$support/expected-differences.md" | cut -d ' ' -f1)"
+cp "$support/expected-differences.md" "$output/expected-differences-before.md"
+python3 "$support/capture-matrix.py" --output "$output/capture" \
+    --host-app "$output/HostLifecycleChecks.app" --build-host --build-previews
+printf 'host_binary_sha256=%s\n' "$(shasum -a 256 "$output/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks" | cut -d ' ' -f1)"
+post_porcelain=$(git status --porcelain=v1 | wc -l | tr -d ' ')
+printf 'post_porcelain=%s\n' "$post_porcelain"
+test "$post_porcelain" = 0
+printf 'end=%s\n' "$(date -Iseconds)"

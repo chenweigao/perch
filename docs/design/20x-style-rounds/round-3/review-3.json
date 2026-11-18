@@ -1,0 +1,505 @@
+{
+  "round": 3,
+  "queue_item": "I01",
+  "review_date": "2026-11-18",
+  "reviewer_role": "independent review sub-agent",
+  "verdict": "PASS_LIMITED",
+  "conclusion": "仅对 I01 捕获态背景修复的源码范围、既定方向红线、这三组矩阵的零容差一致性及归档 Mac/Linux 契约证据给出限定通过。不作审美裁决，不认证所有产品场景或历史颜色因果，不授权继续迭代。",
+  "new_p1_p2_findings": 0,
+  "blocking_findings": [],
+  "findings_note": "以下五项 P3 均为必须保留的认证边界，不是本轮新增回归，不要求重跑已完成作业。finding_verbatim 和 required_disposition 可逐字归档。",
+  "observed_branch": "style/loop-main",
+  "observed_head": "025dc61cafa32e0e61eef2c4ef3ca8ea3a063d5e",
+  "tested_candidate_head": "025dc61cafa32e0e61eef2c4ef3ca8ea3a063d5e",
+  "before_head": "5a4478eb317dc50321fbe4c28c034beaf5d53ec1",
+  "archive_head": null,
+  "execution_boundary": {
+    "sole_authorized_write": "docs/design/20x-style-rounds/round-3/review-3.json",
+    "shared_parent_worktree_used": true,
+    "source_or_other_document_edits": false,
+    "commit_push_branch_switch_or_new_checkout": false,
+    "gui_build_real_connection_or_job_dispatch": false,
+    "subagent_delegation_or_old_review_redispatch": false,
+    "runtime_gates_rerun_by_this_reviewer": false,
+    "independent_operations": [
+      "Read contracts, original logs/results and fixture source; inspect actual Git diffs",
+      "Recompute protected SHA256 values and mode-aware source/commit byte equality",
+      "Decode every original matrix PNG, validate every PNG chunk CRC and compare exact RGBA and integer white-background alpha composites",
+      "Verify every ready/window pair, fixture setting, command target and capture window number",
+      "Compare published originals with permitted external raw evidence; verify derived-image panel ancestry",
+      "Validate the requested JSON and run publication pattern checks after writing"
+    ]
+  },
+  "source_scope": {
+    "status": "PASS",
+    "actual_non_documentation_changes": [
+      "Tests/ComposerPreview/App.swift",
+      "Tests/HostLifecycleChecks/StyleCapture.swift"
+    ],
+    "actual_diff_bytes": 1257,
+    "actual_diff_sha256": "db5dacb488724aa532c331b09239f17d10ab32face4ebe23abf4755b1bfcc1f6",
+    "actual_diff_matches_archived_capture_background_source_diff": true,
+    "source_files": [
+      {
+        "file": "Tests/HostLifecycleChecks/StyleCapture.swift",
+        "lines": "4-8",
+        "sha256": "301846c08eae360d809145d251146bded8157386e4fdeb2a91a8d34fdab95071",
+        "working_bytes_match_candidate_commit": true,
+        "observation": "styleCaptureContainer(background: Color = .clear) 仅在 StyleCapture.isRequested 时调用 containerBackground(background, for: .window)；else 仍为 self。"
+      },
+      {
+        "file": "Tests/ComposerPreview/App.swift",
+        "lines": "8-14",
+        "sha256": "fdbca7c4c3e4404af66606bb38f4ee501365e0b6b25ec215de1f3c043be9fa63",
+        "working_bytes_match_candidate_commit": true,
+        "observation": "既有 Composer 根视图新增已有 WorkbenchTheme.contentBackground 参数；没有改布局、文本、控件、计时、字号或 fixture。"
+      }
+    ],
+    "other_callers_keep_default_clear": [
+      "Tests/SidebarPreview/App.swift:13",
+      "Tests/WorkbenchPreview/App.swift:31"
+    ],
+    "existing_theme_token": {
+      "file": "Sources/AgentWorkbench/WorkbenchTheme.swift:36-38",
+      "light": [1, 1, 1],
+      "dark": [0.122, 0.133, 0.161],
+      "token_changed": false
+    },
+    "round3_production_sources_diff_bytes": 0,
+    "round3_scripts_and_ci_diff_bytes": 0,
+    "round3_resources_package_and_root_agents_diff_bytes": 0,
+    "synced_main_ref": "65cf2fc67623a916f12797371d1ca087c911b24f",
+    "sync_from_historical_stop_72a8690c_to_before_source_test_script_ci_diff_bytes": 0,
+    "cumulative_workbench_core_diff_bytes": 0,
+    "cumulative_sources_outside_agent_workbench_diff_bytes": 0,
+    "cumulative_ci_diff_bytes": 0,
+    "cumulative_agent_workbench_change": "仅保留 S01 的 ConversationActivityBar.swift Recap 标签 .fixedSize()；相对上一完成轮 0a83a8d0，所有生产 Sources 零 diff，S02 产品候选未恢复。",
+    "cumulative_script_changes": [
+      "scripts/capture-style-loop.py",
+      "scripts/build-composer-preview.sh",
+      "scripts/build-sidebar-preview.sh",
+      "scripts/build-workbench-preview.sh"
+    ],
+    "cumulative_script_scope": "既有 round-0 离线截图驱动及三个 preview 编译输入加入 StyleCapture；不改变既有性能测量或 CI 语义。本轮上述脚本全部零 diff。",
+    "new_preview_or_acceptance_pages": 0,
+    "tracked_source_contract_files_byte_verified": 525,
+    "tracked_source_contract_inventory": {
+      "Sources": 243,
+      "Tests": 195,
+      "scripts": 68,
+      ".github": 5,
+      "Resources": 11,
+      "root_AGENTS_and_package_files": 3
+    },
+    "mode_aware_source_contract_sha256": "8be2ad39ae5dba5467153f7a475db41d8c8619592406a6f0aa6861c81d9a8f46",
+    "git_symlink_entries_checked_as_link_targets": 7,
+    "symlink_targets_inside_worktree_and_matching_tracked_sources": true,
+    "additional_portable_remote_files_byte_verified": 11,
+    "additional_remote_inventory_sha256": "1137c4e82221def727c4732852ecfc3f0cbadb386b7ff27065e16879a0b799e2",
+    "preserved_direction": "生产 Sources 未改，因此本轮没有重开单一 regular Liquid Glass backdrop、非不透明窗口、四档 underlay 与明暗独立 token、wide sidebar 平面中性选择、内部全高 inspector 辅助道及同心圆角方向；没有修改权限、SSH、连接生命周期或原生 composer/控件。"
+  },
+  "predeclared_contract": {
+    "expected_differences_file": "docs/design/20x-style-rounds/round-3/expected-differences.md",
+    "expected_differences_sha256": "c3c9a8fb291d992228e99bdcd516834769dc6add0257b8d5bdffb4bae03ae67e",
+    "allowed_regions_file": "docs/design/20x-style-rounds/round-3/allowed-regions-before.json",
+    "allowed_regions_sha256": "3098322751a5bb89dd2d317807673e6d6120b17c2a15427e34451e282aa163b2",
+    "frozen_22_scene_wrapper": "docs/design/20x-style-rounds/round-2/contracts/capture-matrix.py",
+    "frozen_wrapper_sha256": "21a8bb612056e9ce591525894401d957c2d8d869ef761eb26ecfef4529938473",
+    "all_three_jobs_log_matching_wrapper_hash": true,
+    "before_job_logs_expected_hash_before_capture_result": true,
+    "mac_expected_copies_match_local_original_bytes": true,
+    "after_a_b_raw_allowed_region_copies_match_local_original_bytes": true,
+    "repair_allowed_regions": {
+      "composer-light": [[0, 0, 760, 500]],
+      "composer-dark": [[0, 0, 760, 500]],
+      "other_20_scenes": []
+    },
+    "cross_job_allowed_regions": [],
+    "tolerance": 0,
+    "first_actual_write_timestamp_independently_attested": false
+  },
+  "matrix_verification": {
+    "status": "PASS_DECLARED_I01_CONTRACT_ONLY",
+    "method": "独立读取全部 PNG 字节，逐 chunk 核对 CRC，用 Pillow 解码，比较完整 RGBA；另以整数公式 (RGB*alpha + 255*(255-alpha) + 127)//255 复算白底可见像素。不导入归档比较器，不忽略 RGB 位移，不使用允许区之外的容差。",
+    "original_matrix_png_count": 132,
+    "ready_window_pairs_verified": 132,
+    "ready_and_window_metadata_files_verified": 264,
+    "camera": {
+      "window_origin": [48, 72],
+      "backing_scale": 1,
+      "content_bounds_by_family": {
+        "main": [0, 0, 1536, 900],
+        "workbench": [0, 0, 1120, 820],
+        "sidebar": [0, 0, 1100, 760],
+        "composer": [0, 0, 760, 500]
+      },
+      "window_number": "每份为正整数，ready 与 window JSON 相同，逐份匹配原 screencapture -l 参数；不要求独立进程的窗口编号相同。"
+    },
+    "fixture_validation": "逐场景核对显式环境、argv、机位、NSAppearanceNameAqua/DarkAqua、dark/effective_dark、en/zh-Hans 和 large_type。主窗口默认 14pt，large-type 由既有 ReadingBodySize.shared.set(18) 路径实现；其余 preview 无新增 no-op 变体。中英文是 UI locale，不要求合成会话正文翻译。",
+    "matrices": [
+      {
+        "matrix": "before",
+        "head": "5a4478eb317dc50321fbe4c28c034beaf5d53ec1",
+        "dirty": false,
+        "scenes": 22,
+        "pngs": 44,
+        "manifest_sha256": "a6bbc72df50eedc439c025035a236491a504e25e9b30deb60ae45a17360d261d",
+        "repeat_pixel_rgba_and_byte_pairs_verified": 22,
+        "distinct_visible_scenes_verified": 22,
+        "commands_verified": 92,
+        "host_and_three_preview_build_exits": [0, 0, 0, 0],
+        "fixture_teardown_minus15_count": 44,
+        "screencapture_exit0_count": 44,
+        "raw_png_and_ready_window_bytes_match": true
+      },
+      {
+        "matrix": "after-a",
+        "head": "025dc61cafa32e0e61eef2c4ef3ca8ea3a063d5e",
+        "dirty": false,
+        "scenes": 22,
+        "pngs": 44,
+        "manifest_sha256": "9ae5d1236b7861e2cd6dbd7056a48cf5c0c09d2cecb3c4035ac9059f6910c672",
+        "repeat_pixel_rgba_and_byte_pairs_verified": 22,
+        "distinct_visible_scenes_verified": 22,
+        "commands_verified": 92,
+        "host_and_three_preview_build_exits": [0, 0, 0, 0],
+        "fixture_teardown_minus15_count": 44,
+        "screencapture_exit0_count": 44,
+        "raw_png_and_ready_window_bytes_match": true
+      },
+      {
+        "matrix": "after-b",
+        "head": "025dc61cafa32e0e61eef2c4ef3ca8ea3a063d5e",
+        "dirty": false,
+        "scenes": 22,
+        "pngs": 44,
+        "manifest_sha256": "ee53ce5eb8c15b2c1a7e35cf90ad262cf5a5b207fb50f05089632012d2876322",
+        "repeat_pixel_rgba_and_byte_pairs_verified": 22,
+        "distinct_visible_scenes_verified": 22,
+        "commands_verified": 92,
+        "host_and_three_preview_build_exits": [0, 0, 0, 0],
+        "fixture_teardown_minus15_count": 44,
+        "screencapture_exit0_count": 44,
+        "raw_png_and_ready_window_bytes_match": true
+      }
+    ],
+    "capture_exit_interpretation": "44 个 fixture 进程的 -15 是原驱动在完成截图后主动 terminate 的回执，不冒充测试退出 0；每组真正的 screencapture 与四个构建退出 0，外层作业 .done 且末行 exit=0。",
+    "scene_results": [
+      {"scene": "composer-dark", "before_to_a_changed_visible_pixels": 377957, "before_to_b_changed_visible_pixels": 377957, "outside_allowed_pixels": 0, "a_b_changed_rgba_and_visible_pixels": 0, "a_b_png_bytes_identical": true},
+      {"scene": "composer-light", "before_to_a_changed_visible_pixels": 760, "before_to_b_changed_visible_pixels": 760, "outside_allowed_pixels": 0, "a_b_changed_rgba_and_visible_pixels": 0, "a_b_png_bytes_identical": true},
+      {"scene": "main-dark", "before_to_a_changed_visible_pixels": 0, "before_to_b_changed_visible_pixels": 0, "outside_allowed_pixels": 0, "a_b_changed_rgba_and_visible_pixels": 0, "a_b_png_bytes_identical": true},
+      {"scene": "main-dashboard", "before_to_a_changed_visible_pixels": 0, "before_to_b_changed_visible_pixels": 0, "outside_allowed_pixels": 0, "a_b_changed_rgba_and_visible_pixels": 0, "a_b_png_bytes_identical": true},
+      {"scene": "main-english", "before_to_a_changed_visible_pixels": 0, "before_to_b_changed_visible_pixels": 0, "outside_allowed_pixels": 0, "a_b_changed_rgba_and_visible_pixels": 0, "a_b_png_bytes_identical": true},
+      {"scene": "main-english-dark", "before_to_a_changed_visible_pixels": 0, "before_to_b_changed_visible_pixels": 0, "outside_allowed_pixels": 0, "a_b_changed_rgba_and_visible_pixels": 0, "a_b_png_bytes_identical": true},
+      {"scene": "main-english-large-type", "before_to_a_changed_visible_pixels": 0, "before_to_b_changed_visible_pixels": 0, "outside_allowed_pixels": 0, "a_b_changed_rgba_and_visible_pixels": 0, "a_b_png_bytes_identical": true},
+      {"scene": "main-english-large-type-dark", "before_to_a_changed_visible_pixels": 0, "before_to_b_changed_visible_pixels": 0, "outside_allowed_pixels": 0, "a_b_changed_rgba_and_visible_pixels": 0, "a_b_png_bytes_identical": true},
+      {"scene": "main-find", "before_to_a_changed_visible_pixels": 0, "before_to_b_changed_visible_pixels": 0, "outside_allowed_pixels": 0, "a_b_changed_rgba_and_visible_pixels": 0, "a_b_png_bytes_identical": true},
+      {"scene": "main-find-dark", "before_to_a_changed_visible_pixels": 0, "before_to_b_changed_visible_pixels": 0, "outside_allowed_pixels": 0, "a_b_changed_rgba_and_visible_pixels": 0, "a_b_png_bytes_identical": true},
+      {"scene": "main-inspector-closed", "before_to_a_changed_visible_pixels": 0, "before_to_b_changed_visible_pixels": 0, "outside_allowed_pixels": 0, "a_b_changed_rgba_and_visible_pixels": 0, "a_b_png_bytes_identical": true},
+      {"scene": "main-large-type", "before_to_a_changed_visible_pixels": 0, "before_to_b_changed_visible_pixels": 0, "outside_allowed_pixels": 0, "a_b_changed_rgba_and_visible_pixels": 0, "a_b_png_bytes_identical": true},
+      {"scene": "main-large-type-dark", "before_to_a_changed_visible_pixels": 0, "before_to_b_changed_visible_pixels": 0, "outside_allowed_pixels": 0, "a_b_changed_rgba_and_visible_pixels": 0, "a_b_png_bytes_identical": true},
+      {"scene": "main-light", "before_to_a_changed_visible_pixels": 0, "before_to_b_changed_visible_pixels": 0, "outside_allowed_pixels": 0, "a_b_changed_rgba_and_visible_pixels": 0, "a_b_png_bytes_identical": true},
+      {"scene": "main-scroll", "before_to_a_changed_visible_pixels": 0, "before_to_b_changed_visible_pixels": 0, "outside_allowed_pixels": 0, "a_b_changed_rgba_and_visible_pixels": 0, "a_b_png_bytes_identical": true},
+      {"scene": "sidebar-dark", "before_to_a_changed_visible_pixels": 0, "before_to_b_changed_visible_pixels": 0, "outside_allowed_pixels": 0, "a_b_changed_rgba_and_visible_pixels": 0, "a_b_png_bytes_identical": true},
+      {"scene": "sidebar-english", "before_to_a_changed_visible_pixels": 0, "before_to_b_changed_visible_pixels": 0, "outside_allowed_pixels": 0, "a_b_changed_rgba_and_visible_pixels": 0, "a_b_png_bytes_identical": true},
+      {"scene": "sidebar-light", "before_to_a_changed_visible_pixels": 0, "before_to_b_changed_visible_pixels": 0, "outside_allowed_pixels": 0, "a_b_changed_rgba_and_visible_pixels": 0, "a_b_png_bytes_identical": true},
+      {"scene": "workbench-dark", "before_to_a_changed_visible_pixels": 0, "before_to_b_changed_visible_pixels": 0, "outside_allowed_pixels": 0, "a_b_changed_rgba_and_visible_pixels": 0, "a_b_png_bytes_identical": true},
+      {"scene": "workbench-empty-light", "before_to_a_changed_visible_pixels": 0, "before_to_b_changed_visible_pixels": 0, "outside_allowed_pixels": 0, "a_b_changed_rgba_and_visible_pixels": 0, "a_b_png_bytes_identical": true},
+      {"scene": "workbench-english", "before_to_a_changed_visible_pixels": 0, "before_to_b_changed_visible_pixels": 0, "outside_allowed_pixels": 0, "a_b_changed_rgba_and_visible_pixels": 0, "a_b_png_bytes_identical": true},
+      {"scene": "workbench-light", "before_to_a_changed_visible_pixels": 0, "before_to_b_changed_visible_pixels": 0, "outside_allowed_pixels": 0, "a_b_changed_rgba_and_visible_pixels": 0, "a_b_png_bytes_identical": true}
+    ],
+    "composer_details": {
+      "dark": {
+        "changed_bbox": [0, 0, 760, 500],
+        "before_center_rgba": [30, 27, 35, 255],
+        "after_a_and_b_center_rgba": [31, 34, 41, 255],
+        "alpha_changed_pixels": 0
+      },
+      "light": {
+        "changed_bbox": [0, 32, 760, 33],
+        "before_and_after_center_rgba": [255, 255, 255, 255],
+        "alpha_changed_pixels": 0
+      },
+      "interpretation": "仅声明内背景及其合成色变化；完整 RGBA 变化数量也等于可见像素变化数量，没有被白底比较掩盖的额外变化。窗口机位、文本/控件/几何源码与 fixture 未变，不把大面积底色变化当成美学评价。"
+    },
+    "cross_job_stability": {
+      "same_candidate_head": true,
+      "scenes_verified": 22,
+      "all_four_repeat_combinations_per_scene_verified": true,
+      "pixel_rgba_and_png_byte_identical_combinations": 88,
+      "allowed_regions": [],
+      "tolerance": 0
+    },
+    "archived_comparison_reports_independently_matched": [
+      {"file": "contracts/after-a-region-check.json", "sha256": "d73ba85393788e610fc7b5212816e8d14d72a6db18ef8c9ded21edc271613074"},
+      {"file": "contracts/after-b-region-check.json", "sha256": "d73ba85393788e610fc7b5212816e8d14d72a6db18ef8c9ded21edc271613074"},
+      {"file": "contracts/cross-job-stability.json", "sha256": "d2405f8391e12d8131a4b95b0439e5c54503248ae8e1baf10e5908626628d60f"},
+      {"file": "contracts/cross-job-png-integrity.json", "all_22_hash_and_byte_claims_recomputed": true}
+    ]
+  },
+  "publication_and_derived_evidence": {
+    "original_png_total": 144,
+    "matrix_originals": 132,
+    "normal_native_design_originals": 12,
+    "all_original_pngs_match_external_raw_bytes_and_index_hashes": true,
+    "all_original_pngs_decode_and_have_valid_chunk_crc": true,
+    "raw_evidence_reference": "permitted external style-loop-round-3-20261118/raw; read-only",
+    "matrix_text_files_per_job_verified_against_raw": 181,
+    "matrix_job_receipts_and_expected_copy_per_job_verified": 3,
+    "actual_path_only_text_redactions_per_job": {"before": 50, "after-a": 50, "after-b": 50},
+    "gates_files_verified_against_raw": 29,
+    "gates_path_only_text_redactions": 2,
+    "normalization_scope": "只替换机器 HOME 路径前缀；其他文本逐字节匹配，PNG 不做任何脱敏、重采、缩放、替换或后处理。after-a/b-publication 与 gates-publication 的索引和脱敏文件集合逐项匹配。",
+    "native_png_dimensions": {"1536x900": 9, "700x900": 1, "836x900": 1, "280x164": 1},
+    "native_layout_sha256": "120c7e9f2e27f00c46913797963cad544441fe4e9258dd2b373ab05102fe7823",
+    "native_layout_raw_bytes_unchanged": true,
+    "derived_images": [
+      {
+        "file": "comparison/composer-light-before-after.png",
+        "sha256": "88481dec141a79f32354e60ca6ccbbaab74f6af6ee017cb91bdd274dd27d8ab3",
+        "before_source": "before/composer-light/repeat-1/capture.png",
+        "after_source": "after-b/composer-light/repeat-1/capture.png",
+        "before_sha256": "2a4295a44907f174f841f3a5039ff102e915ecff8dd424df2f00de3c43bbacc8",
+        "after_sha256": "f344c1b9d89d9ef54b82daa3819ba3edd64eec714229ab1d2671a285fa760e36",
+        "output_dimensions": [1520, 528],
+        "top_label_strip_height": 28,
+        "both_unscaled_source_panels_exact_full_rgba": true,
+        "original_capture": false
+      },
+      {
+        "file": "comparison/composer-dark-before-after.png",
+        "sha256": "a1b845e3dc36ff5283b723ff44996c9f48bf6efa51f0febcb8beece7f6c5a4ad",
+        "before_source": "before/composer-dark/repeat-1/capture.png",
+        "after_source": "after-b/composer-dark/repeat-1/capture.png",
+        "before_sha256": "d0ca4c8baf97b1579b85189f108d88665c8287bcf4fffb6e8f435d57aef92d5f",
+        "after_sha256": "d7a40d2fef690e9476760a0a628852f5f5a5add8b9197e01c3e045790aaa1efa",
+        "output_dimensions": [1520, 528],
+        "top_label_strip_height": 28,
+        "both_unscaled_source_panels_exact_full_rgba": true,
+        "original_capture": false
+      }
+    ],
+    "comparison_index_all_source_and_derived_hashes_verified": true,
+    "derived_images_counted_as_additional_originals": false
+  },
+  "terminal_capture_jobs": [
+    {"job": "style-r3-before-v1", "actual_start": "2026-11-18T19:31:39+08:00", "actual_end": "2026-11-18T19:38:44+08:00", "done_verified": true, "trailing_exit": 0, "pre_porcelain": 0, "post_porcelain": 0},
+    {"job": "style-r3-after-a-v1", "actual_start": "2026-11-18T19:57:41+08:00", "actual_end": "2026-11-18T20:04:02+08:00", "done_verified": true, "trailing_exit": 0, "pre_porcelain": 0, "post_porcelain": 0},
+    {"job": "style-r3-after-b-v1", "actual_start": "2026-11-18T20:10:43+08:00", "actual_end": "2026-11-18T20:17:00+08:00", "done_verified": true, "trailing_exit": 0, "pre_porcelain": 0, "post_porcelain": 0}
+  ],
+  "gate_verification_matrix": [
+    {
+      "gate": "Mac full gates",
+      "status": "PASS_ARCHIVED_ACTUAL_EXECUTION",
+      "job": "style-r3-gates-v1",
+      "actual_start": "2026-11-18T20:20:00+08:00",
+      "actual_end": "2026-11-18T20:23:10+08:00",
+      "done_verified": true,
+      "trailing_exit": 0,
+      "pre_porcelain": 0,
+      "post_porcelain": 0,
+      "full_source_sha": "025dc61cafa32e0e61eef2c4ef3ca8ea3a063d5e",
+      "evidence": ["contracts/mac-gates/job.log", "contracts/mac-gates/job.done", "contracts/gates-summary.json", "contracts/style-r3-gates-v1.job"]
+    },
+    {
+      "gate": "Mac scripts/build.sh",
+      "status": "PASS_ARCHIVED_ACTUAL_EXECUTION",
+      "build_log_sha256": "0815321e39c9e732f62bcb7a807f6ec59c555c0aaf66bce33098130e6741435d",
+      "observation": "模板实际调用 build.sh；完整日志包含生产编译、Linking AgentWorkbench、Build complete 及签名输出。原编译 warning 保留，不宣称无 warning。",
+      "evidence": ["contracts/mac-gates/build.log", "contracts/style-r3-gates-v1.job:41-42"]
+    },
+    {
+      "gate": "Mac swift run WorkbenchChecks",
+      "status": "PASS_ARCHIVED_ACTUAL_EXECUTION",
+      "log_sha256": "6df05f9ae97ac6421f126df9939ef90e67af18c8d663bf42a289f2f717ef78e9",
+      "observation": "已读完整编译与运行输出，末行协议、shell 参数隔离和 SSH destination 校验 PASS；不是只做模板或 import 检查。",
+      "evidence": ["contracts/mac-gates/workbench-checks.log", "contracts/style-r3-gates-v1.job:43-44"]
+    },
+    {"gate": "Mac radius/localization", "status": "PASS_ARCHIVED_ACTUAL_EXECUTION", "radius_result": "6 radius literals pinned", "localization_result": "1534 scoped/L() keys covered", "evidence": ["contracts/mac-gates/radius.log", "contracts/mac-gates/localization.log"]},
+    {
+      "gate": "Mac production WindowGroup cold launches",
+      "status": "PASS_ARCHIVED_ACTUAL_EXECUTION",
+      "completed_launches": 5,
+      "passed": true,
+      "bundle_describe_stamp": "v0.8.1-312-g025dc61c",
+      "launch_revision": "v0.8.1-312-g025dc61c",
+      "same_checkout_describe_matches": true,
+      "full_source_sha_verified_separately": true,
+      "scope": "既有 check-app-launch.py 的五个独立偏好域冷启动、每次进程存活 10 秒契约；不扩张为完整人工交互或远端验收。五份 console 的 sandbox extension 诊断均保留。",
+      "evidence": ["contracts/mac-gates/app-launch/result.json", "contracts/mac-gates/app-launch.log", "contracts/mac-gates/app-launch/launch-1..5/console.log", "scripts/check-app-launch.py"]
+    },
+    {
+      "gate": "Mac normal non-style-capture native-design",
+      "status": "PASS_ARCHIVED_ACTUAL_EXECUTION_NOT_SKIPPED",
+      "seconds": 27.94,
+      "log_sha256": "2cbce0e7a79fc57f76c079b7212cc318324ef7c09ef0355af155bf46cfd89f37",
+      "style_capture_environment_explicitly_unset": true,
+      "observation": "启动、正常路径的 production workspace/light-dark/inspector、引用、文件阅读、stop/model/effort 和 sidebar 交互 PASS，phase 完成及 preferences cleanup 末行实际存在；12 张 PNG 和布局 JSON 与原件匹配。截图捕获分支不会执行这些正常路径末段或返回 phase PASS，故不是把捕获态代替正常运行。",
+      "layout_assertions_independently_recomputed": "inspector 与 sheet 同高同尾；reply/composer 同一 leading rail 且不被覆盖；关闭 inspector 后 composer 重居中且 sheet 不变；title/actions 与原生窗口控制中线一致。",
+      "evidence": ["contracts/mac-gates/native-design.log", "contracts/mac-gates/native-design/native-layout.json", "contracts/style-r3-gates-v1.job:9,48-59", "Tests/HostLifecycleChecks/NativeDesignChecks.swift:457-585,648-815"]
+    },
+    {
+      "gate": "Linux portable",
+      "status": "PASS_ARCHIVED_ACTUAL_EXECUTION",
+      "candidate_head": "025dc61cafa32e0e61eef2c4ef3ca8ea3a063d5e",
+      "passed_checks": 10,
+      "total_checks": 10,
+      "dirty": true,
+      "results_sha256": "5aaf6f95e5ec28ef6f8f848f592859b79fa1ce6755f2c302fefdd94cb7917046",
+      "checks": ["version", "bridge", "codex-schema", "installer", "model-metadata", "localization", "localization-tests", "radius", "preview-sources", "acceptance-supervisor"],
+      "all_checks_have_actual_exit0_logs": true,
+      "observation": "10 份原日志逐份读取，原 dirty=true 不改写；实际候选源码另作逐字节核对。bridge ResourceWarning 和 supervisor 故意拒绝非法参数的测试输出保留，不误判成最终 suite 失败。preview-sources 是已有源码依赖检查，不是 Linux GUI 构建。",
+      "evidence": ["contracts/linux-portable/results.json", "contracts/linux-portable/*.log", "contracts/source-scope.json"]
+    },
+    {
+      "gate": "Linux WorkbenchChecks",
+      "status": "NOT_RUN_SWIFT_PREREQUISITE_FAILED",
+      "reported_pre_execution_exit_code": 127,
+      "raw_log_has_independent_numeric_exit_line": false,
+      "raw_log_observation": "swift: command not found",
+      "current_environment_has_swift": false,
+      "linux_workbench_pass_claimed": false,
+      "evidence": ["contracts/linux-workbench-prerequisite.log", "README.md:83-85"]
+    },
+    {
+      "gate": "Comparer self-check and bad-hash/single-pixel controls",
+      "status": "EXISTING_DIAGNOSTIC_RECORDS_REVIEWED_NO_RERUN",
+      "seed_matrix": "docs/design/20x-style-rounds/round-2/before",
+      "seed_head": "0a83a8d01c31e904d7952af4cacea2b88173aa1d",
+      "recorded_bad_hash_rejection": "PNG hash mismatch: composer-dark repeat 1",
+      "recorded_single_pixel": [513, 0],
+      "recorded_visible_red_delta": -1,
+      "recorded_repair_and_stability_outside_pixels": 1,
+      "comparator_strict_hash_and_outside_pixel_rejection_paths_inspected": true,
+      "counted_as_new_round3_capture_or_gate_execution": false,
+      "evidence": ["contracts/compare-captures.py", "contracts/comparer-self-check.json", "contracts/comparer-controls.json"]
+    }
+  ],
+  "findings": [
+    {
+      "id": "I01-R3-F01",
+      "severity": "P3",
+      "category": "retained_certification_boundary",
+      "new_regression": false,
+      "blocking": false,
+      "finding_verbatim": "Linux portable 是实际候选的 10/10 通过且 dirty=true；Linux WorkbenchChecks 没有实际运行，保留日志仅为 swift: command not found。127 是既有前置失败记录，不是 WorkbenchChecks 测试结果，该单行日志也没有独立数字退出码行。本评审未在 Linux 重跑或把它改写为 PASS。",
+      "evidence": ["docs/design/20x-style-rounds/round-3/contracts/linux-portable/results.json:5-6,141", "docs/design/20x-style-rounds/round-3/contracts/linux-workbench-prerequisite.log:1", "docs/design/20x-style-rounds/round-3/README.md:83-85"],
+      "required_disposition": "继续分列 Linux portable PASS、Linux WorkbenchChecks 前置失败/未执行与 Mac WorkbenchChecks 实际 PASS；不得用 portable 或 Mac 结果冒充 Linux Swift 执行。"
+    },
+    {
+      "id": "I01-R3-F02",
+      "severity": "P3",
+      "category": "retained_certification_boundary",
+      "new_regression": false,
+      "blocking": false,
+      "finding_verbatim": "A/B 像素与 PNG 字节相同只认证这两个独立作业的捕获可比性，不能证明历史壁纸/tint 因果或所有未来环境稳定。系统全局明暗没有切换补测；源码 .system 返回 nil、普通路径不加背景及正常 native-design 的显式 light/dark PASS 是已核对范围，不是所有普通 preview 的完整人工交互验收或审美批准。",
+      "evidence": ["Sources/AgentWorkbench/WorkbenchTheme.swift:323-328", "Sources/AgentWorkbench/WorkbenchApp.swift:11-21", "Tests/HostLifecycleChecks/StyleCapture.swift:4-17", "Tests/HostLifecycleChecks/NativeDesignChecks.swift:475-494", "docs/design/20x-style-rounds/round-3/contracts/regression-observations.md:18-21"],
+      "required_disposition": "保留历史因果、系统全局切换与普通 preview 完整人工交互未认证的限制；仅对本轮源码不变策略、已执行正常路径和这些矩阵背书，不扩大成全产品或美学结论。"
+    },
+    {
+      "id": "I01-R3-F03",
+      "severity": "P3",
+      "category": "retained_historical_boundary",
+      "new_regression": false,
+      "blocking": false,
+      "finding_verbatim": "S02 inspector 标题与 S03 Workbench preview 筛选器的既有截断仍在队列。I01 只证明本轮声明外没有新增像素改变，不能宣称全产品已经没有截断或重叠。round 2 仍是候选撤回、视觉 FAIL、完整契约 NOT_PASSED；本轮修复与限定评审不能改判该历史结果。",
+      "evidence": ["docs/design/20x-style-loop/INDEX.md:12-18,27-30,46-47", "docs/design/20x-style-rounds/round-2/README.md:5-8,71-87,104-145", "docs/design/20x-style-rounds/round-3/contracts/regression-observations.md:9,22-23"],
+      "required_disposition": "保持 S02/S03 未解决和 round 2 原判；评审文件不是同轮归档，round 3 目前不计完成，距汇报仍 18 轮，不开启 S02 或继续审美迭代。"
+    },
+    {
+      "id": "I01-R3-F04",
+      "severity": "P3",
+      "category": "retained_build_boundary",
+      "new_regression": false,
+      "blocking": false,
+      "finding_verbatim": "after-A/B 的完整源码头相同且 22 场景所有重复组合的原 PNG 字节相同，但原作业记录的 host 可执行文件 SHA256 不同。已核对原日志与发布日志的这些记录；本评审没有可执行文件原件来重新计算其 hash，截图稳定不能推出二进制一致或可重复构建。",
+      "evidence": ["docs/design/20x-style-rounds/round-3/contracts/mac-after-a/job.log:9,17", "docs/design/20x-style-rounds/round-3/contracts/mac-after-b/job.log:7,15", "docs/design/20x-style-rounds/round-3/contracts/cross-job-png-integrity.json"],
+      "logged_after_a_host_sha256": "5028ce9eeac6625c93b2f7442228bc0578449e91b68e454886c6875fb587cfb2",
+      "logged_after_b_host_sha256": "113545f605c0189c16d5400a4c5233a5d90968d6e206ff753336a37b2d528128",
+      "required_disposition": "保留不同的二进制 hash 为原日志值，源码头、bundle describe stamp、截图与二进制记录分开陈述；不宣称可重复构建，也不为此重派已完成作业。"
+    },
+    {
+      "id": "I01-R3-F05",
+      "severity": "P3",
+      "category": "first_write_attestation_limit",
+      "new_regression": false,
+      "blocking": false,
+      "finding_verbatim": "预写差异清单 hash 在 before 原作业的捕获结果之前已有记录，三个 Mac 副本与本地原文逐字节一致，允许区 hash 与 after 副本也一致。现有只读材料可验证声明、冻结内容及作业条件，但没有清单/允许区首次文件写入的独立操作日志；不能编造首次写入时刻或证明封存之前从未发生任何改写。",
+      "evidence": ["docs/design/20x-style-rounds/round-3/contracts/mac-before/job.log:11-18", "docs/design/20x-style-rounds/round-3/expected-differences.md:3", "docs/design/20x-style-rounds/round-3/contracts/style-r3-after-b-v1.job:35-40", "docs/design/20x-style-rounds/round-3/contracts/review-input-sha256.json:2-5"],
+      "required_disposition": "保留原 hash 和既有时序声明，将首次实际写入时序注明为非独立认证；不得补造操作时间、运行证据，或用文件 mtime/Git 提交时间顶替首次写入日志。"
+    }
+  ],
+  "additional_certification_limits": [
+    "原生 gates 的 12 张 PNG 是 view-cache 输出，native-layout 的 scope 明确排除窗口服务器合成的 Liquid Glass；不把这些缓存图当成完整 compositor 光学验收。三矩阵使用既有 screencapture -x -o -l 路径，二者证据不混用。",
+    "本评审独立核对了所有图像字节、解码、来源和合成 fixture 源码路径，但未进行独立人工图像内容/隐私审阅；父代理既有人工观察仍只是归档观察。模式扫描不认证图像内容、未知凭据格式、授权或许可。",
+    "已执行的正常 native-design 为离线注入的合成 runtime 与临时 fixture 路径，不是实际远端 Agent、SSH 或真实用户会话验收。",
+    "本轮没有性能测量认证、FPS 结论、可重复构建认证、额外 2x backing-scale 覆盖或所有尺寸/语言/字号的穷举验收。",
+    "编译 warning、五次冷启动 console 的 sandbox extension 诊断、Linux ResourceWarning 与预期的负向 CLI 测试输出均保留；不宣称日志完全无诊断，也不修复无关问题。"
+  ],
+  "history_and_loop_state": {
+    "index_i01_at_entry": "三层证据通过；待独立评审结论与同轮归档",
+    "round2_visual": "FAIL",
+    "round2_candidate": "WITHDRAWN",
+    "round2_full_contract": "NOT_PASSED",
+    "round2_disposition_review": "PASS_LIMITED_FOR_ROLLBACK_AND_STOP_ONLY",
+    "s02_status": "候选撤回，标题仍待修复",
+    "s03_status": "筛选器仍待执行",
+    "round3_counted_complete_by_this_review": false,
+    "round3_same_round_archive_pending": true,
+    "remaining_rounds_until_report": 18,
+    "parent_goal_status_per_user_and_index": "active",
+    "parent_goal_status_or_counter_mutated": false,
+    "blocking_audit_policy": "用户恢复后另起新审计；不把 round 2 的历史阻断次数冒充本轮新计数。本评审无新增 P1/P2，未修改父目标审计计数。",
+    "iteration_or_s02_start_authorized_by_this_review": false,
+    "old_rounds_reviews_rejected_candidates_and_untracked_artifacts_preserved": true
+  },
+  "write_integrity": {
+    "seal_file": "docs/design/20x-style-rounds/round-3/contracts/review-input-sha256.json",
+    "seal_sha256": "a648024a2bc463c6f79025f1af3a55e81d7afc39d557e6f1080e8f37aa3e0e68",
+    "protected_file_count": 1719,
+    "protected_groups": {"source_files": 2, "INDEX": 1, "round-0": 186, "round-1": 245, "round-2": 526, "round-3": 759},
+    "excluded_from_seal": ["contracts/review-input-sha256.json", "review-3.json"],
+    "entry_all_1719_hashes_match": true,
+    "pre_write_checked_at": "2026-11-18T20:51:37+08:00",
+    "pre_write_all_1719_hashes_match": true,
+    "protected_inventory_canonical_sha256": "d18ebe3257cfc224c0f9f5ec8a1bd1c3af6f517074fdae391e582bd4be86bd9c",
+    "pre_write_head_and_branch_match_required_values": true,
+    "whole_worktree_clean_claimed": false,
+    "existing_porcelain_all_lines": 561,
+    "existing_porcelain_all_sha256": "55a1d42a05a7cbae984366ae276aa163986c45339e2ea68c19d4809a2b6733d8",
+    "pre_existing_dirty_documents": ["docs/design/20x-style-loop/INDEX.md", "docs/design/20x-style-rounds/round-3/README.md"],
+    "pre_existing_untracked_evidence_left_untouched": true,
+    "post_write_check": {
+      "status": "PASS_ACTUAL_AFTER_FIRST_WRITE",
+      "checked_at": "2026-11-18T21:00:21+08:00",
+      "protected_files_verified": 1719,
+      "protected_hashes_and_seal_unchanged": true,
+      "protected_inventory_canonical_sha256": "d18ebe3257cfc224c0f9f5ec8a1bd1c3af6f517074fdae391e582bd4be86bd9c",
+      "source_contract_files_verified": 525,
+      "source_contract_mode_aware_sha256": "8be2ad39ae5dba5467153f7a475db41d8c8619592406a6f0aa6861c81d9a8f46",
+      "observed_head": "025dc61cafa32e0e61eef2c4ef3ca8ea3a063d5e",
+      "observed_branch": "style/loop-main",
+      "existing_porcelain_all_sha256": "55a1d42a05a7cbae984366ae276aa163986c45339e2ea68c19d4809a2b6733d8",
+      "post_write_porcelain_all_lines": 562,
+      "only_addition_relative_to_entry": "docs/design/20x-style-rounds/round-3/review-3.json",
+      "strict_json_valid_without_duplicate_keys": true,
+      "validation_metadata_recorded_only_after_checks_executed": true
+    }
+  },
+  "publication_validation": {
+    "status": "PASS_ACTUAL_POST_WRITE_CHECKS",
+    "strict_json_and_review_matrix_schema": "passed",
+    "direct_review_file_pattern_check": {
+      "checker": "scripts/check-public-source.py::findings",
+      "checked_files": 1,
+      "findings": 0
+    },
+    "round3_snapshot_pattern_check": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 scripts/check-public-source.py docs/design/20x-style-rounds/round-3 --snapshot",
+      "checked_files": 761,
+      "findings": 0,
+      "exit_code": 0
+    },
+    "scope": "上述为实际写入后的检查回执；补记这些验证元数据仍只编辑此文件。最终交付版本的再检查回执保留在会话工具输出，不写入自引用 hash。模式扫描不替代图像内容、未知凭据、授权或许可审查。"
+  }
+}

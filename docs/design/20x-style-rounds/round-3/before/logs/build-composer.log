@@ -1,0 +1,31 @@
+Command: ['bash', 'scripts/build-composer-preview.sh']
+Tests/ComposerPreview/App.swift:23:17: warning: cannot use generic class 'Autoconnect' in a property declaration member of a type not marked '@_implementationOnly'; 'Combine' was not imported by this file
+21 |     @State private var files: [URL] = []
+22 |     @State private var error = ""
+23 |     private let timer = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
+   |                 `- warning: cannot use generic class 'Autoconnect' in a property declaration member of a type not marked '@_implementationOnly'; 'Combine' was not imported by this file
+24 |     private let citationToken = "@cite(\"deadbeef\")"
+25 |     private let citationText = "> 整轮只保留一个执行中的过程头。\n> 思考、工具和中间进展都放在同一个折叠区域。\n> 最终回答留在外面，方便连续阅读。"
+
+Combine.Publishers.Autoconnect:2:14: note: generic class declared here
+ 1 | enum Publishers {
+ 2 | public class Autoconnect<Upstream> : Publisher where Upstream : ConnectablePublisher {
+   |              `- note: generic class declared here
+ 3 |     public typealias Output = Upstream.Output
+ 4 |     public typealias Failure = Upstream.Failure
+
+Tests/ComposerPreview/App.swift:23:17: warning: cannot use enum 'Publishers' in a property declaration member of a type not marked '@_implementationOnly'; 'Combine' was not imported by this file
+21 |     @State private var files: [URL] = []
+22 |     @State private var error = ""
+23 |     private let timer = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
+   |                 `- warning: cannot use enum 'Publishers' in a property declaration member of a type not marked '@_implementationOnly'; 'Combine' was not imported by this file
+24 |     private let citationToken = "@cite(\"deadbeef\")"
+25 |     private let citationText = "> 整轮只保留一个执行中的过程头。\n> 思考、工具和中间进展都放在同一个折叠区域。\n> 最终回答留在外面，方便连续阅读。"
+
+Combine.Publishers:2:13: note: enum declared here
+1 | @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
+2 | public enum Publishers {
+  |             `- note: enum declared here
+3 | }
+/Users/developer/_worktrees/20x-loop-20261112/perch/build/Composer Preview.app: replacing existing signature
+/Users/developer/_worktrees/20x-loop-20261112/perch/build/Composer Preview.app

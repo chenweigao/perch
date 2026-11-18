@@ -1,0 +1,15 @@
+start=2026-11-18T20:20:00+08:00
+pre_porcelain=0
+From github.com:chenweigao/perch
+ * branch              main       -> FETCH_HEAD
+ * branch              style/loop-main -> FETCH_HEAD
+HEAD is now at 025dc61c fix(style): pin Composer preview capture background
+code_head=025dc61cafa32e0e61eef2c4ef3ca8ea3a063d5e
+bundle_describe_stamp=v0.8.1-312-g025dc61c
+build=passed
+workbench_checks=passed
+cold_launches=5/5
+native_design=passed
+post_porcelain=0
+end=2026-11-18T20:23:10+08:00
+exit=0

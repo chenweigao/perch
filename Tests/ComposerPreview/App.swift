@@ -9,6 +9,7 @@ struct ComposerPreviewApp: App {
             ComposerPreview().preferredColorScheme(StyleCapture.colorScheme)
                 .environment(\.locale, StyleCapture.locale)
                 .dynamicTypeSize(StyleCapture.dynamicTypeSize)
+                .styleCaptureContainer(background: WorkbenchTheme.contentBackground)
         }
             .defaultSize(width: 760, height: 500)
     }

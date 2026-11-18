@@ -1,0 +1,18 @@
+start=2026-11-18T20:10:43+08:00
+pre_porcelain=0
+From github.com:chenweigao/perch
+ * branch              main       -> FETCH_HEAD
+ * branch              style/loop-main -> FETCH_HEAD
+HEAD is now at 025dc61c fix(style): pin Composer preview capture background
+code_head=025dc61cafa32e0e61eef2c4ef3ca8ea3a063d5e
+capture_driver_sha256=21a8bb612056e9ce591525894401d957c2d8d869ef761eb26ecfef4529938473
+{
+  "status": "passed",
+  "output": "/Users/developer/Library/PerfRunner/results/style-r3-after-b-v1/capture",
+  "comparisons": 22,
+  "seconds": 372.378
+}
+host_binary_sha256=113545f605c0189c16d5400a4c5233a5d90968d6e206ff753336a37b2d528128
+post_porcelain=0
+end=2026-11-18T20:17:00+08:00
+exit=0

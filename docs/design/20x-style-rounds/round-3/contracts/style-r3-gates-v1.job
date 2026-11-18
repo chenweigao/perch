@@ -1,0 +1,63 @@
+#!/bin/bash
+set -euo pipefail
+
+baseline_revision=5a4478eb317dc50321fbe4c28c034beaf5d53ec1
+support="$HOME/Library/PerfRunner/results/style-r3-support-v1"
+output="$HOME/Library/PerfRunner/results/style-r3-gates-v1"
+after_b="$HOME/Library/PerfRunner/results/style-r3-after-b-v1"
+candidate_revision=$(cat "$support/candidate-revision.txt")
+unset PERCH_STYLE_CAPTURE PERCH_STYLE_DARK PERCH_STYLE_LARGE_TYPE PERCH_STYLE_LOCALE PERCH_STYLE_SCENARIO
+
+[[ "$candidate_revision" =~ ^[0-9a-f]{40}$ ]]
+test -e "$after_b.done"
+test "$(tail -1 "$after_b.log")" = 'exit=0'
+python3 - "$support/cross-job-stability.json" "$candidate_revision" <<'PY'
+import json
+from pathlib import Path
+import sys
+result = json.loads(Path(sys.argv[1]).read_text())
+assert result["status"] == "passed" and result["mode"] == "stability" and result["tolerance"] == 0
+assert result["before_head"] == result["after_head"] == sys.argv[2]
+assert len(result["groups"]) == 22 and all(group["changed_visible_pixels"] == 0 for group in result["groups"])
+PY
+printf 'start=%s\n' "$(date -Iseconds)"
+cd "$HOME/_worktrees/20x-loop-20261112/perch"
+pre_porcelain=$(git status --porcelain=v1 | wc -l | tr -d ' ')
+printf 'pre_porcelain=%s\n' "$pre_porcelain"
+test "$pre_porcelain" = 0
+git fetch origin main style/loop-main
+test "$(git rev-parse origin/style/loop-main)" = "$candidate_revision"
+git checkout --detach "$candidate_revision"
+test "$(git rev-parse HEAD)" = "$candidate_revision"
+printf 'code_head=%s\n' "$(git rev-parse HEAD)"
+expected_stamp=$(git describe --tags --dirty --always)
+printf 'bundle_describe_stamp=%s\n' "$expected_stamp"
+test ! -e "$output"
+mkdir -p "$output/native-design"
+git diff "$baseline_revision" HEAD -- Sources ':(exclude)Sources/AgentWorkbench' > "$output/sources-redline.diff"
+test ! -s "$output/sources-redline.diff"
+git diff "$baseline_revision" HEAD -- scripts .github > "$output/measurement-ci-redline.diff"
+test ! -s "$output/measurement-ci-redline.diff"
+bash scripts/build.sh > "$output/build.log" 2>&1
+printf 'build=passed\n'
+swift run WorkbenchChecks > "$output/workbench-checks.log" 2>&1
+printf 'workbench_checks=passed\n'
+python3 scripts/check-radius-tokens.py > "$output/radius.log" 2>&1
+python3 scripts/check-localization.py > "$output/localization.log" 2>&1
+python3 scripts/check-app-launch.py --app build/Perch.app --output "$output/app-launch" > "$output/app-launch.log" 2>&1
+python3 - "$output/app-launch/result.json" "$expected_stamp" <<'PY'
+import json
+from pathlib import Path
+import sys
+result = json.loads(Path(sys.argv[1]).read_text())
+assert result["passed"] and result["completed_launches"] == 5
+assert result["revision"] == sys.argv[2]
+PY
+printf 'cold_launches=5/5\n'
+export PERCH_DESIGN_CAPTURES="$output/native-design"
+python3 scripts/check-host-lifecycle.py --app "$after_b/HostLifecycleChecks.app" --phase native-design > "$output/native-design.log" 2>&1
+printf 'native_design=passed\n'
+post_porcelain=$(git status --porcelain=v1 | wc -l | tr -d ' ')
+printf 'post_porcelain=%s\n' "$post_porcelain"
+test "$post_porcelain" = 0
+printf 'end=%s\n' "$(date -Iseconds)"

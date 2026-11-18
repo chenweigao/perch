@@ -1,0 +1,27 @@
+diff --git a/Tests/ComposerPreview/App.swift b/Tests/ComposerPreview/App.swift
+index 17b7e5d9..01f96918 100644
+--- a/Tests/ComposerPreview/App.swift
++++ b/Tests/ComposerPreview/App.swift
+@@ -9,6 +9,7 @@ struct ComposerPreviewApp: App {
+             ComposerPreview().preferredColorScheme(StyleCapture.colorScheme)
+                 .environment(\.locale, StyleCapture.locale)
+                 .dynamicTypeSize(StyleCapture.dynamicTypeSize)
++                .styleCaptureContainer(background: WorkbenchTheme.contentBackground)
+         }
+             .defaultSize(width: 760, height: 500)
+     }
+diff --git a/Tests/HostLifecycleChecks/StyleCapture.swift b/Tests/HostLifecycleChecks/StyleCapture.swift
+index a41ac219..06ab3581 100644
+--- a/Tests/HostLifecycleChecks/StyleCapture.swift
++++ b/Tests/HostLifecycleChecks/StyleCapture.swift
+@@ -2,8 +2,8 @@ import AppKit
+ import SwiftUI
+ 
+ extension View {
+-    @ViewBuilder func styleCaptureContainer() -> some View {
+-        if StyleCapture.isRequested { containerBackground(Color.clear, for: .window) }
++    @ViewBuilder func styleCaptureContainer(background: Color = .clear) -> some View {
++        if StyleCapture.isRequested { containerBackground(background, for: .window) }
+         else { self }
+     }
+ }

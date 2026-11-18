@@ -1,0 +1,52 @@
+{
+  "kind": "synthetic end-to-end comparator controls; not new round-3 capture evidence",
+  "original_matrix": "docs/design/20x-style-rounds/round-2/before",
+  "original_head": "0a83a8d01c31e904d7952af4cacea2b88173aa1d",
+  "original_repeat_byte_pairs": 22,
+  "tolerance": 0,
+  "hash_mismatch_rejected": "PNG hash mismatch: composer-dark repeat 1",
+  "positive_control_validation": {
+    "camera_fixture_hashes_repeats": "passed",
+    "repeat_byte_pairs": 22,
+    "changed_point": [
+      513,
+      0
+    ],
+    "visible_red_delta": -1
+  },
+  "repair_one_pixel_rejected": {
+    "group": "main-light",
+    "dimensions": [
+      1536,
+      900
+    ],
+    "changed_visible_pixels": 1,
+    "outside_allowed_pixels": 1,
+    "changed_bbox": [
+      513,
+      0,
+      514,
+      1
+    ],
+    "allowed_regions": [],
+    "pass": false
+  },
+  "stability_one_pixel_rejected": {
+    "group": "main-light",
+    "dimensions": [
+      1536,
+      900
+    ],
+    "changed_visible_pixels": 1,
+    "outside_allowed_pixels": 1,
+    "changed_bbox": [
+      513,
+      0,
+      514,
+      1
+    ],
+    "allowed_regions": [],
+    "pass": false
+  },
+  "status": "passed_comparer_controls_only"
+}

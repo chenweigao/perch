@@ -1,0 +1,35 @@
+{
+  "status": "passed",
+  "baseline_head": "5a4478eb317dc50321fbe4c28c034beaf5d53ec1",
+  "tested_candidate_head": "025dc61cafa32e0e61eef2c4ef3ca8ea3a063d5e",
+  "non_documentation_changes": [
+    "Tests/ComposerPreview/App.swift",
+    "Tests/HostLifecycleChecks/StyleCapture.swift"
+  ],
+  "unchanged_areas": {
+    "production-sources": {
+      "paths": [
+        "Sources"
+      ],
+      "diff_bytes": 0
+    },
+    "measurement-ci": {
+      "paths": [
+        "scripts",
+        ".github"
+      ],
+      "diff_bytes": 0
+    }
+  },
+  "source_files": {
+    "Tests/ComposerPreview/App.swift": {
+      "sha256": "fdbca7c4c3e4404af66606bb38f4ee501365e0b6b25ec215de1f3c043be9fa63",
+      "working_copy_matches_tested_commit": true
+    },
+    "Tests/HostLifecycleChecks/StyleCapture.swift": {
+      "sha256": "301846c08eae360d809145d251146bded8157386e4fdeb2a91a8d34fdab95071",
+      "working_copy_matches_tested_commit": true
+    }
+  },
+  "whole_worktree_clean_claimed": false
+}

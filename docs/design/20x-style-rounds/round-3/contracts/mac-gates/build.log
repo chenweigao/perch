@@ -1,0 +1,123 @@
+[0/1] Planning build
+Building for production...
+[0/12] Write sources
+[1/40] Compiling cmark-gfm cmark_ctype.c
+[2/40] Compiling cmark-gfm cmark.c
+[3/40] Compiling cmark-gfm houdini_href_e.c
+[4/40] Compiling cmark-gfm-extensions tagfilter.c
+[5/40] Compiling cmark-gfm footnotes.c
+[6/40] Compiling cmark-gfm-extensions tasklist.c
+[7/40] Compiling cmark-gfm-extensions core-extensions.c
+[8/40] Compiling cmark-gfm-extensions strikethrough.c
+[9/40] Compiling cmark-gfm commonmark.c
+[10/40] Compiling cmark-gfm xml.c
+[11/40] Compiling cmark-gfm registry.c
+[11/40] Compiling cmark-gfm-extensions ext_scanners.c
+[13/40] Compiling cmark-gfm syntax_extension.c
+[14/40] Compiling cmark-gfm render.c
+[15/40] Compiling cmark-gfm-extensions autolink.c
+[16/40] Compiling CAtomic CAtomic.c
+[16/40] Write swift-version--58304C5D6DBC2206.txt
+[18/43] Compiling cmark-gfm plugin.c
+[19/43] Compiling cmark-gfm references.c
+[20/43] Compiling cmark-gfm-extensions table.c
+[21/43] Compiling cmark-gfm plaintext.c
+[22/43] Compiling cmark-gfm map.c
+[23/43] Compiling cmark-gfm linked_list.c
+[24/43] Compiling cmark-gfm man.c
+[25/43] Compiling cmark-gfm latex.c
+[26/43] Compiling cmark-gfm iterator.c
+[27/43] Compiling cmark-gfm houdini_html_e.c
+[28/43] Compiling cmark-gfm node.c
+[29/43] Compiling cmark-gfm houdini_html_u.c
+[30/43] Compiling cmark-gfm html.c
+[31/43] Compiling cmark-gfm arena.c
+[32/43] Compiling cmark-gfm buffer.c
+[33/43] Compiling cmark-gfm blocks.c
+[34/43] Compiling cmark-gfm inlines.c
+[35/43] Compiling cmark-gfm scanners.c
+[36/43] Compiling cmark-gfm utf8.c
+[38/44] Compiling Markdown ChildIndexPath.swift
+[39/45] Compiling WorkbenchCore ActivityNarrative.swift
+/Users/developer/_worktrees/20x-loop-20261112/perch/Sources/WorkbenchCore/ConversationEntryCache.swift:181:13: warning: variable 'length' was never mutated; consider changing to 'let' constant [#VariableNeverMutated]
+179 | 
+180 |     private static func appendLengthPrefixed(_ bytes: inout [UInt8], _ field: String) {
+181 |         var length = UInt64(field.utf8.count)
+    |             `- warning: variable 'length' was never mutated; consider changing to 'let' constant [#VariableNeverMutated]
+182 |         for shift in stride(from: 56, through: 0, by: -8) {
+183 |             bytes.append(UInt8(truncatingIfNeeded: length >> shift))
+
+[#VariableNeverMutated]: <https://docs.swift.org/compiler/documentation/diagnostics/variable-never-mutated>
+[39/45] Write Objects.LinkFileList
+[41/46] Linking ConnectionChecks
+[42/46] Linking WorkbenchChecks
+[44/46] Compiling AgentWorkbench AcceptanceResponsiveness.swift
+/Users/developer/_worktrees/20x-loop-20261112/perch/Sources/AgentWorkbench/ActivitySummarySettings.swift:54:77: warning: 'kSecUseAuthenticationUIFail' was deprecated in macOS 11.0: Instead of kSecUseAuthenticationUI, use kSecUseAuthenticationContext and set LAContext.interactionNotAllowed property [#DeprecatedDeclaration]
+ 52 |         var request = query
+ 53 |         request[kSecReturnData as String] = true
+ 54 |         if !allowInteraction { request[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUIFail }
+    |                                                                             `- warning: 'kSecUseAuthenticationUIFail' was deprecated in macOS 11.0: Instead of kSecUseAuthenticationUI, use kSecUseAuthenticationContext and set LAContext.interactionNotAllowed property [#DeprecatedDeclaration]
+ 55 |         var result: CFTypeRef?
+ 56 |         let status = SecItemCopyMatching(request as CFDictionary, &result)
+
+/Users/developer/_worktrees/20x-loop-20261112/perch/Sources/AgentWorkbench/NativeAgentConnection.swift:458:31: warning: conformance of 'T' to protocol 'Decodable' may be isolated and cannot be passed to @concurrent context [#IsolatedConformances]
+ 456 |             data = try await api.request(path, method: body == nil ? "GET" : "POST", body: body)
+ 457 |         }
+ 458 |         return try await Self.decodeResponse(T.self, from: data)
+     |                               `- warning: conformance of 'T' to protocol 'Decodable' may be isolated and cannot be passed to @concurrent context [#IsolatedConformances]
+ 459 |     }
+ 460 |     // A changed snapshot can contain the entire history. Keep decoding off the
+
+/Users/developer/_worktrees/20x-loop-20261112/perch/Sources/AgentWorkbench/ReplyMarkdownView.swift:2409:34: warning: Storing a closure in '@Entry var documentOpenLink' may invalidate dependents on every update because closures may not be comparable. (from macro 'Entry ')
+2407 |     @Entry var documentMutedText = false
+2408 |     @Entry var documentQuery: String = ""
+2409 |     @Entry var documentOpenLink: ((URL) -> Bool)? = nil
+     |                                  `- warning: Storing a closure in '@Entry var documentOpenLink' may invalidate dependents on every update because closures may not be comparable. (from macro 'Entry ')
+2410 |     @Entry var documentSelection: ((String) -> Void)? = nil
+2411 | }
+
+/Users/developer/_worktrees/20x-loop-20261112/perch/Sources/AgentWorkbench/ReplyMarkdownView.swift:2410:35: warning: Storing a closure in '@Entry var documentSelection' may invalidate dependents on every update because closures may not be comparable. (from macro 'Entry ')
+2408 |     @Entry var documentQuery: String = ""
+2409 |     @Entry var documentOpenLink: ((URL) -> Bool)? = nil
+2410 |     @Entry var documentSelection: ((String) -> Void)? = nil
+     |                                   `- warning: Storing a closure in '@Entry var documentSelection' may invalidate dependents on every update because closures may not be comparable. (from macro 'Entry ')
+2411 | }
+2412 | @MainActor private final class DocumentSelectionAction: NSObject {
+
+/Users/developer/_worktrees/20x-loop-20261112/perch/Sources/AgentWorkbench/WorkbenchView.swift:30:50: warning: 'weak' ownership of capture 'model' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+ 26 |             }
+ 27 |             .sheet(isPresented: $model.showLocalSetup) { LocalAgentSetupSheet(model: model) }
+ 28 |             .onAppear {
+    |                       |- note: 'model' implicitly strongly captured here
+    |                       `- note: add 'model' as a capture list item to silence
+ 29 |                 let actions = SelectionActionsController.shared
+ 30 |                 actions.quoteAvailable = { [weak model] in model?.canQuoteSelection ?? false }
+    |                                                  |- warning: 'weak' ownership of capture 'model' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                                                  `- note: explicitly assign the capture list item to silence
+ 31 |                 actions.quoteHandler = { [weak model] text in model?.quoteSelection(text) }
+ 32 |                 actions.start()
+
+/Users/developer/_worktrees/20x-loop-20261112/perch/Sources/AgentWorkbench/WorkbenchView.swift:31:48: warning: 'weak' ownership of capture 'model' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+ 26 |             }
+ 27 |             .sheet(isPresented: $model.showLocalSetup) { LocalAgentSetupSheet(model: model) }
+ 28 |             .onAppear {
+    |                       |- note: 'model' implicitly strongly captured here
+    |                       `- note: add 'model' as a capture list item to silence
+ 29 |                 let actions = SelectionActionsController.shared
+ 30 |                 actions.quoteAvailable = { [weak model] in model?.canQuoteSelection ?? false }
+ 31 |                 actions.quoteHandler = { [weak model] text in model?.quoteSelection(text) }
+    |                                                |- warning: 'weak' ownership of capture 'model' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                                                `- note: explicitly assign the capture list item to silence
+ 32 |                 actions.start()
+ 33 |             }
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+[#ImplicitStrongCapture]: <https://docs.swift.org/compiler/documentation/diagnostics/implicit-strong-capture>
+[#IsolatedConformances]: <https://docs.swift.org/compiler/documentation/diagnostics/isolated-conformances>
+[44/46] Write Objects.LinkFileList
+[45/46] Linking AgentWorkbench
+Build complete! (81.80s)
+warning: '--build-system native' has been deprecated and will be removed in a future release; please report an issue at https://github.com/swiftlang/swift-package-manager/issues if you are unable to adopt the default build system.
+warning: '--build-system native' has been deprecated and will be removed in a future release; please report an issue at https://github.com/swiftlang/swift-package-manager/issues if you are unable to adopt the default build system.
+/Users/developer/_worktrees/20x-loop-20261112/perch/build/Perch.app: replacing existing signature
+/Users/developer/_worktrees/20x-loop-20261112/perch/build/Perch.app

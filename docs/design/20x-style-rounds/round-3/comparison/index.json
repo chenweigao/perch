@@ -1,0 +1,38 @@
+[
+  {
+    "scene": "composer-light",
+    "derived_file": "comparison/composer-light-before-after.png",
+    "before_source": "before/composer-light/repeat-1/capture.png",
+    "after_source": "after-b/composer-light/repeat-1/capture.png",
+    "before_sha256": "2a4295a44907f174f841f3a5039ff102e915ecff8dd424df2f00de3c43bbacc8",
+    "after_sha256": "f344c1b9d89d9ef54b82daa3819ba3edd64eec714229ab1d2671a285fa760e36",
+    "derived_sha256": "88481dec141a79f32354e60ca6ccbbaab74f6af6ee017cb91bdd274dd27d8ab3",
+    "transformation": "unscaled source RGBA pasted below 28px labels; no crop or raw-image edits",
+    "source_size": [
+      760,
+      500
+    ],
+    "output_size": [
+      1520,
+      528
+    ]
+  },
+  {
+    "scene": "composer-dark",
+    "derived_file": "comparison/composer-dark-before-after.png",
+    "before_source": "before/composer-dark/repeat-1/capture.png",
+    "after_source": "after-b/composer-dark/repeat-1/capture.png",
+    "before_sha256": "d0ca4c8baf97b1579b85189f108d88665c8287bcf4fffb6e8f435d57aef92d5f",
+    "after_sha256": "d7a40d2fef690e9476760a0a628852f5f5a5add8b9197e01c3e045790aaa1efa",
+    "derived_sha256": "a1b845e3dc36ff5283b723ff44996c9f48bf6efa51f0febcb8beece7f6c5a4ad",
+    "transformation": "unscaled source RGBA pasted below 28px labels; no crop or raw-image edits",
+    "source_size": [
+      760,
+      500
+    ],
+    "output_size": [
+      1520,
+      528
+    ]
+  }
+]

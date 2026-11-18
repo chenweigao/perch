@@ -2,8 +2,8 @@ import AppKit
 import SwiftUI
 
 extension View {
-    @ViewBuilder func styleCaptureContainer() -> some View {
-        if StyleCapture.isRequested { containerBackground(Color.clear, for: .window) }
+    @ViewBuilder func styleCaptureContainer(background: Color = .clear) -> some View {
+        if StyleCapture.isRequested { containerBackground(background, for: .window) }
         else { self }
     }
 }

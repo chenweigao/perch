@@ -1,0 +1,13 @@
+Command: ['bash', 'scripts/build-workbench-preview.sh']
+warning: '--build-system native' has been deprecated and will be removed in a future release; please report an issue at https://github.com/swiftlang/swift-package-manager/issues if you are unable to adopt the default build system.
+Sources/AgentWorkbench/ActivitySummarySettings.swift:54:77: warning: 'kSecUseAuthenticationUIFail' was deprecated in macOS 11.0: Instead of kSecUseAuthenticationUI, use kSecUseAuthenticationContext and set LAContext.interactionNotAllowed property [#DeprecatedDeclaration]
+ 52 |         var request = query
+ 53 |         request[kSecReturnData as String] = true
+ 54 |         if !allowInteraction { request[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUIFail }
+    |                                                                             `- warning: 'kSecUseAuthenticationUIFail' was deprecated in macOS 11.0: Instead of kSecUseAuthenticationUI, use kSecUseAuthenticationContext and set LAContext.interactionNotAllowed property [#DeprecatedDeclaration]
+ 55 |         var result: CFTypeRef?
+ 56 |         let status = SecItemCopyMatching(request as CFDictionary, &result)
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app: replacing existing signature
+/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app

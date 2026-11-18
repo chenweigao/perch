@@ -1,0 +1,75 @@
+{
+  "status": "passed",
+  "job": "style-r3-gates-v1",
+  "candidate_head": "025dc61cafa32e0e61eef2c4ef3ca8ea3a063d5e",
+  "png_count": 12,
+  "png_bytes_unchanged": true,
+  "text_path_redactions": [
+    "contracts/mac-gates/build.log",
+    "contracts/mac-gates/native-design.log"
+  ],
+  "originals": "external evidence raw/gates/output",
+  "visual_privacy_observation": "All 12 native outputs inspected on contact sheet, plus full-sized hover and dark citation captures; synthetic fixture content only. Hover path is a temporary fixture directory, not a personal home.",
+  "png_files": [
+    {
+      "file": "contracts/mac-gates/native-design/native-cite-dark.png",
+      "sha256": "f13e53320ace495658648d87964b7c2e2265d7386f9ad7ac67e67f75977f4b58",
+      "bytes_unchanged": true
+    },
+    {
+      "file": "contracts/mac-gates/native-design/native-cite-light.png",
+      "sha256": "3259e121e68c657e44f42c7f2934618bcd479041a9c0fbb57d8a4aa7c6be8b2c",
+      "bytes_unchanged": true
+    },
+    {
+      "file": "contracts/mac-gates/native-design/native-compact-light.png",
+      "sha256": "77b087be503dba22095d0ff396df76a1842d1472469b8af3584f314747374c1a",
+      "bytes_unchanged": true
+    },
+    {
+      "file": "contracts/mac-gates/native-design/native-dark.png",
+      "sha256": "f06cc979139f5448ad4206029a44f21e824d88101a252bd0a1367fc2d688e298",
+      "bytes_unchanged": true
+    },
+    {
+      "file": "contracts/mac-gates/native-design/native-fit-dark.png",
+      "sha256": "3ce5260aee28878ca2f06a5e3de7725c7dba50fad993ad4615174a8e0235c607",
+      "bytes_unchanged": true
+    },
+    {
+      "file": "contracts/mac-gates/native-design/native-fit-light.png",
+      "sha256": "5afcccd8bde3a4b5d895149c73d5eb55704fdf1a9b58c63010cfd4360d30e989",
+      "bytes_unchanged": true
+    },
+    {
+      "file": "contracts/mac-gates/native-design/native-inspector-closed-light.png",
+      "sha256": "26f39d8fb2b5e3319602aaefae29b7b6d7f936b163b7233f05bce35c8a9195b2",
+      "bytes_unchanged": true
+    },
+    {
+      "file": "contracts/mac-gates/native-design/native-light.png",
+      "sha256": "e02c3502c423db73118febf5635beeb81ffec7a6a9a0ea2e140bcab9588fe002",
+      "bytes_unchanged": true
+    },
+    {
+      "file": "contracts/mac-gates/native-design/native-narrow-light.png",
+      "sha256": "908a0219ed2e6b47fd824c8b9f09d2049af6f67dcd3bda7d1a3a1ba9191ee7fe",
+      "bytes_unchanged": true
+    },
+    {
+      "file": "contracts/mac-gates/native-design/native-task-overview-expanded-light.png",
+      "sha256": "70f6b63b8f396767abcdc513d28cea249011b1e210b5ef028e0f07a470914b5e",
+      "bytes_unchanged": true
+    },
+    {
+      "file": "contracts/mac-gates/native-design/native-task-overview-light.png",
+      "sha256": "8a2854a3f7cd871cf037a3da0ff2bf99fb9cc63b914dad8b5db6461cf83614f3",
+      "bytes_unchanged": true
+    },
+    {
+      "file": "contracts/mac-gates/native-design/sidebar-hover-preview.png",
+      "sha256": "2724422463cb22d3bdeb7e4330ab06c87f71e72a729a6efe4adc622ebffc1e19",
+      "bytes_unchanged": true
+    }
+  ]
+}

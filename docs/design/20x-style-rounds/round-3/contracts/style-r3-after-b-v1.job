@@ -1,0 +1,48 @@
+#!/bin/bash
+set -euo pipefail
+
+support="$HOME/Library/PerfRunner/results/style-r3-support-v1"
+output="$HOME/Library/PerfRunner/results/style-r3-after-b-v1"
+after_a="$HOME/Library/PerfRunner/results/style-r3-after-a-v1"
+candidate_revision=$(cat "$support/candidate-revision.txt")
+export PERCH_STYLE_CAPTURE_NODE="$HOME/.local/opt/node-v24.18.0-darwin-arm64/bin/node"
+
+[[ "$candidate_revision" =~ ^[0-9a-f]{40}$ ]]
+test -e "$after_a.done"
+test "$(tail -1 "$after_a.log")" = 'exit=0'
+python3 - "$support/after-a-region-check.json" "$candidate_revision" <<'PY'
+import json
+from pathlib import Path
+import sys
+result = json.loads(Path(sys.argv[1]).read_text())
+assert result["status"] == "passed" and result["mode"] == "repair" and result["tolerance"] == 0
+assert result["before_head"] == "5a4478eb317dc50321fbe4c28c034beaf5d53ec1"
+assert result["after_head"] == sys.argv[2]
+assert len(result["groups"]) == 22 and not result["unexpected_groups"]
+PY
+printf 'start=%s\n' "$(date -Iseconds)"
+cd "$HOME/_worktrees/20x-loop-20261112/perch"
+pre_porcelain=$(git status --porcelain=v1 | wc -l | tr -d ' ')
+printf 'pre_porcelain=%s\n' "$pre_porcelain"
+test "$pre_porcelain" = 0
+git fetch origin main style/loop-main
+test "$(git rev-parse origin/style/loop-main)" = "$candidate_revision"
+git checkout --detach "$candidate_revision"
+test "$(git rev-parse HEAD)" = "$candidate_revision"
+printf 'code_head=%s\n' "$(git rev-parse HEAD)"
+test ! -e "$output"
+test -x "$PERCH_STYLE_CAPTURE_NODE"
+test "$(shasum -a 256 "$support/expected-differences.md" | cut -d ' ' -f1)" = c3c9a8fb291d992228e99bdcd516834769dc6add0257b8d5bdffb4bae03ae67e
+test "$(shasum -a 256 "$support/allowed-regions-before.json" | cut -d ' ' -f1)" = 3098322751a5bb89dd2d317807673e6d6120b17c2a15427e34451e282aa163b2
+mkdir -p "$output"
+cp "$support/candidate-revision.txt" "$output/candidate-revision.txt"
+cp "$support/expected-differences.md" "$output/expected-differences-before.md"
+cp "$support/allowed-regions-before.json" "$output/allowed-regions-before.json"
+printf 'capture_driver_sha256=%s\n' "$(shasum -a 256 "$support/capture-matrix.py" | cut -d ' ' -f1)"
+python3 "$support/capture-matrix.py" --output "$output/capture" \
+    --host-app "$output/HostLifecycleChecks.app" --build-host --build-previews
+printf 'host_binary_sha256=%s\n' "$(shasum -a 256 "$output/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks" | cut -d ' ' -f1)"
+post_porcelain=$(git status --porcelain=v1 | wc -l | tr -d ' ')
+printf 'post_porcelain=%s\n' "$post_porcelain"
+test "$post_porcelain" = 0
+printf 'end=%s\n' "$(date -Iseconds)"

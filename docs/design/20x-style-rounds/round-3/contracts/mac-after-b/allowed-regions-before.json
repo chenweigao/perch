@@ -1,0 +1,38 @@
+{
+  "composer-dark": [
+    [
+      0,
+      0,
+      760,
+      500
+    ]
+  ],
+  "composer-light": [
+    [
+      0,
+      0,
+      760,
+      500
+    ]
+  ],
+  "main-dark": [],
+  "main-dashboard": [],
+  "main-english": [],
+  "main-english-dark": [],
+  "main-english-large-type": [],
+  "main-english-large-type-dark": [],
+  "main-find": [],
+  "main-find-dark": [],
+  "main-inspector-closed": [],
+  "main-large-type": [],
+  "main-large-type-dark": [],
+  "main-light": [],
+  "main-scroll": [],
+  "sidebar-dark": [],
+  "sidebar-english": [],
+  "sidebar-light": [],
+  "workbench-dark": [],
+  "workbench-empty-light": [],
+  "workbench-english": [],
+  "workbench-light": []
+}

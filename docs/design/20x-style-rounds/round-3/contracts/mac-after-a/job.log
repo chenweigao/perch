@@ -1,0 +1,20 @@
+start=2026-11-18T19:57:41+08:00
+pre_porcelain=0
+From github.com:chenweigao/perch
+ * branch              main            -> FETCH_HEAD
+ * branch              style/loop-main -> FETCH_HEAD
+   5a4478eb..025dc61c  style/loop-main -> origin/style/loop-main
+Previous HEAD position was 5a4478eb chore(style): sync main before capture stability repair
+HEAD is now at 025dc61c fix(style): pin Composer preview capture background
+code_head=025dc61cafa32e0e61eef2c4ef3ca8ea3a063d5e
+capture_driver_sha256=21a8bb612056e9ce591525894401d957c2d8d869ef761eb26ecfef4529938473
+{
+  "status": "passed",
+  "output": "/Users/developer/Library/PerfRunner/results/style-r3-after-a-v1/capture",
+  "comparisons": 22,
+  "seconds": 373.156
+}
+host_binary_sha256=5028ce9eeac6625c93b2f7442228bc0578449e91b68e454886c6875fb587cfb2
+post_porcelain=0
+end=2026-11-18T20:04:02+08:00
+exit=0

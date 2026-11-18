@@ -1,0 +1,16 @@
+......Running build
+.usage: check-functional.py [-h] --output OUTPUT
+                           [--group {all,build,core,core-regression,core-math,host,host-build,host-state,host-workspace,native,native-build,native-streaming,native-session,navigation,navigation-build,navigation-reading,navigation-interaction}]
+                           {portable,macos}
+check-functional.py: error: --group is only supported by the macos suite
+.Passed: /tmp/tmpsou6as2p/out/results.json
+Host lifecycle fixture ready in 0.00 s
+Running host lifecycle phase: startup
+Passed host lifecycle phase: startup (0.00 s)
+Cleaning up host lifecycle preferences
+Host lifecycle cleanup complete
+.................................................
+----------------------------------------------------------------------
+Ran 57 tests in 4.280s
+
+OK

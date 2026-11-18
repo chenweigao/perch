@@ -1,0 +1,65 @@
+Command: ['bash', 'scripts/build-sidebar-preview.sh']
+[0/1] Planning build
+Building for production...
+[0/2] Write sources
+[1/37] Compiling CAtomic CAtomic.c
+[2/37] Compiling cmark-gfm cmark_ctype.c
+[2/37] Compiling cmark-gfm footnotes.c
+[4/37] Compiling cmark-gfm arena.c
+[5/37] Compiling cmark-gfm cmark.c
+[6/37] Write swift-version--58304C5D6DBC2206.txt
+[7/37] Compiling cmark-gfm buffer.c
+[8/37] Compiling cmark-gfm-extensions tasklist.c
+[9/37] Compiling cmark-gfm commonmark.c
+[9/37] Compiling cmark-gfm-extensions tagfilter.c
+[11/37] Compiling cmark-gfm-extensions core-extensions.c
+[12/37] Compiling cmark-gfm-extensions strikethrough.c
+[13/37] Compiling cmark-gfm-extensions ext_scanners.c
+[14/37] Compiling cmark-gfm syntax_extension.c
+[15/37] Compiling cmark-gfm xml.c
+[16/37] Compiling cmark-gfm node.c
+[17/37] Compiling cmark-gfm references.c
+[18/37] Compiling cmark-gfm registry.c
+[19/37] Compiling cmark-gfm plugin.c
+[19/37] Compiling cmark-gfm render.c
+[21/37] Compiling cmark-gfm-extensions autolink.c
+[22/37] Compiling cmark-gfm plaintext.c
+[23/37] Compiling cmark-gfm linked_list.c
+[24/37] Compiling cmark-gfm map.c
+[25/37] Compiling cmark-gfm man.c
+[26/37] Compiling cmark-gfm latex.c
+[27/37] Compiling cmark-gfm-extensions table.c
+[28/37] Compiling cmark-gfm iterator.c
+[29/37] Compiling cmark-gfm houdini_href_e.c
+[30/37] Compiling cmark-gfm houdini_html_e.c
+[31/37] Compiling cmark-gfm houdini_html_u.c
+[32/37] Compiling cmark-gfm html.c
+[33/37] Compiling cmark-gfm blocks.c
+[34/37] Compiling cmark-gfm inlines.c
+[35/37] Compiling cmark-gfm scanners.c
+[36/37] Compiling cmark-gfm utf8.c
+[38/38] Compiling Markdown ChildIndexPath.swift
+[39/39] Compiling WorkbenchCore ActivityNarrative.swift
+/Users/developer/_worktrees/20x-loop-20261112/perch/Sources/WorkbenchCore/ConversationEntryCache.swift:181:13: warning: variable 'length' was never mutated; consider changing to 'let' constant [#VariableNeverMutated]
+179 | 
+180 |     private static func appendLengthPrefixed(_ bytes: inout [UInt8], _ field: String) {
+181 |         var length = UInt64(field.utf8.count)
+    |             `- warning: variable 'length' was never mutated; consider changing to 'let' constant [#VariableNeverMutated]
+182 |         for shift in stride(from: 56, through: 0, by: -8) {
+183 |             bytes.append(UInt8(truncatingIfNeeded: length >> shift))
+
+[#VariableNeverMutated]: <https://docs.swift.org/compiler/documentation/diagnostics/variable-never-mutated>
+Build of target: 'WorkbenchCore' complete! (34.56s)
+warning: '--build-system native' has been deprecated and will be removed in a future release; please report an issue at https://github.com/swiftlang/swift-package-manager/issues if you are unable to adopt the default build system.
+warning: '--build-system native' has been deprecated and will be removed in a future release; please report an issue at https://github.com/swiftlang/swift-package-manager/issues if you are unable to adopt the default build system.
+Sources/AgentWorkbench/ActivitySummarySettings.swift:54:77: warning: 'kSecUseAuthenticationUIFail' was deprecated in macOS 11.0: Instead of kSecUseAuthenticationUI, use kSecUseAuthenticationContext and set LAContext.interactionNotAllowed property [#DeprecatedDeclaration]
+ 52 |         var request = query
+ 53 |         request[kSecReturnData as String] = true
+ 54 |         if !allowInteraction { request[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUIFail }
+    |                                                                             `- warning: 'kSecUseAuthenticationUIFail' was deprecated in macOS 11.0: Instead of kSecUseAuthenticationUI, use kSecUseAuthenticationContext and set LAContext.interactionNotAllowed property [#DeprecatedDeclaration]
+ 55 |         var result: CFTypeRef?
+ 56 |         let status = SecItemCopyMatching(request as CFDictionary, &result)
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+/Users/developer/_worktrees/20x-loop-20261112/perch/build/Sidebar Preview.app: replacing existing signature
+/Users/developer/_worktrees/20x-loop-20261112/perch/build/Sidebar Preview.app
