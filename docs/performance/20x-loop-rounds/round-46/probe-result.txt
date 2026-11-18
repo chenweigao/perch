@@ -1,0 +1,15 @@
+Round-46 parents probe (WORKBENCH_PARENTS_PROBE=1, WORKBENCH_BENCH=streaming)
+Binary: base 84e1d2e9 + .local/round46/parents-probe.patch, release, Mac mini
+
+PARENTSPROBE final calls=1706 mapEntries=672922 foldedRows=61829 changes=61829
+
+Reading:
+- Presentation.parents is called 1,706 times; average incoming map size 394 entries
+  (672,922 / 1,706); folded rows per call ~36; every folded row writes a value that
+  differs from the incoming map (changes == foldedRows, 61,829).
+- Because the incoming map is shared with the cached earlier Presentation, the first
+  write forces a COW copy of the whole dictionary (O(map)) on every call.
+- A "no-change fast path" cannot help: there are zero no-op writes.
+- Eliminating the copy needs a shared/persistent or split (earlier+tail) representation;
+  `foldParents` is a public `[String: String]` consumed by Sources/AgentWorkbench
+  (ConversationTranscriptView.swift:368), which is a red line for this loop.
