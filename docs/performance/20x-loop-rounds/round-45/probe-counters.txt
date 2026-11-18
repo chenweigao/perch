@@ -1,19 +1,39 @@
-# Round-45 instrumentation probe — WORKBENCH_TV_PROBE=1, WORKBENCH_BENCH=streaming
+# Round-45 instrumentation probe v2 — WORKBENCH_TV_PROBE=1, WORKBENCH_BENCH=streaming
 # Binary: base 84e1d2e9 + probe.patch, release, Mac mini (27.0.1), .build/r45-probe
-# Probe was reverted from the product tree after this run (no product change ships).
+# v2 adds a per-run cross-tabulation (cold/warm x reused/rebuilt) and an atexit final
+# flush; the probe was reverted from the product tree after this run.
 
-TVPROBE canReuse-hit updates=50 prefixHits=48 ptRuns=2 ptFails=0 reused=0 rebuilt=460 empty=2 present=0 whole=0 | reuse=48
-TVPROBE canReuse-hit updates=100 prefixHits=84 ptRuns=16 ptFails=0 reused=1846 rebuilt=1864 empty=8 present=8 whole=0 | count=8 reuse=84
-TVPROBE canReuse-hit updates=150 prefixHits=134 ptRuns=16 ptFails=0 reused=1846 rebuilt=1864 empty=8 present=8 whole=0 | count=8 reuse=134
+TVPROBE run state=cold reused=0 rebuilt=230 turns=230
+TVPROBE run state=cold reused=0 rebuilt=230 turns=230
+TVPROBE canReuse-hit updates=50 prefixHits=48 ptRuns=2 cold=2 warm=0 coldRebuilt=460 warmReused=0 warmRebuilt=0 | reuse=48
+TVPROBE run state=warm reused=230 rebuilt=2 turns=232
+TVPROBE run state=cold reused=0 rebuilt=232 turns=232
+TVPROBE run state=warm reused=230 rebuilt=2 turns=232
+TVPROBE run state=warm reused=231 rebuilt=2 turns=233
+TVPROBE run state=cold reused=0 rebuilt=233 turns=233
+TVPROBE run state=warm reused=231 rebuilt=2 turns=233
+TVPROBE run state=warm reused=232 rebuilt=3 turns=235
+TVPROBE run state=cold reused=0 rebuilt=235 turns=235
+TVPROBE run state=warm reused=232 rebuilt=3 turns=235
+TVPROBE run state=cold reused=0 rebuilt=230 turns=230
+TVPROBE run state=cold reused=0 rebuilt=230 turns=230
+TVPROBE run state=cold reused=0 rebuilt=230 turns=230
+TVPROBE run state=warm reused=230 rebuilt=0 turns=230
+TVPROBE run state=warm reused=230 rebuilt=0 turns=230
+TVPROBE canReuse-hit updates=100 prefixHits=84 ptRuns=16 cold=8 warm=8 coldRebuilt=1850 warmReused=1846 warmRebuilt=14 | count=8 reuse=84
+TVPROBE canReuse-hit updates=150 prefixHits=134 ptRuns=16 cold=8 warm=8 coldRebuilt=1850 warmReused=1846 warmRebuilt=14 | count=8 reuse=134
+TVPROBE final updates=153 prefixHits=137 ptRuns=16 cold=8 warm=8 coldRebuilt=1850 warmReused=1846 warmRebuilt=14 | count=8 reuse=137
 
-# Reading:
-# - 150 tools.update(splittingAt:) calls over the streaming bench (two presentation
-#   models), 134 served by canReuse; 16 fall through to projectTurns.
-# - projectTurns runs split 8 / 8:
-#     * chunks EMPTY (cold cache)   -> 8 runs, every turn rebuilt (all 1,864 rebuilds)
-#     * chunks PRESENT (warm cache) -> 8 runs, every turn reused (1,846 reuses, 0 rebuilds)
-# - canReuse failures are all `count` (prefix.source.count != split), 8 occurrences;
-#   no session/anchor/online/active/observed/separates/sameWindow failures.
-# - whole (non-split update) was never called in this bench run.
-# => The 6.36% inclusive share of projectTurns in the round-43 trace is dominated by
-#    cold-cache full builds (necessary first projection), not per-delta overhead.
+# Reading (final line is the authoritative total; the 50/100/150 lines are milestones):
+# - 153 tools.update(splittingAt:) calls, 137 served by canReuse; 16 fall through to projectTurns.
+# - projectTurns runs split 8 cold / 8 warm:
+#     * cold (chunks empty): 1,850 rebuilds, 0 reuses — fresh-model first projections.
+#     * warm (chunks present): 1,846 reuses and 14 rebuilds.
+# - The 14 warm rebuilds are page-prepend boundaries, per model:
+#     (230 reused, 2 rebuilt), (231, 2), (232, 3) — then the unpaged 230-turn
+#     commentary window reuses 230 with 0 rebuilds in each model.
+# => Warm paths avoid whole-window rebuilding but do NOT have zero rebuilds.
+# - canReuse failures: all `count` (8) — prefix.source.count != split; no
+#   session/anchor/online/active/observed/separates/sameWindow failures.
+# - whole=0: the non-split update(_:messages:...) was never called in this bench.
+# - Counts, not elapsed cost: this probe does not time cold vs warm work.

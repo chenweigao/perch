@@ -12,12 +12,14 @@
 
 round-45 的判据（详见 [2026-11-18-round-45.md](2026-11-18-round-45.md)）：
 
-- `projectTurns` 6.36% inclusive 中，探针显示 16 次进入恰为 8 次冷缓存全量重建
-  （1,864 次重建全部在此）+ 8 次完整缓存全量复用（1,846 次复用、零重建）；
-  冷构建是首次投影必经成本，温路径已无整窗重算。
-- 温路径残余（`projectTurns` 本体 20.70% + `identities(in:)` 10.22% 的样本份额
-  ≈ 全样本 2%）低于分类器噪声带。
-- `Snapshot.presented` 5.24% 的主体 `Presentation.parents` 2.37% 自 round-42 起已增量。
+- `projectTurns` 6.36% inclusive 中，探针把 16 次进入分成 **8 次冷缓存**
+  （1,850 次重建、0 复用）与 **8 次完整缓存**（1,846 次复用、14 次重建，页前置边界）；
+  温路径不再整窗重算，但并非零重建。
+- 探针只计次数、不计耗时，因此无法给出温路径的耗时分担；本轮裁决是
+  **证据不足、不采纳**，不是“已证明低于噪声带”。
+- `Snapshot.presented` 5.24%（613 样本）的完整 inclusive 中，`Presentation.parents`
+  为 **427 样本 / 3.65%**——round-44 的 2.37% 只是四桶消费方份额；其叶帧含
+  `_NativeDictionary.copy()`，**该候选保持开放**，需温路径耗时测量后再判。
 
 ## 循环状态
 
@@ -56,8 +58,9 @@ round 46 只会重复同类评估，且每轮的独立评审需要单独的用�
    `[KimiMessage]` 的 public API 红线）；`ConversationSearch` 红线内匹配（cf-match）。
 2. **需要新测量面**的候选：验证族统一（`sameWindow` 10.38%、`TV.canReuse` 5.03%、
    input-compare 7.49%，重叠），round-44 已撤回定量上界，重启需先按路径插桩。
-3. **结构性成本**：`projectTurns` 冷构建、`Presentation.parents` 2.37%——当前证据
-   显示无可谈判的温路径冗余。
+3. **待补耗时测量**：`Snapshot.presented` 5.24%（含 `Presentation.parents` 3.65%
+   inclusive）仍是开放候选；`projectTurns` 冷构建（1,850 次重建）与温路径 14 次
+   页边界重建需要耗时探针才能判断可攻性。
 
 ## 重启条件
 
@@ -72,6 +75,7 @@ round 46 只会重复同类评估，且每轮的独立评审需要单独的用�
 - 轮次表与全部结论行：`docs/performance/20x-loop-rounds/INDEX.md`
 - round 44 归因：`round-44/attr/consumer-attribution.txt`、`consumer-views.txt`、
   `round-44/ATTRIBUTION-NOTE.md`
-- round 45 探针：`round-45/probe.patch`、`round-45/probe-counters.txt`
+- round 45 探针：`round-45/probe.patch`（v2，含冷/温交叉统计与 atexit 最终行）、
+  `round-45/probe-counters.txt`
 - 上一份停止报告（停止规则②，评审通道 `parent_not_active`，已随用户触发轮次解除）：
   `2026-11-18-loop-stop-report.md`
