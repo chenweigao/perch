@@ -1,0 +1,12 @@
+=== r42 battery start Wed Nov 18 06:58:21 CST 2026 ===
+m0-pristine exit=0 (must be 0)
+.local/round42/run-battery-r42.sh: line 22: 632523 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m1-delta-fork-drop DIED exit=132 killer=WorkbenchChecks/DisplayMessagesMemoTests.swift:188: Precondition failed: concurrent shared-box mutations diverged 120 times
+m2-prepend-fork-drop SURVIVED (exit=0) — PIN GAP
+.local/round42/run-battery-r42.sh: line 22: 635692 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m3-never-store DIED exit=132 killer=WorkbenchChecks/DisplayMessagesMemoTests.swift:111: Precondition failed: warm and cold paths must both execute per lineage, got (hits: 0, misses: 2)
+.local/round42/run-battery-r42.sh: line 22: 636851 Illegal instruction     timeout 1200 .build/debug/WorkbenchChecks > "$OUT/$name.log" 2>&1
+m4-cache-blind DIED exit=132 killer=WorkbenchChecks/DisplayMessagesMemoTests.swift:111: Precondition failed: warm and cold paths must both execute per lineage, got (hits: 0, misses: 2)
+m5-toolprogress-fork-drop SURVIVED (expected — documented equivalent mutant)
+m6-reconcile-tail-fork-drop SURVIVED (expected — documented equivalent mutant)
+=== r42 battery done Wed Nov 18 06:59:48 CST 2026 ===

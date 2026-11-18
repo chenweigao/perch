@@ -62,6 +62,7 @@ struct ProtocolTests {
         // byte-key digest golden was captured without them; content-addressed
         // tables make check order observable through stored ENCODINGS.
         try checkCommentaryDerivation()
+        try checkDisplayMessagesMemo()
         checkLocalizationResolutionChain()
         try checkTaskRecaps()
         checkReviewContext()

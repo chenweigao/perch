@@ -582,6 +582,16 @@ public struct KimiConversation: Sendable {
     /// Subagent roster and background tasks of this session. It survives a
     /// snapshot refresh, which replaces the roster but not the task list.
     public var tasks: KimiTaskBoard
+    /// Round 42: lazy-memo box for `displayMessages` (see DisplayMemoBox).
+    /// Struct copies share the box; every mutator below that writes
+    /// `messages` or `live` REPLACES it, so a box is shared only by
+    /// never-diverged copies and its cache cannot go stale. `reconcile`
+    /// replaces `self` wholesale and thereby adopts a fresh box anyway.
+    var displayMemo = DisplayMemoBox()
+    /// Pin infrastructure (public because the release A/B protocol builds
+    /// the checks without testability): memo hit/miss counters. Read-only;
+    /// never consulted by product code.
+    public var displayMemoStats: (hits: Int, misses: Int) { displayMemo.stats }
     public init(_ snapshot: KimiSnapshot) {
         self.snapshot = snapshot; messages = snapshot.messages.items
         live = snapshot.inFlightTurn; lastSeq = snapshot.asOfSeq; hasOlder = snapshot.messages.hasMore
@@ -603,11 +613,13 @@ public struct KimiConversation: Sendable {
             let older = old.filter { $0.createdAt < first.createdAt }
             if !older.isEmpty { messages = older + messages; hasOlder = hadLoadedOlder }
         }
+        displayMemo = DisplayMemoBox()
     }
     public mutating func prepend(_ page: KimiPage<KimiMessage>) {
         let existing = Set(messages.map(\.id))
         let older = page.items.filter { !existing.contains($0.id) }.sorted { $0.createdAt < $1.createdAt }
         messages = older + messages; hasOlder = page.hasMore
+        displayMemo = DisplayMemoBox()
     }
     /// Several pages at once, as successive `prepend(_:)` calls would leave them.
     /// Messages that arrived in the window since the batch began are not repeated.
@@ -617,6 +629,7 @@ public struct KimiConversation: Sendable {
         var older: [KimiMessage] = []
         for page in batch.pages.reversed() { older.append(contentsOf: page.filter { !existing.contains($0.id) }) }
         messages = older + messages; hasOlder = batch.hasMore
+        displayMemo = DisplayMemoBox()
     }
     /// Returns true when an authoritative snapshot is needed. Volatile deltas use JavaScript UTF-16 offsets.
     public mutating func apply(_ event: KimiEvent) -> Bool {
@@ -637,10 +650,12 @@ public struct KimiConversation: Sendable {
             guard var live, live.turnId == p["turnId"].int, let delta = p["delta"].string, let offset = event.offset else { return true }
             guard live.appendDelta(delta, offset: offset, thinking: event.type == "thinking.delta") else { return true }
             self.live = live; notice = nil
+            displayMemo = DisplayMemoBox()
             return false
         case "tool.progress":
             if let id = p["toolCallId"].string, let index = live?.runningTools.firstIndex(where: { $0.id == id }) {
                 live?.runningTools[index].lastProgress = p["update"]
+                displayMemo = DisplayMemoBox()
             }
             return false
         case "turn.step.retrying":

@@ -1,0 +1,7 @@
+
+== linux-ab-r42 key metrics ==
+chain_total                               1.1500 ->    0.8800 (-23.48%) band= 3.51% sep=6/6f 0/6s SEPARATED
+commentary_chain_total                    1.6822 ->    1.1177 (-33.56%) band= 4.47% sep=6/6f 0/6s SEPARATED
+commentary_narrative                      0.0756 ->    0.0757 ( +0.20%) band= 4.83% sep=3/6f 3/6s within-noise
+commentary_presentation_upda              0.3420 ->    0.3369 ( -1.49%) band= 3.06% sep=4/6f 2/6s within-noise
+older_page_full_chain                     5.0550 ->    5.0350 ( -0.40%) band=13.35% sep=3/6f 3/6s within-noise
