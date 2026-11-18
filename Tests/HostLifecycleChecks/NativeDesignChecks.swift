@@ -7,11 +7,12 @@ import WorkbenchCore
 /// repository. No saved environments, network connections, or real drafts.
 @MainActor func checkNativeDesign() async throws {
     UserDefaults.standard.removePersistentDomain(forName: Bundle.main.bundleIdentifier!)
-    AppLanguage.applyToSystem(.zhHans)
+    AppLanguage.applyToSystem(StyleCapture.locale.identifier == "en" ? .en : .zhHans)
     AXUIElementSetAttributeValue(AXUIElementCreateApplication(getpid()), "AXEnhancedUserInterface" as CFString, kCFBooleanTrue)
     let persistentPreview = Bundle.main.object(forInfoDictionaryKey: "PerchDesignPreview") as? Bool == true
     NSApp.setActivationPolicy(persistentPreview ? .regular : .accessory)
-    let root = FileManager.default.temporaryDirectory.appendingPathComponent("perch-design-\(UUID())")
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(StyleCapture.isRequested ? "perch-style-capture" : "perch-design-\(UUID())")
+    if StyleCapture.isRequested { try? FileManager.default.removeItem(at: root) }
     try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
     let emptyDirectory = root.appendingPathComponent("empty")
     try FileManager.default.createDirectory(at: emptyDirectory, withIntermediateDirectories: true)
@@ -38,7 +39,7 @@ import WorkbenchCore
     let titles = ["Perch 界面苹果风格设计优化", "AWP 持续探索｜诊断、比较与规模性能 [ca1adc03]", "整理验收报告",
                   "DeepSeek-V4.1-Flash 跨机缓存加载慢", "长文本阅读体验", "随手记与问题收集"]
     let host = SSHHost(id: ExecutionEnvironment.localHostID, name: "Mac mini", destination: "")
-    var running = true
+    var running = !StyleCapture.isRequested
     var revision = 1
     var abortedTurns: [String] = []
     var selectedModels: [Int: String] = [:]
@@ -51,7 +52,7 @@ import WorkbenchCore
     ]
     func summary(_ index: Int) -> [String: Any] {
         ["id": "design-\(index)", "provider": "codex", "title": titles[index], "cwd": index == 1 ? emptyDirectory.path : root.path,
-         "busy": index == 0 && running, "archived": false, "updated": Date().timeIntervalSince1970 - Double(index * 120),
+         "busy": index == 0 && running, "archived": false, "updated": Date().timeIntervalSince1970 - (StyleCapture.isRequested ? 0 : Double(index * 120)),
          "completed": 1, "pending": index == 2 ? 1 : 0,
          "model": selectedModels[index] ?? "gpt-5.4", "thinking": selectedEfforts[index] ?? "high",
          "turnId": "design-turn-\(index)",
@@ -102,6 +103,19 @@ import WorkbenchCore
                     ["type": "tool_result", "tool_call_id": "plan", "is_error": false, "output": "Updated"]]]
             ] + [questionAndAnswer[1]]
         }
+        if index == 0 && StyleCapture.scenario == "scroll" {
+            var history: [[String: Any]] = []
+            for historyIndex in 0..<20 {
+                history.append(["id": "history-question-\(historyIndex)", "role": "user", "created_at": "",
+                                "content": [["type": "text", "text": "历史问题 \(historyIndex + 1)：检查长对话的滚动跟随。"]]])
+                let answer = historyIndex == 19
+                    ? "历史回复 20\n\n初步发现\n\n这一段用于形成稳定的可滚动内容，不连接任何 Agent。"
+                    : "历史回复 \(historyIndex + 1)\n\n这一段用于形成稳定的可滚动内容，不连接任何 Agent。"
+                history.append(["id": "history-answer-\(historyIndex)", "role": "assistant", "created_at": "",
+                                "content": [["type": "text", "text": answer]]])
+            }
+            data["messages"] = history
+        }
         return try JSONSerialization.data(withJSONObject: data)
     }
     UserDefaults.standard.set(try JSONEncoder().encode([host]), forKey: "hosts")
@@ -120,9 +134,11 @@ import WorkbenchCore
                           styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
     window.title = "Perch · 原生设计对照"
     window.isReleasedWhenClosed = false
-    window.appearance = NSAppearance(named: .aqua)
+    window.appearance = NSAppearance(named: StyleCapture.colorScheme == .dark ? .darkAqua : .aqua)
     defer { window.close(); window.contentViewController = nil }
-    let hosting = NSHostingController(rootView: WorkbenchView(model: model).environment(\.locale, Locale(identifier: "zh-Hans")))
+    UserDefaults.standard.set(StyleCapture.colorScheme == .dark ? AppAppearance.dark.rawValue : AppAppearance.light.rawValue,
+                              forKey: AppAppearance.defaultsKey)
+    let hosting = NSHostingController(rootView: WorkbenchView(model: model).environment(\.locale, StyleCapture.locale))
     hosting.sizingOptions = []
     window.contentViewController = hosting
     // The window must fit the 748 pt reading column beside the default inspector:
@@ -155,7 +171,7 @@ import WorkbenchCore
         precondition(abs(captionFrame.minX - draftFrame.minX) < 1,
                      "The separate live status and input text must share their leading rail")
     }
-    checkStatusOutsideComposer()
+    if !StyleCapture.isRequested { checkStatusOutsideComposer() }
     let citedContext = "整轮只有一个执行中的过程头。\n工具与思考留在过程内，最终回答在外。"
     connection.drafts["design-0"] = "原有草稿"
     model.quoteSelection(citedContext)
@@ -180,7 +196,7 @@ import WorkbenchCore
     connection.drafts["kimi-cite-fixture"] = nil
     for _ in 0..<40 where !draft.draftString.isEmpty { try await Task.sleep(for: .milliseconds(25)) }
     precondition(draft.draftString.isEmpty)
-    checkStatusOutsideComposer()
+    if !StyleCapture.isRequested { checkStatusOutsideComposer() }
     print("PASS: production context citation chip, exact prompt expansion and native/Kimi session ownership")
     let reply = descendants(window.contentView!).compactMap { $0 as? ReplyTextView }.first { $0.string.contains("初步发现") }!
     func splitController(_ view: NSView) -> WorkbenchSplitController? {
@@ -437,6 +453,24 @@ import WorkbenchCore
             for _ in 0..<50 where process.isRunning { try await Task.sleep(for: .milliseconds(100)) }
             if process.isRunning { process.terminate() }
         }
+    }
+    if StyleCapture.isRequested {
+        keepAlive.cancel()
+        switch StyleCapture.scenario {
+        case "find": model.showConversationFind = true
+        case "inspector-closed": model.taskContextWindow.embeddedVisible = false
+        case "dashboard": model.showHome()
+        case "scroll": break
+        default: break
+        }
+        try await Task.sleep(for: .milliseconds(500))
+        if StyleCapture.scenario == "inspector-closed" {
+            precondition(!model.taskContextWindow.embeddedVisible, "Inspector must be closed before capture readiness")
+        }
+        if StyleCapture.dynamicTypeSize == .xxxLarge { ReadingBodySize.shared.set(18) }
+        window.makeFirstResponder(nil)
+        StyleCapture.present(window, contentSize: NSSize(width: 1536, height: 900))
+        while !Task.isCancelled { try await Task.sleep(for: .seconds(3600)) }
     }
     try await capture("native-light")
     UserDefaults.standard.set(AppAppearance.dark.rawValue, forKey: AppAppearance.defaultsKey)

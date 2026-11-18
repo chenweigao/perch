@@ -20,7 +20,7 @@ swiftc -target "$(uname -m)-apple-macosx26.0" -O -swift-version 5 -parse-as-libr
     Sources/AgentWorkbench/HostIdentityIcon.swift \
     Sources/AgentWorkbench/BatchArchiveControls.swift Sources/AgentWorkbench/WorkbenchGlass.swift Sources/AgentWorkbench/ConversationReadingMemory.swift \
     Sources/AgentWorkbench/WorkbenchWindowBackdrop.swift Sources/AgentWorkbench/WorkspaceSplitView.swift Sources/AgentWorkbench/WorkspaceSidebarShell.swift Sources/AgentWorkbench/SidebarMetrics.swift \
-    Tests/WorkbenchPreview/App.swift \
+    Tests/WorkbenchPreview/App.swift Tests/HostLifecycleChecks/StyleCapture.swift \
     "${objects[@]}" -o "$app_dir/Contents/MacOS/WorkbenchPreview"
 cat > "$app_dir/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>

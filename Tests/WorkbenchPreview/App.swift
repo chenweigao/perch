@@ -24,8 +24,14 @@ private let hostNames = Dictionary(uniqueKeysWithValues: demoHosts.map { ($0.id,
 @main struct WorkbenchPreviewApp: App {
     @NSApplicationDelegateAdaptor(PreviewDelegate.self) private var delegate
     var body: some Scene {
-        WindowGroup("Perch 工作台 · 隔离预览") { DashboardPreview().preferredColorScheme(.light) }
+        WindowGroup("Perch 工作台 · 隔离预览") {
+            DashboardPreview().preferredColorScheme(StyleCapture.colorScheme)
+                .environment(\.locale, StyleCapture.locale)
+                .dynamicTypeSize(StyleCapture.dynamicTypeSize)
+                .styleCaptureContainer()
+        }
             .defaultSize(width: 1120, height: 820)
+            .windowStyle(.hiddenTitleBar)
         Settings { Text("示例数据，不连接 Agent。").padding() }
     }
 }
@@ -49,7 +55,7 @@ private struct DashboardPreview: View {
         var values: [WorkspaceSession] = []
         func add(_ id: String, _ title: String, _ section: WorkQueueSection, _ detail: String, _ age: Double,
                  on hostID: UUID = demoHost) {
-            let current: WorkQueueSection = reviewed.contains(id) ? .other : section
+            let current: WorkQueueSection = StyleCapture.isRequested && id == "running" ? .other : reviewed.contains(id) ? .other : section
             values.append(WorkspaceSession(reference: SessionReference(hostID: hostID, terminalID: id, kind: .kimi),
                 title: title, directory: "/fixture/perch", hostName: hostNames[hostID] ?? "演示环境",
                 detail: reviewed.contains(id) ? "Kimi · 结果已查看" : detail,
@@ -138,5 +144,8 @@ private struct DashboardPreview: View {
 }
 
 private final class PreviewDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        StyleCapture.schedule(contentSize: NSSize(width: 1120, height: 820))
+    }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 }

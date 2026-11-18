@@ -1,0 +1,12 @@
+gates_start=2026-11-18T04:24:08Z
+HEAD is now at 9d9fd2cd test(style): add repeatable visual capture infrastructure
+head=9d9fd2cd87e610e8f6367fb40257e40c21d76b07
+porcelain_before=0
+build=passed
+cold_launch=passed_5_of_5
+macos_workbench_checks=passed
+native_design_appearance_checks=passed
+sources_redline=passed_zero_diff
+porcelain_after=0
+gates_end=2026-11-18T04:26:30Z
+exit=0

@@ -1,0 +1,24 @@
+{
+  "commit": "18f6ea7e8041ce435fc7cd3162cd3a5e71294ced",
+  "dirty": false,
+  "boundary": "offline synthetic fixtures in a PerfRunner Aqua job; no user sessions or remote agents",
+  "comparisons": [],
+  "commands": [
+    {
+      "name": "main-light-repeat-1",
+      "command": [
+        "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-loop/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v3/main-light/repeat-1/capture.png"
+      },
+      "log": "logs/main-light-repeat-1.log",
+      "exit_code": -5,
+      "seconds": 3.441
+    }
+  ],
+  "status": "failed",
+  "error": "main-light-repeat-1 exited before capture readiness; see /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v3/logs/main-light-repeat-1.log",
+  "seconds": 3.548
+}

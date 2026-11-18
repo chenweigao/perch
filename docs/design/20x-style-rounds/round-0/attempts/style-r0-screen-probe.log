@@ -1,0 +1,12 @@
+HEAD is now at 5b81c92e test(style): add repeatable visual capture infrastructure
+/Users/<mini>/Library/PerfRunner/jobs/style-r0-screen-probe.job: line 11: 52295 Killed: 9               PERCH_STYLE_CAPTURE="$OUT/capture.png" "$ROOT/.local/style-loop/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks" native-design > "$OUT/app.log" 2>&1
+window= pid=52295
+could not create image from display
+full_exit=1
+could not create image from rect
+region_exit=1
+could not create image from window
+window_exit=1
+total 0
+-rw-r--r--  1 weigao-mini  staff  0 Nov 18 11:21 app.log
+exit=0

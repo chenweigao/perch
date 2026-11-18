@@ -1,0 +1,31 @@
+capture_start=2026-11-18T04:32:35Z
+From github.com:chenweigao/perch
+ + 65c1ad6d...9c422787 style/loop-main -> origin/style/loop-main  (forced update)
+Warning: you are leaving 1 commit behind, not connected to
+any of your branches:
+
+  65c1ad6d test(style): add repeatable visual capture infrastructure
+
+If you want to keep it by creating a new branch, this may be a good time
+to do so with:
+
+ git branch <new-branch-name> 65c1ad6d
+
+HEAD is now at 9c422787 test(style): add repeatable visual capture infrastructure
+head=9c4227878b2bb6cd6e044ad96a063e6459f86311
+porcelain_before=0
+{
+  "status": "failed",
+  "output": "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v16",
+  "comparisons": 0,
+  "seconds": 232.897
+}
+Traceback (most recent call last):
+  File "/Users/<mini>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 263, in <module>
+    main()
+  File "/Users/<mini>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 206, in main
+    capture(f"main-{scenario}-repeat-{repeat}", main_binary, ["native-design"],
+  File "/Users/<mini>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 168, in capture
+    raise RuntimeError(f"{name} exited before capture readiness; see {log_path}")
+RuntimeError: main-scroll-repeat-1 exited before capture readiness; see /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v16/logs/main-scroll-repeat-1.log
+exit=1

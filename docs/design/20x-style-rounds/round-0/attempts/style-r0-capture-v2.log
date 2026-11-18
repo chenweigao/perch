@@ -1,0 +1,40 @@
+capture_start=2026-11-18T03:12:48Z
+From github.com:chenweigao/perch
+   6868caff..073e4fa9  perf/20x-loop-44-20261118 -> origin/perf/20x-loop-44-20261118
+ + 8548322c...1ad357c2 style/loop-main -> origin/style/loop-main  (forced update)
+Warning: you are leaving 1 commit behind, not connected to
+any of your branches:
+
+  8548322c test(style): add repeatable visual capture infrastructure
+
+If you want to keep it by creating a new branch, this may be a good time
+to do so with:
+
+ git branch <new-branch-name> 8548322c
+
+HEAD is now at 1ad357c2 test(style): add repeatable visual capture infrastructure
+head=1ad357c2371f9a5450154a8863b7d0bc59e9f286
+porcelain_before=0
+{
+  "status": "failed",
+  "output": "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v2",
+  "comparisons": 0,
+  "seconds": 96.61
+}
+Traceback (most recent call last):
+  File "/Users/<mini>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 159, in <module>
+    main()
+  File "/Users/<mini>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 117, in main
+    capture(f"main-{variant}-repeat-{repeat}", main_binary, ["native-design"], settings,
+  File "/Users/<mini>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 70, in capture
+    clean_preferences(binary)
+  File "/Users/<mini>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 61, in clean_preferences
+    info = plistlib.loads((app / "Contents/Info.plist").read_bytes())
+  File "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/pathlib.py", line 1249, in read_bytes
+    with self.open(mode='rb') as f:
+  File "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/pathlib.py", line 1242, in open
+    return io.open(self, mode, buffering, encoding, errors, newline,
+  File "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/pathlib.py", line 1110, in _opener
+    return self._accessor.open(self, flags, mode)
+FileNotFoundError: [Errno 2] No such file or directory: '/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-loop/HostLifecycleChecks.app/Contents/Contents/Info.plist'
+exit=1

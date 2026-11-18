@@ -3,13 +3,16 @@ import SwiftUI
 import WorkbenchCore
 
 @main struct SidebarPreviewApp: App {
+    @NSApplicationDelegateAdaptor(SidebarPreviewDelegate.self) private var delegate
     init() { SidebarChecks.configure() }
     var body: some Scene {
         WindowGroup("侧栏隔离验收") {
-            SidebarPreview().preferredColorScheme(.light)
-                .environment(\.locale, Locale(identifier: "zh-Hans"))
+            SidebarPreview().preferredColorScheme(StyleCapture.colorScheme)
+                .environment(\.locale, StyleCapture.locale)
+                .dynamicTypeSize(StyleCapture.dynamicTypeSize)
+                .styleCaptureContainer()
                 .task { await SidebarChecks.runIfRequested() }
-        }.defaultSize(width: 1100, height: 760)
+        }.defaultSize(width: 1100, height: 760).windowStyle(.hiddenTitleBar)
         Settings { Text("隔离预览设置").padding(40) }
     }
 }
@@ -113,6 +116,7 @@ private struct SidebarPreview: View {
         }
     }
     private func task(_ name: String, status: String, symbol: String) -> some View {
+
         SessionRowChrome(title: name, subtitle: status.contains("等你处理") || status.contains("连接中断") ? status : nil,
                          hostName: "studio-mini.local", hostID: UUID(uuidString: "11111111-2222-3333-4444-555555555555"),
                          directory: "/workspace/mini-workspace", detail: status,
@@ -138,4 +142,11 @@ private struct SidebarPreview: View {
             Button("删除会话…", role: .destructive) { title = "删除确认预览 · 不执行真实操作" }
         }
     }
+}
+
+private final class SidebarPreviewDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        StyleCapture.schedule(contentSize: NSSize(width: 1100, height: 760))
+    }
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 }

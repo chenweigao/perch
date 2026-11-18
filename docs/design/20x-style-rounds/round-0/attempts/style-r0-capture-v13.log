@@ -1,0 +1,25 @@
+capture_start=2026-11-18T04:06:56Z
+From github.com:chenweigao/perch
+ + 88e6bd27...41a995f0 style/loop-main -> origin/style/loop-main  (forced update)
+Warning: you are leaving 1 commit behind, not connected to
+any of your branches:
+
+  88e6bd27 test(style): add repeatable visual capture infrastructure
+
+If you want to keep it by creating a new branch, this may be a good time
+to do so with:
+
+ git branch <new-branch-name> 88e6bd27
+
+HEAD is now at 41a995f0 test(style): add repeatable visual capture infrastructure
+head=41a995f07d7e2b0ddae345f64aba0480755c8991
+porcelain_before=0
+{
+  "status": "passed",
+  "output": "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v13",
+  "comparisons": 24,
+  "seconds": 369.624
+}
+porcelain_after=0
+capture_end=2026-11-18T04:13:14Z
+exit=0

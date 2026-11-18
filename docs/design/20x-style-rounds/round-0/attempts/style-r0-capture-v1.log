@@ -1,0 +1,23 @@
+capture_start=2026-11-18T03:09:28Z
+From github.com:chenweigao/perch
+ * [new branch]        perf/20x-loop-44-20261118 -> origin/perf/20x-loop-44-20261118
+ * [new branch]        style/loop-main -> origin/style/loop-main
+Previous HEAD position was 9ed2ac1c Merge pull request #365 from chenweigao/codex/20x-loop-43-20261118
+HEAD is now at 8548322c test(style): add repeatable visual capture infrastructure
+head=8548322c499ce7b9791317d84942812b9974f63a
+porcelain_before=0
+{
+  "status": "failed",
+  "output": "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v1",
+  "comparisons": 0,
+  "seconds": 42.9
+}
+Traceback (most recent call last):
+  File "/Users/<mini>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 159, in <module>
+    main()
+  File "/Users/<mini>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 113, in main
+    run("build-" + name, ["bash", f"scripts/build-{name}-preview.sh"], timeout=900)
+  File "/Users/<mini>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 57, in run
+    raise RuntimeError(f"{name} failed; see {log_path}")
+RuntimeError: build-workbench failed; see /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v1/logs/build-workbench.log
+exit=1

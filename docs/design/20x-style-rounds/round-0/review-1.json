@@ -1,0 +1,23 @@
+{
+  "verdict": "BLOCKING",
+  "findings": [
+    {
+      "severity": "P1",
+      "location": "Tests/HostLifecycleChecks/NativeDesignChecks.swift:461",
+      "evidence": "main-inspector-closed is byte-identical to main-light and still displays the diff inspector. close() closes only the detached panel; it leaves embeddedVisible true.",
+      "required_correction": "Close the embedded inspector in this capture scenario, assert its closed state before capture readiness, and regenerate both repeats and the manifest."
+    },
+    {
+      "severity": "P2",
+      "location": "scripts/capture-style-loop.py:224",
+      "evidence": "Only Workbench receives an empty-scenario argument. Sidebar/composer empty-light captures use the same configuration as light and are byte-identical to their populated defaults; composer capture explicitly fills its draft.",
+      "required_correction": "Provide genuine empty fixtures for sidebar/composer and recapture them. Update the manifest and screenshot index so populated defaults are not presented as empty-state coverage."
+    },
+    {
+      "severity": "P2",
+      "location": "docs/design/20x-style-rounds/round-0/README.md:46",
+      "evidence": "All three preview large-type captures are byte-identical to their light defaults; composer-english also equals composer-light. The metadata records requested flags, not effective rendered font size or language. These variants therefore do not substantiate the listed coverage, although all 24 repeat pairs genuinely match.",
+      "required_correction": "Apply effective preview-only font/localization overrides and recapture, or explicitly disclose these variants as no-ops and qualify the coverage claims. Keep repeat stability distinct from effective scenario coverage."
+    }
+  ]
+}

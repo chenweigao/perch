@@ -5,7 +5,11 @@ import SwiftUI
 struct ComposerPreviewApp: App {
     @NSApplicationDelegateAdaptor(ComposerPreviewDelegate.self) private var delegate
     var body: some Scene {
-        WindowGroup("输入验收") { ComposerPreview().preferredColorScheme(ProcessInfo.processInfo.environment["CITE_PREVIEW_DARK"] == "1" ? .dark : .light) }
+        WindowGroup("输入验收") {
+            ComposerPreview().preferredColorScheme(StyleCapture.colorScheme)
+                .environment(\.locale, StyleCapture.locale)
+                .dynamicTypeSize(StyleCapture.dynamicTypeSize)
+        }
             .defaultSize(width: 760, height: 500)
     }
 }
@@ -44,9 +48,9 @@ private struct ComposerPreview: View {
                 }
             }.padding(14).overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(.black.opacity(0.12)))
             if !error.isEmpty { Text(error).foregroundStyle(.orange) }
-        }.padding(24).onReceive(timer) { _ in tick += 1 }.frame(minWidth: 500, minHeight: 420)
+        }.padding(24).onReceive(timer) { _ in if !StyleCapture.isRequested { tick += 1 } }.frame(minWidth: 500, minHeight: 420)
             .onAppear {
-                if ProcessInfo.processInfo.environment["CITE_PREVIEW_CAPTURE"] != nil {
+                if ProcessInfo.processInfo.environment["CITE_PREVIEW_CAPTURE"] != nil || StyleCapture.isRequested {
                     drafts[0] = citationToken + " \n请把这段上下文接着讲清楚，保留刚才的设计。"
                 }
             }
@@ -56,6 +60,10 @@ private final class ComposerPreviewDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
+        if StyleCapture.isRequested {
+            StyleCapture.schedule(contentSize: NSSize(width: 760, height: 500))
+            return
+        }
         if let path = ProcessInfo.processInfo.environment["CITE_PREVIEW_CAPTURE"] {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 guard let window = NSApp.windows.first(where: { $0.contentView != nil }), let view = window.contentView,

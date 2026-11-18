@@ -1,0 +1,33 @@
+capture_start=2026-11-18T03:19:03Z
+From github.com:chenweigao/perch
+ + 18f6ea7e...5b81c92e style/loop-main -> origin/style/loop-main  (forced update)
+Warning: you are leaving 1 commit behind, not connected to
+any of your branches:
+
+  18f6ea7e test(style): add repeatable visual capture infrastructure
+
+If you want to keep it by creating a new branch, this may be a good time
+to do so with:
+
+ git branch <new-branch-name> 18f6ea7e
+
+HEAD is now at 5b81c92e test(style): add repeatable visual capture infrastructure
+head=5b81c92ea2ab9af4821d833fb90c95426fc8cfd3
+porcelain_before=0
+{
+  "status": "failed",
+  "output": "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v4",
+  "comparisons": 0,
+  "seconds": 35.345
+}
+Traceback (most recent call last):
+  File "/Users/<mini>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 159, in <module>
+    main()
+  File "/Users/<mini>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 117, in main
+    capture(f"main-{variant}-repeat-{repeat}", main_binary, ["native-design"], settings,
+  File "/Users/<mini>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 92, in capture
+    run(name + "-screencapture", ["/usr/sbin/screencapture", "-x", "-o", "-t", "png",
+  File "/Users/<mini>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 57, in run
+    raise RuntimeError(f"{name} failed; see {log_path}")
+RuntimeError: main-light-repeat-1-screencapture failed; see /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v4/logs/main-light-repeat-1-screencapture.log
+exit=1

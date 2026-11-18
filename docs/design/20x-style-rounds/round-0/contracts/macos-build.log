@@ -1,0 +1,58 @@
+[0/1] Planning build
+Building for production...
+[0/39] Compiling cmark-gfm cmark_ctype.c
+[1/39] Compiling cmark-gfm footnotes.c
+[2/39] Compiling cmark-gfm houdini_href_e.c
+[3/39] Compiling cmark-gfm houdini_html_e.c
+[4/39] Compiling cmark-gfm cmark.c
+[5/39] Compiling cmark-gfm man.c
+[6/39] Compiling cmark-gfm buffer.c
+[7/39] Compiling cmark-gfm-extensions tasklist.c
+[8/39] Compiling cmark-gfm-extensions tagfilter.c
+[9/39] Compiling cmark-gfm-extensions core-extensions.c
+[9/39] Compiling cmark-gfm-extensions strikethrough.c
+[11/39] Compiling cmark-gfm commonmark.c
+[12/39] Compiling cmark-gfm-extensions ext_scanners.c
+[13/39] Compiling cmark-gfm syntax_extension.c
+[14/39] Compiling cmark-gfm xml.c
+[15/39] Compiling CAtomic CAtomic.c
+[16/39] Write swift-version--58304C5D6DBC2206.txt
+[17/40] Compiling cmark-gfm registry.c
+[17/41] Compiling cmark-gfm render.c
+[19/42] Compiling cmark-gfm-extensions autolink.c
+[20/42] Compiling cmark-gfm plugin.c
+[21/42] Compiling cmark-gfm references.c
+[22/42] Compiling cmark-gfm linked_list.c
+[23/42] Compiling cmark-gfm plaintext.c
+[24/42] Compiling cmark-gfm map.c
+[25/42] Compiling cmark-gfm-extensions table.c
+[26/42] Compiling cmark-gfm iterator.c
+[27/42] Compiling cmark-gfm latex.c
+[28/42] Compiling cmark-gfm arena.c
+[29/42] Compiling cmark-gfm houdini_html_u.c
+[30/42] Compiling cmark-gfm node.c
+[31/42] Compiling cmark-gfm html.c
+[32/42] Compiling cmark-gfm blocks.c
+[33/42] Compiling cmark-gfm inlines.c
+[34/42] Compiling cmark-gfm scanners.c
+[35/42] Compiling cmark-gfm utf8.c
+[37/43] Compiling Markdown ChildIndexPath.swift
+[38/44] Compiling WorkbenchCore ActivityNarrative.swift
+/Users/<mini>/_worktrees/20x-loop-20261112/perch/Sources/WorkbenchCore/ConversationEntryCache.swift:181:13: warning: variable 'length' was never mutated; consider changing to 'let' constant [#VariableNeverMutated]
+179 |
+180 |     private static func appendLengthPrefixed(_ bytes: inout [UInt8], _ field: String) {
+181 |         var length = UInt64(field.utf8.count)
+    |             `- warning: variable 'length' was never mutated; consider changing to 'let' constant [#VariableNeverMutated]
+182 |         for shift in stride(from: 56, through: 0, by: -8) {
+183 |             bytes.append(UInt8(truncatingIfNeeded: length >> shift))
+
+[#VariableNeverMutated]: <https://docs.swift.org/compiler/documentation/diagnostics/variable-never-mutated>
+[38/44] Write Objects.LinkFileList
+[41/44] Linking ConnectionChecks
+[42/44] Linking WorkbenchChecks
+[43/44] Linking AgentWorkbench
+Build complete! (35.67s)
+warning: '--build-system native' has been deprecated and will be removed in a future release; please report an issue at https://github.com/swiftlang/swift-package-manager/issues if you are unable to adopt the default build system.
+warning: '--build-system native' has been deprecated and will be removed in a future release; please report an issue at https://github.com/swiftlang/swift-package-manager/issues if you are unable to adopt the default build system.
+/Users/<mini>/_worktrees/20x-loop-20261112/perch/build/Perch.app: replacing existing signature
+/Users/<mini>/_worktrees/20x-loop-20261112/perch/build/Perch.app

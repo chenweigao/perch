@@ -1,0 +1,53 @@
+{
+  "commit": "5b81c92ea2ab9af4821d833fb90c95426fc8cfd3",
+  "dirty": false,
+  "boundary": "offline synthetic fixtures in a PerfRunner Aqua job; no user sessions or remote agents",
+  "comparisons": [],
+  "commands": [
+    {
+      "name": "build-host",
+      "command": [
+        "python3",
+        "scripts/check-host-lifecycle.py",
+        "--app",
+        "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-loop/HostLifecycleChecks.app",
+        "--build-only"
+      ],
+      "log": "logs/build-host.log",
+      "exit_code": 0,
+      "seconds": 26.154
+    },
+    {
+      "name": "main-light-repeat-1",
+      "command": [
+        "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-loop/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v4/main-light/repeat-1/capture.png"
+      },
+      "log": "logs/main-light-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 9.087
+    },
+    {
+      "name": "main-light-repeat-1-screencapture",
+      "command": [
+        "/usr/sbin/screencapture",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "19051",
+        "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v4/main-light/repeat-1/capture.png"
+      ],
+      "log": "logs/main-light-repeat-1-screencapture.log",
+      "exit_code": 1,
+      "seconds": 0.101
+    }
+  ],
+  "status": "failed",
+  "error": "main-light-repeat-1-screencapture failed; see /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v4/logs/main-light-repeat-1-screencapture.log",
+  "seconds": 35.345
+}

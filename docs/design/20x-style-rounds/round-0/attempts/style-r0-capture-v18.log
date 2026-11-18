@@ -1,0 +1,29 @@
+capture_start=2026-11-18T05:02:33Z
+From github.com:chenweigao/perch
+ + d7cb51dd...186db77e style/loop-main -> origin/style/loop-main  (forced update)
+Warning: you are leaving 1 commit behind, not connected to
+any of your branches:
+
+  d7cb51dd test(style): add repeatable visual capture infrastructure
+
+If you want to keep it by creating a new branch, this may be a good time
+to do so with:
+
+ git branch <new-branch-name> d7cb51dd
+
+HEAD is now at 186db77e test(style): add repeatable visual capture infrastructure
+head=186db77ee84a68725729a9238e30a17248569c64
+porcelain_before=0
+{
+  "status": "failed",
+  "output": "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v18",
+  "comparisons": 11,
+  "seconds": 334.192
+}
+Traceback (most recent call last):
+  File "/Users/<mini>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 268, in <module>
+    main()
+  File "/Users/<mini>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 254, in main
+    raise RuntimeError(f"Unstable capture: {group.name}")
+RuntimeError: Unstable capture: main-scroll
+exit=1

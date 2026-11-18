@@ -1,0 +1,54 @@
+{
+  "commit": "1ad357c2371f9a5450154a8863b7d0bc59e9f286",
+  "dirty": false,
+  "boundary": "offline synthetic fixtures in a PerfRunner Aqua job; no user sessions or remote agents",
+  "comparisons": [],
+  "commands": [
+    {
+      "name": "build-host",
+      "command": [
+        "python3",
+        "scripts/check-host-lifecycle.py",
+        "--app",
+        "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-loop/HostLifecycleChecks.app",
+        "--build-only"
+      ],
+      "log": "logs/build-host.log",
+      "exit_code": 0,
+      "seconds": 25.312
+    },
+    {
+      "name": "build-workbench",
+      "command": [
+        "bash",
+        "scripts/build-workbench-preview.sh"
+      ],
+      "log": "logs/build-workbench.log",
+      "exit_code": 0,
+      "seconds": 15.498
+    },
+    {
+      "name": "build-sidebar",
+      "command": [
+        "bash",
+        "scripts/build-sidebar-preview.sh"
+      ],
+      "log": "logs/build-sidebar.log",
+      "exit_code": 0,
+      "seconds": 53.673
+    },
+    {
+      "name": "build-composer",
+      "command": [
+        "bash",
+        "scripts/build-composer-preview.sh"
+      ],
+      "log": "logs/build-composer.log",
+      "exit_code": 0,
+      "seconds": 2.049
+    }
+  ],
+  "status": "failed",
+  "error": "[Errno 2] No such file or directory: '/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-loop/HostLifecycleChecks.app/Contents/Contents/Info.plist'",
+  "seconds": 96.61
+}

@@ -1,0 +1,221 @@
+{
+  "commit": "c93381587538332dfa7d5322f97881d1100740b4",
+  "dirty": false,
+  "boundary": "offline synthetic fixtures in a PerfRunner Aqua job; no user sessions or remote agents",
+  "comparisons": [],
+  "commands": [
+    {
+      "name": "main-light-repeat-1",
+      "command": [
+        "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-loop/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v6/main-light/repeat-1/capture.png"
+      },
+      "log": "logs/main-light-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 8.701
+    },
+    {
+      "name": "main-light-repeat-1-screencapture",
+      "command": [
+        "/Users/<mini>/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "19073",
+        "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v6/main-light/repeat-1/capture.png"
+      ],
+      "log": "logs/main-light-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.36
+    },
+    {
+      "name": "main-light-repeat-2",
+      "command": [
+        "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-loop/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v6/main-light/repeat-2/capture.png"
+      },
+      "log": "logs/main-light-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 8.861
+    },
+    {
+      "name": "main-light-repeat-2-screencapture",
+      "command": [
+        "/Users/<mini>/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "19079",
+        "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v6/main-light/repeat-2/capture.png"
+      ],
+      "log": "logs/main-light-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.233
+    },
+    {
+      "name": "main-dark-repeat-1",
+      "command": [
+        "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-loop/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v6/main-dark/repeat-1/capture.png",
+        "PERCH_STYLE_DARK": "1"
+      },
+      "log": "logs/main-dark-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 8.444
+    },
+    {
+      "name": "main-dark-repeat-1-screencapture",
+      "command": [
+        "/Users/<mini>/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "19085",
+        "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v6/main-dark/repeat-1/capture.png"
+      ],
+      "log": "logs/main-dark-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.229
+    },
+    {
+      "name": "main-dark-repeat-2",
+      "command": [
+        "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-loop/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v6/main-dark/repeat-2/capture.png",
+        "PERCH_STYLE_DARK": "1"
+      },
+      "log": "logs/main-dark-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 8.644
+    },
+    {
+      "name": "main-dark-repeat-2-screencapture",
+      "command": [
+        "/Users/<mini>/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "19091",
+        "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v6/main-dark/repeat-2/capture.png"
+      ],
+      "log": "logs/main-dark-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.256
+    },
+    {
+      "name": "main-english-repeat-1",
+      "command": [
+        "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-loop/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v6/main-english/repeat-1/capture.png",
+        "PERCH_STYLE_LOCALE": "en"
+      },
+      "log": "logs/main-english-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 8.802
+    },
+    {
+      "name": "main-english-repeat-1-screencapture",
+      "command": [
+        "/Users/<mini>/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "19097",
+        "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v6/main-english/repeat-1/capture.png"
+      ],
+      "log": "logs/main-english-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.233
+    },
+    {
+      "name": "main-english-repeat-2",
+      "command": [
+        "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-loop/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v6/main-english/repeat-2/capture.png",
+        "PERCH_STYLE_LOCALE": "en"
+      },
+      "log": "logs/main-english-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 8.831
+    },
+    {
+      "name": "main-english-repeat-2-screencapture",
+      "command": [
+        "/Users/<mini>/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "19103",
+        "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v6/main-english/repeat-2/capture.png"
+      ],
+      "log": "logs/main-english-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.387
+    },
+    {
+      "name": "main-large-type-repeat-1",
+      "command": [
+        "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-loop/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v6/main-large-type/repeat-1/capture.png",
+        "PERCH_STYLE_LARGE_TYPE": "1"
+      },
+      "log": "logs/main-large-type-repeat-1.log",
+      "exit_code": -5,
+      "seconds": 2.551
+    }
+  ],
+  "status": "failed",
+  "error": "main-large-type-repeat-1 exited before capture readiness; see /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v6/logs/main-large-type-repeat-1.log",
+  "seconds": 55.113
+}

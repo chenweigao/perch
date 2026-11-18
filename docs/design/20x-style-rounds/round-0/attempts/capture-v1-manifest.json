@@ -1,0 +1,34 @@
+{
+  "commit": "8548322c499ce7b9791317d84942812b9974f63a",
+  "dirty": false,
+  "boundary": "offline synthetic fixtures in a PerfRunner Aqua job; no user sessions or remote agents",
+  "comparisons": [],
+  "commands": [
+    {
+      "name": "build-host",
+      "command": [
+        "python3",
+        "scripts/check-host-lifecycle.py",
+        "--app",
+        "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-loop/HostLifecycleChecks.app",
+        "--build-only"
+      ],
+      "log": "logs/build-host.log",
+      "exit_code": 0,
+      "seconds": 27.595
+    },
+    {
+      "name": "build-workbench",
+      "command": [
+        "bash",
+        "scripts/build-workbench-preview.sh"
+      ],
+      "log": "logs/build-workbench.log",
+      "exit_code": 1,
+      "seconds": 15.229
+    }
+  ],
+  "status": "failed",
+  "error": "build-workbench failed; see /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v1/logs/build-workbench.log",
+  "seconds": 42.9
+}

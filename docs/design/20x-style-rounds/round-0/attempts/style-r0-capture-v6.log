@@ -1,0 +1,31 @@
+capture_start=2026-11-18T03:29:58Z
+From github.com:chenweigao/perch
+ + b389c8fb...c9338158 style/loop-main -> origin/style/loop-main  (forced update)
+Warning: you are leaving 1 commit behind, not connected to
+any of your branches:
+
+  b389c8fb test(style): add repeatable visual capture infrastructure
+
+If you want to keep it by creating a new branch, this may be a good time
+to do so with:
+
+ git branch <new-branch-name> b389c8fb
+
+HEAD is now at c9338158 test(style): add repeatable visual capture infrastructure
+head=c93381587538332dfa7d5322f97881d1100740b4
+porcelain_before=0
+{
+  "status": "failed",
+  "output": "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v6",
+  "comparisons": 0,
+  "seconds": 55.113
+}
+Traceback (most recent call last):
+  File "/Users/<mini>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 249, in <module>
+    main()
+  File "/Users/<mini>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 202, in main
+    capture(f"main-{variant}-repeat-{repeat}", main_binary, ["native-design"], settings,
+  File "/Users/<mini>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 168, in capture
+    raise RuntimeError(f"{name} exited before capture readiness; see {log_path}")
+RuntimeError: main-large-type-repeat-1 exited before capture readiness; see /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v6/logs/main-large-type-repeat-1.log
+exit=1

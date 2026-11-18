@@ -1,0 +1,31 @@
+capture_start=2026-11-18T04:29:36Z
+From github.com:chenweigao/perch
+ + 9d9fd2cd...65c1ad6d style/loop-main -> origin/style/loop-main  (forced update)
+Warning: you are leaving 1 commit behind, not connected to
+any of your branches:
+
+  9d9fd2cd test(style): add repeatable visual capture infrastructure
+
+If you want to keep it by creating a new branch, this may be a good time
+to do so with:
+
+ git branch <new-branch-name> 9d9fd2cd
+
+HEAD is now at 65c1ad6d test(style): add repeatable visual capture infrastructure
+head=65c1ad6d44f62c7cf305e3157594080b23b90c55
+porcelain_before=0
+{
+  "status": "failed",
+  "output": "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v15",
+  "comparisons": 0,
+  "seconds": 26.881
+}
+Traceback (most recent call last):
+  File "/Users/<mini>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 263, in <module>
+    main()
+  File "/Users/<mini>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 195, in main
+    run("build-host", ["python3", "scripts/check-host-lifecycle.py", "--app", host_app, "--build-only"], timeout=900)
+  File "/Users/<mini>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 130, in run
+    raise RuntimeError(f"{name} failed; see {log_path}")
+RuntimeError: build-host failed; see /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v15/logs/build-host.log
+exit=1

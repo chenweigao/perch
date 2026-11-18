@@ -1,0 +1,32 @@
+capture_start=2026-11-18T03:16:30Z
+From github.com:chenweigao/perch
+   073e4fa9..f30fea05  perf/20x-loop-44-20261118 -> origin/perf/20x-loop-44-20261118
+ + 1ad357c2...18f6ea7e style/loop-main -> origin/style/loop-main  (forced update)
+Warning: you are leaving 1 commit behind, not connected to
+any of your branches:
+
+  1ad357c2 test(style): add repeatable visual capture infrastructure
+
+If you want to keep it by creating a new branch, this may be a good time
+to do so with:
+
+ git branch <new-branch-name> 1ad357c2
+
+HEAD is now at 18f6ea7e test(style): add repeatable visual capture infrastructure
+head=18f6ea7e8041ce435fc7cd3162cd3a5e71294ced
+porcelain_before=0
+{
+  "status": "failed",
+  "output": "/Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v3",
+  "comparisons": 0,
+  "seconds": 3.548
+}
+Traceback (most recent call last):
+  File "/Users/<mini>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 159, in <module>
+    main()
+  File "/Users/<mini>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 117, in main
+    capture(f"main-{variant}-repeat-{repeat}", main_binary, ["native-design"], settings,
+  File "/Users/<mini>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop.py", line 86, in capture
+    raise RuntimeError(f"{name} exited before capture readiness; see {log_path}")
+RuntimeError: main-light-repeat-1 exited before capture readiness; see /Users/<mini>/_worktrees/20x-loop-20261112/perch/.local/style-r0-capture-v3/logs/main-light-repeat-1.log
+exit=1
