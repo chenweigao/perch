@@ -1,0 +1,15 @@
+{
+  "checked_at": "2026-11-19T16:41:29+08:00",
+  "full_check_exit_code": 2,
+  "full_check_passed": false,
+  "full_diagnostic_sha256": "9ce778f8b95900b35b1d75b40c5873700cb9e1b12821faeddbdb26e18cafece3",
+  "exact_original_log_exclusions": [
+    "docs/design/20x-style-rounds/round-6/after/logs/build-host.log",
+    "docs/design/20x-style-rounds/round-6/before/logs/build-host.log",
+    "docs/design/20x-style-rounds/round-6/before/logs/build-sidebar.log",
+    "docs/design/20x-style-rounds/round-6/contracts/mac-gates/build.log"
+  ],
+  "original_logs_unchanged": true,
+  "all_other_staged_round_files_exit_code": 0,
+  "full_whitespace_certified": false
+}

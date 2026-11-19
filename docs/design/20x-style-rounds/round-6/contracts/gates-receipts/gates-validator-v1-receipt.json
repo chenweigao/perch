@@ -1,0 +1,6 @@
+{
+  "consumer": "validate-gates.py",
+  "actual_validator_exit": 0,
+  "Mac_gates_actual_exit": 0,
+  "not_a_GUI_rerun": true
+}

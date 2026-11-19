@@ -1,0 +1,99 @@
+{
+  "status": "passed",
+  "synthetic_controls_only_not_delivery_screenshots": true,
+  "controls": [
+    {
+      "name": "unchanged",
+      "layer": "decoded pixel mask",
+      "synthetic_input": true,
+      "pass": true
+    },
+    {
+      "name": "inside-header",
+      "layer": "decoded pixel mask",
+      "synthetic_input": true,
+      "pass": true
+    },
+    {
+      "name": "left-boundary-outside",
+      "layer": "decoded pixel mask",
+      "synthetic_input": true,
+      "pass": true
+    },
+    {
+      "name": "right-boundary-outside",
+      "layer": "decoded pixel mask",
+      "synthetic_input": true,
+      "pass": true
+    },
+    {
+      "name": "top-boundary-outside",
+      "layer": "decoded pixel mask",
+      "synthetic_input": true,
+      "pass": true
+    },
+    {
+      "name": "bottom-boundary-outside",
+      "layer": "decoded pixel mask",
+      "synthetic_input": true,
+      "pass": true
+    },
+    {
+      "name": "rgba-only-outside",
+      "layer": "decoded pixel mask",
+      "synthetic_input": true,
+      "pass": true
+    },
+    {
+      "name": "stability-header-pixel",
+      "layer": "decoded pixel mask",
+      "synthetic_input": true,
+      "pass": true
+    },
+    {
+      "name": "tampered-frozen-contract.json",
+      "layer": "isolated frozen inputs",
+      "synthetic_input": true,
+      "diagnostic": "Frozen contract hash mismatch",
+      "pass": true
+    },
+    {
+      "name": "tampered-expected-differences.md",
+      "layer": "isolated frozen inputs",
+      "synthetic_input": true,
+      "diagnostic": "Frozen input hash mismatch: expected_list_sha256",
+      "pass": true
+    },
+    {
+      "name": "tampered-allowed-regions-before.json",
+      "layer": "isolated frozen inputs",
+      "synthetic_input": true,
+      "diagnostic": "Frozen input hash mismatch: allowed_regions_sha256",
+      "pass": true
+    },
+    {
+      "name": "tampered-capture-matrix.py",
+      "layer": "isolated frozen inputs",
+      "synthetic_input": true,
+      "diagnostic": "Frozen input hash mismatch: capture_wrapper_sha256",
+      "pass": true
+    },
+    {
+      "name": "tampered-capture-style-loop.py",
+      "layer": "isolated frozen inputs",
+      "synthetic_input": true,
+      "diagnostic": "Frozen input hash mismatch: existing_capture_driver_sha256",
+      "pass": true
+    },
+    {
+      "name": "tampered-protected-reader.py",
+      "layer": "isolated frozen inputs",
+      "synthetic_input": true,
+      "diagnostic": "Protected round 3 PNG reader hash mismatch",
+      "pass": true
+    }
+  ],
+  "original_before_and_frozen_inputs_unchanged": true,
+  "before_input_files": 0,
+  "frozen_contract_sha256": "3b1d333c9414f2c87a92159ba22dd98cb6c24620c158f7cf9e6183591329ac60"
+}

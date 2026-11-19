@@ -1,0 +1,13 @@
+{
+  "recorded_at": "2026-11-19T15:04:39+08:00",
+  "HEAD_before_commit": "2ded248b7f3d6993841b05c88b33f36add451a92",
+  "dirty": true,
+  "only_product_path": "Tests/WorkbenchPreview/App.swift",
+  "added_lines": 1,
+  "removed_lines": 1,
+  "source_before_sha256": "1fbc3b47cee0203549f4a136bea80583076a145e59cd2d1eb4ecc6ae98a3a422",
+  "source_after_sha256": "c9904e832630a78e057bd8311076d5cff3c98321ed9163cbfea8901ebf957a11",
+  "Source_WorkbenchCore_other_Sources_scripts_CI_diff": "ZERO",
+  "strings_tags_bindings_options_fonts_padding_S03_Pickers_changed": false,
+  "fresh_before_and_26_controls_passed_before_edit": true
+}

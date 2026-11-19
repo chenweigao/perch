@@ -1,0 +1,195 @@
+{
+  "status": "passed",
+  "source_files": 31,
+  "originals_unchanged": true,
+  "png_count": 12,
+  "text_policy": "Only machine home prefixes and JSON slash normalization; original text retained externally",
+  "files": [
+    {
+      "file": "app-launch/launch-1/console.log",
+      "source_sha256": "432707aef2e8c4e5fc48d65adfb73454c5c00254b804aa9145ddd84a9b7976a8",
+      "published_sha256": "432707aef2e8c4e5fc48d65adfb73454c5c00254b804aa9145ddd84a9b7976a8",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "app-launch/launch-2/console.log",
+      "source_sha256": "a456b3abcbd033b144550b6754940e5fc1d36e9b2090f084c66d3469300a550a",
+      "published_sha256": "a456b3abcbd033b144550b6754940e5fc1d36e9b2090f084c66d3469300a550a",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "app-launch/launch-3/console.log",
+      "source_sha256": "1cb046c14bd353dd83c9615a587fe741398a9e5145bbe32755aa517812c8011a",
+      "published_sha256": "1cb046c14bd353dd83c9615a587fe741398a9e5145bbe32755aa517812c8011a",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "app-launch/launch-4/console.log",
+      "source_sha256": "a927afd0d77f6a002498be7a6ccba2a27661c37801e6b13f3776c1f204812dc5",
+      "published_sha256": "a927afd0d77f6a002498be7a6ccba2a27661c37801e6b13f3776c1f204812dc5",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "app-launch/launch-5/console.log",
+      "source_sha256": "eaf17685fa75181a3e9d25e62c39f45a8e1b02581ab67752df732f9f6350ee7f",
+      "published_sha256": "eaf17685fa75181a3e9d25e62c39f45a8e1b02581ab67752df732f9f6350ee7f",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "app-launch/result.json",
+      "source_sha256": "eb3ba5202e0e296b978ae584f5b7956878eea2fd508eb72285505e5c94fd8666",
+      "published_sha256": "eb3ba5202e0e296b978ae584f5b7956878eea2fd508eb72285505e5c94fd8666",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "app-launch.log",
+      "source_sha256": "839eab0f6581765c725a302d799e6628e700774e0c4dac961a4ec9699c7483ac",
+      "published_sha256": "839eab0f6581765c725a302d799e6628e700774e0c4dac961a4ec9699c7483ac",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "before-after-comparison.json",
+      "source_sha256": "269298746172504d9f545167d4c8b510e596d1896454b092bd47a904d4eceb05",
+      "published_sha256": "269298746172504d9f545167d4c8b510e596d1896454b092bd47a904d4eceb05",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "build.log",
+      "source_sha256": "a3b0c2e49c451049b07fd78899b1f7592ff03b2af7f5830fa60d44c49e3b3939",
+      "published_sha256": "e6c50d607b4316bf3a01f6cae15e661fc8ba31c377a98c56b9236dd4a48cf206",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "localization.log",
+      "source_sha256": "15053579b8b58a44a8e65381d240fa4fcab6705f63135b51b4117a190f704338",
+      "published_sha256": "15053579b8b58a44a8e65381d240fa4fcab6705f63135b51b4117a190f704338",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "measurement-ci-redline.diff",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "native-design/native-cite-dark.png",
+      "source_sha256": "7139b52cd855aa32c9e33100d7ae55f417e3fd7b6295e215da86b2e1d16773dd",
+      "published_sha256": "7139b52cd855aa32c9e33100d7ae55f417e3fd7b6295e215da86b2e1d16773dd",
+      "png_bytes_preserved": true
+    },
+    {
+      "file": "native-design/native-cite-light.png",
+      "source_sha256": "a87ffd4082a31ab5782a1d51a25f760a9d5c696c46f4275247a5c6968c534903",
+      "published_sha256": "a87ffd4082a31ab5782a1d51a25f760a9d5c696c46f4275247a5c6968c534903",
+      "png_bytes_preserved": true
+    },
+    {
+      "file": "native-design/native-compact-light.png",
+      "source_sha256": "a0c2cdfa7c6f440f1eb13930c6395b22b9e0ec72dff81334efdd2c8a08b32920",
+      "published_sha256": "a0c2cdfa7c6f440f1eb13930c6395b22b9e0ec72dff81334efdd2c8a08b32920",
+      "png_bytes_preserved": true
+    },
+    {
+      "file": "native-design/native-dark.png",
+      "source_sha256": "18f09c6efb78167391f9bac291df56b42762b19a1a19f01771c0cfaa7805c633",
+      "published_sha256": "18f09c6efb78167391f9bac291df56b42762b19a1a19f01771c0cfaa7805c633",
+      "png_bytes_preserved": true
+    },
+    {
+      "file": "native-design/native-fit-dark.png",
+      "source_sha256": "2049ab8f5a3a010d34f80c3e1136f18dc4b328bba23bc01a660b7f50d72897fd",
+      "published_sha256": "2049ab8f5a3a010d34f80c3e1136f18dc4b328bba23bc01a660b7f50d72897fd",
+      "png_bytes_preserved": true
+    },
+    {
+      "file": "native-design/native-fit-light.png",
+      "source_sha256": "9833d8e0381f2b550cf428dad5481ef5734569adc09ca8dc19df4fb1723c289a",
+      "published_sha256": "9833d8e0381f2b550cf428dad5481ef5734569adc09ca8dc19df4fb1723c289a",
+      "png_bytes_preserved": true
+    },
+    {
+      "file": "native-design/native-inspector-closed-light.png",
+      "source_sha256": "0377bbd45277808d50833348e599b5e38e62522b258b9e38e635e2a44a6b55ba",
+      "published_sha256": "0377bbd45277808d50833348e599b5e38e62522b258b9e38e635e2a44a6b55ba",
+      "png_bytes_preserved": true
+    },
+    {
+      "file": "native-design/native-layout.json",
+      "source_sha256": "120c7e9f2e27f00c46913797963cad544441fe4e9258dd2b373ab05102fe7823",
+      "published_sha256": "120c7e9f2e27f00c46913797963cad544441fe4e9258dd2b373ab05102fe7823",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "native-design/native-light.png",
+      "source_sha256": "99b8fa90bbf7903324c55117743616aedc52bbdad827c6fb128dcf0adac0ad7c",
+      "published_sha256": "99b8fa90bbf7903324c55117743616aedc52bbdad827c6fb128dcf0adac0ad7c",
+      "png_bytes_preserved": true
+    },
+    {
+      "file": "native-design/native-narrow-light.png",
+      "source_sha256": "20ed5f0ffdbce88fa7c321d809a1fe4d60790032711c43abc9efa1dd1264fb62",
+      "published_sha256": "20ed5f0ffdbce88fa7c321d809a1fe4d60790032711c43abc9efa1dd1264fb62",
+      "png_bytes_preserved": true
+    },
+    {
+      "file": "native-design/native-task-overview-expanded-light.png",
+      "source_sha256": "0bd968e719675d29312eae03f7764461bc6576143a1571b948cd5fdaace10ac0",
+      "published_sha256": "0bd968e719675d29312eae03f7764461bc6576143a1571b948cd5fdaace10ac0",
+      "png_bytes_preserved": true
+    },
+    {
+      "file": "native-design/native-task-overview-light.png",
+      "source_sha256": "98e500fe541043bb2a9d9cfcd3903999efcb057c9de09bc7d37e6706f696e586",
+      "published_sha256": "98e500fe541043bb2a9d9cfcd3903999efcb057c9de09bc7d37e6706f696e586",
+      "png_bytes_preserved": true
+    },
+    {
+      "file": "native-design/sidebar-hover-preview.png",
+      "source_sha256": "1d118e547808a49cdf61d70e5e20d5f4d8c9cd8b7152cf159b3b584b16c7a5ed",
+      "published_sha256": "1d118e547808a49cdf61d70e5e20d5f4d8c9cd8b7152cf159b3b584b16c7a5ed",
+      "png_bytes_preserved": true
+    },
+    {
+      "file": "native-design.log",
+      "source_sha256": "dea3b76d8ff01fc15b70da1cc628ca89cde953f619dc9a898e77b7fd6865ccd4",
+      "published_sha256": "049ae0e5dc9c11b193f381535bb15e06697ef0ff860ea5ca1a8ad8bdfe8935b7",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "perfrunner-gates.job",
+      "source_sha256": "eed80c4706ce716b99179767b33ea5ed24eb0e3daa842c6f31cb200e7211f380",
+      "published_sha256": "eed80c4706ce716b99179767b33ea5ed24eb0e3daa842c6f31cb200e7211f380",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "radius.log",
+      "source_sha256": "14bc9968c97ea0b5f67a901a694728079f748579b8d72d9b50c87c2ab69c714f",
+      "published_sha256": "14bc9968c97ea0b5f67a901a694728079f748579b8d72d9b50c87c2ab69c714f",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "sources-redline.diff",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "style-r6-gates-v1.done",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "style-r6-gates-v1.log",
+      "source_sha256": "62dc9205abcb37d541268c264460ac0350dd140c0593e4f2f5d578d8ba58317f",
+      "published_sha256": "62dc9205abcb37d541268c264460ac0350dd140c0593e4f2f5d578d8ba58317f",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "workbench-checks.log",
+      "source_sha256": "4b4cacd26259d5de82c7c6ab47117620dfe8bc3733a1a3d50b4f3486ac39dd4f",
+      "published_sha256": "4b4cacd26259d5de82c7c6ab47117620dfe8bc3733a1a3d50b4f3486ac39dd4f",
+      "png_bytes_preserved": false
+    }
+  ]
+}

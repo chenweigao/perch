@@ -1,0 +1,16 @@
+Host lifecycle fixture ready in 0.04 s
+/Users/developer/_worktrees/20x-loop-20261112/perch/build/Perch Design Preview.app: replacing existing signature
+Persistent native design preview: /Users/developer/_worktrees/20x-loop-20261112/perch/build/Perch Design Preview.app
+Running host lifecycle phase: native-design
+PASS: production context citation chip, exact prompt expansion and native/Kimi session ownership
+PASS: sidebar close/reopen and rapid toggles preserve unified header alignment
+Native window chrome: ["windowCornerRadius": 16.0, "sidebar": ["top": 52.0, "minX": 6.0, "maxX": 266.0, "midY": 473.0, "height": 842.0], "actions": ["midY": 26.0, "minX": 1372.0, "maxX": 1518.0, "height": 32.0, "top": 10.0], "closeButton": ["maxX": 33.0, "top": 19.0, "minX": 19.0, "height": 14.0, "midY": 26.0], "conversation": ["top": 6.0, "midY": 450.0, "minX": 276.0, "maxX": 1530.0, "height": 888.0], "title": ["maxX": 536.0, "minX": 300.0, "midY": 26.0, "height": 32.0, "top": 10.0], "sidebarToggle": ["minX": 98.0, "height": 37.0, "maxX": 130.0, "top": 7.0, "midY": 25.5], "titlebarHeight": 52.0]
+PASS: production workspace, aligned reply/composer, integrated full-height inspector, native light and dark
+PASS: file inspector first reveal, inline preview, parent navigation, reopen, session isolation and explicit expansion
+PASS: preview stop reaches confirmed stopped state
+PASS: model and effort changes reach the fixture runtime and return in the selected session
+Sidebar preview handoff: 10 ms, panel stayed visible
+PASS: sidebar delayed preview, hover ellipsis and native session actions menu
+Passed host lifecycle phase: native-design (25.13 s)
+Cleaning up host lifecycle preferences
+Host lifecycle cleanup complete

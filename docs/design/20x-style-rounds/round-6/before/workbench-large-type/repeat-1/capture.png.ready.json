@@ -1,0 +1,21 @@
+{
+  "appearance" : "NSAppearanceNameAqua",
+  "backing_scale" : 1,
+  "content_bounds" : [
+    0,
+    0,
+    1120,
+    820
+  ],
+  "dark" : false,
+  "effective_dark" : false,
+  "large_type" : true,
+  "locale" : "zh-Hans",
+  "window_frame" : [
+    48,
+    72,
+    1120,
+    820
+  ],
+  "window_number" : 25904
+}

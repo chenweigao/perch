@@ -1,0 +1,57 @@
+{
+  "status": "passed",
+  "source_files": 8,
+  "originals_unchanged": true,
+  "png_count": 0,
+  "text_policy": "Only machine home prefixes and JSON slash normalization; original text retained externally",
+  "files": [
+    {
+      "file": "after-package.log",
+      "source_sha256": "a9dac998bcf17155a305ced7f6e01363a11ba264ac5696207f4e48536d13e785",
+      "published_sha256": "bac796e263a7c5a9cb8fe2074e2b3232ac6597e914e6c1743dc7a60523c695c9",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "after-transfer.log",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "allowed-regions-before.json",
+      "source_sha256": "c779c0020c137e028d2dbcdb700ead71eeb25c0013195bfde461d13348782f55",
+      "published_sha256": "c779c0020c137e028d2dbcdb700ead71eeb25c0013195bfde461d13348782f55",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "candidate-revision.txt",
+      "source_sha256": "dc7e7a98e326066dadb5006837c02655602f4c0d672fe845349ddb9176492459",
+      "published_sha256": "dc7e7a98e326066dadb5006837c02655602f4c0d672fe845349ddb9176492459",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "expected-differences-before.md",
+      "source_sha256": "bf8c978d0e02e587afd3c65b4dfac2c42e894954555635486cded1bb0c8d59cb",
+      "published_sha256": "bf8c978d0e02e587afd3c65b4dfac2c42e894954555635486cded1bb0c8d59cb",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "frozen-contract.json",
+      "source_sha256": "3b1d333c9414f2c87a92159ba22dd98cb6c24620c158f7cf9e6183591329ac60",
+      "published_sha256": "3b1d333c9414f2c87a92159ba22dd98cb6c24620c158f7cf9e6183591329ac60",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "style-r6-after-v1.done",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "style-r6-after-v1.log",
+      "source_sha256": "66e5a51a3d3dc40d9ff12c83312f050551c4d6428e5a551ec06d69872d25700f",
+      "published_sha256": "eecd9574b68b6920815891afae24db53bcaf084732b6879bff623a31637d7220",
+      "png_bytes_preserved": false
+    }
+  ]
+}

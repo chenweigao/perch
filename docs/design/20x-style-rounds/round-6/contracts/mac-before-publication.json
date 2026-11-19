@@ -1,0 +1,45 @@
+{
+  "status": "passed",
+  "source_files": 6,
+  "originals_unchanged": true,
+  "png_count": 0,
+  "text_policy": "Only machine home prefixes and JSON slash normalization; original text retained externally",
+  "files": [
+    {
+      "file": "allowed-regions-before.json",
+      "source_sha256": "c779c0020c137e028d2dbcdb700ead71eeb25c0013195bfde461d13348782f55",
+      "published_sha256": "c779c0020c137e028d2dbcdb700ead71eeb25c0013195bfde461d13348782f55",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "expected-differences-before.md",
+      "source_sha256": "bf8c978d0e02e587afd3c65b4dfac2c42e894954555635486cded1bb0c8d59cb",
+      "published_sha256": "bf8c978d0e02e587afd3c65b4dfac2c42e894954555635486cded1bb0c8d59cb",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "frozen-contract.json",
+      "source_sha256": "3b1d333c9414f2c87a92159ba22dd98cb6c24620c158f7cf9e6183591329ac60",
+      "published_sha256": "3b1d333c9414f2c87a92159ba22dd98cb6c24620c158f7cf9e6183591329ac60",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "perfrunner-before.job",
+      "source_sha256": "a0c99ffd02e120f180aa5ed959e4fbd9a94fedcef8ff4873762f2cd7cfe87400",
+      "published_sha256": "a0c99ffd02e120f180aa5ed959e4fbd9a94fedcef8ff4873762f2cd7cfe87400",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "style-r6-before-v1.done",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "style-r6-before-v1.log",
+      "source_sha256": "bb569d006bfb15ab8707e6cd023ca291f8ce0c0c90e29bc1cb2ba4fe5af83085",
+      "published_sha256": "fba24ed2dcbdd34837f22fc9a4879715892b2b96ab183d08a13a77ea62ef8416",
+      "png_bytes_preserved": false
+    }
+  ]
+}

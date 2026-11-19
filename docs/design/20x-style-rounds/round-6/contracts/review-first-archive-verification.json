@@ -1,0 +1,138 @@
+{
+  "status": "passed",
+  "verified_at": "2026-11-19T16:50:22+08:00",
+  "branch": "style/loop-main",
+  "real_tested_head": "7e66eb2e5a9dac92eea8d6178e55e7ab5f38e554",
+  "current_archive_head": "c0275629df4e50a38e3942dc88d98f3c6006fdb4",
+  "seal_sha256": "4b503ba3889c907a5717dc801b24bd9fc9b2e39f2181e7f4a3685b171894bc18",
+  "protected_hash_mode_kind_records_verified": 7772,
+  "original_historical_findings_verified": 19,
+  "round4_original_FAIL_and_image_supplement_preserved": true,
+  "authored_original_snapshots": [
+    {
+      "source": "docs/design/20x-style-loop/INDEX.md",
+      "snapshot": "docs/design/20x-style-rounds/round-6/contracts/review-original-authored/INDEX.md",
+      "sha256": "62ce765f1690e753a11959d6457151446bdda2bbdd76afd3ee0a969189947dd5"
+    },
+    {
+      "source": "docs/design/20x-style-rounds/round-6/README.md",
+      "snapshot": "docs/design/20x-style-rounds/round-6/contracts/review-original-authored/README.md",
+      "sha256": "2982897e91846e854928bbad9986197840269ad9c5d669c08c6fac33a636846b"
+    }
+  ],
+  "protected_product_and_scripts_diff": "ZERO",
+  "counter_advanced_by_this_verifier": false,
+  "rounds_remaining_before_exact_archive_push": 15,
+  "verdict": "PASS_LIMITED",
+  "review_sha256": "5918281ee481c5158ec02cc6c88de4f6396abd4dc18ba5593df0852db8540fb2",
+  "new_findings": {
+    "P1": 0,
+    "P2": 0,
+    "P3": 1
+  },
+  "finding_disposition_verified": true,
+  "all_uncertified_boundaries_retained": [
+    {
+      "id": "R6-L01",
+      "status": "not_verified",
+      "required_for_frozen_S09_contract": false,
+      "boundary": "任意窗口宽度、全部八种状态菜单交互/更多当前值、最长任务组/机器名、其他locale或backing scale；只认证本轮冻结34场景及1120x820/scale1的十六header组合。"
+    },
+    {
+      "id": "R6-L02",
+      "status": "not_verified",
+      "required_for_frozen_S09_contract": false,
+      "boundary": "全应用18pt或任意Dynamic Type；xxxLarge为既有代表fixture，固定字体/原生控件可能与默认像素相同，3x nearest仅供观察。"
+    },
+    {
+      "id": "R6-L03",
+      "status": "not_verified",
+      "required_for_frozen_S09_contract": false,
+      "boundary": "全产品无旧截断、所有preview完整人工交互或全部原图逐字目视；原sidebar省略、英文fixture的中文预览状态等既有行为不被本轮结论覆盖。"
+    },
+    {
+      "id": "R6-L04",
+      "status": "not_verified",
+      "required_for_frozen_S09_contract": false,
+      "boundary": "全局OS明暗切换、所有系统跟随环境及所有Settings交互；源码策略不变及正常native-design的显式app light/dark不替代全局切换运行认证。"
+    },
+    {
+      "id": "R6-L05",
+      "status": "not_verified",
+      "required_for_frozen_S09_contract": false,
+      "boundary": "全部compositor/Liquid Glass光学、壁纸/tint历史因果或审美批准；正常native-design12原PNG为view-cache，已裁决玻璃/sidebar/inspector/framePanel方向不重开。"
+    },
+    {
+      "id": "R6-L06",
+      "status": "not_verified",
+      "required_for_frozen_S09_contract": false,
+      "boundary": "真实用户会话、SSH/客户端连接、实际Agent、认证、权限、连接生命周期运行；已有UI/runtime证据为离线合成fixture，本代理不进行这些操作。"
+    },
+    {
+      "id": "R6-L07",
+      "status": "not_verified",
+      "required_for_frozen_S09_contract": false,
+      "boundary": "性能/FPS、新PerfRunner测量或性能CI语义认证；capture用时、native-design用时和进程存活检查不等于帧率或性能通过。"
+    },
+    {
+      "id": "R6-L08",
+      "status": "not_verified",
+      "required_for_frozen_S09_contract": false,
+      "boundary": "Linux完整PASS、LinuxSwift/WorkbenchChecks或clean候选Linux来源；portable10/10是在产品写入后/commit前、baseline HEAD且dirty=true，无Swift/WorkbenchChecks执行。"
+    },
+    {
+      "id": "R6-L09",
+      "status": "not_verified",
+      "required_for_frozen_S09_contract": false,
+      "boundary": "由dirty布尔值重建历史逐文件工作树、可重复构建、独立原二进制字节认证；本次只确认after/gates原日志中的host hash相同，未在Linux取得或执行Mac二进制原件。"
+    },
+    {
+      "id": "R6-L10",
+      "status": "not_verified",
+      "required_for_frozen_S09_contract": false,
+      "boundary": "seal之前的不可变取证保管、从未改写证明或追补round3首次写入认证；本轮操作记录/hash链不改写旧时序边界，不使用mtime代替操作回执。"
+    },
+    {
+      "id": "R6-L11",
+      "status": "not_verified",
+      "required_for_frozen_S09_contract": false,
+      "boundary": "从原process回执独立读取after整体shell的141及完整摘要管线因果；141保持父代理实际工具回执值，不升级整体exit0、不误归类为Mac/像素FAIL，见S09-R6-F01。"
+    },
+    {
+      "id": "R6-L12",
+      "status": "not_verified",
+      "required_for_frozen_S09_contract": false,
+      "boundary": "旧post-push TLS查询的独立Git数字退出码、全局TLS/credential/permission/hook配置历史或本次实时远端审计；普通精确重查成功的原记录可核对，不补造、不重推/改配置。"
+    },
+    {
+      "id": "R6-L13",
+      "status": "not_verified",
+      "required_for_frozen_S09_contract": false,
+      "boundary": "完整whitespace或全历史归档clean；完整本轮候选检查实际exit2，只在两个精确原日志例外之外通过，原诊断与尾空格不修剪。"
+    },
+    {
+      "id": "R6-L14",
+      "status": "not_verified",
+      "required_for_frozen_S09_contract": false,
+      "boundary": "图片隐私、未知秘密/凭据格式、所有权、许可、授权或全历史仓库审计；scanner0 findings只认证既有模式，不修改scanner或扩大认证。"
+    },
+    {
+      "id": "R6-L15",
+      "status": "not_verified",
+      "required_for_frozen_S09_contract": false,
+      "boundary": "所有未来环境稳定、全部原生生产启动交互；固定双跑及五次10秒进程存活不能穷尽未来运行。"
+    },
+    {
+      "id": "R6-L16",
+      "status": "not_verified",
+      "required_for_frozen_S09_contract": false,
+      "boundary": "旧round2/4改判、旧发现等级/原文改写或旧作业重派；19个原对象和原verdict完整保留，round4限定图像补证与原FAIL分别保留。"
+    },
+    {
+      "id": "R6-L17",
+      "status": "not_verified",
+      "required_for_frozen_S09_contract": false,
+      "boundary": "父代理归档、推送、新归档HEAD重新测试、计本轮完成、开始下一轮或恢复迭代；本代理只写本JSON，目标active和剩15轮不变。"
+    }
+  ]
+}

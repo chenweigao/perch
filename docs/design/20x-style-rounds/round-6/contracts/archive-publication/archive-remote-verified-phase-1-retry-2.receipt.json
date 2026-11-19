@@ -1,0 +1,15 @@
+{
+  "command": [
+    "git",
+    "ls-remote",
+    "origin",
+    "refs/heads/style/loop-main",
+    "refs/heads/main"
+  ],
+  "started_at": "2026-11-19T16:47:55+08:00",
+  "finished_at": "2026-11-19T16:47:57+08:00",
+  "process_return_code": 0,
+  "archive_head": "c0275629df4e50a38e3942dc88d98f3c6006fdb4",
+  "expected_remote_before": "7e66eb2e5a9dac92eea8d6178e55e7ab5f38e554",
+  "original_log": "archive-remote-verified-phase-1-retry-2.log"
+}

@@ -1,0 +1,9 @@
+runner_pid=69667
+queued_jobs_before=0
+shared_porcelain=0
+shared_head=2ded248b7f3d6993841b05c88b33f36add451a92
+queued_at=2026-11-19T15:10:59+08:00
+job=style-r6-after-v1
+job_sha256=45eb5c263fbc7076b8893acd8a4af434db7ebefb4a06ba4c8b34ff53239a7d10
+candidate=7e66eb2e5a9dac92eea8d6178e55e7ab5f38e554
+queue_receipt_only=true

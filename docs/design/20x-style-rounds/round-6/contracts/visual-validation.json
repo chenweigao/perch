@@ -1,0 +1,80 @@
+{
+  "status": "passed_for_gates",
+  "observed_at": "2026-11-19T15:27:47.208719+08:00",
+  "method": "Actual functions.view_image calls; author visual coverage, not independent review",
+  "candidate_head": "7e66eb2e5a9dac92eea8d6178e55e7ab5f38e554",
+  "first_use_header_combinations_viewed": 8,
+  "daily_header_combinations_viewed": 8,
+  "full_workbench_pairs_viewed": 4,
+  "original_workbench_after_pngs_viewed": 4,
+  "original_main_before_after_pngs_viewed": 4,
+  "observations": [
+    "All eight first-use header current values show complete 首次使用 after; before remains 首…",
+    "All eight daily current values remain complete 日常; original S03 values, arrows and labels have no new overlap",
+    "Workbench header and page titles are unchanged; four full-window pairs have no added overlap",
+    "Main light/dark original pairs have no visible difference; all 18 unaffected scenes independently byte-matched for both repeats"
+  ],
+  "unexpected_visual_differences": [],
+  "frozen_contract_sha256": "3b1d333c9414f2c87a92159ba22dd98cb6c24620c158f7cf9e6183591329ac60",
+  "viewed_files": [
+    {
+      "file": "comparison/headers-first-use.png",
+      "sha256": "29e6f774f5ec26bd03d9f2986764f8ff7f6c26c6becfbd92b44ef26d12ed4552"
+    },
+    {
+      "file": "comparison/headers-daily.png",
+      "sha256": "4469dc9df0ef491cc4adb33eb427fd94b6403e4c519a500cccfc78fe210834e1"
+    },
+    {
+      "file": "comparison/workbench-empty-light-full.png",
+      "sha256": "5d3f32553fd51ed357477b75c207c48a6bdb578cce367ce3d3e37aadd53e4442"
+    },
+    {
+      "file": "comparison/workbench-empty-dark-full.png",
+      "sha256": "c64873631df77290bc58da34f775290333ebb87a7aba7026be269f656e95f605"
+    },
+    {
+      "file": "comparison/workbench-empty-english-large-type-full.png",
+      "sha256": "c865d0dbfb6077e3661a4bc5a0029aaaab851a859935dc4876ef8dc3dfbe84e1"
+    },
+    {
+      "file": "comparison/workbench-empty-english-large-type-dark-full.png",
+      "sha256": "0969e77ce04d55a646899561b69c4d23866794ea8c1381d9a3d5bb2386294bce"
+    },
+    {
+      "file": "after/workbench-empty-light/repeat-1/capture.png",
+      "sha256": "2dfbac6ad8b1e9a31da9657a6795742f17fce4751d428f2bd29b2ba1ff963632"
+    },
+    {
+      "file": "after/workbench-empty-dark/repeat-1/capture.png",
+      "sha256": "0583f87f3c2b9bc9df7a6289a4a6107431091854614fde448d3bd91202a2614a"
+    },
+    {
+      "file": "after/workbench-empty-english-large-type/repeat-1/capture.png",
+      "sha256": "4d2a0274543274bb5dcab2ba842499ff5e26190a3696e68cc45a34b516574a87"
+    },
+    {
+      "file": "after/workbench-empty-english-large-type-dark/repeat-1/capture.png",
+      "sha256": "2b9ac809eebd3099cc48eab8b9fa1785a905f82ffe52097b4b74adc4d9aff917"
+    },
+    {
+      "file": "before/main-light/repeat-1/capture.png",
+      "sha256": "1cc5ea93e59c18a79254453cc08924bba95ddfeafe648deacc4fa7d56d856183"
+    },
+    {
+      "file": "before/main-dark/repeat-1/capture.png",
+      "sha256": "e0850313f2dc065a86609ffc0a4af651a74a0ec7a04665478797b7da69faf9f5"
+    },
+    {
+      "file": "after/main-light/repeat-1/capture.png",
+      "sha256": "1cc5ea93e59c18a79254453cc08924bba95ddfeafe648deacc4fa7d56d856183"
+    },
+    {
+      "file": "after/main-dark/repeat-1/capture.png",
+      "sha256": "e0850313f2dc065a86609ffc0a4af651a74a0ec7a04665478797b7da69faf9f5"
+    }
+  ],
+  "round_counted_complete": false,
+  "rounds_remaining": 15,
+  "certification_boundary": "Fixed offline scenes only; not independent review, arbitrary widths/all options, all-app 18pt, global OS switching, full compositor optics, real sessions/permissions or performance."
+}

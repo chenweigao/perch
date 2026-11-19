@@ -1,0 +1,11 @@
+{
+  "scanner_exit": 0,
+  "support_check_exit": 0,
+  "comparison_transfer_exit": 0,
+  "queue_ssh_exit": 0,
+  "status": "queued",
+  "job_name": "style-r6-gates-v1",
+  "comparison_sha256": "269298746172504d9f545167d4c8b510e596d1896454b092bd47a904d4eceb05",
+  "job_sha256": "eed80c4706ce716b99179767b33ea5ed24eb0e3daa842c6f31cb200e7211f380",
+  "result_is_not_pass": true
+}

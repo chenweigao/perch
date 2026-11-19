@@ -1,0 +1,15 @@
+observed_at=2026-11-19T14:36:49+08:00
+status=not_terminal
+
+ git branch <new-branch-name> 0b05897b
+
+HEAD is now at 2ded248b fix(style): preserve preview filter intrinsic widths
+code_head=2ded248b7f3d6993841b05c88b33f36add451a92
+capture_wrapper_sha256=49ed5d26e810739fe44314499c0fdb04296eb3143ce24e7a3d7e65f03e5c9ea2
+expected_list_sha256=bf8c978d0e02e587afd3c65b4dfac2c42e894954555635486cded1bb0c8d59cb
+allowed_regions_sha256=c779c0020c137e028d2dbcdb700ead71eeb25c0013195bfde461d13348782f55
+specific_live_processes:
+ 8753 69667       03:00 /bin/bash /Users/developer/Library/PerfRunner/jobs/style-r6-before-v1.job
+ 8828  8753       02:47 /Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python -B /Users/developer/Library/PerfRunner/results/style-r6-support-v1/capture-matrix.py --output /Users/developer/Library/PerfRunner/results/style-r6-before-v1/capture --host-app /Users/developer/Library/PerfRunner/results/style-r6-before-v1/HostLifecycleChecks.app --build-host --build-previews
+10312  8828       00:06 /Users/developer/Library/PerfRunner/results/style-r6-before-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks native-design
+job_file_present=true

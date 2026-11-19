@@ -1,0 +1,18 @@
+{
+  "checked_at": "2026-11-19T16:51:55+08:00",
+  "full_check_process_return_code": 2,
+  "full_whitespace_certified": false,
+  "full_original_diagnostic_sha256": "24048aebdde8cafd2ae397c95978c4fff84f2b78d6ec8ea00e6dd465a819c3d2",
+  "full_original_diagnostic_utf8": "docs/design/20x-style-rounds/round-6/after/logs/build-host.log:67: trailing whitespace.\n+  5 | \ndocs/design/20x-style-rounds/round-6/before/logs/build-host.log:67: trailing whitespace.\n+  5 | \ndocs/design/20x-style-rounds/round-6/before/logs/build-sidebar.log:43: trailing whitespace.\n+179 | \ndocs/design/20x-style-rounds/round-6/contracts/archive-publication/archive-push-phase-1.log:2: trailing whitespace.\n+error: RPC failed; curl 35 OpenSSL SSL_connect: SSL_ERROR_SYSCALL in connection to github.com:443 \ndocs/design/20x-style-rounds/round-6/contracts/archive-publication/archive-remote-after-phase-1-error.log:1: trailing whitespace.\n+fatal: unable to access 'https://github.com/chenweigao/perch.git/': OpenSSL SSL_connect: SSL_ERROR_SYSCALL in connection to github.com:443 \ndocs/design/20x-style-rounds/round-6/contracts/archive-publication/whitespace-full.log:2: trailing whitespace.\n++  5 | \ndocs/design/20x-style-rounds/round-6/contracts/archive-publication/whitespace-full.log:4: trailing whitespace.\n++  5 | \ndocs/design/20x-style-rounds/round-6/contracts/archive-publication/whitespace-full.log:6: trailing whitespace.\n++179 | \ndocs/design/20x-style-rounds/round-6/contracts/archive-publication/whitespace-full.log:8: trailing whitespace.\n++179 | \ndocs/design/20x-style-rounds/round-6/contracts/mac-gates/build.log:42: trailing whitespace.\n+179 | \n",
+  "exact_preserved_log_exclusions": [
+    "docs/design/20x-style-rounds/round-6/after/logs/build-host.log",
+    "docs/design/20x-style-rounds/round-6/before/logs/build-host.log",
+    "docs/design/20x-style-rounds/round-6/before/logs/build-sidebar.log",
+    "docs/design/20x-style-rounds/round-6/contracts/archive-publication/archive-push-phase-1.log",
+    "docs/design/20x-style-rounds/round-6/contracts/archive-publication/archive-remote-after-phase-1-error.log",
+    "docs/design/20x-style-rounds/round-6/contracts/archive-publication/whitespace-full.log",
+    "docs/design/20x-style-rounds/round-6/contracts/mac-gates/build.log"
+  ],
+  "all_other_staged_round_files_process_return_code": 0,
+  "original_logs_not_trimmed_or_rewritten": true
+}

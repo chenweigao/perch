@@ -1,0 +1,14 @@
+{
+  "phase": "before S09 candidate commit",
+  "full_git_diff_check_exit": 2,
+  "full_whitespace_PASS_claimed": false,
+  "preserved_original_evidence_exclusions": [
+    {"file": "before/logs/build-host.log", "line": 67},
+    {"file": "before/logs/build-sidebar.log", "line": 43}
+  ],
+  "product_and_other_reports_check": "Pass only with the two exact original compiler evidence files excluded.",
+  "evidence_trimmed_or_overwritten": false,
+  "scanner_snapshot_files_before_this_record": 404,
+  "scanner_findings": 0,
+  "hooks_rules_TLS_credentials_permission_changes": false
+}

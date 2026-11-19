@@ -15,8 +15,9 @@ conventional commit。只修改 macOS 主窗口、既有 preview 与主题 token
 - round 3 最终归档／远端头 `aad604b9ce5294b52951f189b3895b69edd12f31` 已核实；round4/S02真实测试头`4b647966`的88原PNG／区域比较和Mac gates实际PASS。原复核FAIL保留，新独立目视补证PASS_LIMITED、无新增P1/P2/P3，有限契约及首次同轮归档／精确远端核验通过后计完成；2026-11-19接续计数17→16，原测试头不改。最终同轮计数归档头以Git／外部handoff核实，不重派旧候选或评审。
 - round 2 独立处置评审已完成：回滚／停止 PASS_LIMITED，视觉 FAIL、完整契约 NOT_PASSED；历史归档不改判。
 - [历史停止总结](STOP-20261118.md)保留round2撤回／未计完成；恢复后round3／round4的完成不改历史判定，不重派round0/1或已完成作业。
-- 距上次用户汇报还剩 **15 轮**；当前未到汇报点，未请求合并。
+- 距上次用户汇报还剩 **14 轮**；当前未到汇报点，未请求合并。
 - round5 / S03新before／after各27/27双跑、108矩阵原PNG、19项控制、portable10/10、九组目视及完整Mac gates实际PASS；正常native-design12原PNG已回收。独立评审PASS_LIMITED、无P1/P2，唯一非阻断P3逐字处置；两项Picker测试头`0b05897b`不改，同轮首次归档`57dad370`／精确远端及源码核验通过后计完成16→15。2026-11-19 14:07现场目标恢复active后接续，不重派旧作业；最终计数归档头以Git及外部handoff核实。
+- round6 / S09 新基线 `2ded248b`，before／after分别于14:42:21／15:18:56终结exit0，各34/34双跑／68原PNG；26控制、原件／发布副本冻结区外双通道零差异、十八场景全窗口及跨作业PNG字节相同。首次使用八组合完整，日常八组合及主窗口代表图实际目视通过；原负回执／告警保留、不重拍。gates于15:30:55实际exit0，production build／checks／5冷启动／正常native-design和双消费PASS，共148原PNG。一行产品／portable10/10的真实候选`7e66eb2e`不改；独立评审PASS_LIMITED、无P1/P2，唯一P3逐字处置、17项认证边界保留。首归档`c0275629`精确远端与7772项保护／源码核验通过后计完成15→14；首push exit1及查询exit128保留，普通同SHA重推exit0，不改配置。最终同轮计数归档头以Git／外部handoff核实，之后才开始S04。
 - 已裁决外观方向不重开；当前没有「提案-待批」条目。
 
 ## 样式候选队列
@@ -30,7 +31,7 @@ conventional commit。只修改 macOS 主窗口、既有 preview 与主题 token
 | S01 | 主窗口回复操作行 | 正文 18pt 时 `Recap` 被截成 `Re…`，违反放大字号不截断契约 | 操作行应给文字标签保留最小固有宽度，图标间距让位于完整标签 | 仅放大字号的操作标签恢复完整；默认字号不变 | 否 | 完成：限定范围独立评审 PASS |
 | S02 | 主窗口 inspector 标题 | 英文默认宽度下 `Current workspace diff` 被截成 `Current workspac…` | 标题区可减少非标题控件的占位竞争，让完整标题优先显示 | 仅 inspector header 的标题与相邻水平留白变化；其他区域不变 | 否 | round4完成：实际关卡与独立目视补证通过，精确同轮首次归档已核实；round2仍撤回 |
 | S03 | Workbench preview 顶部筛选器 | 1120pt旧基线英文任务组值仅ellipsis／机器`All…`，中文任务组值也`全部…`；130／120pt硬frame压缩当前值 | 原生Picker当前值保留水平固有宽度，原宽度作最小值；不藏标签、缩字或改所选值 | 仅中英既有Workbench header筛选器与相邻水平留白变化，其他区域零差异 | 否 | round5真实测试头`0b05897b`三层证据及独立PASS_LIMITED通过；唯一P3已处置，同轮首次归档／精确远端核验后完成 |
-| S09 | 既有Workbench preview预览状态当前值 | round5同机位before／after的首次使用light中当前值仍`首…`，原130pt硬frame压缩标签与值 | 单独让该原生Picker保留水平固有尺寸、130作为最小宽度；不改字符串、tags、binding或选项行为 | 仅既有WB header筛选器的当前值恢复完整及水平留白分配；其他区域零差异 | 否 | 新观察的契约修复候选，优先于审美项；round5收尾后独立新轮，不在S03扩面 |
+| S09 | 既有Workbench preview预览状态当前值 | round5同机位before／after的首次使用light中当前值仍`首…`，原130pt硬frame压缩标签与值 | 单独让该原生Picker保留水平固有尺寸、130作为最小宽度；不改字符串、tags、binding或选项行为 | 仅既有WB header筛选器的当前值恢复完整及水平留白分配；其他区域零差异 | 否 | round6 三层证据、独立PASS_LIMITED及首次同轮归档／精确远端与源码核验通过后计完成；唯一P3逐字处置 |
 | S04 | 主窗口与 Workbench preview 的暗色辅助文字 | 时间戳、分组计数等 quiet 文本在暗色画布上明显弱于 light 的相对层级 | 仅提高 dark quiet token 的明度，保持 light 与正文 token 不变 | 仅暗色辅助文字变清晰；无布局位移 | 否 | 待执行 |
 | S05 | Composer preview 暗色容器 | 引用 chip 与外框在暗色下几乎融入背景，边界弱于 light | 仅提高 preview 暗色 stroke 的对比度，不改变 composer 尺寸或原生玻璃 | 仅暗色 preview 的引用 chip/容器边界变化 | 否 | 待执行 |
 | S06 | 主窗口查找栏空态 | light/dark 下匹配模式、范围与 `无匹配` 的文字层级挤在同一弱色层，扫读困难 | 保持紧凑布局，仅区分选项与结果状态的 quiet/ink 层级 | 仅查找栏文字颜色变化；输入框与工具栏几何不变 | 否 | 待执行 |
@@ -50,6 +51,7 @@ conventional commit。只修改 macOS 主窗口、既有 preview 与主题 token
 | [3](../20x-style-rounds/round-3/README.md) | Composer 捕获态背景基建修复 | I01声明内差异、其余20场景零差异；A/B全部22场景零差异 | 三矩阵132原PNG + 原生12张；portable10/10；Mac build/checks、5/5冷启动、正常native-design全通过 | [PASS_LIMITED](../20x-style-rounds/round-3/review-3.json)，五项P3逐字处置、同轮归档；不作审美或历史因果裁决 | 17 轮 |
 | [4](../20x-style-rounds/round-4/README.md) | inspector标题宽度契约修复新轮 | 英文标题和计数完整；88原PNG、11个header场景声明内变化，其余11场景零差异 | 双跑22/22、CLI控制／portable10/10；实际Mac build/checks、5/5冷启动、正常native-design全部通过 | 原[FAIL](../20x-style-rounds/round-4/review-4.json)保留；新[目视PASS_LIMITED](../20x-style-rounds/round-4/review-4-image-recheck.json)，九项发现逐字处置，归档／首次精确远端核验通过 | 16轮 |
 | [5](../20x-style-rounds/round-5/README.md) | 两项既有WB Picker当前值宽度 | 九组合中英当前值完整，九header声明内变化、其余十八RGBA／visible／PNG字节零差异；120原PNG | before／after各27/27双跑、19控制、portable10/10及完整Mac gates实际PASS；未认证边界保留 | [PASS_LIMITED](../20x-style-rounds/round-5/review-5.json)，唯一P3逐字处置；同轮归档／首次精确远端与源码核验通过后计完成 | 15轮 |
+| [6](../20x-style-rounds/round-6/README.md) | 既有预览状态当前值宽度契约 | 新before／after各34/34双跑、136矩阵＋12原生PNG；十八场景零差异，首次使用八组完整 | 冻结契约、26控制、portable10/10、目视及完整Mac gates／5冷启动PASS，负回执保留 | [PASS_LIMITED](../20x-style-rounds/round-6/review-6.json)，唯一P3逐字处置；首归档／精确远端与源码再验通过后计完成 | 14轮 |
 
 ## 可验证的续作锚点
 

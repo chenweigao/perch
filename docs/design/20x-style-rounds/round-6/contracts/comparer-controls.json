@@ -1,0 +1,207 @@
+{
+  "status": "passed",
+  "synthetic_controls_only_not_delivery_screenshots": true,
+  "controls": [
+    {
+      "name": "unchanged",
+      "layer": "decoded pixel mask",
+      "synthetic_input": true,
+      "pass": true
+    },
+    {
+      "name": "inside-header",
+      "layer": "decoded pixel mask",
+      "synthetic_input": true,
+      "pass": true
+    },
+    {
+      "name": "left-boundary-outside",
+      "layer": "decoded pixel mask",
+      "synthetic_input": true,
+      "pass": true
+    },
+    {
+      "name": "right-boundary-outside",
+      "layer": "decoded pixel mask",
+      "synthetic_input": true,
+      "pass": true
+    },
+    {
+      "name": "top-boundary-outside",
+      "layer": "decoded pixel mask",
+      "synthetic_input": true,
+      "pass": true
+    },
+    {
+      "name": "bottom-boundary-outside",
+      "layer": "decoded pixel mask",
+      "synthetic_input": true,
+      "pass": true
+    },
+    {
+      "name": "rgba-only-outside",
+      "layer": "decoded pixel mask",
+      "synthetic_input": true,
+      "pass": true
+    },
+    {
+      "name": "stability-header-pixel",
+      "layer": "decoded pixel mask",
+      "synthetic_input": true,
+      "pass": true
+    },
+    {
+      "name": "tampered-frozen-contract.json",
+      "layer": "isolated frozen inputs",
+      "synthetic_input": true,
+      "diagnostic": "Frozen contract hash mismatch",
+      "pass": true
+    },
+    {
+      "name": "tampered-expected-differences.md",
+      "layer": "isolated frozen inputs",
+      "synthetic_input": true,
+      "diagnostic": "Frozen input hash mismatch: expected_list_sha256",
+      "pass": true
+    },
+    {
+      "name": "tampered-allowed-regions-before.json",
+      "layer": "isolated frozen inputs",
+      "synthetic_input": true,
+      "diagnostic": "Frozen input hash mismatch: allowed_regions_sha256",
+      "pass": true
+    },
+    {
+      "name": "tampered-capture-matrix.py",
+      "layer": "isolated frozen inputs",
+      "synthetic_input": true,
+      "diagnostic": "Frozen input hash mismatch: capture_wrapper_sha256",
+      "pass": true
+    },
+    {
+      "name": "tampered-capture-style-loop.py",
+      "layer": "isolated frozen inputs",
+      "synthetic_input": true,
+      "diagnostic": "Frozen input hash mismatch: existing_capture_driver_sha256",
+      "pass": true
+    },
+    {
+      "name": "tampered-protected-reader.py",
+      "layer": "isolated frozen inputs",
+      "synthetic_input": true,
+      "diagnostic": "Protected round 3 PNG reader hash mismatch",
+      "pass": true
+    },
+    {
+      "name": "unchanged",
+      "layer": "full frozen matrix CLI",
+      "synthetic_input": true,
+      "actual_exit": 0,
+      "expected_exit": 0,
+      "diagnostic": null,
+      "pass": true
+    },
+    {
+      "name": "first-use-header-pixel",
+      "layer": "full frozen matrix CLI",
+      "synthetic_input": true,
+      "actual_exit": 0,
+      "expected_exit": 0,
+      "diagnostic": null,
+      "pass": true
+    },
+    {
+      "name": "daily-header-pixel",
+      "layer": "full frozen matrix CLI",
+      "synthetic_input": true,
+      "actual_exit": 0,
+      "expected_exit": 0,
+      "diagnostic": null,
+      "pass": true
+    },
+    {
+      "name": "main-pixel",
+      "layer": "full frozen matrix CLI",
+      "synthetic_input": true,
+      "actual_exit": 1,
+      "expected_exit": 1,
+      "diagnostic": null,
+      "pass": true
+    },
+    {
+      "name": "composer-pixel",
+      "layer": "full frozen matrix CLI",
+      "synthetic_input": true,
+      "actual_exit": 1,
+      "expected_exit": 1,
+      "diagnostic": null,
+      "pass": true
+    },
+    {
+      "name": "hash-corruption",
+      "layer": "full frozen matrix CLI",
+      "synthetic_input": true,
+      "actual_exit": 1,
+      "expected_exit": 1,
+      "diagnostic": "PNG hash mismatch: workbench-empty-dark repeat 1",
+      "pass": true
+    },
+    {
+      "name": "repeat-byte-drift",
+      "layer": "full frozen matrix CLI",
+      "synthetic_input": true,
+      "actual_exit": 1,
+      "expected_exit": 1,
+      "diagnostic": "Unstable PNG-byte repeat: workbench-empty-dark",
+      "pass": true
+    },
+    {
+      "name": "metadata-drift",
+      "layer": "full frozen matrix CLI",
+      "synthetic_input": true,
+      "actual_exit": 1,
+      "expected_exit": 1,
+      "diagnostic": "Cross-matrix camera/fixture drift: workbench-empty-dark/window_frame",
+      "pass": true
+    },
+    {
+      "name": "missing-scene",
+      "layer": "full frozen matrix CLI",
+      "synthetic_input": true,
+      "actual_exit": 1,
+      "expected_exit": 1,
+      "diagnostic": "Matrix must contain exactly the frozen 34 scenes",
+      "pass": true
+    },
+    {
+      "name": "wrong-first-use-scenario",
+      "layer": "full frozen matrix CLI",
+      "synthetic_input": true,
+      "actual_exit": 1,
+      "expected_exit": 1,
+      "diagnostic": "Workbench scenario fixture mismatch: workbench-empty-dark",
+      "pass": true
+    },
+    {
+      "name": "wrong-first-use-marker",
+      "layer": "full frozen matrix CLI",
+      "synthetic_input": true,
+      "actual_exit": 1,
+      "expected_exit": 1,
+      "diagnostic": "First-use marker fixture mismatch: workbench-empty-dark",
+      "pass": true
+    },
+    {
+      "name": "unexpected-fixture-exit",
+      "layer": "full frozen matrix CLI",
+      "synthetic_input": true,
+      "actual_exit": 1,
+      "expected_exit": 1,
+      "diagnostic": "Unexpected fixture exit: workbench-empty-dark",
+      "pass": true
+    }
+  ],
+  "original_before_and_frozen_inputs_unchanged": true,
+  "before_input_files": 345,
+  "frozen_contract_sha256": "3b1d333c9414f2c87a92159ba22dd98cb6c24620c158f7cf9e6183591329ac60"
+}

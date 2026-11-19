@@ -1,0 +1,19 @@
+start=2026-11-19T15:11:03+08:00
+pre_porcelain=0
+From github.com:chenweigao/perch
+ * branch              main            -> FETCH_HEAD
+ * branch              style/loop-main -> FETCH_HEAD
+   2ded248b..7e66eb2e  style/loop-main -> origin/style/loop-main
+Previous HEAD position was 2ded248b fix(style): preserve preview filter intrinsic widths
+HEAD is now at 7e66eb2e fix(style): preserve preview state intrinsic width
+code_head=7e66eb2e5a9dac92eea8d6178e55e7ab5f38e554
+{
+  "status": "passed",
+  "output": "/Users/developer/Library/PerfRunner/results/style-r6-after-v1/capture",
+  "comparisons": 34,
+  "seconds": 463.62
+}
+host_binary_sha256=7e255f173c3946e2b72d7e148849e88fda4e19efe384acae4448ed7caff83142
+post_porcelain=0
+end=2026-11-19T15:18:56+08:00
+exit=0

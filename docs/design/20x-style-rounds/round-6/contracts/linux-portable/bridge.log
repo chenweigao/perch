@@ -1,0 +1,8 @@
+.............................................................................................................................../home/developer/.t3/worktrees/perch/t3-0fa50c12-583299d2a65c82a7/remote/native-agent-service.py:692: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/tmpp1_3l5qy/isolated-dsh.stderr' mode='a' encoding='UTF-8'>
+  if any(value.startswith(a) and value.endswith(b) for a,b in (
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+.................................................................................................
+----------------------------------------------------------------------
+Ran 224 tests in 1.763s
+
+OK

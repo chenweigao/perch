@@ -1,0 +1,14 @@
+{
+  "phase": "actual first creation before GUI and product modification",
+  "directory_absent_precondition_checked": true,
+  "start": "2026-11-19T14:28:42+08:00",
+  "authored_files_finished": "2026-11-19T14:28:42+08:00",
+  "frozen_at": "2026-11-19T14:28:42+08:00",
+  "head": "2ded248b7f3d6993841b05c88b33f36add451a92",
+  "product_still_baseline": true,
+  "GUI_queued": false,
+  "first_write_attestation_source": "parent exec precondition and timestamps, not mtime",
+  "expected_list_sha256": "bf8c978d0e02e587afd3c65b4dfac2c42e894954555635486cded1bb0c8d59cb",
+  "allowed_regions_sha256": "c779c0020c137e028d2dbcdb700ead71eeb25c0013195bfde461d13348782f55",
+  "frozen_contract_sha256": "3b1d333c9414f2c87a92159ba22dd98cb6c24620c158f7cf9e6183591329ac60"
+}

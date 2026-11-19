@@ -1,0 +1,13 @@
+{
+  "source": "Live orchestrator_capabilities search aone/gpt-6.1-sol refreshed immediately before the new round-6 review; specified provider/model retained and current highest thinking=max confirmed. No new delegate started by this record.",
+  "providerInstanceId": "acpRegistry_kimi_code",
+  "model": "aone/gpt-6.1-sol",
+  "options": {"thinking": "max", "mode": "default"},
+  "observed_registry_thinking_values": ["low", "medium", "high", "xhigh", "max"],
+  "observed_provider_default_mode": "yolo",
+  "child_only_explicit_default_mode": "Avoid implicitly selecting the registry's yolo default; no global mode or permission configuration change.",
+  "actual_independent_ReadMediaFile_required": true,
+  "new_review_only_after_actual_after_and_complete_Mac_gates": true,
+  "global_provider_model_endpoint_credential_permission_changes": false,
+  "fallback_or_unrequested_provider_switch": false
+}

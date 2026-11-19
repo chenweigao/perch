@@ -1,0 +1,31 @@
+start=2026-11-19T14:33:49+08:00
+pre_porcelain=0
+From github.com:chenweigao/perch
+ * branch              main            -> FETCH_HEAD
+ * branch              style/loop-main -> FETCH_HEAD
+ + 0b05897b...2ded248b style/loop-main -> origin/style/loop-main  (forced update)
+Warning: you are leaving 1 commit behind, not connected to
+any of your branches:
+
+  0b05897b fix(style): preserve preview filter intrinsic widths
+
+If you want to keep it by creating a new branch, this may be a good time
+to do so with:
+
+ git branch <new-branch-name> 0b05897b
+
+HEAD is now at 2ded248b fix(style): preserve preview filter intrinsic widths
+code_head=2ded248b7f3d6993841b05c88b33f36add451a92
+capture_wrapper_sha256=49ed5d26e810739fe44314499c0fdb04296eb3143ce24e7a3d7e65f03e5c9ea2
+expected_list_sha256=bf8c978d0e02e587afd3c65b4dfac2c42e894954555635486cded1bb0c8d59cb
+allowed_regions_sha256=c779c0020c137e028d2dbcdb700ead71eeb25c0013195bfde461d13348782f55
+{
+  "status": "passed",
+  "output": "/Users/developer/Library/PerfRunner/results/style-r6-before-v1/capture",
+  "comparisons": 34,
+  "seconds": 497.991
+}
+host_binary_sha256=fdaf0cdbb60ef2b980a3e5993f484b43c692fb8b9c907e16355e03760a0a53f6
+post_porcelain=0
+end=2026-11-19T14:42:21+08:00
+exit=0

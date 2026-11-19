@@ -1,0 +1,6 @@
+{
+  "status": "passed",
+  "gates_package_ssh_exit": 0,
+  "gates_scp_exit": 0,
+  "not_a_GUI_rerun": true
+}

@@ -108,7 +108,7 @@ private struct DashboardPreview: View {
             HStack(spacing: 10) {
                 Picker("预览状态", selection: $scenario) {
                     ForEach(["日常", "需要处理", "新进展", "空待处理", "离线", "首次使用", "保存错误", "归档中"], id: \.self) { Text($0) }
-                }.frame(width: 130)
+                }.fixedSize(horizontal: true, vertical: false).frame(minWidth: 130)
                 Picker("任务组", selection: Binding(get: { scope.groupID }, set: { scope.groupID = $0 })) {
                     Text("全部任务组").tag(UUID?.none)
                     ForEach(demoGroups) { group in Text(group.name).tag(Optional(group.id)) }

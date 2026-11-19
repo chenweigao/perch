@@ -1,0 +1,27 @@
+{
+  "status": "passed",
+  "source_files": 3,
+  "originals_unchanged": true,
+  "png_count": 0,
+  "text_policy": "Only machine home prefixes and JSON slash normalization; original text retained externally",
+  "files": [
+    {
+      "file": "before-observation-1.log",
+      "source_sha256": "e4c4c709375287fb5b8746b2231cf81f8f4446badc5e396a1b45bc3ef2c0379d",
+      "published_sha256": "748c8b80ee629459ee577aa13247ae9a1e9068f669a7c71e8bb20c127f9adac6",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "queue-before-receipt.json",
+      "source_sha256": "ab3bef5d43b47c5b17e3a5b4eaae39b7b5783613ff5e314663ea20097eed5f23",
+      "published_sha256": "ab3bef5d43b47c5b17e3a5b4eaae39b7b5783613ff5e314663ea20097eed5f23",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "queue-before.log",
+      "source_sha256": "49bcd3bd26703bbf2e97a5378afa0af19f796cefc094e3f8709cef310c0e373d",
+      "published_sha256": "49bcd3bd26703bbf2e97a5378afa0af19f796cefc094e3f8709cef310c0e373d",
+      "png_bytes_preserved": false
+    }
+  ]
+}

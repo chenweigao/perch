@@ -1,0 +1,1 @@
+{"phase":"initial read-only Mac preflight","exit_code":1,"source":"original exec/session receipt","error":"default zsh rejected an empty jobs/*.job glob","no_new_GUI_job_started":true,"shared_checkout_check_not_reached":true,"disposition":"repeat read-only preflight under explicit bash; no global shell/config changes"}

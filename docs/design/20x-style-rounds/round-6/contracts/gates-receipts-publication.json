@@ -1,0 +1,69 @@
+{
+  "status": "passed",
+  "source_files": 10,
+  "originals_unchanged": true,
+  "png_count": 0,
+  "text_policy": "Only machine home prefixes and JSON slash normalization; original text retained externally",
+  "files": [
+    {
+      "file": "gates-comparison-transfer.log",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "gates-package.log",
+      "source_sha256": "0ac74d0099a961190464a9a997a471130b57138e3ea54f8b442fe5e9be2a498a",
+      "published_sha256": "0ac74d0099a961190464a9a997a471130b57138e3ea54f8b442fe5e9be2a498a",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "gates-support-check.log",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "gates-transfer-receipt.json",
+      "source_sha256": "e46d7fe558379efd0d9426480918d6e3b6404dce63141da9dd1843acdb335163",
+      "published_sha256": "e46d7fe558379efd0d9426480918d6e3b6404dce63141da9dd1843acdb335163",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "gates-transfer.log",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "gates-validation-v1.log",
+      "source_sha256": "ab1d0830a31e463c08660dd700964647ceca6f9092eeb607f6d6d2447237383a",
+      "published_sha256": "ab1d0830a31e463c08660dd700964647ceca6f9092eeb607f6d6d2447237383a",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "gates-validator-v1-receipt.json",
+      "source_sha256": "7f4ce9a6e8d2711b41377ab33171e4cfb1f6b1bd94b672534879443d2be6de2c",
+      "published_sha256": "7f4ce9a6e8d2711b41377ab33171e4cfb1f6b1bd94b672534879443d2be6de2c",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "public-source-before-gates.log",
+      "source_sha256": "f0b3688a14c83f10adcadfa08cdf7f96febe0807c5c90659db2aa9aa20a1fb86",
+      "published_sha256": "f0b3688a14c83f10adcadfa08cdf7f96febe0807c5c90659db2aa9aa20a1fb86",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "queue-gates-receipt.json",
+      "source_sha256": "d2675601414563d3580a3d66dc127e57b7682f9b574f95fe334b8b5cf09947b8",
+      "published_sha256": "d2675601414563d3580a3d66dc127e57b7682f9b574f95fe334b8b5cf09947b8",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "queue-gates.log",
+      "source_sha256": "12acde8ffa4a0a93d0e0495fe210bb1efc479dad6d675f223d2e1449ffeaf0bb",
+      "published_sha256": "3fa9470a10a3131d911b293f3139b37b8d0e5c57051eb8198763ef5905dc4b45",
+      "png_bytes_preserved": false
+    }
+  ]
+}

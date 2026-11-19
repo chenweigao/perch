@@ -1,0 +1,10 @@
+mac_time=2026-11-19T14:27:00+08:00
+PerfRunner state/pid:
+	state = running
+	pid = 69667
+		state = active
+		state = active
+	job state = running
+Queue:
+queued_jobs=0
+/bin/bash: line 9: jobs[@]: unbound variable

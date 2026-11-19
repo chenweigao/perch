@@ -1,0 +1,108 @@
+{
+  "baseline_head": "2ded248b7f3d6993841b05c88b33f36add451a92",
+  "phase": "prewritten before new GUI capture and product edit",
+  "coordinate_system": "Original PNG top-left coordinates; unscaled half-open rectangles",
+  "reference_geometry": [
+    1120,
+    820
+  ],
+  "description": "Only the sixteen existing Workbench header filter scenes; no after-time expansion or title change.",
+  "scenarios": {
+    "workbench-dark": [
+      480,
+      48,
+      1112,
+      104
+    ],
+    "workbench-empty-dark": [
+      480,
+      48,
+      1112,
+      104
+    ],
+    "workbench-empty-english": [
+      480,
+      48,
+      1112,
+      104
+    ],
+    "workbench-empty-english-dark": [
+      480,
+      48,
+      1112,
+      104
+    ],
+    "workbench-empty-english-large-type": [
+      480,
+      48,
+      1112,
+      104
+    ],
+    "workbench-empty-english-large-type-dark": [
+      480,
+      48,
+      1112,
+      104
+    ],
+    "workbench-empty-large-type": [
+      480,
+      48,
+      1112,
+      104
+    ],
+    "workbench-empty-large-type-dark": [
+      480,
+      48,
+      1112,
+      104
+    ],
+    "workbench-empty-light": [
+      480,
+      48,
+      1112,
+      104
+    ],
+    "workbench-english": [
+      480,
+      48,
+      1112,
+      104
+    ],
+    "workbench-english-dark": [
+      480,
+      48,
+      1112,
+      104
+    ],
+    "workbench-english-large-type": [
+      480,
+      48,
+      1112,
+      104
+    ],
+    "workbench-english-large-type-dark": [
+      480,
+      48,
+      1112,
+      104
+    ],
+    "workbench-large-type": [
+      480,
+      48,
+      1112,
+      104
+    ],
+    "workbench-large-type-dark": [
+      480,
+      48,
+      1112,
+      104
+    ],
+    "workbench-light": [
+      480,
+      48,
+      1112,
+      104
+    ]
+  }
+}

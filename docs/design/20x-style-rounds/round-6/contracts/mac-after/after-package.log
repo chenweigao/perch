@@ -1,0 +1,33 @@
+observed_at=2026-11-19T15:23:45+08:00
+original_png_count=68
+after_terminal_log_tail
+   2ded248b..7e66eb2e  style/loop-main -> origin/style/loop-main
+Previous HEAD position was 2ded248b fix(style): preserve preview filter intrinsic widths
+HEAD is now at 7e66eb2e fix(style): preserve preview state intrinsic width
+code_head=7e66eb2e5a9dac92eea8d6178e55e7ab5f38e554
+{
+  "status": "passed",
+  "output": "/Users/developer/Library/PerfRunner/results/style-r6-after-v1/capture",
+  "comparisons": 34,
+  "seconds": 463.62
+}
+host_binary_sha256=7e255f173c3946e2b72d7e148849e88fda4e19efe384acae4448ed7caff83142
+post_porcelain=0
+end=2026-11-19T15:18:56+08:00
+exit=0
+support_files
+/Users/developer/Library/PerfRunner/results/style-r6-support-v1/frozen-contract.json
+/Users/developer/Library/PerfRunner/results/style-r6-support-v1/capture-matrix.py
+/Users/developer/Library/PerfRunner/results/style-r6-support-v1/candidate-revision.txt
+/Users/developer/Library/PerfRunner/results/style-r6-support-v1/wrapper-model-validation.json
+/Users/developer/Library/PerfRunner/results/style-r6-support-v1/allowed-regions-before.json
+/Users/developer/Library/PerfRunner/results/style-r6-support-v1/perfrunner-before.job
+/Users/developer/Library/PerfRunner/results/style-r6-support-v1/first-write-receipt.json
+/Users/developer/Library/PerfRunner/results/style-r6-support-v1/perfrunner-gates.job
+/Users/developer/Library/PerfRunner/results/style-r6-support-v1/expected-differences.md
+/Users/developer/Library/PerfRunner/results/style-r6-support-v1/perfrunner-after.job
+/Users/developer/Library/PerfRunner/results/style-r6-support-v1/before-validation.json
+/Users/developer/Library/PerfRunner/results/style-r6-support-v1/candidate-remote-at-enqueue.txt
+archive_sha256=85dab0a0c5090942e83049d7357d7464a0967cb1a8648d09fed810b4d27b4e44
+archive_bytes=10342508
+package=passed

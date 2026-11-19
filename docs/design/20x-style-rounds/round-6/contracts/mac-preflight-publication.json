@@ -1,0 +1,39 @@
+{
+  "status": "passed",
+  "source_files": 5,
+  "originals_unchanged": true,
+  "png_count": 0,
+  "text_policy": "Only machine home prefixes and JSON slash normalization; original text retained externally",
+  "files": [
+    {
+      "file": "v1-negative-receipt.json",
+      "source_sha256": "5ae3084b12aacd87ef7a0a87267a60bb22d82518b71a6aa348218835f25f39dd",
+      "published_sha256": "5ae3084b12aacd87ef7a0a87267a60bb22d82518b71a6aa348218835f25f39dd",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "v2-receipt.json",
+      "source_sha256": "e0609c2a0144f65a9cc62dd19fdd409c46ca615fc6e010af43375e540b3d0abc",
+      "published_sha256": "e0609c2a0144f65a9cc62dd19fdd409c46ca615fc6e010af43375e540b3d0abc",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "v2.log",
+      "source_sha256": "d2d284d48c7893b2197627549086b8357c0f2201a0c255a777d3ac6cf125417a",
+      "published_sha256": "d2d284d48c7893b2197627549086b8357c0f2201a0c255a777d3ac6cf125417a",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "v3-receipt.json",
+      "source_sha256": "bf59dc513c7ecda6566b17fbf25e108b5527a1f3a704f26002065896ba0cb343",
+      "published_sha256": "bf59dc513c7ecda6566b17fbf25e108b5527a1f3a704f26002065896ba0cb343",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "v3.log",
+      "source_sha256": "f1d6b5fc6c9da79e82a3c2449c1b61a30479926552c6ca89b035cfe4c0e8a86f",
+      "published_sha256": "e1a89671f60fa3a8947f204c82cc3460f9c8ced368d28788877ba9ccc2b5f21d",
+      "png_bytes_preserved": false
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+#!/bin/bash
+set -euo pipefail
+
+baseline_revision=2ded248b7f3d6993841b05c88b33f36add451a92
+support="$HOME/Library/PerfRunner/results/style-r6-support-v1"
+output="$HOME/Library/PerfRunner/results/style-r6-after-v1"
+before="$HOME/Library/PerfRunner/results/style-r6-before-v1"
+candidate_revision=$(cat "$support/candidate-revision.txt")
+export PERCH_STYLE_CAPTURE_NODE="$HOME/.local/opt/node-v24.18.0-darwin-arm64/bin/node"
+export PYTHONDONTWRITEBYTECODE=1
+
+[[ "$candidate_revision" =~ ^[0-9a-f]{40}$ ]]
+test "$candidate_revision" != "$baseline_revision"
+test -f "$before.done"
+test "$(tail -1 "$before.log")" = 'exit=0'
+python3 -B - "$support/before-validation.json" "$baseline_revision" <<'PY'
+import json
+from pathlib import Path
+import sys
+result = json.loads(Path(sys.argv[1]).read_text())
+assert result["status"] == "passed" and result["mode"] == "baseline"
+assert result["before_head"] == sys.argv[2]
+assert result["before_repeat_byte_pairs"] == 34 and result["before_original_pngs"] == 68
+assert result["frozen_contract_sha256"] == "3b1d333c9414f2c87a92159ba22dd98cb6c24620c158f7cf9e6183591329ac60"
+PY
+printf 'start=%s\n' "$(date -Iseconds)"
+cd "$HOME/_worktrees/20x-loop-20261112/perch"
+pre_porcelain=$(git status --porcelain=v1 | wc -l | tr -d ' ')
+printf 'pre_porcelain=%s\n' "$pre_porcelain"
+test "$pre_porcelain" = 0
+git fetch origin main style/loop-main
+test "$(git rev-parse origin/style/loop-main)" = "$candidate_revision"
+git checkout --detach "$candidate_revision"
+test "$(git rev-parse HEAD)" = "$candidate_revision"
+printf 'code_head=%s\n' "$(git rev-parse HEAD)"
+test ! -e "$output"
+test -x "$PERCH_STYLE_CAPTURE_NODE"
+test "$(shasum -a 256 scripts/capture-style-loop.py | cut -d ' ' -f1)" = 43d8934fcf70b190e6e5bb6a448e8a9418cd6b6a558e0a940e208a8e7687fc5f
+test "$(shasum -a 256 "$support/capture-matrix.py" | cut -d ' ' -f1)" = 49ed5d26e810739fe44314499c0fdb04296eb3143ce24e7a3d7e65f03e5c9ea2
+test "$(shasum -a 256 "$support/expected-differences.md" | cut -d ' ' -f1)" = bf8c978d0e02e587afd3c65b4dfac2c42e894954555635486cded1bb0c8d59cb
+test "$(shasum -a 256 "$support/allowed-regions-before.json" | cut -d ' ' -f1)" = c779c0020c137e028d2dbcdb700ead71eeb25c0013195bfde461d13348782f55
+test "$(shasum -a 256 "$support/frozen-contract.json" | cut -d ' ' -f1)" = 3b1d333c9414f2c87a92159ba22dd98cb6c24620c158f7cf9e6183591329ac60
+mkdir -p "$output"
+cp "$support/candidate-revision.txt" "$output/candidate-revision.txt"
+cp "$support/expected-differences.md" "$output/expected-differences-before.md"
+cp "$support/allowed-regions-before.json" "$output/allowed-regions-before.json"
+cp "$support/frozen-contract.json" "$output/frozen-contract.json"
+python3 -B "$support/capture-matrix.py" --output "$output/capture" \
+    --host-app "$output/HostLifecycleChecks.app" --build-host --build-previews
+printf 'host_binary_sha256=%s\n' "$(shasum -a 256 "$output/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks" | cut -d ' ' -f1)"
+post_porcelain=$(git status --porcelain=v1 | wc -l | tr -d ' ')
+printf 'post_porcelain=%s\n' "$post_porcelain"
+test "$post_porcelain" = 0
+printf 'end=%s\n' "$(date -Iseconds)"

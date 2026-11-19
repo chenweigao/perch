@@ -1,0 +1,9 @@
+runner_pids=69667
+  PID  PPID     ELAPSED STAT COMMAND
+69667     1 06-22:05:37 S    /bin/bash /Users/developer/Library/PerfRunner/runner.sh
+pre_queue_jobs=0
+candidate_head=7e66eb2e5a9dac92eea8d6178e55e7ab5f38e554
+job_sha256=eed80c4706ce716b99179767b33ea5ed24eb0e3daa842c6f31cb200e7211f380
+comparison_sha256=269298746172504d9f545167d4c8b510e596d1896454b092bd47a904d4eceb05
+queued_at=2026-11-19T15:28:31+08:00
+queued=true

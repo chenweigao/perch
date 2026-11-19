@@ -1,0 +1,361 @@
+{
+  "purpose": "Derived views only; original capture PNGs are preserved separately",
+  "header_crop_half_open": [
+    480,
+    48,
+    1112,
+    104
+  ],
+  "header_scale": 3,
+  "header_resampling": "nearest",
+  "full_window_resampling": "none",
+  "transparent_pixels": "composited over white like the visible comparer",
+  "sources": [
+    {
+      "file": "before/workbench-light/repeat-1/capture.png",
+      "sha256": "ed3c439efe6f3d9059e25db386fd1dda1cacff68634064da1af37c194b91520a",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "after/workbench-light/repeat-1/capture.png",
+      "sha256": "7302fb49bd78d87480c9e0b664ee58094a5ab76fcf2cc76382b2f6931e935f8b",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "before/workbench-dark/repeat-1/capture.png",
+      "sha256": "9c80de70a0c0d8897289ddafdc90eeebcd9fbc03a5b8a7f6d15a1132c697e289",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "after/workbench-dark/repeat-1/capture.png",
+      "sha256": "87399e070805940c824ff29c64259b64d03cf0efc9b35f9f407f1f10e17e1002",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "before/workbench-english/repeat-1/capture.png",
+      "sha256": "717f16b276bc1e1f65bbf9182a1e0dc514762057ffbe745f80bd581c0dfb7530",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "after/workbench-english/repeat-1/capture.png",
+      "sha256": "b86faf138fa359e904c8f35360c6925e3bb4d060d6d699284d4477d9a85cbf8b",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "before/workbench-english-dark/repeat-1/capture.png",
+      "sha256": "e579dc5a5b88b65e67bfec7710e976ee5b32460174dcc62a925aeffc3cf97ec6",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "after/workbench-english-dark/repeat-1/capture.png",
+      "sha256": "838a38350ca641699939cb65379cf7d4d73513a834119c9e5ef3918c9c17db84",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "before/workbench-large-type/repeat-1/capture.png",
+      "sha256": "ed3c439efe6f3d9059e25db386fd1dda1cacff68634064da1af37c194b91520a",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "after/workbench-large-type/repeat-1/capture.png",
+      "sha256": "7302fb49bd78d87480c9e0b664ee58094a5ab76fcf2cc76382b2f6931e935f8b",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "before/workbench-large-type-dark/repeat-1/capture.png",
+      "sha256": "9c80de70a0c0d8897289ddafdc90eeebcd9fbc03a5b8a7f6d15a1132c697e289",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "after/workbench-large-type-dark/repeat-1/capture.png",
+      "sha256": "87399e070805940c824ff29c64259b64d03cf0efc9b35f9f407f1f10e17e1002",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "before/workbench-english-large-type/repeat-1/capture.png",
+      "sha256": "717f16b276bc1e1f65bbf9182a1e0dc514762057ffbe745f80bd581c0dfb7530",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "after/workbench-english-large-type/repeat-1/capture.png",
+      "sha256": "b86faf138fa359e904c8f35360c6925e3bb4d060d6d699284d4477d9a85cbf8b",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "before/workbench-english-large-type-dark/repeat-1/capture.png",
+      "sha256": "e579dc5a5b88b65e67bfec7710e976ee5b32460174dcc62a925aeffc3cf97ec6",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "after/workbench-english-large-type-dark/repeat-1/capture.png",
+      "sha256": "838a38350ca641699939cb65379cf7d4d73513a834119c9e5ef3918c9c17db84",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "before/workbench-empty-light/repeat-1/capture.png",
+      "sha256": "9b32717eccd065bf8dc702264666851831b27145ffdeb731ed60a477f11d0350",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "after/workbench-empty-light/repeat-1/capture.png",
+      "sha256": "2dfbac6ad8b1e9a31da9657a6795742f17fce4751d428f2bd29b2ba1ff963632",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "before/workbench-empty-dark/repeat-1/capture.png",
+      "sha256": "0912cdc2ecfe89bad0b55dacc684d3b9d126a3a82ada5efeefb053f7d4e58794",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "after/workbench-empty-dark/repeat-1/capture.png",
+      "sha256": "0583f87f3c2b9bc9df7a6289a4a6107431091854614fde448d3bd91202a2614a",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "before/workbench-empty-english/repeat-1/capture.png",
+      "sha256": "ab5c3ac323e373996879dc8ad4e9ab40013f37887eebf2c7a7ba1a5615437eea",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "after/workbench-empty-english/repeat-1/capture.png",
+      "sha256": "4d2a0274543274bb5dcab2ba842499ff5e26190a3696e68cc45a34b516574a87",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "before/workbench-empty-english-dark/repeat-1/capture.png",
+      "sha256": "18ed4e1abcd476676b3dc8f58e69285704ee21f3da595bc78607006896e1593f",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "after/workbench-empty-english-dark/repeat-1/capture.png",
+      "sha256": "2b9ac809eebd3099cc48eab8b9fa1785a905f82ffe52097b4b74adc4d9aff917",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "before/workbench-empty-large-type/repeat-1/capture.png",
+      "sha256": "9b32717eccd065bf8dc702264666851831b27145ffdeb731ed60a477f11d0350",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "after/workbench-empty-large-type/repeat-1/capture.png",
+      "sha256": "2dfbac6ad8b1e9a31da9657a6795742f17fce4751d428f2bd29b2ba1ff963632",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "before/workbench-empty-large-type-dark/repeat-1/capture.png",
+      "sha256": "0912cdc2ecfe89bad0b55dacc684d3b9d126a3a82ada5efeefb053f7d4e58794",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "after/workbench-empty-large-type-dark/repeat-1/capture.png",
+      "sha256": "0583f87f3c2b9bc9df7a6289a4a6107431091854614fde448d3bd91202a2614a",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "before/workbench-empty-english-large-type/repeat-1/capture.png",
+      "sha256": "ab5c3ac323e373996879dc8ad4e9ab40013f37887eebf2c7a7ba1a5615437eea",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "after/workbench-empty-english-large-type/repeat-1/capture.png",
+      "sha256": "4d2a0274543274bb5dcab2ba842499ff5e26190a3696e68cc45a34b516574a87",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "before/workbench-empty-english-large-type-dark/repeat-1/capture.png",
+      "sha256": "18ed4e1abcd476676b3dc8f58e69285704ee21f3da595bc78607006896e1593f",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "after/workbench-empty-english-large-type-dark/repeat-1/capture.png",
+      "sha256": "2b9ac809eebd3099cc48eab8b9fa1785a905f82ffe52097b4b74adc4d9aff917",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "before/workbench-empty-light/repeat-1/capture.png",
+      "sha256": "9b32717eccd065bf8dc702264666851831b27145ffdeb731ed60a477f11d0350",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "after/workbench-empty-light/repeat-1/capture.png",
+      "sha256": "2dfbac6ad8b1e9a31da9657a6795742f17fce4751d428f2bd29b2ba1ff963632",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "before/workbench-empty-dark/repeat-1/capture.png",
+      "sha256": "0912cdc2ecfe89bad0b55dacc684d3b9d126a3a82ada5efeefb053f7d4e58794",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "after/workbench-empty-dark/repeat-1/capture.png",
+      "sha256": "0583f87f3c2b9bc9df7a6289a4a6107431091854614fde448d3bd91202a2614a",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "before/workbench-empty-english-large-type/repeat-1/capture.png",
+      "sha256": "ab5c3ac323e373996879dc8ad4e9ab40013f37887eebf2c7a7ba1a5615437eea",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "after/workbench-empty-english-large-type/repeat-1/capture.png",
+      "sha256": "4d2a0274543274bb5dcab2ba842499ff5e26190a3696e68cc45a34b516574a87",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "before/workbench-empty-english-large-type-dark/repeat-1/capture.png",
+      "sha256": "18ed4e1abcd476676b3dc8f58e69285704ee21f3da595bc78607006896e1593f",
+      "dimensions": [
+        1120,
+        820
+      ]
+    },
+    {
+      "file": "after/workbench-empty-english-large-type-dark/repeat-1/capture.png",
+      "sha256": "2b9ac809eebd3099cc48eab8b9fa1785a905f82ffe52097b4b74adc4d9aff917",
+      "dimensions": [
+        1120,
+        820
+      ]
+    }
+  ],
+  "outputs": [
+    {
+      "file": "headers-daily.png",
+      "sha256": "4469dc9df0ef491cc4adb33eb427fd94b6403e4c519a500cccfc78fe210834e1"
+    },
+    {
+      "file": "headers-first-use.png",
+      "sha256": "29e6f774f5ec26bd03d9f2986764f8ff7f6c26c6becfbd92b44ef26d12ed4552"
+    },
+    {
+      "file": "workbench-empty-dark-full.png",
+      "sha256": "c64873631df77290bc58da34f775290333ebb87a7aba7026be269f656e95f605"
+    },
+    {
+      "file": "workbench-empty-english-large-type-dark-full.png",
+      "sha256": "0969e77ce04d55a646899561b69c4d23866794ea8c1381d9a3d5bb2386294bce"
+    },
+    {
+      "file": "workbench-empty-english-large-type-full.png",
+      "sha256": "c865d0dbfb6077e3661a4bc5a0029aaaab851a859935dc4876ef8dc3dfbe84e1"
+    },
+    {
+      "file": "workbench-empty-light-full.png",
+      "sha256": "5d3f32553fd51ed357477b75c207c48a6bdb578cce367ce3d3e37aadd53e4442"
+    }
+  ]
+}
