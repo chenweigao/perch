@@ -1,0 +1,14 @@
+{
+  "baseline_head": "566c0c3e449fa076adbee1d91a9002ddd561034d",
+  "phase": "after product edit, before candidate commit",
+  "dirty": true,
+  "product_changed_paths": [
+    "Tests/WorkbenchPreview/App.swift"
+  ],
+  "before_sha256": "b674a9bc979780c1e057841a156ff3d4b36a63475908fed011d1af88ceb13ec8",
+  "after_sha256": "1fbc3b47cee0203549f4a136bea80583076a145e59cd2d1eb4ecc6ae98a3a422",
+  "other_sources_diff": false,
+  "measurement_ci_semantics_diff": false,
+  "linux_swift_available": false,
+  "linux_workbench_checks": "not executed: Swift SDK unavailable; fresh Mac gates required"
+}

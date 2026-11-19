@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-11-19T14:21:39+08:00",
+  "first_verified_archive_head": "57dad3702be6b72d52581414bb86c6b032ba240c",
+  "real_GUI_tested_head": "0b05897bad0dfaa22aef446422bbd3a5c31f92ea",
+  "normal_commit_and_push_safety_hooks_passed": true,
+  "initial_archive_push_exit": 1,
+  "initial_archive_push_error": "TLS disconnect; Everything up-to-date is not a success receipt",
+  "remote_after_failure": "0b05897bad0dfaa22aef446422bbd3a5c31f92ea",
+  "same_SHA_normal_retry_exit": 0,
+  "exact_remote_archive_verified": true,
+  "TLS_credentials_hooks_scanner_rules_permissions_changed": false,
+  "new_GUI_build_or_measurement_execution": false,
+  "published_negative_log_retains_original_trailing_whitespace": true,
+  "publication_files": [
+    {
+      "file": "commit-phase-1.log",
+      "source_sha256": "56c98f14516400e4b335b95ac39c53e829eba752512d9247da1500d96091da16",
+      "published_sha256": "56c98f14516400e4b335b95ac39c53e829eba752512d9247da1500d96091da16",
+      "only_machine_home_prefix_redaction": true
+    },
+    {
+      "file": "push-phase-1.log",
+      "source_sha256": "21186a2acc69b73e732c4f85f7a3230303023d1b8aec19db7cd902651065c48c",
+      "published_sha256": "21186a2acc69b73e732c4f85f7a3230303023d1b8aec19db7cd902651065c48c",
+      "only_machine_home_prefix_redaction": true
+    },
+    {
+      "file": "push-phase-1-negative-receipt.json",
+      "source_sha256": "eda911b2f1213fe500b75deb1b68f6d03feb1bdba381cfe2401b414d1988a701",
+      "published_sha256": "eda911b2f1213fe500b75deb1b68f6d03feb1bdba381cfe2401b414d1988a701",
+      "only_machine_home_prefix_redaction": true
+    },
+    {
+      "file": "remote-after-phase-1-error.txt",
+      "source_sha256": "3a37d0460e308ca2b73555fd407befca2d18e6dd17f9d9d41e580c01c824450f",
+      "published_sha256": "3a37d0460e308ca2b73555fd407befca2d18e6dd17f9d9d41e580c01c824450f",
+      "only_machine_home_prefix_redaction": true
+    },
+    {
+      "file": "push-phase-1-retry.log",
+      "source_sha256": "11ef1ac2fdef9b312af9e16dd7d618580bfea74cd8f3862b4add294009f7e52b",
+      "published_sha256": "11ef1ac2fdef9b312af9e16dd7d618580bfea74cd8f3862b4add294009f7e52b",
+      "only_machine_home_prefix_redaction": true
+    },
+    {
+      "file": "push-phase-1-retry-receipt.json",
+      "source_sha256": "ad012b9ff0f6021a52b1ce59bf46dd77cfd7d6ebb6816c5f6281ae2271b217b7",
+      "published_sha256": "ad012b9ff0f6021a52b1ce59bf46dd77cfd7d6ebb6816c5f6281ae2271b217b7",
+      "only_machine_home_prefix_redaction": true
+    },
+    {
+      "file": "remote-verified-phase-1.txt",
+      "source_sha256": "2544ba6ef271f840d4d270b8024b18846a6654b695c6f6d95f725014527a8115",
+      "published_sha256": "2544ba6ef271f840d4d270b8024b18846a6654b695c6f6d95f725014527a8115",
+      "only_machine_home_prefix_redaction": true
+    },
+    {
+      "file": "public-source-repository-phase-1.log",
+      "source_sha256": "6b9c8bbb63695a01a2f7992493f6f74513d0c4773d13764a9e7071c0527e793d",
+      "published_sha256": "6b9c8bbb63695a01a2f7992493f6f74513d0c4773d13764a9e7071c0527e793d",
+      "only_machine_home_prefix_redaction": true
+    },
+    {
+      "file": "public-source-phase-1-final.log",
+      "source_sha256": "3252535ba2780e947b9dfbed0eb2d5af712d8f636952ce148d749dcc86f156fe",
+      "published_sha256": "3252535ba2780e947b9dfbed0eb2d5af712d8f636952ce148d749dcc86f156fe",
+      "only_machine_home_prefix_redaction": true
+    }
+  ]
+}

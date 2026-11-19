@@ -1,0 +1,62 @@
+declaration_start=2026-11-19T10:48:56+0800
+new_round_directory_absent=1
+Success. Updated the following files:
+A docs/design/20x-style-rounds/round-5/expected-differences.md
+A docs/design/20x-style-rounds/round-5/README.md
+A docs/design/20x-style-rounds/round-5/contracts/capture-matrix.py
+M docs/design/20x-style-loop/INDEX.md
+{
+  "schema_version": 1,
+  "frozen_at": "2026-11-19T10:48:56+08:00",
+  "baseline_head": "566c0c3e449fa076adbee1d91a9002ddd561034d",
+  "expected_list_sha256": "eda0ee9715468af234555a0f3a181f1c4231ac45e04f0b873c32f4d22924a918",
+  "allowed_regions_sha256": "ee50b2f2080d689bd83aa6cbf5c13cda6d8a644d45dbf5f8b98a41c02cb3aac5",
+  "capture_wrapper_sha256": "65c2cf77f6bd620082fb7aa68ca3a41b475459c7121a00312e4e379251d0415c",
+  "existing_capture_driver_sha256": "43d8934fcf70b190e6e5bb6a448e8a9418cd6b6a558e0a940e208a8e7687fc5f",
+  "scenes": [
+    "composer-dark",
+    "composer-light",
+    "main-dark",
+    "main-dashboard",
+    "main-english",
+    "main-english-dark",
+    "main-english-large-type",
+    "main-english-large-type-dark",
+    "main-find",
+    "main-find-dark",
+    "main-inspector-closed",
+    "main-large-type",
+    "main-large-type-dark",
+    "main-light",
+    "main-scroll",
+    "sidebar-dark",
+    "sidebar-english",
+    "sidebar-light",
+    "workbench-dark",
+    "workbench-empty-light",
+    "workbench-english",
+    "workbench-english-dark",
+    "workbench-english-large-type",
+    "workbench-english-large-type-dark",
+    "workbench-large-type",
+    "workbench-large-type-dark",
+    "workbench-light"
+  ],
+  "affected_scenes": [
+    "workbench-dark",
+    "workbench-empty-light",
+    "workbench-english",
+    "workbench-english-dark",
+    "workbench-english-large-type",
+    "workbench-english-large-type-dark",
+    "workbench-large-type",
+    "workbench-large-type-dark",
+    "workbench-light"
+  ],
+  "scene_count": 27,
+  "expected_repeat_pairs": 27,
+  "expected_raw_png_per_matrix": 54,
+  "existing_preview_pages_only": true,
+  "product_modified": false
+}
+declaration_end=2026-11-19T10:48:56+0800

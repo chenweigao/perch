@@ -1,0 +1,12 @@
+{
+  "phase": "before candidate commit",
+  "full_git_diff_check": "failed: two original compiler diagnostic rows retain trailing whitespace",
+  "preserved_evidence_exceptions": [
+    {"file": "before/logs/build-host.log", "line": 67, "present_in_original": true},
+    {"file": "before/logs/build-sidebar.log", "line": 43, "present_in_original": true}
+  ],
+  "product_and_other_reports_diff_check": "passed with only these two exact original evidence files excluded",
+  "evidence_policy": "Original compiler output is retained; publication only redacts machine home prefixes",
+  "scanner_hook_rule_permission_changes": false,
+  "normal_commit_push_hooks": "not yet executed at this record phase"
+}

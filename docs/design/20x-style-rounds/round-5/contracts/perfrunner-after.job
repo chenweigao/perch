@@ -1,0 +1,61 @@
+#!/bin/bash
+set -euo pipefail
+
+baseline_revision=566c0c3e449fa076adbee1d91a9002ddd561034d
+support="$HOME/Library/PerfRunner/results/style-r5-support-v1"
+output="$HOME/Library/PerfRunner/results/style-r5-after-v1"
+before="$HOME/Library/PerfRunner/results/style-r5-before-v1"
+candidate_revision=$(cat "$support/candidate-revision.txt")
+export PERCH_STYLE_CAPTURE_NODE="$HOME/.local/opt/node-v24.18.0-darwin-arm64/bin/node"
+export PYTHONDONTWRITEBYTECODE=1
+
+[[ "$candidate_revision" =~ ^[0-9a-f]{40}$ ]]
+test -f "$before.done"
+test "$(tail -1 "$before.log")" = 'exit=0'
+python3 -B - "$support/before-validation.json" "$baseline_revision" <<'PY'
+import json
+from pathlib import Path
+import sys
+result = json.loads(Path(sys.argv[1]).read_text())
+assert result["status"] == "passed" and result["mode"] == "baseline"
+assert result["before_head"] == sys.argv[2]
+assert result["before_repeat_pixel_pairs"] == result["before_repeat_byte_pairs"] == 27
+assert result["before_original_pngs"] == 54
+PY
+printf 'start=%s\n' "$(date -Iseconds)"
+cd "$HOME/_worktrees/20x-loop-20261112/perch"
+pre_porcelain=$(git status --porcelain=v1 | wc -l | tr -d ' ')
+printf 'pre_porcelain=%s\n' "$pre_porcelain"
+test "$pre_porcelain" = 0
+git fetch origin main style/loop-main
+test "$(git rev-parse origin/style/loop-main)" = "$candidate_revision"
+git checkout --detach "$candidate_revision"
+test "$(git rev-parse HEAD)" = "$candidate_revision"
+printf 'code_head=%s\n' "$(git rev-parse HEAD)"
+test ! -e "$output"
+test -x "$PERCH_STYLE_CAPTURE_NODE"
+test "$(shasum -a 256 scripts/capture-style-loop.py | cut -d ' ' -f1)" = 43d8934fcf70b190e6e5bb6a448e8a9418cd6b6a558e0a940e208a8e7687fc5f
+test "$(shasum -a 256 "$support/capture-matrix.py" | cut -d ' ' -f1)" = 65c2cf77f6bd620082fb7aa68ca3a41b475459c7121a00312e4e379251d0415c
+test "$(shasum -a 256 "$support/expected-differences.md" | cut -d ' ' -f1)" = eda0ee9715468af234555a0f3a181f1c4231ac45e04f0b873c32f4d22924a918
+test "$(shasum -a 256 "$support/allowed-regions-before.json" | cut -d ' ' -f1)" = ee50b2f2080d689bd83aa6cbf5c13cda6d8a644d45dbf5f8b98a41c02cb3aac5
+test "$(shasum -a 256 "$support/frozen-contract.json" | cut -d ' ' -f1)" = e376d105d4c7df452ce9df01bd416e032a1a23b373f7c0c70ebafa663a079cd9
+mkdir -p "$output"
+git diff "$baseline_revision" HEAD -- Sources > "$output/sources-redline.diff"
+git diff "$baseline_revision" HEAD -- scripts .github > "$output/measurement-ci-redline.diff"
+git diff "$baseline_revision" HEAD -- Tests ':(exclude)Tests/WorkbenchPreview/App.swift' > "$output/other-preview-redline.diff"
+test ! -s "$output/sources-redline.diff"
+test ! -s "$output/measurement-ci-redline.diff"
+test ! -s "$output/other-preview-redline.diff"
+cp "$support/expected-differences.md" "$output/expected-differences-before.md"
+cp "$support/allowed-regions-before.json" "$output/allowed-regions-before.json"
+cp "$support/frozen-contract.json" "$output/frozen-contract.json"
+printf 'capture_driver_sha256=%s\n' "$(shasum -a 256 "$support/capture-matrix.py" | cut -d ' ' -f1)"
+printf 'expected_list_sha256=%s\n' "$(shasum -a 256 "$support/expected-differences.md" | cut -d ' ' -f1)"
+printf 'allowed_regions_sha256=%s\n' "$(shasum -a 256 "$support/allowed-regions-before.json" | cut -d ' ' -f1)"
+python3 -B "$support/capture-matrix.py" --output "$output/capture" \
+    --host-app "$output/HostLifecycleChecks.app" --build-host --build-previews
+printf 'host_binary_sha256=%s\n' "$(shasum -a 256 "$output/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks" | cut -d ' ' -f1)"
+post_porcelain=$(git status --porcelain=v1 | wc -l | tr -d ' ')
+printf 'post_porcelain=%s\n' "$post_porcelain"
+test "$post_porcelain" = 0
+printf 'end=%s\n' "$(date -Iseconds)"

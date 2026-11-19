@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "phase": "final same-round accounting stage after first exact archive verification",
+  "full_round_git_diff_check_exit": 2,
+  "full_round_whitespace_PASS_claimed": false,
+  "precise_original_file_exclusion_check_exit": 0,
+  "preserved_original_evidence_files": [
+    "after/logs/build-host.log:67",
+    "before/logs/build-host.log:67",
+    "before/logs/build-sidebar.log:43",
+    "contracts/archive-publication/push-phase-1.log:2",
+    "contracts/candidate-publication/push-initial.log:2",
+    "contracts/mac-gates/build.log:42"
+  ],
+  "five_frozen_original_hashes": "Unchanged and verified in archive-phase-1-validation.json and the original seal.",
+  "new_original_negative_receipt_hash": "Source and publication hashes verified in archival-operational-observations.json.",
+  "round_snapshot_publication_files_before_this_record": 676,
+  "round_snapshot_publication_findings": 0,
+  "remaining_rounds_before": 16,
+  "remaining_rounds_after": 15,
+  "counter_requires_first_exact_archive_and_source_verification": true,
+  "product_or_original_logs_modified": false,
+  "rules_hooks_TLS_credentials_or_permission_configuration_changed": false,
+  "new_GUI_build_or_performance_execution": false
+}

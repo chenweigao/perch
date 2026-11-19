@@ -1,0 +1,11 @@
+{
+  "source": "orchestrator_capabilities searched for aone/gpt-6.1-sol in this round on 2026-11-19",
+  "providerInstanceId": "acpRegistry_kimi_code",
+  "model": "aone/gpt-6.1-sol",
+  "thinking": "max",
+  "registered_thinking_values": ["low", "medium", "high", "xhigh", "max"],
+  "canRunChildTask": true,
+  "global_provider_model_endpoint_credential_permission_changes": false,
+  "required_visual_evidence": "Actual independent ReadMediaFile eye review; not just an input capability declaration",
+  "review_scope": "Contracts, source redlines, frozen visual differences and settled directions only; no aesthetic adjudication"
+}

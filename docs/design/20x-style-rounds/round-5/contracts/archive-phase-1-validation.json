@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "phase": "full round archival staging, after independent review",
+  "verified_at": "2026-11-19T14:13:28+08:00",
+  "full_round_git_diff_check_exit": 2,
+  "exact_five_original_file_exclusion_check_exit": 0,
+  "round_snapshot_publication_scan_files": 664,
+  "round_snapshot_publication_scan_findings": 0,
+  "full_round_git_diff_check_status": "FAIL: preserved original diagnostic/negative-receipt trailing whitespace",
+  "full_negative_output_sha256": "129dcae582fe28713f374dc1fbc94f57baad2fca3e9bad6b1cd725925a09d38b",
+  "precise_original_evidence_exclusions": [
+    {
+      "file": "docs/design/20x-style-rounds/round-5/after/logs/build-host.log",
+      "line": 67,
+      "sha256": "497102bbe074d0ef4086c479d65a226599015c90a38f471ab1dce377b19d3eae",
+      "frozen_original_bytes_unchanged": true
+    },
+    {
+      "file": "docs/design/20x-style-rounds/round-5/before/logs/build-host.log",
+      "line": 67,
+      "sha256": "7afe32eb5f53ae7d7f48ce2cc1aec7f8f4205106471e7d704d6935bad91f7562",
+      "frozen_original_bytes_unchanged": true
+    },
+    {
+      "file": "docs/design/20x-style-rounds/round-5/before/logs/build-sidebar.log",
+      "line": 43,
+      "sha256": "eb34d09f047995c55f875e0309e51351174254e3cf698f3718352ae9e11448b5",
+      "frozen_original_bytes_unchanged": true
+    },
+    {
+      "file": "docs/design/20x-style-rounds/round-5/contracts/candidate-publication/push-initial.log",
+      "line": 2,
+      "sha256": "21186a2acc69b73e732c4f85f7a3230303023d1b8aec19db7cd902651065c48c",
+      "frozen_original_bytes_unchanged": true
+    },
+    {
+      "file": "docs/design/20x-style-rounds/round-5/contracts/mac-gates/build.log",
+      "line": 42,
+      "sha256": "8e96231b25294a7121844929f63128ec681955a2f33ec3e41a44e9228ab3e1aa",
+      "frozen_original_bytes_unchanged": true
+    }
+  ],
+  "original_candidate_phase_two_exception_record_retained": true,
+  "full_round_whitespace_PASS_claimed": false,
+  "scanner_hook_rule_permission_changes": false,
+  "product_or_evidence_rewritten": false
+}

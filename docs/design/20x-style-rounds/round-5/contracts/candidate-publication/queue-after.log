@@ -1,0 +1,11 @@
+local_preflight_at=2026-11-19T11:21:47+08:00
+candidate_revision=0b05897bad0dfaa22aef446422bbd3a5c31f92ea
+job_sha256=8141db44df41eff6f18794a6da7c67b7942ebee1cd7dda6c37f0b2dbfde48d66
+runner_pid=69667
+shared_head=566c0c3e449fa076adbee1d91a9002ddd561034d
+shared_porcelain=0
+queue_before_count=0
+queued_at=2026-11-19T11:21:58+08:00
+job_name=style-r5-after-v1
+job_sha256=8141db44df41eff6f18794a6da7c67b7942ebee1cd7dda6c37f0b2dbfde48d66
+state=queued_not_terminal

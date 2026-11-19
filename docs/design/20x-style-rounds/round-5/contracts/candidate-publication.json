@@ -1,0 +1,57 @@
+{
+  "status": "passed",
+  "source_files": 8,
+  "originals_unchanged": true,
+  "png_count": 0,
+  "text_policy": "Only machine home prefixes and JSON slash normalization; original text retained externally",
+  "files": [
+    {
+      "file": "candidate-revision.txt",
+      "source_sha256": "b07b56121c5d5ae9beeb3b3c2a6fb52bbaf58410c6f1890f7897c6ecb3965e7e",
+      "published_sha256": "b07b56121c5d5ae9beeb3b3c2a6fb52bbaf58410c6f1890f7897c6ecb3965e7e",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "commit.log",
+      "source_sha256": "1237a82c29784c66c6e386ee7257b61217681006a5a515739b3b66e5d70f936d",
+      "published_sha256": "1237a82c29784c66c6e386ee7257b61217681006a5a515739b3b66e5d70f936d",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "push-initial.log",
+      "source_sha256": "21186a2acc69b73e732c4f85f7a3230303023d1b8aec19db7cd902651065c48c",
+      "published_sha256": "21186a2acc69b73e732c4f85f7a3230303023d1b8aec19db7cd902651065c48c",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "push-retry.log",
+      "source_sha256": "608f6ff77550f659e1e7c0b2e676d7157e96957ca069c08902f1b98fdb19030a",
+      "published_sha256": "608f6ff77550f659e1e7c0b2e676d7157e96957ca069c08902f1b98fdb19030a",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "queue-after.log",
+      "source_sha256": "03376bd5e42d3de13ddbc7496e8edebbea8b391f833efad457bc86684995d7b4",
+      "published_sha256": "03376bd5e42d3de13ddbc7496e8edebbea8b391f833efad457bc86684995d7b4",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "remote-after-error.txt",
+      "source_sha256": "d73fa763285562b4ba5aea949879f4b86d79842d86aef16dc2136b21dabbbc98",
+      "published_sha256": "d73fa763285562b4ba5aea949879f4b86d79842d86aef16dc2136b21dabbbc98",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "remote-before.txt",
+      "source_sha256": "d73fa763285562b4ba5aea949879f4b86d79842d86aef16dc2136b21dabbbc98",
+      "published_sha256": "d73fa763285562b4ba5aea949879f4b86d79842d86aef16dc2136b21dabbbc98",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "remote-verified.txt",
+      "source_sha256": "3a37d0460e308ca2b73555fd407befca2d18e6dd17f9d9d41e580c01c824450f",
+      "published_sha256": "3a37d0460e308ca2b73555fd407befca2d18e6dd17f9d9d41e580c01c824450f",
+      "png_bytes_preserved": false
+    }
+  ]
+}

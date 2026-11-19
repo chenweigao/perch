@@ -1,0 +1,15 @@
+{
+  "verified_at": "2026-11-19T10:50:57+08:00",
+  "status": "PASS_PORTABLE_WRAPPER_MODEL_ONLY",
+  "existing_driver_sha256": "43d8934fcf70b190e6e5bb6a448e8a9418cd6b6a558e0a940e208a8e7687fc5f",
+  "wrapper_sha256": "65c2cf77f6bd620082fb7aa68ca3a41b475459c7121a00312e4e379251d0415c",
+  "scene_count": 27,
+  "main_scenes": 13,
+  "workbench_scenes_including_existing_empty": 9,
+  "sidebar_scenes": 3,
+  "composer_scenes": 2,
+  "scene_registry_matches_frozen_contract": true,
+  "existing_driver_loaded_unchanged": true,
+  "native_capture_and_build_not_executed_in_model_test": true,
+  "scope": "Only validates variant registration and delegated existing driver body; actual Mac pixel/metadata repeat validation is still required."
+}

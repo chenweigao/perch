@@ -1,0 +1,31 @@
+start=2026-11-19T10:51:47+08:00
+pre_porcelain=0
+From github.com:chenweigao/perch
+ * branch              main            -> FETCH_HEAD
+ * branch              style/loop-main -> FETCH_HEAD
+ + 4b647966...566c0c3e style/loop-main -> origin/style/loop-main  (forced update)
+Warning: you are leaving 1 commit behind, not connected to
+any of your branches:
+
+  4b647966 fix(style): reclaim inspector header title width
+
+If you want to keep it by creating a new branch, this may be a good time
+to do so with:
+
+ git branch <new-branch-name> 4b647966
+
+HEAD is now at 566c0c3e fix(style): reclaim inspector header title width
+code_head=566c0c3e449fa076adbee1d91a9002ddd561034d
+capture_driver_sha256=65c2cf77f6bd620082fb7aa68ca3a41b475459c7121a00312e4e379251d0415c
+expected_list_sha256=eda0ee9715468af234555a0f3a181f1c4231ac45e04f0b873c32f4d22924a918
+allowed_regions_sha256=ee50b2f2080d689bd83aa6cbf5c13cda6d8a644d45dbf5f8b98a41c02cb3aac5
+{
+  "status": "passed",
+  "output": "/Users/developer/Library/PerfRunner/results/style-r5-before-v1/capture",
+  "comparisons": 27,
+  "seconds": 449.714
+}
+host_binary_sha256=96cb3ee4c95b69fe48f69d047f2a3d7106ca3bad2ac24b23e6319948a4fe8adb
+post_porcelain=0
+end=2026-11-19T10:59:27+08:00
+exit=0

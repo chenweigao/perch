@@ -1,0 +1,16 @@
+start=2026-11-19T11:42:32+08:00
+pre_porcelain=0
+From github.com:chenweigao/perch
+ * branch              main       -> FETCH_HEAD
+ * branch              style/loop-main -> FETCH_HEAD
+HEAD is now at 0b05897b fix(style): preserve preview filter intrinsic widths
+code_head=0b05897bad0dfaa22aef446422bbd3a5c31f92ea
+bundle_describe_stamp=v0.8.1-314-g0b05897b
+host_binary_sha256=7ccb95a14b1ac6b175129b86ff5fd992dc47fe9f9820e722213fd436c45ca24d
+build=passed
+workbench_checks=passed
+cold_launches=5/5
+native_design=passed
+post_porcelain=0
+end=2026-11-19T11:45:03+08:00
+exit=0

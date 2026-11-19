@@ -1,0 +1,66 @@
+{
+  "baseline_head": "566c0c3e449fa076adbee1d91a9002ddd561034d",
+  "phase": "prewritten before fresh capture and product edit",
+  "coordinate_system": "Original PNG top-left coordinates; unscaled half-open rectangles",
+  "reference_geometry": [
+    1120,
+    820
+  ],
+  "description": "Only the nine existing Workbench header filter scenes may change within this frozen region. All non-filter text/geometry remains subject to the prewritten list and independent eye review. No after-time expansion.",
+  "scenarios": {
+    "workbench-dark": [
+      544,
+      48,
+      1112,
+      104
+    ],
+    "workbench-empty-light": [
+      544,
+      48,
+      1112,
+      104
+    ],
+    "workbench-english": [
+      544,
+      48,
+      1112,
+      104
+    ],
+    "workbench-english-dark": [
+      544,
+      48,
+      1112,
+      104
+    ],
+    "workbench-english-large-type": [
+      544,
+      48,
+      1112,
+      104
+    ],
+    "workbench-english-large-type-dark": [
+      544,
+      48,
+      1112,
+      104
+    ],
+    "workbench-large-type": [
+      544,
+      48,
+      1112,
+      104
+    ],
+    "workbench-large-type-dark": [
+      544,
+      48,
+      1112,
+      104
+    ],
+    "workbench-light": [
+      544,
+      48,
+      1112,
+      104
+    ]
+  }
+}

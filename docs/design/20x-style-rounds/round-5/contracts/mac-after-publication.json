@@ -1,0 +1,57 @@
+{
+  "status": "passed",
+  "source_files": 8,
+  "originals_unchanged": true,
+  "png_count": 0,
+  "text_policy": "Only machine home prefixes and JSON slash normalization; original text retained externally",
+  "files": [
+    {
+      "file": "allowed-regions-before.json",
+      "source_sha256": "ee50b2f2080d689bd83aa6cbf5c13cda6d8a644d45dbf5f8b98a41c02cb3aac5",
+      "published_sha256": "ee50b2f2080d689bd83aa6cbf5c13cda6d8a644d45dbf5f8b98a41c02cb3aac5",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "expected-differences-before.md",
+      "source_sha256": "eda0ee9715468af234555a0f3a181f1c4231ac45e04f0b873c32f4d22924a918",
+      "published_sha256": "eda0ee9715468af234555a0f3a181f1c4231ac45e04f0b873c32f4d22924a918",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "frozen-contract.json",
+      "source_sha256": "e376d105d4c7df452ce9df01bd416e032a1a23b373f7c0c70ebafa663a079cd9",
+      "published_sha256": "e376d105d4c7df452ce9df01bd416e032a1a23b373f7c0c70ebafa663a079cd9",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "measurement-ci-redline.diff",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "other-preview-redline.diff",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "sources-redline.diff",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "style-r5-after-v1.done",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "style-r5-after-v1.log",
+      "source_sha256": "5e7a5dfb6450ffffa9b31fa09bb4bbae874ad22c9f5777e47bb0512c23b97711",
+      "published_sha256": "b0fda0ee965ccb649cd9c90f1bc31208062b5e5919229ac23a4bcd78fdf7af15",
+      "png_bytes_preserved": false
+    }
+  ]
+}

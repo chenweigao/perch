@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-11-19T14:14:23+08:00",
+  "branch": "style/loop-main",
+  "real_tested_head": "0b05897bad0dfaa22aef446422bbd3a5c31f92ea",
+  "current_archive_head": "0b05897bad0dfaa22aef446422bbd3a5c31f92ea",
+  "verdict": "PASS_LIMITED",
+  "review_sha256": "281f695742acc952a223968c3dda85498c426505c7ca84fb71290bcaa47a52e0",
+  "seal_sha256": "f6bc4e54703a2e73faa39cd67bf0cdc298b56fa2c4d5b5d37e16f24df453b89e",
+  "protected_hash_mode_kind_records_verified": 6914,
+  "authored_document_originals_preserved": [
+    {
+      "source": "docs/design/20x-style-loop/INDEX.md",
+      "snapshot": "docs/design/20x-style-rounds/round-5/contracts/review-original-authored/INDEX.md",
+      "sha256": "e061878d32804625aa8ff085ffbfa41f6f5a5bbd4d36401c14449e30cb798bb1"
+    },
+    {
+      "source": "docs/design/20x-style-rounds/round-5/README.md",
+      "snapshot": "docs/design/20x-style-rounds/round-5/contracts/review-original-authored/README.md",
+      "sha256": "689c68d1502c464e30429a70df70412749f73d75787ff97b8ecf8d06c6973b0e"
+    }
+  ],
+  "all_other_inputs_unchanged": true,
+  "source_tests_scripts_CI_package_diff_from_real_tested_head": "ZERO",
+  "new_findings": {
+    "P1": 0,
+    "P2": 0,
+    "P3": 1
+  },
+  "finding_id": "S03-R5-F01",
+  "finding_utf8_sha256": "baec479a0bb8d36191ae56714812c4121e5eb9fcd293d4e2adfdbadedd00332a",
+  "disposition_verbatim_verified": true,
+  "historical_reviews_and_18_findings_preserved": true,
+  "all_uncertified_boundaries_retained": [
+    {
+      "id": "L01",
+      "check": "任意窗口、菜单其他值、最长字符串、更多任务组或机器及其他locale/backing scale",
+      "status": "not_verified",
+      "required_for_frozen_S03_contract": false,
+      "retained_boundary": "只认证冻结1120x820/scale1的九组当前值；不外推。"
+    },
+    {
+      "id": "L02",
+      "check": "所有原生控件18pt或任意Dynamic Type",
+      "status": "not_verified",
+      "required_for_frozen_S03_contract": false,
+      "retained_boundary": "xxxLarge为既有代表fixture；explicit font/native控件可与默认像素一致。"
+    },
+    {
+      "id": "L03",
+      "check": "全应用没有任何旧截断或全部preview完整人工交互",
+      "status": "not_verified",
+      "required_for_frozen_S03_contract": false,
+      "retained_boundary": "英文fixture的预览状态仍中文，empty仍首…；原sidebar截断也保留。"
+    },
+    {
+      "id": "L04",
+      "check": "全局OS明暗切换与所有系统跟随环境",
+      "status": "not_verified",
+      "required_for_frozen_S03_contract": false,
+      "retained_boundary": "源码系统跟随＋Settings覆盖不变，Mac正常路径执行显式app light/dark；未做全局OS切换。"
+    },
+    {
+      "id": "L05",
+      "check": "完整compositor、Liquid Glass光学或审美批准",
+      "status": "not_verified",
+      "required_for_frozen_S03_contract": false,
+      "retained_boundary": "正常native-design的12 PNG是view-cache，不把它们当完整窗口服务器合成验收；已裁决方向不重开。"
+    },
+    {
+      "id": "L06",
+      "check": "真实用户数据、SSH/客户端连接、实际coding agent、认证权限或连接生命周期运行",
+      "status": "not_verified",
+      "required_for_frozen_S03_contract": false,
+      "retained_boundary": "本复核未执行这些操作；已有gates为离线注入runtime。"
+    },
+    {
+      "id": "L07",
+      "check": "性能、FPS或PerfRunner新的测量/CI语义认证",
+      "status": "not_verified",
+      "required_for_frozen_S03_contract": false,
+      "retained_boundary": "仅读既有运行记录，不build、不GUI、不重跑PerfRunner、不做性能认证。"
+    },
+    {
+      "id": "L08",
+      "check": "Linux完整PASS、Linux Swift/WorkbenchChecks或clean候选Linux来源",
+      "status": "not_verified",
+      "required_for_frozen_S03_contract": false,
+      "retained_boundary": "portable10/10在产品写入后/commit前，HEAD为baseline且dirty=true；Linux无Swift，WorkbenchChecks未执行。"
+    },
+    {
+      "id": "L09",
+      "check": "从dirty布尔值重建历史工作树或可重复构建/独立二进制字节一致",
+      "status": "not_verified",
+      "required_for_frozen_S03_contract": false,
+      "retained_boundary": "候选source-scope artifact与当前源码/提交吻合；host二进制hash仅核对日志，未读取二进制原件。"
+    },
+    {
+      "id": "L10",
+      "check": "封存前不可变取证保管或追补round3首次写入认证",
+      "status": "not_verified",
+      "required_for_frozen_S03_contract": false,
+      "retained_boundary": "本轮有真实首次写入/queue记录及冻结hash；不使用mtime或本輪证据改写历史认证。"
+    },
+    {
+      "id": "L11",
+      "check": "原机器未脱敏文本逐字重读或全局配置/实时远端独立审计",
+      "status": "not_verified",
+      "required_for_frozen_S03_contract": false,
+      "retained_boundary": "已独立核对612份发布文件hash、120原PNG的source/published一致及脱敏脚本；未重读外部未脱敏文本或操作远端。"
+    },
+    {
+      "id": "L12",
+      "check": "全量whitespace PASS或首push成功",
+      "status": "not_verified",
+      "required_for_frozen_S03_contract": false,
+      "retained_boundary": "全量候选diff实际exit2保留两份原编译诊断空白；仅两个精确排除后通过。首push错误不受Everything up-to-date尾句覆盖。"
+    },
+    {
+      "id": "L13",
+      "check": "图片隐私、未知凭据格式、ownership/许可及全历史仓库审计",
+      "status": "not_verified",
+      "required_for_frozen_S03_contract": false,
+      "retained_boundary": "原scanner的0 findings仅认证其既有模式，不修改scanner或扩大结论。"
+    },
+    {
+      "id": "L14",
+      "check": "round2/round4历史改判、归档完成或下一轮启动",
+      "status": "not_verified",
+      "required_for_frozen_S03_contract": false,
+      "retained_boundary": "原FAIL/NOT_PASSED及限定补证各自保留；round5未归档计完成、剩16轮不动。"
+    }
+  ],
+  "aesthetic_approval": false,
+  "new_build_GUI_or_remote_session_execution": false,
+  "remaining_rounds_before_exact_archive_push": 16,
+  "counter_advanced_by_this_verifier": false
+}

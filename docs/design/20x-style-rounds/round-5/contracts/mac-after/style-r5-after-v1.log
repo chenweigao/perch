@@ -1,0 +1,22 @@
+start=2026-11-19T11:21:59+08:00
+pre_porcelain=0
+From github.com:chenweigao/perch
+ * branch              main            -> FETCH_HEAD
+ * branch              style/loop-main -> FETCH_HEAD
+   566c0c3e..0b05897b  style/loop-main -> origin/style/loop-main
+Previous HEAD position was 566c0c3e fix(style): reclaim inspector header title width
+HEAD is now at 0b05897b fix(style): preserve preview filter intrinsic widths
+code_head=0b05897bad0dfaa22aef446422bbd3a5c31f92ea
+capture_driver_sha256=65c2cf77f6bd620082fb7aa68ca3a41b475459c7121a00312e4e379251d0415c
+expected_list_sha256=eda0ee9715468af234555a0f3a181f1c4231ac45e04f0b873c32f4d22924a918
+allowed_regions_sha256=ee50b2f2080d689bd83aa6cbf5c13cda6d8a644d45dbf5f8b98a41c02cb3aac5
+{
+  "status": "passed",
+  "output": "/Users/developer/Library/PerfRunner/results/style-r5-after-v1/capture",
+  "comparisons": 27,
+  "seconds": 410.622
+}
+host_binary_sha256=7ccb95a14b1ac6b175129b86ff5fd992dc47fe9f9820e722213fd436c45ca24d
+post_porcelain=0
+end=2026-11-19T11:29:05+08:00
+exit=0

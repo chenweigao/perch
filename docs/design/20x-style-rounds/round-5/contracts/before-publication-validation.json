@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "mode": "baseline",
+  "before_head": "566c0c3e449fa076adbee1d91a9002ddd561034d",
+  "after_head": null,
+  "tolerance": 0,
+  "frozen_contract_sha256": "e376d105d4c7df452ce9df01bd416e032a1a23b373f7c0c70ebafa663a079cd9",
+  "png_reader_sha256": "9d4e7eeba751edccac29645cf7099bdafa3b53d54952f2bc6d62a365134b1237",
+  "before_repeat_pixel_pairs": 27,
+  "before_repeat_byte_pairs": 27,
+  "before_original_pngs": 54
+}

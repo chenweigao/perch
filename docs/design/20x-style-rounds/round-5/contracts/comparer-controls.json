@@ -1,0 +1,176 @@
+{
+  "status": "passed",
+  "purpose": "Synthetic corruption controls, not delivery screenshots or a product verdict",
+  "source_matrix_head": "566c0c3e449fa076adbee1d91a9002ddd561034d",
+  "protected_original_files": 275,
+  "protected_contract_files": 19,
+  "protected_originals_unchanged": true,
+  "control_count": 19,
+  "checks": [
+    {
+      "name": "unchanged",
+      "layer": "decoded pixel mask",
+      "synthetic_input": true,
+      "outside_allowed_visible_pixels": 0,
+      "outside_allowed_rgba_pixels": 0,
+      "pass": true
+    },
+    {
+      "name": "inside-header",
+      "layer": "decoded pixel mask",
+      "synthetic_input": true,
+      "outside_allowed_visible_pixels": 0,
+      "outside_allowed_rgba_pixels": 0,
+      "pass": true
+    },
+    {
+      "name": "left-boundary-outside",
+      "layer": "decoded pixel mask",
+      "synthetic_input": true,
+      "outside_allowed_visible_pixels": 1,
+      "outside_allowed_rgba_pixels": 1,
+      "pass": true
+    },
+    {
+      "name": "right-boundary-outside",
+      "layer": "decoded pixel mask",
+      "synthetic_input": true,
+      "outside_allowed_visible_pixels": 1,
+      "outside_allowed_rgba_pixels": 1,
+      "pass": true
+    },
+    {
+      "name": "top-boundary-outside",
+      "layer": "decoded pixel mask",
+      "synthetic_input": true,
+      "outside_allowed_visible_pixels": 1,
+      "outside_allowed_rgba_pixels": 1,
+      "pass": true
+    },
+    {
+      "name": "bottom-boundary-outside",
+      "layer": "decoded pixel mask",
+      "synthetic_input": true,
+      "outside_allowed_visible_pixels": 1,
+      "outside_allowed_rgba_pixels": 1,
+      "pass": true
+    },
+    {
+      "name": "rgba-only-outside",
+      "layer": "decoded pixel mask",
+      "synthetic_input": true,
+      "outside_allowed_visible_pixels": 0,
+      "outside_allowed_rgba_pixels": 1,
+      "pass": true
+    },
+    {
+      "name": "stability-header-pixel",
+      "layer": "decoded pixel mask",
+      "synthetic_input": true,
+      "outside_allowed_visible_pixels": 1,
+      "outside_allowed_rgba_pixels": 1,
+      "pass": true
+    },
+    {
+      "name": "unchanged",
+      "layer": "full frozen matrix CLI",
+      "synthetic_input": true,
+      "expected_exit": 0,
+      "actual_exit": 0,
+      "comparer_status": "passed",
+      "diagnostic": null,
+      "pass": true
+    },
+    {
+      "name": "header-pixel",
+      "layer": "full frozen matrix CLI",
+      "synthetic_input": true,
+      "expected_exit": 0,
+      "actual_exit": 0,
+      "comparer_status": "passed",
+      "diagnostic": null,
+      "pass": true
+    },
+    {
+      "name": "main-pixel",
+      "layer": "full frozen matrix CLI",
+      "synthetic_input": true,
+      "expected_exit": 1,
+      "actual_exit": 1,
+      "comparer_status": "failed",
+      "diagnostic": null,
+      "pass": true
+    },
+    {
+      "name": "composer-pixel",
+      "layer": "full frozen matrix CLI",
+      "synthetic_input": true,
+      "expected_exit": 1,
+      "actual_exit": 1,
+      "comparer_status": "failed",
+      "diagnostic": null,
+      "pass": true
+    },
+    {
+      "name": "hash-corruption",
+      "layer": "full frozen matrix CLI",
+      "synthetic_input": true,
+      "expected_exit": 1,
+      "actual_exit": 1,
+      "comparer_status": "failed",
+      "diagnostic": "PNG hash mismatch: workbench-english repeat 1",
+      "pass": true
+    },
+    {
+      "name": "repeat-byte-drift",
+      "layer": "full frozen matrix CLI",
+      "synthetic_input": true,
+      "expected_exit": 1,
+      "actual_exit": 1,
+      "comparer_status": "failed",
+      "diagnostic": "Unstable PNG-byte repeat: workbench-english",
+      "pass": true
+    },
+    {
+      "name": "metadata-drift",
+      "layer": "full frozen matrix CLI",
+      "synthetic_input": true,
+      "expected_exit": 1,
+      "actual_exit": 1,
+      "comparer_status": "failed",
+      "diagnostic": "Cross-matrix camera/fixture drift: workbench-english/window_frame",
+      "pass": true
+    },
+    {
+      "name": "missing-scene",
+      "layer": "full frozen matrix CLI",
+      "synthetic_input": true,
+      "expected_exit": 1,
+      "actual_exit": 1,
+      "comparer_status": "failed",
+      "diagnostic": "Matrix must contain exactly the frozen 27 scenes",
+      "pass": true
+    },
+    {
+      "name": "frozen-contract",
+      "layer": "frozen input binding",
+      "synthetic_input": true,
+      "diagnostic": "Frozen contract hash mismatch",
+      "pass": true
+    },
+    {
+      "name": "allowed-region",
+      "layer": "frozen input binding",
+      "synthetic_input": true,
+      "diagnostic": "Frozen input hash mismatch: allowed_regions_sha256",
+      "pass": true
+    },
+    {
+      "name": "expected-list",
+      "layer": "frozen input binding",
+      "synthetic_input": true,
+      "diagnostic": "Frozen input hash mismatch: expected_list_sha256",
+      "pass": true
+    }
+  ]
+}

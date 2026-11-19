@@ -112,11 +112,11 @@ private struct DashboardPreview: View {
                 Picker("任务组", selection: Binding(get: { scope.groupID }, set: { scope.groupID = $0 })) {
                     Text("全部任务组").tag(UUID?.none)
                     ForEach(demoGroups) { group in Text(group.name).tag(Optional(group.id)) }
-                }.frame(width: 130)
+                }.fixedSize(horizontal: true, vertical: false).frame(minWidth: 130)
                 Picker("机器", selection: Binding(get: { scope.hostID }, set: { scope.hostID = $0 })) {
                     Text("全部机器").tag(UUID?.none)
                     ForEach(demoHosts, id: \.id) { entry in Text(entry.name).tag(Optional(entry.id)) }
-                }.frame(width: 120)
+                }.fixedSize(horizontal: true, vertical: false).frame(minWidth: 120)
             }
         } content: {
             WorkbenchDashboard(homeSection: $homeSection, attentionOnly: inbox, changes: changes,

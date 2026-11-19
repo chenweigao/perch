@@ -1,0 +1,10 @@
+local_preflight_at=2026-11-19T11:42:26+08:00
+job_sha256=1682f6c29f9f18f01d9f8900422ab30ae12510cd9842635f4b125fd1946f1bcb
+runner_pid=69667
+shared_head=0b05897bad0dfaa22aef446422bbd3a5c31f92ea
+shared_porcelain=0
+queue_before_count=0
+queued_at=2026-11-19T11:42:31+08:00
+job_name=style-r5-gates-v1
+job_sha256=1682f6c29f9f18f01d9f8900422ab30ae12510cd9842635f4b125fd1946f1bcb
+state=queued_not_terminal
