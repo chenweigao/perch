@@ -1,0 +1,16 @@
+{
+  "command": [
+    "env",
+    "GIT_TERMINAL_PROMPT=0",
+    "GIT_OPTIONAL_LOCKS=0",
+    "git",
+    "ls-remote",
+    "origin",
+    "refs/heads/main",
+    "refs/heads/style/loop-main"
+  ],
+  "started_at": "2026-11-19T17:57:00+08:00",
+  "finished_at": "2026-11-19T17:57:02+08:00",
+  "process_return_code": 0,
+  "original_log": "candidate-remote-post-v1.log"
+}

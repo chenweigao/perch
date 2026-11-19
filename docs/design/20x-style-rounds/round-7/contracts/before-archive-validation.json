@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "verified_at": "2026-11-19T17:26:09+08:00",
+  "archive_sha256": "0ea93bc4fdcbd74af1d8512e984a04e927213a6bbaa4604ae14baab3f3aa8fa1",
+  "mac_and_local_archive_sha256_equal": true,
+  "members": 456,
+  "regular_files": 352,
+  "original_pngs": 68,
+  "all_member_bytes_verified": true,
+  "unsafe_paths_or_links": 0,
+  "appledouble_metadata": 0,
+  "before_profile_and_wrapper_original_bytes_equal": true,
+  "GUI_restarted": false
+}

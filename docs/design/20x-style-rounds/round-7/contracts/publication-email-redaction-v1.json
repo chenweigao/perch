@@ -1,0 +1,15 @@
+{
+  "status": "applied_pending_rescan",
+  "recorded_at": "2026-11-19T18:04:42+08:00",
+  "path": "contracts/candidate-and-after-receipts/candidate-commit-v1.receipt.json",
+  "reason": "The first queued snapshot actually reported one email pattern in the bot coauthor command argument; preserve that negative receipt.",
+  "policy": "Public receipt command argument redacts only the known bot coauthor email, with an explicit note. Actual command, private original receipt, real Git footer and source remain unchanged. This is not a scanner exemption or configuration change.",
+  "private_original_sha256": "48aa53a96291ca556ff2cd3fed0809485cdc4e11944a6dd42431239cfbf78eea",
+  "initial_published_sha256": "48aa53a96291ca556ff2cd3fed0809485cdc4e11944a6dd42431239cfbf78eea",
+  "redacted_published_sha256": "63df18661c2bcf24bc3cc55df505adafa9d7446f35f3d042ca625300f303c393",
+  "initial_published_copy_retained": true,
+  "actual_commit_return_code": 0,
+  "scanner_first_receipt": "start-receipts/queued-publication-snapshot-v1.receipt.json",
+  "scanner_first_process_return_code": 1,
+  "scan_scope_not_full_secret_audit": true
+}

@@ -1,0 +1,3000 @@
+{
+  "commit": "5970638a64a73e352867ad8e5ffeca9341f9d66b",
+  "dirty": false,
+  "boundary": "offline synthetic fixtures in a PerfRunner Aqua job; no user sessions or remote agents",
+  "comparisons": [
+    {
+      "group": "composer-dark",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "d7a40d2fef690e9476760a0a628852f5f5a5add8b9197e01c3e045790aaa1efa",
+      "second_sha256": "d7a40d2fef690e9476760a0a628852f5f5a5add8b9197e01c3e045790aaa1efa",
+      "byte_identical": true,
+      "dimensions": [
+        760,
+        500
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "composer-light",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "f344c1b9d89d9ef54b82daa3819ba3edd64eec714229ab1d2671a285fa760e36",
+      "second_sha256": "f344c1b9d89d9ef54b82daa3819ba3edd64eec714229ab1d2671a285fa760e36",
+      "byte_identical": true,
+      "dimensions": [
+        760,
+        500
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "main-dark",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "9031fbbc64ab1bfc937d45f480e02f932755f30bb9cb8bfdea7d315a5e462ea1",
+      "second_sha256": "9031fbbc64ab1bfc937d45f480e02f932755f30bb9cb8bfdea7d315a5e462ea1",
+      "byte_identical": true,
+      "dimensions": [
+        1536,
+        900
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "main-dashboard",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "1643b2097f5855af819039312b5d8bc51dca6ad5d7f0d8753031fab6db556ffd",
+      "second_sha256": "1643b2097f5855af819039312b5d8bc51dca6ad5d7f0d8753031fab6db556ffd",
+      "byte_identical": true,
+      "dimensions": [
+        1536,
+        900
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "main-english",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "e075a4c45997b699385bea2404481c3e1eabc51aa523bfa2c5b4a8f7e92b1b81",
+      "second_sha256": "e075a4c45997b699385bea2404481c3e1eabc51aa523bfa2c5b4a8f7e92b1b81",
+      "byte_identical": true,
+      "dimensions": [
+        1536,
+        900
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "main-english-dark",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "4b78f7499cebad4c77e9301b4ad71199701d6fb242ad4cfe396731fdd0a7352e",
+      "second_sha256": "4b78f7499cebad4c77e9301b4ad71199701d6fb242ad4cfe396731fdd0a7352e",
+      "byte_identical": true,
+      "dimensions": [
+        1536,
+        900
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "main-english-large-type",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "584ef5ed925d8d904d9d7ca417e75ef42a33637a635524f635f3336f04cff0f4",
+      "second_sha256": "584ef5ed925d8d904d9d7ca417e75ef42a33637a635524f635f3336f04cff0f4",
+      "byte_identical": true,
+      "dimensions": [
+        1536,
+        900
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "main-english-large-type-dark",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "d43dfe234fddff205478e48f50bd7850f216eb393cf9df4f676ae75e53bc6613",
+      "second_sha256": "d43dfe234fddff205478e48f50bd7850f216eb393cf9df4f676ae75e53bc6613",
+      "byte_identical": true,
+      "dimensions": [
+        1536,
+        900
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "main-find",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "4ff33a50f17cb0db4640cd33192ac62c56f01b744e84d63736aec5ea55a53e04",
+      "second_sha256": "4ff33a50f17cb0db4640cd33192ac62c56f01b744e84d63736aec5ea55a53e04",
+      "byte_identical": true,
+      "dimensions": [
+        1536,
+        900
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "main-find-dark",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "af14e8d84a71dba2bd8199eb4a987fa84dd481b240e2d34a0318272f5aaa047f",
+      "second_sha256": "af14e8d84a71dba2bd8199eb4a987fa84dd481b240e2d34a0318272f5aaa047f",
+      "byte_identical": true,
+      "dimensions": [
+        1536,
+        900
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "main-inspector-closed",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "7d9bc3630f7cfa965c46fa8bb66877e1f3c4deacb5bcb6291557f78ceccb3a15",
+      "second_sha256": "7d9bc3630f7cfa965c46fa8bb66877e1f3c4deacb5bcb6291557f78ceccb3a15",
+      "byte_identical": true,
+      "dimensions": [
+        1536,
+        900
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "main-large-type",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "bcd0816ed09a4a4683c7ece4549df2583a766d30a82cd3fffc0143fcfe7efa35",
+      "second_sha256": "bcd0816ed09a4a4683c7ece4549df2583a766d30a82cd3fffc0143fcfe7efa35",
+      "byte_identical": true,
+      "dimensions": [
+        1536,
+        900
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "main-large-type-dark",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "ae963c359dab761987761262db320daddc3a71a9244cc052003f9701b8ad3532",
+      "second_sha256": "ae963c359dab761987761262db320daddc3a71a9244cc052003f9701b8ad3532",
+      "byte_identical": true,
+      "dimensions": [
+        1536,
+        900
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "main-light",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "1cc5ea93e59c18a79254453cc08924bba95ddfeafe648deacc4fa7d56d856183",
+      "second_sha256": "1cc5ea93e59c18a79254453cc08924bba95ddfeafe648deacc4fa7d56d856183",
+      "byte_identical": true,
+      "dimensions": [
+        1536,
+        900
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "main-scroll",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "20e574bb0a0238bc2d07d69b295e20936b2bd3ead165fe620f570ce56c459929",
+      "second_sha256": "20e574bb0a0238bc2d07d69b295e20936b2bd3ead165fe620f570ce56c459929",
+      "byte_identical": true,
+      "dimensions": [
+        1536,
+        900
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "sidebar-dark",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "cb1c4e6806ed31de6342f6508579dfc9643b18d1656ffeaf1acf95f215b4d723",
+      "second_sha256": "cb1c4e6806ed31de6342f6508579dfc9643b18d1656ffeaf1acf95f215b4d723",
+      "byte_identical": true,
+      "dimensions": [
+        1100,
+        760
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "sidebar-english",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "ca058cddd77b79304aed2d1ec477eabaf9f3ab1367a903732bf84eb553876c63",
+      "second_sha256": "ca058cddd77b79304aed2d1ec477eabaf9f3ab1367a903732bf84eb553876c63",
+      "byte_identical": true,
+      "dimensions": [
+        1100,
+        760
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "sidebar-light",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "b5b9658bfe5e6c364ad8d4600b5eef0c422da0717479b4f2c71707c0c9e516c1",
+      "second_sha256": "b5b9658bfe5e6c364ad8d4600b5eef0c422da0717479b4f2c71707c0c9e516c1",
+      "byte_identical": true,
+      "dimensions": [
+        1100,
+        760
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "workbench-dark",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "87399e070805940c824ff29c64259b64d03cf0efc9b35f9f407f1f10e17e1002",
+      "second_sha256": "87399e070805940c824ff29c64259b64d03cf0efc9b35f9f407f1f10e17e1002",
+      "byte_identical": true,
+      "dimensions": [
+        1120,
+        820
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "workbench-empty-dark",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "0583f87f3c2b9bc9df7a6289a4a6107431091854614fde448d3bd91202a2614a",
+      "second_sha256": "0583f87f3c2b9bc9df7a6289a4a6107431091854614fde448d3bd91202a2614a",
+      "byte_identical": true,
+      "dimensions": [
+        1120,
+        820
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "workbench-empty-english",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "4d2a0274543274bb5dcab2ba842499ff5e26190a3696e68cc45a34b516574a87",
+      "second_sha256": "4d2a0274543274bb5dcab2ba842499ff5e26190a3696e68cc45a34b516574a87",
+      "byte_identical": true,
+      "dimensions": [
+        1120,
+        820
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "workbench-empty-english-dark",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "2b9ac809eebd3099cc48eab8b9fa1785a905f82ffe52097b4b74adc4d9aff917",
+      "second_sha256": "2b9ac809eebd3099cc48eab8b9fa1785a905f82ffe52097b4b74adc4d9aff917",
+      "byte_identical": true,
+      "dimensions": [
+        1120,
+        820
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "workbench-empty-english-large-type",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "4d2a0274543274bb5dcab2ba842499ff5e26190a3696e68cc45a34b516574a87",
+      "second_sha256": "4d2a0274543274bb5dcab2ba842499ff5e26190a3696e68cc45a34b516574a87",
+      "byte_identical": true,
+      "dimensions": [
+        1120,
+        820
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "workbench-empty-english-large-type-dark",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "2b9ac809eebd3099cc48eab8b9fa1785a905f82ffe52097b4b74adc4d9aff917",
+      "second_sha256": "2b9ac809eebd3099cc48eab8b9fa1785a905f82ffe52097b4b74adc4d9aff917",
+      "byte_identical": true,
+      "dimensions": [
+        1120,
+        820
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "workbench-empty-large-type",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "2dfbac6ad8b1e9a31da9657a6795742f17fce4751d428f2bd29b2ba1ff963632",
+      "second_sha256": "2dfbac6ad8b1e9a31da9657a6795742f17fce4751d428f2bd29b2ba1ff963632",
+      "byte_identical": true,
+      "dimensions": [
+        1120,
+        820
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "workbench-empty-large-type-dark",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "0583f87f3c2b9bc9df7a6289a4a6107431091854614fde448d3bd91202a2614a",
+      "second_sha256": "0583f87f3c2b9bc9df7a6289a4a6107431091854614fde448d3bd91202a2614a",
+      "byte_identical": true,
+      "dimensions": [
+        1120,
+        820
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "workbench-empty-light",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "2dfbac6ad8b1e9a31da9657a6795742f17fce4751d428f2bd29b2ba1ff963632",
+      "second_sha256": "2dfbac6ad8b1e9a31da9657a6795742f17fce4751d428f2bd29b2ba1ff963632",
+      "byte_identical": true,
+      "dimensions": [
+        1120,
+        820
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "workbench-english",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "b86faf138fa359e904c8f35360c6925e3bb4d060d6d699284d4477d9a85cbf8b",
+      "second_sha256": "b86faf138fa359e904c8f35360c6925e3bb4d060d6d699284d4477d9a85cbf8b",
+      "byte_identical": true,
+      "dimensions": [
+        1120,
+        820
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "workbench-english-dark",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "838a38350ca641699939cb65379cf7d4d73513a834119c9e5ef3918c9c17db84",
+      "second_sha256": "838a38350ca641699939cb65379cf7d4d73513a834119c9e5ef3918c9c17db84",
+      "byte_identical": true,
+      "dimensions": [
+        1120,
+        820
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "workbench-english-large-type",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "b86faf138fa359e904c8f35360c6925e3bb4d060d6d699284d4477d9a85cbf8b",
+      "second_sha256": "b86faf138fa359e904c8f35360c6925e3bb4d060d6d699284d4477d9a85cbf8b",
+      "byte_identical": true,
+      "dimensions": [
+        1120,
+        820
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "workbench-english-large-type-dark",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "838a38350ca641699939cb65379cf7d4d73513a834119c9e5ef3918c9c17db84",
+      "second_sha256": "838a38350ca641699939cb65379cf7d4d73513a834119c9e5ef3918c9c17db84",
+      "byte_identical": true,
+      "dimensions": [
+        1120,
+        820
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "workbench-large-type",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "7302fb49bd78d87480c9e0b664ee58094a5ab76fcf2cc76382b2f6931e935f8b",
+      "second_sha256": "7302fb49bd78d87480c9e0b664ee58094a5ab76fcf2cc76382b2f6931e935f8b",
+      "byte_identical": true,
+      "dimensions": [
+        1120,
+        820
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "workbench-large-type-dark",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "87399e070805940c824ff29c64259b64d03cf0efc9b35f9f407f1f10e17e1002",
+      "second_sha256": "87399e070805940c824ff29c64259b64d03cf0efc9b35f9f407f1f10e17e1002",
+      "byte_identical": true,
+      "dimensions": [
+        1120,
+        820
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    },
+    {
+      "group": "workbench-light",
+      "first_exists": true,
+      "second_exists": true,
+      "first_sha256": "7302fb49bd78d87480c9e0b664ee58094a5ab76fcf2cc76382b2f6931e935f8b",
+      "second_sha256": "7302fb49bd78d87480c9e0b664ee58094a5ab76fcf2cc76382b2f6931e935f8b",
+      "byte_identical": true,
+      "dimensions": [
+        1120,
+        820
+      ],
+      "identical": true,
+      "comparison": "byte-identical PNG; pixels necessarily identical"
+    }
+  ],
+  "commands": [
+    {
+      "name": "build-host",
+      "command": [
+        "python3",
+        "scripts/check-host-lifecycle.py",
+        "--app",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app",
+        "--build-only"
+      ],
+      "log": "logs/build-host.log",
+      "exit_code": 0,
+      "seconds": 27.114
+    },
+    {
+      "name": "build-workbench",
+      "command": [
+        "bash",
+        "scripts/build-workbench-preview.sh"
+      ],
+      "log": "logs/build-workbench.log",
+      "exit_code": 0,
+      "seconds": 17.405
+    },
+    {
+      "name": "build-sidebar",
+      "command": [
+        "bash",
+        "scripts/build-sidebar-preview.sh"
+      ],
+      "log": "logs/build-sidebar.log",
+      "exit_code": 0,
+      "seconds": 14.009
+    },
+    {
+      "name": "build-composer",
+      "command": [
+        "bash",
+        "scripts/build-composer-preview.sh"
+      ],
+      "log": "logs/build-composer.log",
+      "exit_code": 0,
+      "seconds": 2.045
+    },
+    {
+      "name": "main-light-repeat-1",
+      "command": [
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-light/repeat-1/capture.png"
+      },
+      "log": "logs/main-light-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 10.357
+    },
+    {
+      "name": "main-light-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27151",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-light/repeat-1/capture.png"
+      ],
+      "log": "logs/main-light-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.425
+    },
+    {
+      "name": "main-light-repeat-2",
+      "command": [
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-light/repeat-2/capture.png"
+      },
+      "log": "logs/main-light-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 9.329
+    },
+    {
+      "name": "main-light-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27158",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-light/repeat-2/capture.png"
+      ],
+      "log": "logs/main-light-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.363
+    },
+    {
+      "name": "main-dark-repeat-1",
+      "command": [
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-dark/repeat-1/capture.png",
+        "PERCH_STYLE_DARK": "1"
+      },
+      "log": "logs/main-dark-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 9.267
+    },
+    {
+      "name": "main-dark-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27165",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-dark/repeat-1/capture.png"
+      ],
+      "log": "logs/main-dark-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.266
+    },
+    {
+      "name": "main-dark-repeat-2",
+      "command": [
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-dark/repeat-2/capture.png",
+        "PERCH_STYLE_DARK": "1"
+      },
+      "log": "logs/main-dark-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 9.023
+    },
+    {
+      "name": "main-dark-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27172",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-dark/repeat-2/capture.png"
+      ],
+      "log": "logs/main-dark-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.242
+    },
+    {
+      "name": "main-english-repeat-1",
+      "command": [
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-english/repeat-1/capture.png",
+        "PERCH_STYLE_LOCALE": "en"
+      },
+      "log": "logs/main-english-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 9.109
+    },
+    {
+      "name": "main-english-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27179",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-english/repeat-1/capture.png"
+      ],
+      "log": "logs/main-english-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.228
+    },
+    {
+      "name": "main-english-repeat-2",
+      "command": [
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-english/repeat-2/capture.png",
+        "PERCH_STYLE_LOCALE": "en"
+      },
+      "log": "logs/main-english-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 9.286
+    },
+    {
+      "name": "main-english-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27186",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-english/repeat-2/capture.png"
+      ],
+      "log": "logs/main-english-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.232
+    },
+    {
+      "name": "main-large-type-repeat-1",
+      "command": [
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-large-type/repeat-1/capture.png",
+        "PERCH_STYLE_LARGE_TYPE": "1"
+      },
+      "log": "logs/main-large-type-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 9.186
+    },
+    {
+      "name": "main-large-type-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27193",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-large-type/repeat-1/capture.png"
+      ],
+      "log": "logs/main-large-type-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.238
+    },
+    {
+      "name": "main-large-type-repeat-2",
+      "command": [
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-large-type/repeat-2/capture.png",
+        "PERCH_STYLE_LARGE_TYPE": "1"
+      },
+      "log": "logs/main-large-type-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 9.496
+    },
+    {
+      "name": "main-large-type-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27200",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-large-type/repeat-2/capture.png"
+      ],
+      "log": "logs/main-large-type-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.349
+    },
+    {
+      "name": "main-english-dark-repeat-1",
+      "command": [
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-english-dark/repeat-1/capture.png",
+        "PERCH_STYLE_LOCALE": "en",
+        "PERCH_STYLE_DARK": "1"
+      },
+      "log": "logs/main-english-dark-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 8.992
+    },
+    {
+      "name": "main-english-dark-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27207",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-english-dark/repeat-1/capture.png"
+      ],
+      "log": "logs/main-english-dark-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.287
+    },
+    {
+      "name": "main-english-dark-repeat-2",
+      "command": [
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-english-dark/repeat-2/capture.png",
+        "PERCH_STYLE_LOCALE": "en",
+        "PERCH_STYLE_DARK": "1"
+      },
+      "log": "logs/main-english-dark-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 9.127
+    },
+    {
+      "name": "main-english-dark-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27214",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-english-dark/repeat-2/capture.png"
+      ],
+      "log": "logs/main-english-dark-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.167
+    },
+    {
+      "name": "main-english-large-type-repeat-1",
+      "command": [
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-english-large-type/repeat-1/capture.png",
+        "PERCH_STYLE_LOCALE": "en",
+        "PERCH_STYLE_LARGE_TYPE": "1"
+      },
+      "log": "logs/main-english-large-type-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 9.222
+    },
+    {
+      "name": "main-english-large-type-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27221",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-english-large-type/repeat-1/capture.png"
+      ],
+      "log": "logs/main-english-large-type-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.192
+    },
+    {
+      "name": "main-english-large-type-repeat-2",
+      "command": [
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-english-large-type/repeat-2/capture.png",
+        "PERCH_STYLE_LOCALE": "en",
+        "PERCH_STYLE_LARGE_TYPE": "1"
+      },
+      "log": "logs/main-english-large-type-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 9.004
+    },
+    {
+      "name": "main-english-large-type-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27228",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-english-large-type/repeat-2/capture.png"
+      ],
+      "log": "logs/main-english-large-type-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.363
+    },
+    {
+      "name": "main-english-large-type-dark-repeat-1",
+      "command": [
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-english-large-type-dark/repeat-1/capture.png",
+        "PERCH_STYLE_LOCALE": "en",
+        "PERCH_STYLE_LARGE_TYPE": "1",
+        "PERCH_STYLE_DARK": "1"
+      },
+      "log": "logs/main-english-large-type-dark-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 9.309
+    },
+    {
+      "name": "main-english-large-type-dark-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27235",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-english-large-type-dark/repeat-1/capture.png"
+      ],
+      "log": "logs/main-english-large-type-dark-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.319
+    },
+    {
+      "name": "main-english-large-type-dark-repeat-2",
+      "command": [
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-english-large-type-dark/repeat-2/capture.png",
+        "PERCH_STYLE_LOCALE": "en",
+        "PERCH_STYLE_LARGE_TYPE": "1",
+        "PERCH_STYLE_DARK": "1"
+      },
+      "log": "logs/main-english-large-type-dark-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 9.286
+    },
+    {
+      "name": "main-english-large-type-dark-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27242",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-english-large-type-dark/repeat-2/capture.png"
+      ],
+      "log": "logs/main-english-large-type-dark-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.232
+    },
+    {
+      "name": "main-large-type-dark-repeat-1",
+      "command": [
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-large-type-dark/repeat-1/capture.png",
+        "PERCH_STYLE_LARGE_TYPE": "1",
+        "PERCH_STYLE_DARK": "1"
+      },
+      "log": "logs/main-large-type-dark-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 9.518
+    },
+    {
+      "name": "main-large-type-dark-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27249",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-large-type-dark/repeat-1/capture.png"
+      ],
+      "log": "logs/main-large-type-dark-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.378
+    },
+    {
+      "name": "main-large-type-dark-repeat-2",
+      "command": [
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-large-type-dark/repeat-2/capture.png",
+        "PERCH_STYLE_LARGE_TYPE": "1",
+        "PERCH_STYLE_DARK": "1"
+      },
+      "log": "logs/main-large-type-dark-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 9.238
+    },
+    {
+      "name": "main-large-type-dark-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27256",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-large-type-dark/repeat-2/capture.png"
+      ],
+      "log": "logs/main-large-type-dark-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.264
+    },
+    {
+      "name": "main-find-repeat-1",
+      "command": [
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-find/repeat-1/capture.png",
+        "PERCH_STYLE_SCENARIO": "find"
+      },
+      "log": "logs/main-find-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 9.314
+    },
+    {
+      "name": "main-find-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27263",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-find/repeat-1/capture.png"
+      ],
+      "log": "logs/main-find-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.363
+    },
+    {
+      "name": "main-find-repeat-2",
+      "command": [
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-find/repeat-2/capture.png",
+        "PERCH_STYLE_SCENARIO": "find"
+      },
+      "log": "logs/main-find-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 9.373
+    },
+    {
+      "name": "main-find-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27272",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-find/repeat-2/capture.png"
+      ],
+      "log": "logs/main-find-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.234
+    },
+    {
+      "name": "main-inspector-closed-repeat-1",
+      "command": [
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-inspector-closed/repeat-1/capture.png",
+        "PERCH_STYLE_SCENARIO": "inspector-closed"
+      },
+      "log": "logs/main-inspector-closed-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 9.274
+    },
+    {
+      "name": "main-inspector-closed-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27281",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-inspector-closed/repeat-1/capture.png"
+      ],
+      "log": "logs/main-inspector-closed-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.401
+    },
+    {
+      "name": "main-inspector-closed-repeat-2",
+      "command": [
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-inspector-closed/repeat-2/capture.png",
+        "PERCH_STYLE_SCENARIO": "inspector-closed"
+      },
+      "log": "logs/main-inspector-closed-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 9.284
+    },
+    {
+      "name": "main-inspector-closed-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27288",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-inspector-closed/repeat-2/capture.png"
+      ],
+      "log": "logs/main-inspector-closed-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.226
+    },
+    {
+      "name": "main-dashboard-repeat-1",
+      "command": [
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-dashboard/repeat-1/capture.png",
+        "PERCH_STYLE_SCENARIO": "dashboard"
+      },
+      "log": "logs/main-dashboard-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 9.254
+    },
+    {
+      "name": "main-dashboard-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27295",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-dashboard/repeat-1/capture.png"
+      ],
+      "log": "logs/main-dashboard-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.235
+    },
+    {
+      "name": "main-dashboard-repeat-2",
+      "command": [
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-dashboard/repeat-2/capture.png",
+        "PERCH_STYLE_SCENARIO": "dashboard"
+      },
+      "log": "logs/main-dashboard-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 8.951
+    },
+    {
+      "name": "main-dashboard-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27302",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-dashboard/repeat-2/capture.png"
+      ],
+      "log": "logs/main-dashboard-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.233
+    },
+    {
+      "name": "main-scroll-repeat-1",
+      "command": [
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-scroll/repeat-1/capture.png",
+        "PERCH_STYLE_SCENARIO": "scroll"
+      },
+      "log": "logs/main-scroll-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 11.503
+    },
+    {
+      "name": "main-scroll-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27309",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-scroll/repeat-1/capture.png"
+      ],
+      "log": "logs/main-scroll-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.406
+    },
+    {
+      "name": "main-scroll-repeat-2",
+      "command": [
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-scroll/repeat-2/capture.png",
+        "PERCH_STYLE_SCENARIO": "scroll"
+      },
+      "log": "logs/main-scroll-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 11.474
+    },
+    {
+      "name": "main-scroll-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27316",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-scroll/repeat-2/capture.png"
+      ],
+      "log": "logs/main-scroll-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.234
+    },
+    {
+      "name": "main-find-dark-repeat-1",
+      "command": [
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-find-dark/repeat-1/capture.png",
+        "PERCH_STYLE_SCENARIO": "find",
+        "PERCH_STYLE_DARK": "1"
+      },
+      "log": "logs/main-find-dark-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 9.068
+    },
+    {
+      "name": "main-find-dark-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27323",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-find-dark/repeat-1/capture.png"
+      ],
+      "log": "logs/main-find-dark-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.234
+    },
+    {
+      "name": "main-find-dark-repeat-2",
+      "command": [
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks",
+        "native-design"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-find-dark/repeat-2/capture.png",
+        "PERCH_STYLE_SCENARIO": "find",
+        "PERCH_STYLE_DARK": "1"
+      },
+      "log": "logs/main-find-dark-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 9.199
+    },
+    {
+      "name": "main-find-dark-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27332",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/main-find-dark/repeat-2/capture.png"
+      ],
+      "log": "logs/main-find-dark-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.274
+    },
+    {
+      "name": "workbench-light-repeat-1",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "日常"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-light/repeat-1/capture.png"
+      },
+      "log": "logs/workbench-light-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 3.943
+    },
+    {
+      "name": "workbench-light-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27341",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-light/repeat-1/capture.png"
+      ],
+      "log": "logs/workbench-light-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.351
+    },
+    {
+      "name": "workbench-light-repeat-2",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "日常"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-light/repeat-2/capture.png"
+      },
+      "log": "logs/workbench-light-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 3.708
+    },
+    {
+      "name": "workbench-light-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27349",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-light/repeat-2/capture.png"
+      ],
+      "log": "logs/workbench-light-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.231
+    },
+    {
+      "name": "workbench-dark-repeat-1",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "日常"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-dark/repeat-1/capture.png",
+        "PERCH_STYLE_DARK": "1"
+      },
+      "log": "logs/workbench-dark-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 3.773
+    },
+    {
+      "name": "workbench-dark-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27357",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-dark/repeat-1/capture.png"
+      ],
+      "log": "logs/workbench-dark-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.375
+    },
+    {
+      "name": "workbench-dark-repeat-2",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "日常"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-dark/repeat-2/capture.png",
+        "PERCH_STYLE_DARK": "1"
+      },
+      "log": "logs/workbench-dark-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 3.761
+    },
+    {
+      "name": "workbench-dark-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27363",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-dark/repeat-2/capture.png"
+      ],
+      "log": "logs/workbench-dark-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.331
+    },
+    {
+      "name": "workbench-english-repeat-1",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "日常"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-english/repeat-1/capture.png",
+        "PERCH_STYLE_LOCALE": "en"
+      },
+      "log": "logs/workbench-english-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 3.592
+    },
+    {
+      "name": "workbench-english-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27371",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-english/repeat-1/capture.png"
+      ],
+      "log": "logs/workbench-english-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.245
+    },
+    {
+      "name": "workbench-english-repeat-2",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "日常"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-english/repeat-2/capture.png",
+        "PERCH_STYLE_LOCALE": "en"
+      },
+      "log": "logs/workbench-english-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 3.681
+    },
+    {
+      "name": "workbench-english-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27377",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-english/repeat-2/capture.png"
+      ],
+      "log": "logs/workbench-english-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.23
+    },
+    {
+      "name": "workbench-large-type-repeat-1",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "日常"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-large-type/repeat-1/capture.png",
+        "PERCH_STYLE_LARGE_TYPE": "1"
+      },
+      "log": "logs/workbench-large-type-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 3.758
+    },
+    {
+      "name": "workbench-large-type-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27383",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-large-type/repeat-1/capture.png"
+      ],
+      "log": "logs/workbench-large-type-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.343
+    },
+    {
+      "name": "workbench-large-type-repeat-2",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "日常"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-large-type/repeat-2/capture.png",
+        "PERCH_STYLE_LARGE_TYPE": "1"
+      },
+      "log": "logs/workbench-large-type-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 3.587
+    },
+    {
+      "name": "workbench-large-type-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27389",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-large-type/repeat-2/capture.png"
+      ],
+      "log": "logs/workbench-large-type-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.234
+    },
+    {
+      "name": "workbench-english-dark-repeat-1",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "日常"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-english-dark/repeat-1/capture.png",
+        "PERCH_STYLE_LOCALE": "en",
+        "PERCH_STYLE_DARK": "1"
+      },
+      "log": "logs/workbench-english-dark-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 3.553
+    },
+    {
+      "name": "workbench-english-dark-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27395",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-english-dark/repeat-1/capture.png"
+      ],
+      "log": "logs/workbench-english-dark-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.23
+    },
+    {
+      "name": "workbench-english-dark-repeat-2",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "日常"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-english-dark/repeat-2/capture.png",
+        "PERCH_STYLE_LOCALE": "en",
+        "PERCH_STYLE_DARK": "1"
+      },
+      "log": "logs/workbench-english-dark-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 3.845
+    },
+    {
+      "name": "workbench-english-dark-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27401",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-english-dark/repeat-2/capture.png"
+      ],
+      "log": "logs/workbench-english-dark-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.398
+    },
+    {
+      "name": "workbench-english-large-type-repeat-1",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "日常"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-english-large-type/repeat-1/capture.png",
+        "PERCH_STYLE_LOCALE": "en",
+        "PERCH_STYLE_LARGE_TYPE": "1"
+      },
+      "log": "logs/workbench-english-large-type-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 3.697
+    },
+    {
+      "name": "workbench-english-large-type-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27407",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-english-large-type/repeat-1/capture.png"
+      ],
+      "log": "logs/workbench-english-large-type-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.382
+    },
+    {
+      "name": "workbench-english-large-type-repeat-2",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "日常"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-english-large-type/repeat-2/capture.png",
+        "PERCH_STYLE_LOCALE": "en",
+        "PERCH_STYLE_LARGE_TYPE": "1"
+      },
+      "log": "logs/workbench-english-large-type-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 3.619
+    },
+    {
+      "name": "workbench-english-large-type-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27413",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-english-large-type/repeat-2/capture.png"
+      ],
+      "log": "logs/workbench-english-large-type-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.229
+    },
+    {
+      "name": "workbench-english-large-type-dark-repeat-1",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "日常"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-english-large-type-dark/repeat-1/capture.png",
+        "PERCH_STYLE_LOCALE": "en",
+        "PERCH_STYLE_LARGE_TYPE": "1",
+        "PERCH_STYLE_DARK": "1"
+      },
+      "log": "logs/workbench-english-large-type-dark-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 3.779
+    },
+    {
+      "name": "workbench-english-large-type-dark-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27421",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-english-large-type-dark/repeat-1/capture.png"
+      ],
+      "log": "logs/workbench-english-large-type-dark-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.381
+    },
+    {
+      "name": "workbench-english-large-type-dark-repeat-2",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "日常"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-english-large-type-dark/repeat-2/capture.png",
+        "PERCH_STYLE_LOCALE": "en",
+        "PERCH_STYLE_LARGE_TYPE": "1",
+        "PERCH_STYLE_DARK": "1"
+      },
+      "log": "logs/workbench-english-large-type-dark-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 3.714
+    },
+    {
+      "name": "workbench-english-large-type-dark-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27427",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-english-large-type-dark/repeat-2/capture.png"
+      ],
+      "log": "logs/workbench-english-large-type-dark-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.394
+    },
+    {
+      "name": "workbench-large-type-dark-repeat-1",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "日常"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-large-type-dark/repeat-1/capture.png",
+        "PERCH_STYLE_LARGE_TYPE": "1",
+        "PERCH_STYLE_DARK": "1"
+      },
+      "log": "logs/workbench-large-type-dark-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 3.52
+    },
+    {
+      "name": "workbench-large-type-dark-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27433",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-large-type-dark/repeat-1/capture.png"
+      ],
+      "log": "logs/workbench-large-type-dark-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.198
+    },
+    {
+      "name": "workbench-large-type-dark-repeat-2",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "日常"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-large-type-dark/repeat-2/capture.png",
+        "PERCH_STYLE_LARGE_TYPE": "1",
+        "PERCH_STYLE_DARK": "1"
+      },
+      "log": "logs/workbench-large-type-dark-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 3.828
+    },
+    {
+      "name": "workbench-large-type-dark-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27439",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-large-type-dark/repeat-2/capture.png"
+      ],
+      "log": "logs/workbench-large-type-dark-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.392
+    },
+    {
+      "name": "workbench-empty-dark-repeat-1",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "首次使用"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-dark/repeat-1/capture.png",
+        "PERCH_STYLE_DARK": "1",
+        "PERCH_STYLE_FIRST_USE": "1"
+      },
+      "log": "logs/workbench-empty-dark-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 3.744
+    },
+    {
+      "name": "workbench-empty-dark-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27445",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-dark/repeat-1/capture.png"
+      ],
+      "log": "logs/workbench-empty-dark-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.405
+    },
+    {
+      "name": "workbench-empty-dark-repeat-2",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "首次使用"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-dark/repeat-2/capture.png",
+        "PERCH_STYLE_DARK": "1",
+        "PERCH_STYLE_FIRST_USE": "1"
+      },
+      "log": "logs/workbench-empty-dark-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 3.676
+    },
+    {
+      "name": "workbench-empty-dark-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27451",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-dark/repeat-2/capture.png"
+      ],
+      "log": "logs/workbench-empty-dark-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.235
+    },
+    {
+      "name": "workbench-empty-english-repeat-1",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "首次使用"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-english/repeat-1/capture.png",
+        "PERCH_STYLE_LOCALE": "en",
+        "PERCH_STYLE_FIRST_USE": "1"
+      },
+      "log": "logs/workbench-empty-english-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 3.795
+    },
+    {
+      "name": "workbench-empty-english-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27459",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-english/repeat-1/capture.png"
+      ],
+      "log": "logs/workbench-empty-english-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.356
+    },
+    {
+      "name": "workbench-empty-english-repeat-2",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "首次使用"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-english/repeat-2/capture.png",
+        "PERCH_STYLE_LOCALE": "en",
+        "PERCH_STYLE_FIRST_USE": "1"
+      },
+      "log": "logs/workbench-empty-english-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 3.71
+    },
+    {
+      "name": "workbench-empty-english-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27465",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-english/repeat-2/capture.png"
+      ],
+      "log": "logs/workbench-empty-english-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.388
+    },
+    {
+      "name": "workbench-empty-large-type-repeat-1",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "首次使用"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-large-type/repeat-1/capture.png",
+        "PERCH_STYLE_LARGE_TYPE": "1",
+        "PERCH_STYLE_FIRST_USE": "1"
+      },
+      "log": "logs/workbench-empty-large-type-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 3.798
+    },
+    {
+      "name": "workbench-empty-large-type-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27471",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-large-type/repeat-1/capture.png"
+      ],
+      "log": "logs/workbench-empty-large-type-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.363
+    },
+    {
+      "name": "workbench-empty-large-type-repeat-2",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "首次使用"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-large-type/repeat-2/capture.png",
+        "PERCH_STYLE_LARGE_TYPE": "1",
+        "PERCH_STYLE_FIRST_USE": "1"
+      },
+      "log": "logs/workbench-empty-large-type-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 3.8
+    },
+    {
+      "name": "workbench-empty-large-type-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27479",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-large-type/repeat-2/capture.png"
+      ],
+      "log": "logs/workbench-empty-large-type-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.385
+    },
+    {
+      "name": "workbench-empty-english-dark-repeat-1",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "首次使用"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-english-dark/repeat-1/capture.png",
+        "PERCH_STYLE_LOCALE": "en",
+        "PERCH_STYLE_DARK": "1",
+        "PERCH_STYLE_FIRST_USE": "1"
+      },
+      "log": "logs/workbench-empty-english-dark-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 3.592
+    },
+    {
+      "name": "workbench-empty-english-dark-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27487",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-english-dark/repeat-1/capture.png"
+      ],
+      "log": "logs/workbench-empty-english-dark-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.213
+    },
+    {
+      "name": "workbench-empty-english-dark-repeat-2",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "首次使用"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-english-dark/repeat-2/capture.png",
+        "PERCH_STYLE_LOCALE": "en",
+        "PERCH_STYLE_DARK": "1",
+        "PERCH_STYLE_FIRST_USE": "1"
+      },
+      "log": "logs/workbench-empty-english-dark-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 3.729
+    },
+    {
+      "name": "workbench-empty-english-dark-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27495",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-english-dark/repeat-2/capture.png"
+      ],
+      "log": "logs/workbench-empty-english-dark-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.411
+    },
+    {
+      "name": "workbench-empty-english-large-type-repeat-1",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "首次使用"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-english-large-type/repeat-1/capture.png",
+        "PERCH_STYLE_LOCALE": "en",
+        "PERCH_STYLE_LARGE_TYPE": "1",
+        "PERCH_STYLE_FIRST_USE": "1"
+      },
+      "log": "logs/workbench-empty-english-large-type-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 3.722
+    },
+    {
+      "name": "workbench-empty-english-large-type-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27501",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-english-large-type/repeat-1/capture.png"
+      ],
+      "log": "logs/workbench-empty-english-large-type-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.233
+    },
+    {
+      "name": "workbench-empty-english-large-type-repeat-2",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "首次使用"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-english-large-type/repeat-2/capture.png",
+        "PERCH_STYLE_LOCALE": "en",
+        "PERCH_STYLE_LARGE_TYPE": "1",
+        "PERCH_STYLE_FIRST_USE": "1"
+      },
+      "log": "logs/workbench-empty-english-large-type-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 3.669
+    },
+    {
+      "name": "workbench-empty-english-large-type-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27509",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-english-large-type/repeat-2/capture.png"
+      ],
+      "log": "logs/workbench-empty-english-large-type-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.215
+    },
+    {
+      "name": "workbench-empty-english-large-type-dark-repeat-1",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "首次使用"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-english-large-type-dark/repeat-1/capture.png",
+        "PERCH_STYLE_LOCALE": "en",
+        "PERCH_STYLE_LARGE_TYPE": "1",
+        "PERCH_STYLE_DARK": "1",
+        "PERCH_STYLE_FIRST_USE": "1"
+      },
+      "log": "logs/workbench-empty-english-large-type-dark-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 3.591
+    },
+    {
+      "name": "workbench-empty-english-large-type-dark-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27515",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-english-large-type-dark/repeat-1/capture.png"
+      ],
+      "log": "logs/workbench-empty-english-large-type-dark-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.284
+    },
+    {
+      "name": "workbench-empty-english-large-type-dark-repeat-2",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "首次使用"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-english-large-type-dark/repeat-2/capture.png",
+        "PERCH_STYLE_LOCALE": "en",
+        "PERCH_STYLE_LARGE_TYPE": "1",
+        "PERCH_STYLE_DARK": "1",
+        "PERCH_STYLE_FIRST_USE": "1"
+      },
+      "log": "logs/workbench-empty-english-large-type-dark-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 3.687
+    },
+    {
+      "name": "workbench-empty-english-large-type-dark-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27521",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-english-large-type-dark/repeat-2/capture.png"
+      ],
+      "log": "logs/workbench-empty-english-large-type-dark-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.282
+    },
+    {
+      "name": "workbench-empty-large-type-dark-repeat-1",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "首次使用"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-large-type-dark/repeat-1/capture.png",
+        "PERCH_STYLE_LARGE_TYPE": "1",
+        "PERCH_STYLE_DARK": "1",
+        "PERCH_STYLE_FIRST_USE": "1"
+      },
+      "log": "logs/workbench-empty-large-type-dark-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 3.69
+    },
+    {
+      "name": "workbench-empty-large-type-dark-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27527",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-large-type-dark/repeat-1/capture.png"
+      ],
+      "log": "logs/workbench-empty-large-type-dark-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.248
+    },
+    {
+      "name": "workbench-empty-large-type-dark-repeat-2",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "首次使用"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-large-type-dark/repeat-2/capture.png",
+        "PERCH_STYLE_LARGE_TYPE": "1",
+        "PERCH_STYLE_DARK": "1",
+        "PERCH_STYLE_FIRST_USE": "1"
+      },
+      "log": "logs/workbench-empty-large-type-dark-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 3.439
+    },
+    {
+      "name": "workbench-empty-large-type-dark-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27533",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-large-type-dark/repeat-2/capture.png"
+      ],
+      "log": "logs/workbench-empty-large-type-dark-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.159
+    },
+    {
+      "name": "sidebar-light-repeat-1",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Sidebar Preview.app/Contents/MacOS/SidebarPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/sidebar-light/repeat-1/capture.png"
+      },
+      "log": "logs/sidebar-light-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 3.507
+    },
+    {
+      "name": "sidebar-light-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27539",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/sidebar-light/repeat-1/capture.png"
+      ],
+      "log": "logs/sidebar-light-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.177
+    },
+    {
+      "name": "sidebar-light-repeat-2",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Sidebar Preview.app/Contents/MacOS/SidebarPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/sidebar-light/repeat-2/capture.png"
+      },
+      "log": "logs/sidebar-light-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 3.76
+    },
+    {
+      "name": "sidebar-light-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27545",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/sidebar-light/repeat-2/capture.png"
+      ],
+      "log": "logs/sidebar-light-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.379
+    },
+    {
+      "name": "sidebar-dark-repeat-1",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Sidebar Preview.app/Contents/MacOS/SidebarPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/sidebar-dark/repeat-1/capture.png",
+        "PERCH_STYLE_DARK": "1"
+      },
+      "log": "logs/sidebar-dark-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 3.589
+    },
+    {
+      "name": "sidebar-dark-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27551",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/sidebar-dark/repeat-1/capture.png"
+      ],
+      "log": "logs/sidebar-dark-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.237
+    },
+    {
+      "name": "sidebar-dark-repeat-2",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Sidebar Preview.app/Contents/MacOS/SidebarPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/sidebar-dark/repeat-2/capture.png",
+        "PERCH_STYLE_DARK": "1"
+      },
+      "log": "logs/sidebar-dark-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 3.647
+    },
+    {
+      "name": "sidebar-dark-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27557",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/sidebar-dark/repeat-2/capture.png"
+      ],
+      "log": "logs/sidebar-dark-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.363
+    },
+    {
+      "name": "sidebar-english-repeat-1",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Sidebar Preview.app/Contents/MacOS/SidebarPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/sidebar-english/repeat-1/capture.png",
+        "PERCH_STYLE_LOCALE": "en"
+      },
+      "log": "logs/sidebar-english-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 3.735
+    },
+    {
+      "name": "sidebar-english-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27563",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/sidebar-english/repeat-1/capture.png"
+      ],
+      "log": "logs/sidebar-english-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.363
+    },
+    {
+      "name": "sidebar-english-repeat-2",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Sidebar Preview.app/Contents/MacOS/SidebarPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/sidebar-english/repeat-2/capture.png",
+        "PERCH_STYLE_LOCALE": "en"
+      },
+      "log": "logs/sidebar-english-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 3.793
+    },
+    {
+      "name": "sidebar-english-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27569",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/sidebar-english/repeat-2/capture.png"
+      ],
+      "log": "logs/sidebar-english-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.365
+    },
+    {
+      "name": "composer-light-repeat-1",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Composer Preview.app/Contents/MacOS/ComposerPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/composer-light/repeat-1/capture.png"
+      },
+      "log": "logs/composer-light-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 3.74
+    },
+    {
+      "name": "composer-light-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27577",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/composer-light/repeat-1/capture.png"
+      ],
+      "log": "logs/composer-light-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.287
+    },
+    {
+      "name": "composer-light-repeat-2",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Composer Preview.app/Contents/MacOS/ComposerPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/composer-light/repeat-2/capture.png"
+      },
+      "log": "logs/composer-light-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 3.53
+    },
+    {
+      "name": "composer-light-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27588",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/composer-light/repeat-2/capture.png"
+      ],
+      "log": "logs/composer-light-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.21
+    },
+    {
+      "name": "composer-dark-repeat-1",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Composer Preview.app/Contents/MacOS/ComposerPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/composer-dark/repeat-1/capture.png",
+        "PERCH_STYLE_DARK": "1"
+      },
+      "log": "logs/composer-dark-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 3.65
+    },
+    {
+      "name": "composer-dark-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27597",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/composer-dark/repeat-1/capture.png"
+      ],
+      "log": "logs/composer-dark-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.294
+    },
+    {
+      "name": "composer-dark-repeat-2",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Composer Preview.app/Contents/MacOS/ComposerPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/composer-dark/repeat-2/capture.png",
+        "PERCH_STYLE_DARK": "1"
+      },
+      "log": "logs/composer-dark-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 3.483
+    },
+    {
+      "name": "composer-dark-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27606",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/composer-dark/repeat-2/capture.png"
+      ],
+      "log": "logs/composer-dark-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.268
+    },
+    {
+      "name": "workbench-empty-light-repeat-1",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "首次使用"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-light/repeat-1/capture.png"
+      },
+      "log": "logs/workbench-empty-light-repeat-1.log",
+      "exit_code": -15,
+      "seconds": 3.699
+    },
+    {
+      "name": "workbench-empty-light-repeat-1-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27615",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-light/repeat-1/capture.png"
+      ],
+      "log": "logs/workbench-empty-light-repeat-1-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.282
+    },
+    {
+      "name": "workbench-empty-light-repeat-2",
+      "command": [
+        "/Users/developer/_worktrees/20x-loop-20261112/perch/build/Workbench Preview.app/Contents/MacOS/WorkbenchPreview",
+        "-ApplePersistenceIgnoreState",
+        "YES",
+        "-NSQuitAlwaysKeepsWindows",
+        "NO",
+        "-scenario",
+        "首次使用"
+      ],
+      "environment": {
+        "PERCH_STYLE_CAPTURE": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-light/repeat-2/capture.png"
+      },
+      "log": "logs/workbench-empty-light-repeat-2.log",
+      "exit_code": -15,
+      "seconds": 3.864
+    },
+    {
+      "name": "workbench-empty-light-repeat-2-screencapture",
+      "command": [
+        "/Users/developer/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+        "-e",
+        "const r=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(r.status??1)",
+        "--",
+        "-x",
+        "-o",
+        "-t",
+        "png",
+        "-l",
+        "27621",
+        "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture/workbench-empty-light/repeat-2/capture.png"
+      ],
+      "log": "logs/workbench-empty-light-repeat-2-screencapture.log",
+      "exit_code": 0,
+      "seconds": 0.399
+    }
+  ],
+  "status": "passed",
+  "seconds": 463.866
+}

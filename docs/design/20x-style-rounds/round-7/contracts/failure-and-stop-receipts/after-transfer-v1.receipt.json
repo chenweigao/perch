@@ -1,0 +1,13 @@
+{
+  "command": [
+    "scp",
+    "-o",
+    "BatchMode=yes",
+    "mac-mini:Library/PerfRunner/results/style-r7-after-v1.original.tar.gz",
+    "after-original-v1.tar.gz"
+  ],
+  "started_at": "2026-11-19T18:07:10+08:00",
+  "finished_at": "2026-11-19T18:07:14+08:00",
+  "process_return_code": 0,
+  "original_log": "after-transfer-v1.log"
+}

@@ -1,0 +1,49 @@
+{
+  "status": "limited_before_observation_passed",
+  "recorded_at": "2026-11-19T17:29:08+08:00",
+  "actual_full_original_views": [
+    {
+      "file": "before/main-dark/repeat-1/capture.png",
+      "original_sha256": "e0850313f2dc065a86609ffc0a4af651a74a0ec7a04665478797b7da69faf9f5",
+      "actual_tool": "functions.view_image",
+      "status": "viewed"
+    },
+    {
+      "file": "before/main-light/repeat-1/capture.png",
+      "original_sha256": "1cc5ea93e59c18a79254453cc08924bba95ddfeafe648deacc4fa7d56d856183",
+      "actual_tool": "functions.view_image",
+      "status": "viewed"
+    },
+    {
+      "file": "before/main-english-large-type-dark/repeat-1/capture.png",
+      "original_sha256": "40f00bd20d57b4c220d80ef156bbaeffe6beb080fa6ee2842ef21e59433ab092",
+      "actual_tool": "functions.view_image",
+      "status": "viewed"
+    },
+    {
+      "file": "before/workbench-empty-english-large-type-dark/repeat-1/capture.png",
+      "original_sha256": "2b9ac809eebd3099cc48eab8b9fa1785a905f82ffe52097b4b74adc4d9aff917",
+      "actual_tool": "functions.view_image",
+      "status": "viewed"
+    },
+    {
+      "file": "before/sidebar-dark/repeat-1/capture.png",
+      "original_sha256": "cb1c4e6806ed31de6342f6508579dfc9643b18d1656ffeaf1acf95f215b4d723",
+      "actual_tool": "functions.view_image",
+      "status": "viewed"
+    },
+    {
+      "file": "before/composer-dark/repeat-1/capture.png",
+      "original_sha256": "d7a40d2fef690e9476760a0a628852f5f5a5add8b9197e01c3e045790aaa1efa",
+      "actual_tool": "functions.view_image",
+      "status": "viewed"
+    }
+  ],
+  "observations": [
+    "Synthetic fixtures are visible; no real connection or user-session interaction performed.",
+    "Quiet labels, process/footer icons and counts remain lower in the dark hierarchy; shared-token scope includes visible auxiliary graphics.",
+    "Main Chinese default and English xxxLarge plus three existing previews inspected; first-use current values remain complete.",
+    "No after images, product change, all-application 18pt or global OS switching certified by this before-only observation."
+  ],
+  "product_modified": false
+}

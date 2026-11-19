@@ -1,0 +1,83 @@
+{
+  "status": "passed",
+  "checked_at": "2026-11-19T17:20:50+08:00",
+  "control_count": 18,
+  "checks": [
+    {
+      "name": "flat_background_excluded",
+      "status": "passed"
+    },
+    {
+      "name": "pure_quiet_seed_included",
+      "status": "passed"
+    },
+    {
+      "name": "prewritten_edge_dilation_includes_foreground",
+      "status": "passed"
+    },
+    {
+      "name": "edge_dilation_does_not_admit_far_background",
+      "status": "passed"
+    },
+    {
+      "name": "edge_dilation_is_clipped_not_wrapped",
+      "status": "passed"
+    },
+    {
+      "name": "zero_increment_valid",
+      "status": "passed"
+    },
+    {
+      "name": "neutral_step_5_valid",
+      "status": "passed"
+    },
+    {
+      "name": "prewritten_upper_step_8_valid",
+      "status": "passed"
+    },
+    {
+      "name": "step_9_rejected",
+      "status": "passed"
+    },
+    {
+      "name": "negative_step_rejected",
+      "status": "passed"
+    },
+    {
+      "name": "non_neutral_channel_span_rejected",
+      "status": "passed"
+    },
+    {
+      "name": "unchanged_light_passes",
+      "status": "passed"
+    },
+    {
+      "name": "changed_light_rejected",
+      "status": "passed"
+    },
+    {
+      "name": "dark_foreground_neutral_step_passes",
+      "status": "passed"
+    },
+    {
+      "name": "mask_outside_rgba_and_visible_zero_tolerance",
+      "status": "passed"
+    },
+    {
+      "name": "alpha_change_rejected",
+      "status": "passed"
+    },
+    {
+      "name": "invisible_rgba_change_rejected",
+      "status": "passed"
+    },
+    {
+      "name": "wrong_profile_anchor_rejected",
+      "status": "passed"
+    }
+  ],
+  "comparison_source_sha256": "6d7f2e3ca2abd18504b08b69d2d40347c1627893f6b85652f28e429b5bde5589",
+  "profile_sha256": "b767459491bc0eb17b1a3760eaf1037d770139396dfcf679da4a8e571eff37d7",
+  "synthetic_controls_not_GUI_evidence": true,
+  "product_modified_by_controls": false
+}

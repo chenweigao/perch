@@ -1,0 +1,25 @@
+{
+  "command": [
+    "python3",
+    "-B",
+    "docs/design/20x-style-rounds/round-7/contracts/compare-quiet-captures.py",
+    "--before",
+    "/home/developer/code/_evidence/style-loop-round-7-20261119/raw/before-original/capture",
+    "--before-head",
+    "ec3372c8d81dd5844bbfc4bdf5d973be80ef2bb4",
+    "--after",
+    "/home/developer/code/_evidence/style-loop-round-7-20261119/raw/after-original/capture",
+    "--after-head",
+    "5970638a64a73e352867ad8e5ffeca9341f9d66b",
+    "--mode",
+    "color",
+    "--masks-sha256",
+    "7418ab2190596ee647a4f5f6db41e2fcda6aeb806b4dcc58ec4c55e001710104",
+    "--output",
+    "/home/developer/code/_evidence/style-loop-round-7-20261119/raw/before-after-original-comparison-v1.json"
+  ],
+  "started_at": "2026-11-19T18:07:14+08:00",
+  "finished_at": "2026-11-19T18:07:24+08:00",
+  "process_return_code": 1,
+  "original_log": "after-original-comparison-v1.log"
+}

@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "mode": "baseline",
+  "verified_at": "2026-11-19T17:37:45+08:00",
+  "before_head": "ec3372c8d81dd5844bbfc4bdf5d973be80ef2bb4",
+  "after_head": null,
+  "profile_sha256": "b767459491bc0eb17b1a3760eaf1037d770139396dfcf679da4a8e571eff37d7",
+  "tolerance_outside_frozen_mask": 0,
+  "before_repeat_byte_pairs": 34,
+  "before_repeat_pixel_pairs": 34,
+  "before_original_pngs": 68
+}

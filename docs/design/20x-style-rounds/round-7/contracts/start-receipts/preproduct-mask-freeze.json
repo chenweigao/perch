@@ -1,0 +1,11 @@
+{
+  "frozen_at": "2026-11-19T17:29:03+08:00",
+  "frozen_masks_sha256": "7418ab2190596ee647a4f5f6db41e2fcda6aeb806b4dcc58ec4c55e001710104",
+  "comparison_source_sha256": "6d7f2e3ca2abd18504b08b69d2d40347c1627893f6b85652f28e429b5bde5589",
+  "profile_sha256": "b767459491bc0eb17b1a3760eaf1037d770139396dfcf679da4a8e571eff37d7",
+  "before_head": "ec3372c8d81dd5844bbfc4bdf5d973be80ef2bb4",
+  "before_original_manifest_sha256": "6e6c49035ab22fa82affefb872f04577507c52a309b8d8cf5a41441665075034",
+  "dark_mask_count": 15,
+  "source_unchanged_at_freeze": true,
+  "product_modified": false
+}

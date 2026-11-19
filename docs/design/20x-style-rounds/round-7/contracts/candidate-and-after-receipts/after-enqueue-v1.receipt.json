@@ -1,0 +1,15 @@
+{
+  "command": [
+    "ssh",
+    "-o",
+    "BatchMode=yes",
+    "mac-mini",
+    "/bin/bash",
+    "-s"
+  ],
+  "started_at": "2026-11-19T17:57:51+08:00",
+  "finished_at": "2026-11-19T17:57:59+08:00",
+  "process_return_code": 0,
+  "original_log": "after-enqueue-v1.log",
+  "stdin_file": "remote-after-enqueue.sh"
+}

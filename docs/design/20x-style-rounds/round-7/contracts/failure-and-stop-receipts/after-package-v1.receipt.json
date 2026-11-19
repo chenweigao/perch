@@ -1,0 +1,15 @@
+{
+  "command": [
+    "ssh",
+    "-o",
+    "BatchMode=yes",
+    "mac-mini",
+    "/bin/bash",
+    "-s"
+  ],
+  "started_at": "2026-11-19T18:07:08+08:00",
+  "finished_at": "2026-11-19T18:07:10+08:00",
+  "process_return_code": 0,
+  "original_log": "after-package-v1.log",
+  "stdin_file": "remote-after-package.sh"
+}

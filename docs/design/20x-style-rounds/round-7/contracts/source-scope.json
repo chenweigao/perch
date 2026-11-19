@@ -1,0 +1,16 @@
+{
+  "status": "passed",
+  "checked_at": "2026-11-19T17:43:06+08:00",
+  "baseline_head": "ec3372c8d81dd5844bbfc4bdf5d973be80ef2bb4",
+  "product_files": [
+    "Sources/AgentWorkbench/WorkbenchTheme.swift"
+  ],
+  "original_source_sha256": "64c9baba01460a8f062ee9c4db732be6d1577ad0d3432f2024fb436317f57e95",
+  "candidate_source_sha256": "1731ec656c535b47dceaa47503892d6fbb1c26f45354686e58b35c06f7d1fc87",
+  "exact_allowed_replacements": 3,
+  "dark_quiet_only_plus_two_existing_numeric_descriptions": true,
+  "light_body_material_tokens_strings_geometry_behavior_unchanged": true,
+  "other_sources_tests_scripts_CI_package_diff": "ZERO",
+  "frozen_masks_sha256": "7418ab2190596ee647a4f5f6db41e2fcda6aeb806b4dcc58ec4c55e001710104",
+  "comparison_source_sha256": "6d7f2e3ca2abd18504b08b69d2d40347c1627893f6b85652f28e429b5bde5589"
+}

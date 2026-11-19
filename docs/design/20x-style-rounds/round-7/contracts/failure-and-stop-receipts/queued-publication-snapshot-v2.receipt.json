@@ -1,0 +1,13 @@
+{
+  "command": [
+    "python3",
+    "-B",
+    "scripts/check-public-source.py",
+    "--snapshot",
+    "docs/design/20x-style-rounds/round-7"
+  ],
+  "started_at": "2026-11-19T18:04:42+08:00",
+  "finished_at": "2026-11-19T18:04:43+08:00",
+  "process_return_code": 0,
+  "original_log": "queued-publication-snapshot-v2.log"
+}

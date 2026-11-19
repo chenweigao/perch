@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "checked_at": "2026-11-19T17:37:57+08:00",
+  "expected_negative_process_return_code": 1,
+  "expected_negative_missing_changes": [
+    "main-dark",
+    "workbench-dark"
+  ],
+  "original_before_reused_only_for_negative_control": true,
+  "not_actual_after_GUI_evidence": true,
+  "originals_or_masks_changed": false
+}

@@ -1,0 +1,82 @@
+Command: ['python3', 'scripts/check-host-lifecycle.py', '--app', PosixPath('/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app'), '--build-only']
+warning: '--build-system native' has been deprecated and will be removed in a future release; please report an issue at https://github.com/swiftlang/swift-package-manager/issues if you are unable to adopt the default build system.
+Compiling host lifecycle fixture
+/Users/developer/_worktrees/20x-loop-20261112/perch/Sources/AgentWorkbench/ActivitySummarySettings.swift:54:77: warning: 'kSecUseAuthenticationUIFail' was deprecated in macOS 11.0: Instead of kSecUseAuthenticationUI, use kSecUseAuthenticationContext and set LAContext.interactionNotAllowed property [#DeprecatedDeclaration]
+ 52 |         var request = query
+ 53 |         request[kSecReturnData as String] = true
+ 54 |         if !allowInteraction { request[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUIFail }
+    |                                                                             `- warning: 'kSecUseAuthenticationUIFail' was deprecated in macOS 11.0: Instead of kSecUseAuthenticationUI, use kSecUseAuthenticationContext and set LAContext.interactionNotAllowed property [#DeprecatedDeclaration]
+ 55 |         var result: CFTypeRef?
+ 56 |         let status = SecItemCopyMatching(request as CFDictionary, &result)
+
+[#DeprecatedDeclaration]: <https://docs.swift.org/compiler/documentation/diagnostics/deprecated-declaration>
+/Users/developer/_worktrees/20x-loop-20261112/perch/Sources/AgentWorkbench/NativeAgentConnection.swift:458:31: warning: conformance of 'T' to protocol 'Decodable' may be isolated and cannot be passed to @concurrent context [#IsolatedConformances]
+ 456 |             data = try await api.request(path, method: body == nil ? "GET" : "POST", body: body)
+ 457 |         }
+ 458 |         return try await Self.decodeResponse(T.self, from: data)
+     |                               `- warning: conformance of 'T' to protocol 'Decodable' may be isolated and cannot be passed to @concurrent context [#IsolatedConformances]
+ 459 |     }
+ 460 |     // A changed snapshot can contain the entire history. Keep decoding off the
+
+[#IsolatedConformances]: <https://docs.swift.org/compiler/documentation/diagnostics/isolated-conformances>
+/Users/developer/_worktrees/20x-loop-20261112/perch/Sources/AgentWorkbench/ReplyMarkdownView.swift:2409:34: warning: Storing a closure in '@Entry var documentOpenLink' may invalidate dependents on every update because closures may not be comparable. (from macro 'Entry ')
+2407 |     @Entry var documentMutedText = false
+2408 |     @Entry var documentQuery: String = ""
+2409 |     @Entry var documentOpenLink: ((URL) -> Bool)? = nil
+     |                                  `- warning: Storing a closure in '@Entry var documentOpenLink' may invalidate dependents on every update because closures may not be comparable. (from macro 'Entry ')
+2410 |     @Entry var documentSelection: ((String) -> Void)? = nil
+2411 | }
+
+/Users/developer/_worktrees/20x-loop-20261112/perch/Sources/AgentWorkbench/ReplyMarkdownView.swift:2410:35: warning: Storing a closure in '@Entry var documentSelection' may invalidate dependents on every update because closures may not be comparable. (from macro 'Entry ')
+2408 |     @Entry var documentQuery: String = ""
+2409 |     @Entry var documentOpenLink: ((URL) -> Bool)? = nil
+2410 |     @Entry var documentSelection: ((String) -> Void)? = nil
+     |                                   `- warning: Storing a closure in '@Entry var documentSelection' may invalidate dependents on every update because closures may not be comparable. (from macro 'Entry ')
+2411 | }
+2412 | @MainActor private final class DocumentSelectionAction: NSObject {
+/Users/developer/_worktrees/20x-loop-20261112/perch/Sources/AgentWorkbench/WorkbenchView.swift:30:50: warning: 'weak' ownership of capture 'model' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+ 26 |             }
+ 27 |             .sheet(isPresented: $model.showLocalSetup) { LocalAgentSetupSheet(model: model) }
+ 28 |             .onAppear {
+    |                       |- note: 'model' implicitly strongly captured here
+    |                       `- note: add 'model' as a capture list item to silence
+ 29 |                 let actions = SelectionActionsController.shared
+ 30 |                 actions.quoteAvailable = { [weak model] in model?.canQuoteSelection ?? false }
+    |                                                  |- warning: 'weak' ownership of capture 'model' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                                                  `- note: explicitly assign the capture list item to silence
+ 31 |                 actions.quoteHandler = { [weak model] text in model?.quoteSelection(text) }
+ 32 |                 actions.start()
+
+/Users/developer/_worktrees/20x-loop-20261112/perch/Sources/AgentWorkbench/WorkbenchView.swift:31:48: warning: 'weak' ownership of capture 'model' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+ 26 |             }
+ 27 |             .sheet(isPresented: $model.showLocalSetup) { LocalAgentSetupSheet(model: model) }
+ 28 |             .onAppear {
+    |                       |- note: 'model' implicitly strongly captured here
+    |                       `- note: add 'model' as a capture list item to silence
+ 29 |                 let actions = SelectionActionsController.shared
+ 30 |                 actions.quoteAvailable = { [weak model] in model?.canQuoteSelection ?? false }
+ 31 |                 actions.quoteHandler = { [weak model] text in model?.quoteSelection(text) }
+    |                                                |- warning: 'weak' ownership of capture 'model' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                                                `- note: explicitly assign the capture list item to silence
+ 32 |                 actions.start()
+ 33 |             }
+
+[#ImplicitStrongCapture]: <https://docs.swift.org/compiler/documentation/diagnostics/implicit-strong-capture>
+/Users/developer/_worktrees/20x-loop-20261112/perch/Tests/HostLifecycleChecks/StreamingRenderingChecks.swift:8:40: warning: parameter 'file' with default argument '#filePath' passed to parameter 'file', whose default argument is '#file'
+  4 | import WorkbenchCore
+  5 | 
+  6 | @MainActor private func streamingRenderingFailure(_ message: String, file: StaticString = #filePath, line: UInt = #line) -> Never {
+    |                                                                                           `- note: did you mean for parameter 'file' to default to '#file'?
+  7 |     FileHandle.standardError.write(Data("FAIL streaming rendering at \(line): \(message)\n".utf8))
+  8 |     preconditionFailure(message, file: file, line: line)
+    |                                        |- warning: parameter 'file' with default argument '#filePath' passed to parameter 'file', whose default argument is '#file'
+    |                                        `- note: add parentheses to silence this warning
+  9 | }
+ 10 | @MainActor private func streamingRenderingRequire(_ condition: @autoclosure () -> Bool, _ message: String = "", file: StaticString = #filePath, line: UInt = #line) {
+
+Swift.preconditionFailure.file:1:1: note: 'file' declared here
+1 | file: StaticString
+  | `- note: 'file' declared here
+/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app: replacing existing signature
+Host lifecycle fixture ready in 26.88 s
+/Users/developer/Library/PerfRunner/results/style-r7-after-v1/HostLifecycleChecks.app

@@ -1,0 +1,985 @@
+{
+  "schema_version": 1,
+  "frozen_at": "2026-11-19T17:09:03+08:00",
+  "baseline_head": "ec3372c8d81dd5844bbfc4bdf5d973be80ef2bb4",
+  "queue_item": "S04",
+  "product_modified": false,
+  "scenes": [
+    "composer-dark",
+    "composer-light",
+    "main-dark",
+    "main-dashboard",
+    "main-english",
+    "main-english-dark",
+    "main-english-large-type",
+    "main-english-large-type-dark",
+    "main-find",
+    "main-find-dark",
+    "main-inspector-closed",
+    "main-large-type",
+    "main-large-type-dark",
+    "main-light",
+    "main-scroll",
+    "sidebar-dark",
+    "sidebar-english",
+    "sidebar-light",
+    "workbench-dark",
+    "workbench-empty-dark",
+    "workbench-empty-english",
+    "workbench-empty-english-dark",
+    "workbench-empty-english-large-type",
+    "workbench-empty-english-large-type-dark",
+    "workbench-empty-large-type",
+    "workbench-empty-large-type-dark",
+    "workbench-empty-light",
+    "workbench-english",
+    "workbench-english-dark",
+    "workbench-english-large-type",
+    "workbench-english-large-type-dark",
+    "workbench-large-type",
+    "workbench-large-type-dark",
+    "workbench-light"
+  ],
+  "affected_scenes": [
+    "composer-dark",
+    "main-dark",
+    "main-english-dark",
+    "main-english-large-type-dark",
+    "main-find-dark",
+    "main-large-type-dark",
+    "sidebar-dark",
+    "workbench-dark",
+    "workbench-empty-dark",
+    "workbench-empty-english-dark",
+    "workbench-empty-english-large-type-dark",
+    "workbench-empty-large-type-dark",
+    "workbench-english-dark",
+    "workbench-english-large-type-dark",
+    "workbench-large-type-dark"
+  ],
+  "light_scene_count": 19,
+  "expected_repeat_pairs": 34,
+  "expected_raw_png_per_matrix": 68,
+  "first_use_scene_count": 8,
+  "reference_geometry": {
+    "composer-dark": {
+      "dimensions": [
+        760,
+        500
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          760,
+          500
+        ],
+        "content_bounds": [
+          0,
+          0,
+          760,
+          500
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameDarkAqua",
+        "dark": true,
+        "effective_dark": true,
+        "locale": "zh-Hans",
+        "large_type": false
+      }
+    },
+    "composer-light": {
+      "dimensions": [
+        760,
+        500
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          760,
+          500
+        ],
+        "content_bounds": [
+          0,
+          0,
+          760,
+          500
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameAqua",
+        "dark": false,
+        "effective_dark": false,
+        "locale": "zh-Hans",
+        "large_type": false
+      }
+    },
+    "main-dark": {
+      "dimensions": [
+        1536,
+        900
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1536,
+          900
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1536,
+          900
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameDarkAqua",
+        "dark": true,
+        "effective_dark": true,
+        "locale": "zh-Hans",
+        "large_type": false
+      }
+    },
+    "main-dashboard": {
+      "dimensions": [
+        1536,
+        900
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1536,
+          900
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1536,
+          900
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameAqua",
+        "dark": false,
+        "effective_dark": false,
+        "locale": "zh-Hans",
+        "large_type": false
+      }
+    },
+    "main-english": {
+      "dimensions": [
+        1536,
+        900
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1536,
+          900
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1536,
+          900
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameAqua",
+        "dark": false,
+        "effective_dark": false,
+        "locale": "en",
+        "large_type": false
+      }
+    },
+    "main-english-dark": {
+      "dimensions": [
+        1536,
+        900
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1536,
+          900
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1536,
+          900
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameDarkAqua",
+        "dark": true,
+        "effective_dark": true,
+        "locale": "en",
+        "large_type": false
+      }
+    },
+    "main-english-large-type": {
+      "dimensions": [
+        1536,
+        900
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1536,
+          900
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1536,
+          900
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameAqua",
+        "dark": false,
+        "effective_dark": false,
+        "locale": "en",
+        "large_type": true
+      }
+    },
+    "main-english-large-type-dark": {
+      "dimensions": [
+        1536,
+        900
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1536,
+          900
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1536,
+          900
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameDarkAqua",
+        "dark": true,
+        "effective_dark": true,
+        "locale": "en",
+        "large_type": true
+      }
+    },
+    "main-find": {
+      "dimensions": [
+        1536,
+        900
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1536,
+          900
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1536,
+          900
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameAqua",
+        "dark": false,
+        "effective_dark": false,
+        "locale": "zh-Hans",
+        "large_type": false
+      }
+    },
+    "main-find-dark": {
+      "dimensions": [
+        1536,
+        900
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1536,
+          900
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1536,
+          900
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameDarkAqua",
+        "dark": true,
+        "effective_dark": true,
+        "locale": "zh-Hans",
+        "large_type": false
+      }
+    },
+    "main-inspector-closed": {
+      "dimensions": [
+        1536,
+        900
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1536,
+          900
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1536,
+          900
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameAqua",
+        "dark": false,
+        "effective_dark": false,
+        "locale": "zh-Hans",
+        "large_type": false
+      }
+    },
+    "main-large-type": {
+      "dimensions": [
+        1536,
+        900
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1536,
+          900
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1536,
+          900
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameAqua",
+        "dark": false,
+        "effective_dark": false,
+        "locale": "zh-Hans",
+        "large_type": true
+      }
+    },
+    "main-large-type-dark": {
+      "dimensions": [
+        1536,
+        900
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1536,
+          900
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1536,
+          900
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameDarkAqua",
+        "dark": true,
+        "effective_dark": true,
+        "locale": "zh-Hans",
+        "large_type": true
+      }
+    },
+    "main-light": {
+      "dimensions": [
+        1536,
+        900
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1536,
+          900
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1536,
+          900
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameAqua",
+        "dark": false,
+        "effective_dark": false,
+        "locale": "zh-Hans",
+        "large_type": false
+      }
+    },
+    "main-scroll": {
+      "dimensions": [
+        1536,
+        900
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1536,
+          900
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1536,
+          900
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameAqua",
+        "dark": false,
+        "effective_dark": false,
+        "locale": "zh-Hans",
+        "large_type": false
+      }
+    },
+    "sidebar-dark": {
+      "dimensions": [
+        1100,
+        760
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1100,
+          760
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1100,
+          760
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameDarkAqua",
+        "dark": true,
+        "effective_dark": true,
+        "locale": "zh-Hans",
+        "large_type": false
+      }
+    },
+    "sidebar-english": {
+      "dimensions": [
+        1100,
+        760
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1100,
+          760
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1100,
+          760
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameAqua",
+        "dark": false,
+        "effective_dark": false,
+        "locale": "en",
+        "large_type": false
+      }
+    },
+    "sidebar-light": {
+      "dimensions": [
+        1100,
+        760
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1100,
+          760
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1100,
+          760
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameAqua",
+        "dark": false,
+        "effective_dark": false,
+        "locale": "zh-Hans",
+        "large_type": false
+      }
+    },
+    "workbench-dark": {
+      "dimensions": [
+        1120,
+        820
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1120,
+          820
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1120,
+          820
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameDarkAqua",
+        "dark": true,
+        "effective_dark": true,
+        "locale": "zh-Hans",
+        "large_type": false
+      }
+    },
+    "workbench-empty-dark": {
+      "dimensions": [
+        1120,
+        820
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1120,
+          820
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1120,
+          820
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameDarkAqua",
+        "dark": true,
+        "effective_dark": true,
+        "locale": "zh-Hans",
+        "large_type": false
+      }
+    },
+    "workbench-empty-english": {
+      "dimensions": [
+        1120,
+        820
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1120,
+          820
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1120,
+          820
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameAqua",
+        "dark": false,
+        "effective_dark": false,
+        "locale": "en",
+        "large_type": false
+      }
+    },
+    "workbench-empty-english-dark": {
+      "dimensions": [
+        1120,
+        820
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1120,
+          820
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1120,
+          820
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameDarkAqua",
+        "dark": true,
+        "effective_dark": true,
+        "locale": "en",
+        "large_type": false
+      }
+    },
+    "workbench-empty-english-large-type": {
+      "dimensions": [
+        1120,
+        820
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1120,
+          820
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1120,
+          820
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameAqua",
+        "dark": false,
+        "effective_dark": false,
+        "locale": "en",
+        "large_type": true
+      }
+    },
+    "workbench-empty-english-large-type-dark": {
+      "dimensions": [
+        1120,
+        820
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1120,
+          820
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1120,
+          820
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameDarkAqua",
+        "dark": true,
+        "effective_dark": true,
+        "locale": "en",
+        "large_type": true
+      }
+    },
+    "workbench-empty-large-type": {
+      "dimensions": [
+        1120,
+        820
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1120,
+          820
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1120,
+          820
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameAqua",
+        "dark": false,
+        "effective_dark": false,
+        "locale": "zh-Hans",
+        "large_type": true
+      }
+    },
+    "workbench-empty-large-type-dark": {
+      "dimensions": [
+        1120,
+        820
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1120,
+          820
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1120,
+          820
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameDarkAqua",
+        "dark": true,
+        "effective_dark": true,
+        "locale": "zh-Hans",
+        "large_type": true
+      }
+    },
+    "workbench-empty-light": {
+      "dimensions": [
+        1120,
+        820
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1120,
+          820
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1120,
+          820
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameAqua",
+        "dark": false,
+        "effective_dark": false,
+        "locale": "zh-Hans",
+        "large_type": false
+      }
+    },
+    "workbench-english": {
+      "dimensions": [
+        1120,
+        820
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1120,
+          820
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1120,
+          820
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameAqua",
+        "dark": false,
+        "effective_dark": false,
+        "locale": "en",
+        "large_type": false
+      }
+    },
+    "workbench-english-dark": {
+      "dimensions": [
+        1120,
+        820
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1120,
+          820
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1120,
+          820
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameDarkAqua",
+        "dark": true,
+        "effective_dark": true,
+        "locale": "en",
+        "large_type": false
+      }
+    },
+    "workbench-english-large-type": {
+      "dimensions": [
+        1120,
+        820
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1120,
+          820
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1120,
+          820
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameAqua",
+        "dark": false,
+        "effective_dark": false,
+        "locale": "en",
+        "large_type": true
+      }
+    },
+    "workbench-english-large-type-dark": {
+      "dimensions": [
+        1120,
+        820
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1120,
+          820
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1120,
+          820
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameDarkAqua",
+        "dark": true,
+        "effective_dark": true,
+        "locale": "en",
+        "large_type": true
+      }
+    },
+    "workbench-large-type": {
+      "dimensions": [
+        1120,
+        820
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1120,
+          820
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1120,
+          820
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameAqua",
+        "dark": false,
+        "effective_dark": false,
+        "locale": "zh-Hans",
+        "large_type": true
+      }
+    },
+    "workbench-large-type-dark": {
+      "dimensions": [
+        1120,
+        820
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1120,
+          820
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1120,
+          820
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameDarkAqua",
+        "dark": true,
+        "effective_dark": true,
+        "locale": "zh-Hans",
+        "large_type": true
+      }
+    },
+    "workbench-light": {
+      "dimensions": [
+        1120,
+        820
+      ],
+      "metadata": {
+        "window_frame": [
+          48,
+          72,
+          1120,
+          820
+        ],
+        "content_bounds": [
+          0,
+          0,
+          1120,
+          820
+        ],
+        "backing_scale": 1,
+        "appearance": "NSAppearanceNameAqua",
+        "dark": false,
+        "effective_dark": false,
+        "locale": "zh-Hans",
+        "large_type": false
+      }
+    }
+  },
+  "geometry_reference": {
+    "round6_original_manifest_sha256": "96a151c262fbebbee59753d31ca72618772b101e2a527f784e5f881bd340636e",
+    "round6_real_tested_head": "7e66eb2e5a9dac92eea8d6178e55e7ab5f38e554",
+    "source_diff_to_round7_baseline": "ZERO",
+    "not_round7_before_images": true
+  },
+  "mask_rules": {
+    "source": "new round7 before only, frozen before product",
+    "rgb_edge_neighborhood": 8,
+    "chebyshev_dilation_radius": 3,
+    "quiet_srgb_seed": [
+      133,
+      140,
+      156
+    ],
+    "quiet_seed_maximum_channel_distance": 3
+  },
+  "color_rules": {
+    "outside_mask_rgba_and_visible_tolerance": 0,
+    "alpha_delta": 0,
+    "minimum_rgb_channel_increment": 0,
+    "maximum_rgb_channel_increment": 8,
+    "maximum_increment_channel_span": 3,
+    "light_png_bytes_must_match": true,
+    "required_changed_scenes": [
+      "main-dark",
+      "workbench-dark"
+    ]
+  },
+  "capture_wrapper_sha256": "cb1833ce3761136fac334541164af317a7513a71d819e4e6028f6a6979f41576",
+  "protected_round6_capture_wrapper_sha256": "49ed5d26e810739fe44314499c0fdb04296eb3143ce24e7a3d7e65f03e5c9ea2",
+  "existing_capture_driver_sha256": "43d8934fcf70b190e6e5bb6a448e8a9418cd6b6a558e0a940e208a8e7687fc5f",
+  "expected_list_sha256": "abcbfe32964def8c8215f5242ceab2909820ba771bd3dcb1c4b013a825a22a31",
+  "protected_matrix_reader_sha256": "8033f3645ee458cbdb540243c4d9318543193a77013be630fca9d4c241f33b8e",
+  "protected_png_reader_sha256": "9d4e7eeba751edccac29645cf7099bdafa3b53d54952f2bc6d62a365134b1237"
+}

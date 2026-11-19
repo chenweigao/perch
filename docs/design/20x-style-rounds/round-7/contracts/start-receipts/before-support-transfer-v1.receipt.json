@@ -1,0 +1,19 @@
+{
+  "command": [
+    "scp",
+    "-o",
+    "BatchMode=yes",
+    "/home/developer/.t3/worktrees/perch/t3-0fa50c12-583299d2a65c82a7/docs/design/20x-style-rounds/round-7/contracts/capture-matrix.py",
+    "/home/developer/.t3/worktrees/perch/t3-0fa50c12-583299d2a65c82a7/docs/design/20x-style-rounds/round-7/expected-differences.md",
+    "/home/developer/.t3/worktrees/perch/t3-0fa50c12-583299d2a65c82a7/docs/design/20x-style-rounds/round-7/color-geometry-before.json",
+    "/home/developer/.t3/worktrees/perch/t3-0fa50c12-583299d2a65c82a7/docs/design/20x-style-rounds/round-7/contracts/before-support.sha256",
+    "/home/developer/.t3/worktrees/perch/t3-0fa50c12-583299d2a65c82a7/docs/design/20x-style-rounds/round-7/contracts/perfrunner-before.job",
+    "mac-mini:Library/PerfRunner/results/style-r7-support-v1/"
+  ],
+  "started_at": "2026-11-19T17:12:20+08:00",
+  "finished_at": "2026-11-19T17:12:23+08:00",
+  "process_return_code": 0,
+  "original_log": "before-support-transfer-v1.log",
+  "job_sha256": "f105ca02922cf5124c7f68296b0a395ad93362a0ec8ff9a1f6850976a093a63f",
+  "job_name": "style-r7-before-v1"
+}

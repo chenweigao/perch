@@ -1,0 +1,20 @@
+{
+  "status": "passed",
+  "verified_at": "2026-11-19T17:56:47+08:00",
+  "baseline_head": "ec3372c8d81dd5844bbfc4bdf5d973be80ef2bb4",
+  "candidate_head": "5970638a64a73e352867ad8e5ffeca9341f9d66b",
+  "changed_file_count": 430,
+  "product_files": [
+    "Sources/AgentWorkbench/WorkbenchTheme.swift"
+  ],
+  "frozen_hashes": {
+    "Sources/AgentWorkbench/WorkbenchTheme.swift": "1731ec656c535b47dceaa47503892d6fbb1c26f45354686e58b35c06f7d1fc87",
+    "docs/design/20x-style-rounds/round-7/color-geometry-before.json": "b767459491bc0eb17b1a3760eaf1037d770139396dfcf679da4a8e571eff37d7",
+    "docs/design/20x-style-rounds/round-7/frozen-masks.json": "7418ab2190596ee647a4f5f6db41e2fcda6aeb806b4dcc58ec4c55e001710104",
+    "docs/design/20x-style-rounds/round-7/contracts/compare-quiet-captures.py": "6d7f2e3ca2abd18504b08b69d2d40347c1627893f6b85652f28e429b5bde5589"
+  },
+  "other_sources_tests_measurement_ci_diff_empty": true,
+  "tracked_worktree_and_index_clean": true,
+  "unrelated_untracked_assets_untouched": true,
+  "scope": "candidate continuity only; does not attest after captures or gates"
+}

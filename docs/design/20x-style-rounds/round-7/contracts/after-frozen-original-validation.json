@@ -1,0 +1,8 @@
+{
+  "status": "passed",
+  "candidate_head": "5970638a64a73e352867ad8e5ffeca9341f9d66b",
+  "before_head": "ec3372c8d81dd5844bbfc4bdf5d973be80ef2bb4",
+  "original_frozen_inputs_and_wrapper_equal": true,
+  "after_terminal_exit": 0,
+  "GUI_restarted": false
+}

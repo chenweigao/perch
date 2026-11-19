@@ -1,0 +1,25 @@
+diff --git a/Sources/AgentWorkbench/WorkbenchTheme.swift b/Sources/AgentWorkbench/WorkbenchTheme.swift
+index c8d1c941..b66b8510 100644
+--- a/Sources/AgentWorkbench/WorkbenchTheme.swift
++++ b/Sources/AgentWorkbench/WorkbenchTheme.swift
+@@ -6,7 +6,7 @@ import SwiftUI
+ /// lightness inverted for dark. The dark appearance is a designed night scale,
+ /// not a simple inversion: the canvas is blue-graphite at hue ~226°, and ink,
+ /// quiet text, and semantic colors are tuned against it for measured contrast
+-/// (body ink ≈ 11.4:1, quiet ≈ 5.1:1) so long night reads avoid halation. The
++/// (body ink ≈ 11.4:1, quiet ≈ 4.7:1) so long night reads avoid halation. The
+ /// terminal shares the same canvas. Fills, strokes and elevation are independent
+ /// light/dark tokens, not one alpha shared by both appearances. Every value
+ /// resolves through a dynamic NSColor so AppKit text (cached attributed strings)
+@@ -23,9 +23,9 @@ enum WorkbenchTheme {
+     /// tone in the room.
+     static let accent = color(light: (0.16, 0.16, 0.17), dark: (0.910, 0.918, 0.941))
+     /// De-emphasised ink for status lines and timestamps: neutral gray in light
+-    /// (≈ 5.1:1 on white); dark holds ≈ 5.1:1 on the canvas — legible, but
++    /// (≈ 5.1:1 on white); dark holds ≈ 4.7:1 on the canvas — legible, but
+     /// clearly below body text.
+-    static let quietNS = nsColor(light: (0.43, 0.43, 0.45), dark: (0.540, 0.570, 0.630))
++    static let quietNS = nsColor(light: (0.43, 0.43, 0.45), dark: (0.520, 0.550, 0.610))
+     static let quiet = Color(nsColor: quietNS)
+     /// Content surfaces: white in light; dark is the palette's blue-graphite
+     /// canvas (#1F2229) instead of the system's neutral gray — a designed dark

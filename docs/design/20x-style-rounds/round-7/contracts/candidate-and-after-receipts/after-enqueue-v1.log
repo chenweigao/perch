@@ -1,0 +1,8 @@
+runner_pids=69667
+capture-matrix.py: OK
+expected-differences.md: OK
+color-geometry-before.json: OK
+queued_at=2026-11-19T17:57:59+08:00
+candidate_revision=5970638a64a73e352867ad8e5ffeca9341f9d66b
+job_sha256=0dfa1d6c7f5d1620c3487540040726c53c5f9d44a14815ea71c823b8e1c84c78
+status=queued_only

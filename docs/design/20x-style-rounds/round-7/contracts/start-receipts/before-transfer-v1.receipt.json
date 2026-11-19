@@ -1,0 +1,14 @@
+{
+  "command": [
+    "scp",
+    "-o",
+    "BatchMode=yes",
+    "mac-mini:Library/PerfRunner/results/style-r7-before-v1.tar",
+    "/home/developer/code/_evidence/style-loop-round-7-20261119/raw/before-original.tar"
+  ],
+  "started_at": "2026-11-19T17:26:05+08:00",
+  "finished_at": "2026-11-19T17:26:09+08:00",
+  "process_return_code": 0,
+  "original_log": "before-transfer-v1.log",
+  "GUI_restarted": false
+}

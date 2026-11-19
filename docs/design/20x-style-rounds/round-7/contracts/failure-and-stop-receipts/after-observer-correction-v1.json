@@ -1,0 +1,13 @@
+{
+  "recorded_at": "2026-11-19T18:02:05+08:00",
+  "scope": "read-only observation classification, not the capture job or product",
+  "original_receipt": "start-receipts/after-observation-v1.receipt.json",
+  "original_log": "start-receipts/after-observation-v1.log",
+  "original_observer_sha256": "5f34bf54b1add38bd9f8e8afe78a51d5d998c9367aa68e0543ab935059c42243",
+  "correction_observer_sha256": "693b8e610e7f997d7cfbb0ed723be8f50229ce008393831c5ac567320e6165a8",
+  "observation_v1_limit": "v1 checks the retained .job before the existing log and therefore emitted queued although 14 original PNGs existed and shared HEAD was the candidate. The emitted line is preserved, not used to attest no execution.",
+  "v2_classification": "terminal marker first; otherwise existing log means started_not_terminal; only a job without log is queued",
+  "capture_requeued": false,
+  "old_observer_and_original_receipt_preserved": true,
+  "GUI_or_contract_failure_inferred": false
+}

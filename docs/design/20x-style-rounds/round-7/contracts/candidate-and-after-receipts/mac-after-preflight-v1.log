@@ -1,0 +1,13 @@
+observed_at=2026-11-19T17:55:07+08:00
+69667 /bin/bash /Users/developer/Library/PerfRunner/runner.sh
+queued_jobs=0
+shared_head=ec3372c8d81dd5844bbfc4bdf5d973be80ef2bb4
+shared_porcelain=0
+baad91b8c2393f92aa681049b7f1c772ce0d70eaabb1c884538d42ca5fe756b9  /Users/developer/Library/PerfRunner/results/style-r7-support-v1/before-support.sha256
+7418ab2190596ee647a4f5f6db41e2fcda6aeb806b4dcc58ec4c55e001710104  /Users/developer/Library/PerfRunner/results/style-r7-support-v1/frozen-masks.json
+0dfa1d6c7f5d1620c3487540040726c53c5f9d44a14815ea71c823b8e1c84c78  /Users/developer/Library/PerfRunner/results/style-r7-support-v1/perfrunner-after.job
+1d4daa13aed0941b0358f9b565a2a87ae425c738fdf7d6bb6ebb973dcb61f922  /Users/developer/Library/PerfRunner/results/style-r7-support-v1/perfrunner-gates.job
+capture-matrix.py: OK
+expected-differences.md: OK
+color-geometry-before.json: OK
+after_preflight=passed

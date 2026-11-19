@@ -1,0 +1,23 @@
+{
+  "status": "passed",
+  "verified_at": "2026-11-19T18:14:10+08:00",
+  "scope": "failure evidence identity only; color verdict remains failed",
+  "color_verdict": "failed",
+  "original_and_published_metrics_identical": true,
+  "both_comparison_process_return_codes": [
+    1,
+    1
+  ],
+  "unexpected_groups": [
+    "main-find",
+    "main-find-dark"
+  ],
+  "missing_required_changes": [
+    "workbench-dark"
+  ],
+  "original_pngs": 136,
+  "masks_or_rules_changed": false,
+  "gates_queued": false,
+  "round_counted": false,
+  "remaining_rounds": 14
+}

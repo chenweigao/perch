@@ -1,0 +1,20 @@
+{
+  "status": "passed",
+  "verified_at": "2026-11-19T18:22:08+08:00",
+  "scope": "source restore only, not new GUI tests",
+  "branch": "style/loop-main",
+  "head_before_archive": "5970638a64a73e352867ad8e5ffeca9341f9d66b",
+  "real_test_candidate": "5970638a64a73e352867ad8e5ffeca9341f9d66b",
+  "restored_baseline": "ec3372c8d81dd5844bbfc4bdf5d973be80ef2bb4",
+  "theme_sha256": "64c9baba01460a8f062ee9c4db732be6d1577ad0d3432f2024fb436317f57e95",
+  "all_sources_tests_scripts_ci_package_agents_diff_against_baseline_empty": true,
+  "tracked_worktree_clean_claimed": false,
+  "new_GUI_or_gates_run": false,
+  "visual_verdict": "FAIL",
+  "full_contract": "NOT_PASSED",
+  "remaining_rounds": 14,
+  "cached_diff_empty": true,
+  "earlier_physical_index_unchanged_claim_certified": false,
+  "correction_of_v1": "v1 physical_index_not_updated was broader than the recorded empty cached diff. Preserve v1 privately and in the original-v1 copy; this version certifies exact source bytes and no staged semantic diff only. Physical index protection starts with the independent-review seal.",
+  "original_v1_sha256": "69edd692a8f12c6d78100b549a75bfdba177c88cbde43082ddc92da2818da755"
+}

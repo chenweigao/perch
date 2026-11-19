@@ -1,0 +1,63 @@
+{
+  "status": "passed",
+  "files": [
+    {
+      "file": "before-support.sha256",
+      "source_sha256": "baad91b8c2393f92aa681049b7f1c772ce0d70eaabb1c884538d42ca5fe756b9",
+      "published_sha256": "baad91b8c2393f92aa681049b7f1c772ce0d70eaabb1c884538d42ca5fe756b9",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "candidate-revision.txt",
+      "source_sha256": "6c2593cfd3ad626ad81e0cfb02853486e22981522481de02d451ddbb8e6d1cf9",
+      "published_sha256": "6c2593cfd3ad626ad81e0cfb02853486e22981522481de02d451ddbb8e6d1cf9",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "capture-matrix.py",
+      "source_sha256": "cb1833ce3761136fac334541164af317a7513a71d819e4e6028f6a6979f41576",
+      "published_sha256": "cb1833ce3761136fac334541164af317a7513a71d819e4e6028f6a6979f41576",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "color-geometry-before.json",
+      "source_sha256": "b767459491bc0eb17b1a3760eaf1037d770139396dfcf679da4a8e571eff37d7",
+      "published_sha256": "b767459491bc0eb17b1a3760eaf1037d770139396dfcf679da4a8e571eff37d7",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "expected-differences-before.md",
+      "source_sha256": "abcbfe32964def8c8215f5242ceab2909820ba771bd3dcb1c4b013a825a22a31",
+      "published_sha256": "abcbfe32964def8c8215f5242ceab2909820ba771bd3dcb1c4b013a825a22a31",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "frozen-masks.json",
+      "source_sha256": "7418ab2190596ee647a4f5f6db41e2fcda6aeb806b4dcc58ec4c55e001710104",
+      "published_sha256": "7418ab2190596ee647a4f5f6db41e2fcda6aeb806b4dcc58ec4c55e001710104",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "mac-after.done",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "mac-after.log",
+      "source_sha256": "a93a75de04daf66b576bcac2cef4f2fa948c0e7532e89b02d49207721e68a9d7",
+      "published_sha256": "3123346a34b240d4e22287d368ee19745a19965a01ac51b71288ef0e5e9ad4f4",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "perfrunner-after.job",
+      "source_sha256": "0dfa1d6c7f5d1620c3487540040726c53c5f9d44a14815ea71c823b8e1c84c78",
+      "published_sha256": "0dfa1d6c7f5d1620c3487540040726c53c5f9d44a14815ea71c823b8e1c84c78",
+      "png_bytes_preserved": false
+    }
+  ],
+  "source_files": 9,
+  "png_count": 0,
+  "originals_unchanged": true,
+  "text_policy": "Only machine home prefixes and JSON slash normalization; original text retained externally"
+}

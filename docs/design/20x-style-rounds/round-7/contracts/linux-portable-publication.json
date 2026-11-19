@@ -1,0 +1,75 @@
+{
+  "status": "passed",
+  "files": [
+    {
+      "file": "acceptance-supervisor.log",
+      "source_sha256": "82c5fb957fd066d954bc3949ec0876e35de630e39e8a66080756993b461b48d0",
+      "published_sha256": "82c5fb957fd066d954bc3949ec0876e35de630e39e8a66080756993b461b48d0",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "bridge.log",
+      "source_sha256": "0224c0b6af576c5b0b5c08874ec4e735a927d12ec65c442573deb9183f37c9e6",
+      "published_sha256": "46b3b0f12ab954ee5fc4229f2e2e3dab6287773b89daf0dcf96b6524f45ef499",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "codex-schema.log",
+      "source_sha256": "a5972f7bb5e2c8a17fce6bc12719f076e6af80758ad77f35f30d5c1de97cd125",
+      "published_sha256": "a5972f7bb5e2c8a17fce6bc12719f076e6af80758ad77f35f30d5c1de97cd125",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "installer.log",
+      "source_sha256": "9f1a72f4de73e17b2b1e5d0f139c03a0972402e549f3fd5f0b29b07c16f15888",
+      "published_sha256": "9f1a72f4de73e17b2b1e5d0f139c03a0972402e549f3fd5f0b29b07c16f15888",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "localization-tests.log",
+      "source_sha256": "3b0dbb90387b342ccecc50446a0fb5e4385d86a3f467e5b97d63f8924fc08aff",
+      "published_sha256": "3b0dbb90387b342ccecc50446a0fb5e4385d86a3f467e5b97d63f8924fc08aff",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "localization.log",
+      "source_sha256": "15053579b8b58a44a8e65381d240fa4fcab6705f63135b51b4117a190f704338",
+      "published_sha256": "15053579b8b58a44a8e65381d240fa4fcab6705f63135b51b4117a190f704338",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "model-metadata.log",
+      "source_sha256": "e6ec182765cd965f2837d8eeaef5a64af48a104f245cd1a0b7281559194c57c1",
+      "published_sha256": "e6ec182765cd965f2837d8eeaef5a64af48a104f245cd1a0b7281559194c57c1",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "preview-sources.log",
+      "source_sha256": "ed2a2e6130b78e683ae1579906c9810a6227b547721033a0b930c276d7960e7e",
+      "published_sha256": "ed2a2e6130b78e683ae1579906c9810a6227b547721033a0b930c276d7960e7e",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "radius.log",
+      "source_sha256": "14bc9968c97ea0b5f67a901a694728079f748579b8d72d9b50c87c2ab69c714f",
+      "published_sha256": "14bc9968c97ea0b5f67a901a694728079f748579b8d72d9b50c87c2ab69c714f",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "results.json",
+      "source_sha256": "5133280fb172ae98c38e15821cea8da72f1db6ca630df6f56ba9cfe55dd17b7d",
+      "published_sha256": "29582950e2b0f4a0ce79eee2408e0e69d9752fdd1700a308e462b4f68cbdd1e6",
+      "png_bytes_preserved": false
+    },
+    {
+      "file": "version.log",
+      "source_sha256": "6e1343779f7f086c9756cb5d425daae3b9d57f4304e35360598687e84f4151f1",
+      "published_sha256": "6e1343779f7f086c9756cb5d425daae3b9d57f4304e35360598687e84f4151f1",
+      "png_bytes_preserved": false
+    }
+  ],
+  "source_files": 11,
+  "png_count": 0,
+  "originals_unchanged": true,
+  "text_policy": "Only machine home prefixes and JSON slash normalization; original text retained externally"
+}

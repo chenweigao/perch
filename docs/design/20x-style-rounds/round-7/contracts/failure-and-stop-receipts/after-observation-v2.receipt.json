@@ -1,0 +1,15 @@
+{
+  "command": [
+    "ssh",
+    "-o",
+    "BatchMode=yes",
+    "mac-mini",
+    "/bin/bash",
+    "-s"
+  ],
+  "started_at": "2026-11-19T18:06:27+08:00",
+  "finished_at": "2026-11-19T18:06:29+08:00",
+  "process_return_code": 0,
+  "original_log": "after-observation-v2.log",
+  "stdin_file": "remote-after-observe-v2.sh"
+}

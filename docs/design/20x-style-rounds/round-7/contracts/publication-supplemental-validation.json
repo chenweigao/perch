@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "scope": "initial publication plus one explicit known-email metadata redaction",
+  "source_files_verified_unchanged": 20,
+  "published_files_matching_initial_manifest": 19,
+  "published_files_matching_explicit_redaction": 1,
+  "initial_manifest_is_historical_not_rewritten": true,
+  "redaction_record": "publication-email-redaction-v1.json",
+  "real_git_footer_or_command_changed": false,
+  "earlier_followup_snapshot_process_return_code": 0,
+  "earlier_followup_snapshot_files": 450,
+  "earlier_followup_snapshot_findings": 0,
+  "current_expanded_snapshot_still_requires_validation": true
+}

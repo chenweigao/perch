@@ -1,0 +1,15 @@
+{
+  "command": [
+    "ssh",
+    "-o",
+    "BatchMode=yes",
+    "mac-mini",
+    "/bin/bash -s"
+  ],
+  "started_at": "2026-11-19T17:12:23+08:00",
+  "finished_at": "2026-11-19T17:12:24+08:00",
+  "process_return_code": 0,
+  "original_log": "before-enqueue-v1.log",
+  "job_sha256": "f105ca02922cf5124c7f68296b0a395ad93362a0ec8ff9a1f6850976a093a63f",
+  "job_name": "style-r7-before-v1"
+}

@@ -1,0 +1,36 @@
+#!/bin/bash
+set -euo pipefail
+
+baseline_revision=ec3372c8d81dd5844bbfc4bdf5d973be80ef2bb4
+support="$HOME/Library/PerfRunner/results/style-r7-support-v1"
+output="$HOME/Library/PerfRunner/results/style-r7-before-v1"
+support_checksum_sha256=baad91b8c2393f92aa681049b7f1c772ce0d70eaabb1c884538d42ca5fe756b9
+export PERCH_STYLE_CAPTURE_NODE="$HOME/.local/opt/node-v24.18.0-darwin-arm64/bin/node"
+export PYTHONDONTWRITEBYTECODE=1
+
+printf 'start=%s\n' "$(date -Iseconds)"
+cd "$HOME/_worktrees/20x-loop-20261112/perch"
+pre_porcelain=$(git status --porcelain=v1 | wc -l | tr -d ' ')
+printf 'pre_porcelain=%s\n' "$pre_porcelain"
+test "$pre_porcelain" = 0
+git fetch origin main style/loop-main
+test "$(git rev-parse origin/style/loop-main)" = "$baseline_revision"
+git checkout --detach "$baseline_revision"
+test "$(git rev-parse HEAD)" = "$baseline_revision"
+test ! -e "$output"
+test -x "$PERCH_STYLE_CAPTURE_NODE"
+test "$(shasum -a 256 scripts/capture-style-loop.py | cut -d ' ' -f1)" = 43d8934fcf70b190e6e5bb6a448e8a9418cd6b6a558e0a940e208a8e7687fc5f
+test "$(shasum -a 256 "$support/before-support.sha256" | cut -d ' ' -f1)" = "$support_checksum_sha256"
+(cd "$support" && shasum -a 256 -c before-support.sha256)
+mkdir -p "$output"
+cp "$support/expected-differences.md" "$output/expected-differences-before.md"
+cp "$support/color-geometry-before.json" "$output/color-geometry-before.json"
+cp "$support/before-support.sha256" "$output/before-support.sha256"
+printf 'code_head=%s\n' "$(git rev-parse HEAD)"
+python3 -B "$support/capture-matrix.py" --output "$output/capture" \
+    --host-app "$output/HostLifecycleChecks.app" --build-host --build-previews
+printf 'host_binary_sha256=%s\n' "$(shasum -a 256 "$output/HostLifecycleChecks.app/Contents/MacOS/HostLifecycleChecks" | cut -d ' ' -f1)"
+post_porcelain=$(git status --porcelain=v1 | wc -l | tr -d ' ')
+printf 'post_porcelain=%s\n' "$post_porcelain"
+test "$post_porcelain" = 0
+printf 'end=%s\n' "$(date -Iseconds)"

@@ -1,0 +1,14 @@
+observed_at=2026-11-19T17:21:58+08:00
+state=terminal
+{
+  "status": "passed",
+  "output": "/Users/developer/Library/PerfRunner/results/style-r7-before-v1/capture",
+  "comparisons": 34,
+  "seconds": 499.335
+}
+host_binary_sha256=a85ac235314f009487c9fe10e81f6bb7acd375f684bab623273ac9c1ef139955
+post_porcelain=0
+end=2026-11-19T17:21:02+08:00
+exit=0
+current_original_png_files=68
+shared_head=ec3372c8d81dd5844bbfc4bdf5d973be80ef2bb4

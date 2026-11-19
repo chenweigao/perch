@@ -1,0 +1,55 @@
+{
+  "status": "passed",
+  "phase": "before-stage",
+  "verified_at": "2026-11-19T19:21:29+08:00",
+  "scope": "round7 rollback archive protection and verbatim finding dispositions only",
+  "original_seal_sha256": "9720e2be9e5e46a6da050d4f800ba0b96ad7d35305f249318f5c3240d0ed5867",
+  "original_review_sha256": "004c000b4f47420b3f09dde23d5dfd5f0bb8c1792bb2d03b6ff4483922633621",
+  "original_records_checked": 11163,
+  "unchanged_records": 11160,
+  "authored_original_snapshots_and_modes_verified": [
+    {
+      "path": "docs/design/20x-style-loop/INDEX.md",
+      "original_sha256": "4252475d4774d2c2ec166a6e1ca8be54894ffdc44290e89375b26524b0d7a766",
+      "archive_sha256": "9f5d07858195eb14e8be5120f10da88fc98858d5326594e053092b60fed74c89",
+      "original_snapshot_verified": true
+    },
+    {
+      "path": "docs/design/20x-style-loop/STOP-20261119-R7.md",
+      "original_sha256": "d1feff62d5d288290bde2381704b8f403b645f4f0112316bcce81e50a7faa974",
+      "archive_sha256": "dfe26ade0b4e5c8412023288542d703e759f647c9aad00e195c11385477812e1",
+      "original_snapshot_verified": true
+    },
+    {
+      "path": "docs/design/20x-style-rounds/round-7/README.md",
+      "original_sha256": "6123b9899d302330b329a5158471e03cabf35e84efc9d4ba00d9b00e598ac1a1",
+      "archive_sha256": "f2568b1660ce04cde3ba78e32b93883bc84f8bc14121b5531262ae9abeb3b99b",
+      "original_snapshot_verified": true
+    }
+  ],
+  "authorized_new_input_paths_observed": [
+    "docs/design/20x-style-rounds/round-7/review-disposition.md"
+  ],
+  "new_findings_verbatim_checked": 7,
+  "retained_original_historical_findings": 20,
+  "new_by_severity": {
+    "P1": 3,
+    "P2": 1,
+    "P3": 3
+  },
+  "candidate_or_full_contract_blockers_retained": 4,
+  "branch": "style/loop-main",
+  "current_head": "5970638a64a73e352867ad8e5ffeca9341f9d66b",
+  "parent": "ec3372c8d81dd5844bbfc4bdf5d973be80ef2bb4",
+  "real_tested_head": "5970638a64a73e352867ad8e5ffeca9341f9d66b",
+  "physical_index_sha256_at_this_phase": "8cb0c296fe7a3e186db80263fb6d36ccb1e6bd5652e53217e511b21e8ad97db6",
+  "restored_product_scripts_and_CI_equal_round6_baseline": true,
+  "unrelated_work_unchanged": true,
+  "visual_verdict": "FAIL",
+  "full_contract": "NOT_PASSED",
+  "Mac_full_gates": "NOT_RUN",
+  "round7_counted_complete": false,
+  "remaining_rounds_to_report": 14,
+  "iteration_resumption": "NOT_AUTHORIZED",
+  "new_GUI_build_SSH_or_PerfRunner_jobs_started": false
+}

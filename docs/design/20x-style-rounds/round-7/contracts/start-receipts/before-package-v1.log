@@ -1,0 +1,5 @@
+capture-matrix.py: OK
+expected-differences.md: OK
+color-geometry-before.json: OK
+packaged_at=2026-11-19T17:26:05+08:00
+archive_sha256=0ea93bc4fdcbd74af1d8512e984a04e927213a6bbaa4604ae14baab3f3aa8fa1

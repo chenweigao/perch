@@ -1,0 +1,169 @@
+{
+  "scope": "descriptive pixels only, no changed thresholds",
+  "records": [
+    {
+      "scene": "main-find",
+      "changed_rgba_pixels": 32953,
+      "common_pixel_pairs": [
+        {
+          "before_rgba": [
+            235,
+            231,
+            237,
+            255
+          ],
+          "after_rgba": [
+            233,
+            229,
+            236,
+            255
+          ],
+          "pixels": 28911
+        },
+        {
+          "before_rgba": [
+            230,
+            226,
+            232,
+            255
+          ],
+          "after_rgba": [
+            228,
+            224,
+            231,
+            255
+          ],
+          "pixels": 1185
+        },
+        {
+          "before_rgba": [
+            210,
+            206,
+            212,
+            255
+          ],
+          "after_rgba": [
+            208,
+            204,
+            211,
+            255
+          ],
+          "pixels": 1123
+        },
+        {
+          "before_rgba": [
+            225,
+            222,
+            227,
+            255
+          ],
+          "after_rgba": [
+            223,
+            220,
+            226,
+            255
+          ],
+          "pixels": 691
+        },
+        {
+          "before_rgba": [
+            207,
+            203,
+            208,
+            255
+          ],
+          "after_rgba": [
+            205,
+            201,
+            208,
+            255
+          ],
+          "pixels": 49
+        }
+      ],
+      "causal_inference": "not certified; pixel pairs do not establish focus, material or product causality"
+    },
+    {
+      "scene": "main-find-dark",
+      "changed_rgba_pixels": 38005,
+      "common_pixel_pairs": [
+        {
+          "before_rgba": [
+            38,
+            38,
+            48,
+            255
+          ],
+          "after_rgba": [
+            36,
+            37,
+            48,
+            255
+          ],
+          "pixels": 10145
+        },
+        {
+          "before_rgba": [
+            37,
+            38,
+            48,
+            255
+          ],
+          "after_rgba": [
+            35,
+            37,
+            48,
+            255
+          ],
+          "pixels": 2834
+        },
+        {
+          "before_rgba": [
+            38,
+            39,
+            48,
+            255
+          ],
+          "after_rgba": [
+            36,
+            38,
+            48,
+            255
+          ],
+          "pixels": 2827
+        },
+        {
+          "before_rgba": [
+            38,
+            38,
+            47,
+            255
+          ],
+          "after_rgba": [
+            36,
+            37,
+            47,
+            255
+          ],
+          "pixels": 2238
+        },
+        {
+          "before_rgba": [
+            24,
+            25,
+            26,
+            255
+          ],
+          "after_rgba": [
+            24,
+            24,
+            26,
+            255
+          ],
+          "pixels": 1764
+        }
+      ],
+      "causal_inference": "not certified; pixel pairs do not establish focus, material or product causality"
+    }
+  ]
+}

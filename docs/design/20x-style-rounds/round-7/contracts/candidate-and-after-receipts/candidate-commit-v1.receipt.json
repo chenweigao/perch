@@ -1,0 +1,14 @@
+{
+  "command": [
+    "git",
+    "commit",
+    "-m",
+    "fix(style): balance dark quiet contrast",
+    "-m",
+    "Co-Authored-By: Claude Code <[publication-redacted-email]>"
+  ],
+  "started_at": "2026-11-19T17:49:27+08:00",
+  "finished_at": "2026-11-19T17:49:42+08:00",
+  "process_return_code": 0,
+  "publication_redaction_note": "Only the already-public bot coauthor email in the command argument is redacted here after a publication-pattern finding. The executed command, private original receipt and real Git footer remain unchanged; see publication-email-redaction-v1.json."
+}

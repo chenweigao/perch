@@ -1,0 +1,21 @@
+{
+  "command": [
+    "python3",
+    "-B",
+    "validate-original-archive.py",
+    "--archive",
+    "after-original-v1.tar.gz",
+    "--remote-sha256",
+    "fd4807954ed5539bea8cdd4020842d9f6ebd06976ab9622a26167ea0998f9342",
+    "--destination",
+    "after-original",
+    "--output",
+    "after-archive-validation-v1.json",
+    "--expected-pngs",
+    "68"
+  ],
+  "started_at": "2026-11-19T18:07:14+08:00",
+  "finished_at": "2026-11-19T18:07:14+08:00",
+  "process_return_code": 0,
+  "original_log": "after-intake-v1.log"
+}

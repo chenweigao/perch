@@ -1,0 +1,16 @@
+observed_at=2026-11-19T18:06:29+08:00
+state=terminal
+expected-differences.md: OK
+color-geometry-before.json: OK
+{
+  "status": "passed",
+  "output": "/Users/developer/Library/PerfRunner/results/style-r7-after-v1/capture",
+  "comparisons": 34,
+  "seconds": 463.866
+}
+host_binary_sha256=80f2759d63ec9fb9684e0e4700a4654315e6091a2cb457bab24c877db5e032f4
+post_porcelain=0
+end=2026-11-19T18:05:50+08:00
+exit=0
+current_original_png_files=68
+shared_head=5970638a64a73e352867ad8e5ffeca9341f9d66b

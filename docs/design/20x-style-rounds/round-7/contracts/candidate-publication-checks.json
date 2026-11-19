@@ -1,0 +1,17 @@
+{
+  "checked_at": "2026-11-19T17:49:27+08:00",
+  "full_whitespace_process_return_code": 2,
+  "full_whitespace_certified": false,
+  "original_diagnostic_sha256": "8095feda60be1c135ec2099aaacf79046c5479f5b05e922feae56358bd4d9929",
+  "original_diagnostic_utf8": "docs/design/20x-style-rounds/round-7/before/logs/build-host.log:67: trailing whitespace.\n+  5 | \ndocs/design/20x-style-rounds/round-7/before/logs/build-sidebar.log:43: trailing whitespace.\n+179 | \ndocs/design/20x-style-rounds/round-7/contracts/start-receipts/fetch-origin-attempt-1.log:1: trailing whitespace.\n+fatal: unable to access 'https://github.com/chenweigao/perch.git/': OpenSSL SSL_connect: SSL_ERROR_SYSCALL in connection to github.com:443 \ndocs/design/20x-style-rounds/round-7/contracts/start-receipts/fetch-origin-attempt-2.log:1: trailing whitespace.\n+fatal: unable to access 'https://github.com/chenweigao/perch.git/': OpenSSL SSL_connect: SSL_ERROR_SYSCALL in connection to github.com:443 \n",
+  "exact_original_evidence_log_exclusions": [
+    "docs/design/20x-style-rounds/round-7/before/logs/build-host.log",
+    "docs/design/20x-style-rounds/round-7/before/logs/build-sidebar.log",
+    "docs/design/20x-style-rounds/round-7/contracts/start-receipts/fetch-origin-attempt-1.log",
+    "docs/design/20x-style-rounds/round-7/contracts/start-receipts/fetch-origin-attempt-2.log"
+  ],
+  "all_other_staged_files_return_code": 0,
+  "original_logs_unchanged": true,
+  "public_source_process_return_code": 0,
+  "staged_scope_paths": 429
+}

@@ -1,0 +1,43 @@
+{
+  "status": "generated",
+  "scope": "Illustration only, not quantitative comparison or a replacement for originals",
+  "raw_originals_unchanged": true,
+  "outside_alpha_composited_on_white": true,
+  "crop_chosen_after_failure_only_for_observation_not_contract": true,
+  "records": [
+    {
+      "scene": "main-find",
+      "before_png": "before-original/capture/main-find/repeat-1/capture.png",
+      "after_png": "after-original/capture/main-find/repeat-1/capture.png",
+      "before_sha256": "a06d11e2d07c0163edc37d12a9489b0dc2619f263a41ec55c4a18ece35a0ca4b",
+      "after_sha256": "4ff33a50f17cb0db4640cd33192ac62c56f01b744e84d63736aec5ea55a53e04",
+      "crop_pixels": [
+        264,
+        38,
+        1248,
+        104
+      ],
+      "scale": 3,
+      "resampling": "nearest",
+      "derived_png": "main-find-3x.png",
+      "derived_sha256": "1307852c133a474a18cbc64d74d16fe589b1a671ac46675a131d745fe95460f0"
+    },
+    {
+      "scene": "main-find-dark",
+      "before_png": "before-original/capture/main-find-dark/repeat-1/capture.png",
+      "after_png": "after-original/capture/main-find-dark/repeat-1/capture.png",
+      "before_sha256": "186556a8fdf45f94bdb18c2a31bd53acbc7f230c7e7166bfd802474e1e3e6db9",
+      "after_sha256": "af14e8d84a71dba2bd8199eb4a987fa84dd481b240e2d34a0318272f5aaa047f",
+      "crop_pixels": [
+        264,
+        38,
+        1248,
+        104
+      ],
+      "scale": 3,
+      "resampling": "nearest",
+      "derived_png": "main-find-dark-3x.png",
+      "derived_sha256": "b15efe2fb75368e48dbba6a1cba359fd6fc2c7d30aadd798f0ab92c19362926d"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "status": "queued_only",
+  "job_name": "style-r7-after-v1",
+  "queued_at": "2026-11-19T17:57:59+08:00",
+  "candidate_head": "5970638a64a73e352867ad8e5ffeca9341f9d66b",
+  "job_sha256": "0dfa1d6c7f5d1620c3487540040726c53c5f9d44a14815ea71c823b8e1c84c78",
+  "before_head": "ec3372c8d81dd5844bbfc4bdf5d973be80ef2bb4",
+  "gates_queued": false,
+  "not_completion": true
+}

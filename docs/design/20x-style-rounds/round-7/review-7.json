@@ -1,0 +1,1043 @@
+{
+  "schema_version": 1,
+  "round": 7,
+  "queue_item": "S04",
+  "review_date": "2026-11-19",
+  "review_status": "COMPLETE_LIMITED_DISPOSITION_REVIEW_ONLY",
+  "verdict": "PASS_LIMITED",
+  "visual_verdict": "FAIL",
+  "full_contract": "NOT_PASSED",
+  "reviewer": {
+    "role": "independent review sub-agent; failure evidence, rollback and stop only",
+    "provider": "acpRegistry_kimi_code",
+    "model": "aone/gpt-6.1-sol",
+    "thinking": "max",
+    "mode": "default",
+    "identity_basis": "任务已核实的实时 capabilities 与本线程 runtime；本复核未另查或修改 provider/model/config。",
+    "subagents_started": false,
+    "permission_bypass_used": false
+  },
+  "scope": {
+    "limited_disposition_assessment": "PASS_LIMITED",
+    "statement": "仅对现场可独立核对的失败证据完整性、冻结规则一致性、本线程源码恢复、红线及按规则②停止的处置签发有限通过。处置通过不等于候选视觉通过、完整契约通过或审美批准。",
+    "included": [
+      "原 before/after tar、136 原 PNG 的来源、字节、解码完整性及公开副本一致性",
+      "双方各 34/34 重复像素/字节、跨作业固定 geometry/fixture/environment 与冻结颜色契约的独立实算",
+      "八张指定完整原 PNG 与两张指定 3x 观察图的本 provider 实际图像读取和目视",
+      "候选 HEAD/index、本线程已恢复 worktree 与 parent 基线的分离及源码红线",
+      "原数字负回执、三项诚实处置、NOT_RUN、停止及历史 finding/verdict 原文保留",
+      "本 seal 期输入保护与唯一公开 review JSON 的格式/pattern 检查"
+    ],
+    "not_included": [
+      "产品视觉 PASS 或美学裁决",
+      "完整 Mac gates、production build、WorkbenchChecks、radius、localization、5 次冷启动或正常非 capture native-design 的本轮验收",
+      "Linux Swift/WorkbenchChecks、clean 候选或恢复后的源码重测",
+      "全局操作系统明暗切换、全应用 18pt、所有语言/字号矩阵逐字验收、所有普通 preview 人工交互",
+      "focus、材料/compositor、编译产物或 token 实际可见作用域的确定根因或已修复结论",
+      "Mac 源码已回滚、实时远端状态、可重复构建、真实连接/Agent/会话/凭据/权限/性能",
+      "图片隐私、未知凭据格式、所有历史身份、所有权、授权或许可的完整审计",
+      "seal 之前物理 index 字节未更新或封存之前从未改写输入的历史证明"
+    ]
+  },
+  "iteration_authority": {
+    "S04_delivery": "WITHDRAWN",
+    "round7_counted_complete": false,
+    "completed_rounds_retained": [0, 1, 3, 4, 5, 6],
+    "remaining_rounds_to_report": 14,
+    "stop_rule": "②：未解释的跨作业可见漂移，截图可比性不能认证时保守停止",
+    "user_pause_or_aesthetic_rejection_inferred": false,
+    "twenty_round_approval_point_reached": false,
+    "S05_or_next_round_started_by_review": false,
+    "iteration_resumption": "NOT_AUTHORIZED",
+    "archive_authorized_by_review": false,
+    "finding_disposal_authorized_by_review": false,
+    "PR_or_merge_authorized": false,
+    "goal_counter_queue_or_index_document_changed": false,
+    "commit_stage_amend_push_fetch_checkout_stash_reset_clean_worktree_creation_performed": false,
+    "build_application_SSH_or_PerfRunner_job_started": false,
+    "statement": "本 JSON 不是同轮归档或计轮操作，不替父代理处置 finding，不改 INDEX/STOP/goal/队列，不复活旧候选。恢复截图可比性及任何后续恢复均需另获明确指示。"
+  },
+  "finding_counts": {
+    "new_round7_review_findings": 7,
+    "new_by_severity": {"P1": 3, "P2": 1, "P3": 3},
+    "new_blocking_for_candidate_or_full_contract": 4,
+    "retained_original_historical_findings": 20,
+    "total_new_and_retained": 27,
+    "count_basis": "本轮实际核验后登记，非预设零 finding；blocking 的范围由各项明确列出，不能把候选交付阻断误作回滚/停止处置不合规。"
+  },
+  "findings": [
+    {
+      "id": "S04-R7-F01",
+      "severity": "P1",
+      "blocking": true,
+      "blocking_for": ["candidate_visual_delivery", "full_contract"],
+      "blocking_for_limited_disposition_review": false,
+      "category": "light_zero_tolerance_cross_job_color_failure",
+      "finding_verbatim": "从本轮唯一 before/after 的 main-find 原 PNG 独立解码并以整数白底合成、RGBA 与 PNG 字节零容差重算，得到 32,953 个 RGBA/可见变化像素，全部属于 light 清单外，半开 bbox 为 [276,46,1218,95)。其中 28,911 像素从 [235,231,237,255] 变为 [233,229,236,255]，跨作业两个 repeat 的 PNG 字节均不同。light 预写要求是全窗口三项零差异，不允许以微小色阶、同侧双跑稳定、几何/alpha 不变或四个其他 dark 场景合规抵销。候选视觉 FAIL，S04 撤回；查找栏底色的因果未认证，不宣称 focus、材料、编译产物或 token 根因已确定/已修复。",
+      "status": "CONFIRMED_CANDIDATE_FAILURE_RETAINED",
+      "evidence": [
+        "docs/design/20x-style-rounds/round-7/expected-differences.md:15-18",
+        "raw/before-original/capture/main-find/repeat-1/capture.png",
+        "raw/after-original/capture/main-find/repeat-1/capture.png",
+        "docs/design/20x-style-rounds/round-7/contracts/before-after-original-comparison.json",
+        "docs/design/20x-style-rounds/round-7/visuals/main-find-3x.png"
+      ],
+      "required_disposition": "保留失败原 PNG、exit1 与预冻结规则；维持撤回/停止，不换图、不扩 mask、不调阈值、不计完成。"
+    },
+    {
+      "id": "S04-R7-F02",
+      "severity": "P1",
+      "blocking": true,
+      "blocking_for": ["candidate_visual_delivery", "full_contract"],
+      "blocking_for_limited_disposition_review": false,
+      "category": "dark_frozen_mask_color_rule_failure",
+      "finding_verbatim": "main-find-dark 原图独立重算有 38,005 个 RGBA/可见变化像素，其中 36,298 像素违反原 RGB 与 white-visible RGB 每通道仅许 0–8 中性提亮、增量跨度≤3 的冻结规则。mask 外、alpha 和隐藏透明 RGBA 的变化均为 0 仍不能使它通过：在 mask 内也不得变暗/换色。38,005 是总变化，不把其中合规的 1,707 像素说成违规；整体 bbox [276,46,1422,859) 同时包含查找栏与合规辅助前景。完整原图及 3x 对照实际目视看到查找条底色色阶差异，具体数量来自原 PNG 实算而非目视/OCR。四个非查找 main dark 场景的局部提亮合规不抵销这项 FAIL，因果继续未认证。",
+      "status": "CONFIRMED_CANDIDATE_FAILURE_RETAINED",
+      "evidence": [
+        "docs/design/20x-style-rounds/round-7/frozen-masks.json",
+        "raw/before-original/capture/main-find-dark/repeat-1/capture.png",
+        "raw/after-original/capture/main-find-dark/repeat-1/capture.png",
+        "docs/design/20x-style-rounds/round-7/visuals/main-find-dark-3x.png",
+        "raw/start-receipts/after-original-comparison-v1.receipt.json",
+        "raw/start-receipts/after-publication-comparison-v1.receipt.json"
+      ],
+      "required_disposition": "维持颜色 FAIL 和规则②停止；不能因 geometry/alpha/隐藏 RGBA 或发布副本一致而改判，不认证或修补根因。"
+    },
+    {
+      "id": "S04-R7-F03",
+      "severity": "P1",
+      "blocking": true,
+      "blocking_for": ["candidate_visual_delivery", "full_contract"],
+      "blocking_for_limited_disposition_review": false,
+      "category": "missing_prewritten_required_change",
+      "finding_verbatim": "预写 required_changed_scenes 同时要求 main-dark 与 workbench-dark 真实变化。独立原 PNG 实算 main-dark 有 1,707 个受控变化像素，但 workbench-dark 为 0，两个 repeat 的 before/after PNG 字节亦完全相同；指定 Workbench-dark 全窗口前后原图已实际目视。普通逐场景 pass=true 仅表示无不允许的差异，不含另列的必需变化检查；missing_required_changes=[workbench-dark] 仍使整体 color FAIL。不得删除 Workbench 必需变化要求迎合 after，也不能把未满足假设写成 token 作用域根因已认证或截图/产品问题已修复。",
+      "status": "CONFIRMED_REQUIRED_CHANGE_MISSING_RETAINED",
+      "evidence": [
+        "docs/design/20x-style-rounds/round-7/expected-differences.md:18",
+        "docs/design/20x-style-rounds/round-7/color-geometry-before.json",
+        "raw/before-original/capture/workbench-dark/repeat-1/capture.png",
+        "raw/after-original/capture/workbench-dark/repeat-1/capture.png",
+        "docs/design/20x-style-rounds/round-7/contracts/dual-failure-evidence-validation.json"
+      ],
+      "required_disposition": "保留冻结要求、缺失变化及未认证作用域；不接受 S04、不计轮、不补派本轮作业。"
+    },
+    {
+      "id": "S04-R7-F04",
+      "severity": "P2",
+      "blocking": true,
+      "blocking_for": ["full_contract_acceptance"],
+      "blocking_for_limited_disposition_review": false,
+      "category": "full_Mac_gates_NOT_RUN_after_visual_failure",
+      "finding_verbatim": "本轮完整 Mac gates、production build、WorkbenchChecks、radius、localization、5 冷启动与正常非 capture native-design 未派发，均为 NOT_RUN，没有对应本轮原生回归 PNG。原 wrapper/manifest/log 仅证明每个 capture job 内 host build 与三个既有 preview build 实际 exit0，以及离线 capture fixture/截图执行；名为 native-design 的 capture fixture 不是正常非 capture 回归。两个 GUI terminal exit0、portable 10/10 或准备好的 gates 脚本不等于完整关卡 PASS。按视觉失败先停止、未派后续 gates 的处置合规，但完整契约一直 NOT_PASSED。",
+      "status": "CONFIRMED_NOT_RUN_BOUNDARY_RETAINED",
+      "evidence": [
+        "raw/before-original/perfrunner-before.job",
+        "raw/after-original/perfrunner-after.job",
+        "raw/before-original/capture/manifest.json",
+        "raw/after-original/capture/manifest.json",
+        "docs/design/20x-style-rounds/round-7/contracts/perfrunner-gates.job",
+        "raw/start-receipts/stop-observation-v1.log"
+      ],
+      "required_disposition": "分列 capture/preview build 与完整 Mac gates；保留 NOT_RUN/无原生 PNG，不在复核中补跑、恢复迭代或缩小原完整交付契约。"
+    },
+    {
+      "id": "S04-R7-F05",
+      "severity": "P3",
+      "blocking": false,
+      "category": "retained_observer_v1_misclassification_and_v2_correction",
+      "finding_verbatim": "after 观察 v1 于 18:01:20 实际 exit0，但先查保留 .job 再查 log，输出 state=queued 时已有 14 原 PNG 且共享 HEAD 为测试候选。独立读取旧 observer、原日志/数字回执与公开副本，确认这不是尚未启动的证明。v2 按 terminal→log→无 log 的 job 顺序分类，18:06:29 实际读取唯一 after 的 18:05:50 terminal exit0 与 68 PNG。旧 queued 行、observer 和原回执保留；这项只读观察分类纠正不重派 capture，不改 GUI/产品，也不把观察器 exit0 升级成 color PASS。",
+      "status": "CORRECTED_BY_V2_ORIGINAL_V1_RETAINED",
+      "evidence": [
+        "raw/remote-after-observe.sh",
+        "raw/remote-after-observe-v2.sh",
+        "raw/start-receipts/after-observation-v1.log",
+        "raw/start-receipts/after-observation-v1.receipt.json",
+        "raw/start-receipts/after-observation-v2.log",
+        "docs/design/20x-style-rounds/round-7/contracts/failure-and-stop-receipts/after-observer-correction-v1.json"
+      ],
+      "required_disposition": "保留 v1 负精度记录与 v2 范围，不把旧行抹成 terminal 或据旧 queued 重派作业。"
+    },
+    {
+      "id": "S04-R7-F06",
+      "severity": "P3",
+      "blocking": false,
+      "category": "retained_publication_email_negative_receipt_and_explicit_redaction",
+      "finding_verbatim": "首新增公开 snapshot 实际 exit1、449 文件、1 个 bot coauthor 邮箱模式 finding；独立核对数字回执，并在初版保留的公开 commit receipt 上以原 scanner 纯函数确认该 1 项。仅当前公开 commit receipt 的命令参数显式脱敏并加注，真实 Git 尾注、私有原件和初版公开副本字节不变；真实尾注与私有原命令已用 bool/hash 核对，公开 JSON 不复制邮箱。后续实际 450 文件/0 findings/exit0，原 20 项 source hash 全部匹配，19 个旧 pubhash 加 1 个授权 redaction hash 续证通过；初版 manifest 和首次失败未重写。后来的 850/0、loop 3/0、root 8648/0 仅为 pattern check，不证明图片隐私、所有凭据格式、身份历史、许可或所有权。",
+      "status": "EXPLICIT_PUBLIC_REDACTION_VERIFIED_NEGATIVE_ORIGINALS_RETAINED",
+      "evidence": [
+        "raw/start-receipts/queued-publication-snapshot-v1.receipt.json",
+        "raw/start-receipts/queued-publication-snapshot-v1.log",
+        "raw/start-receipts/queued-publication-snapshot-v2.receipt.json",
+        "raw/start-receipts/queued-publication-snapshot-v2.log",
+        "docs/design/20x-style-rounds/round-7/contracts/publication-email-redaction-v1.json",
+        "docs/design/20x-style-rounds/round-7/contracts/publication-supplemental-validation.json"
+      ],
+      "required_disposition": "保留初次 exit1 和原 bytes，仅承认明确公开脱敏，不改 scanner/豁免/config/真实尾注，不扩认隐私或凭据审计。"
+    },
+    {
+      "id": "S04-R7-F07",
+      "severity": "P3",
+      "blocking": false,
+      "category": "retained_rollback_v1_physical_index_overclaim_and_v2_boundary",
+      "finding_verbatim": "源码 restore 原 v1 将空 cached diff 过度写成 physical_index_not_updated=true。该原 v1 私有件及 original-v1 公开副本 SHA256 69edd692a8f12c6d78100b549a75bfdba177c88cbde43082ddc92da2818da755 均保留；v2 只签源字节恢复与无 staged 语义 diff，不追认此前物理 index。独立当前 Git 读取确认 worktree Theme 等于 parent，HEAD/index Theme 仍是候选、cached diff 空，不能误称整个 worktree clean 或 HEAD 已回滚。物理 index SHA256 8cb0c296fe7a3e186db80263fb6d36ccb1e6bd5652e53217e511b21e8ad97db6 只从本 seal 期实际保护，不扩认之前；本线程恢复也不证明 Mac 共享树已回滚或恢复后的字节已经重测。",
+      "status": "V2_LIMIT_VERIFIED_ORIGINAL_V1_OVERCLAIM_RETAINED_NOT_CERTIFIED",
+      "evidence": [
+        "raw/rollback-source-validation-v1.json",
+        "raw/rollback-source-validation-v2.json",
+        "docs/design/20x-style-rounds/round-7/contracts/rollback-source-validation-original-v1.json",
+        "docs/design/20x-style-rounds/round-7/contracts/rollback-source-validation.json",
+        "docs/design/20x-style-rounds/round-7/contracts/review-input-seal-v1.json"
+      ],
+      "required_disposition": "继续分列源字节、staged 语义、物理 index、候选 HEAD、本线程 worktree 与 Mac 状态；不修原 v1、不补造旧 index 摘要、不 amend/提交。"
+    }
+  ],
+  "input_roots": {
+    "workspace": ".",
+    "raw": "/home/developer/code/_evidence/style-loop-round-7-20261119/raw",
+    "path_policy": "本文 raw/ 前缀相对脱敏 raw 根；workspace 文件使用相对路径。机器 home 已脱敏，不含真实邮箱/凭据。"
+  },
+  "source_identity_and_redlines": {
+    "branch": "style/loop-main",
+    "current_HEAD_and_real_after_test_candidate": "5970638a64a73e352867ad8e5ffeca9341f9d66b",
+    "parent_and_restore_baseline": "ec3372c8d81dd5844bbfc4bdf5d973be80ef2bb4",
+    "candidate_theme_sha256_from_HEAD_and_index": "1731ec656c535b47dceaa47503892d6fbb1c26f45354686e58b35c06f7d1fc87",
+    "restored_theme_sha256_from_worktree_and_parent": "64c9baba01460a8f062ee9c4db732be6d1577ad0d3432f2024fb436317f57e95",
+    "candidate_source_diff_files": ["Sources/AgentWorkbench/WorkbenchTheme.swift"],
+    "exact_candidate_replacements_verified": 3,
+    "candidate_product_change": "dark quiet (0.520,0.550,0.610)→(0.540,0.570,0.630)，另两处既有数字描述 4.7→5.1；独立按 parent 原 bytes 重建并与 HEAD 全文件 bytes 相同。",
+    "source_change_patch_equals_actual_parent_to_HEAD_git_diff": true,
+    "worktree_against_parent_zero_diff_prefixes": ["Sources", "Tests", "Resources", "scripts", ".github", "Package.swift", "Package.resolved", "AGENTS.md"],
+    "worktree_against_parent_source_redlines_zero_diff": true,
+    "WorkbenchCore_and_other_sources_tests_measurement_CI_unchanged": true,
+    "light_body_other_tokens_strings_geometry_behavior_unchanged_in_source": true,
+    "system_follow_Settings_default_light_single_glass_flat_sidebar_whitespace_inspector_concentric_sheet_native_composer_unchanged_in_source": true,
+    "already_adjudicated_directions_reopened": false,
+    "index_theme_equals_candidate_not_restored_worktree": true,
+    "cached_diff_empty": true,
+    "entire_worktree_clean_claimed": false,
+    "physical_index_sha256_current_and_seal_period_only": "8cb0c296fe7a3e186db80263fb6d36ccb1e6bd5652e53217e511b21e8ad97db6",
+    "earlier_physical_index_bytes_certified": false,
+    "final_archive_HEAD_claimed": null,
+    "restored_worktree_or_archive_retested_as_candidate_claimed": false,
+    "rollback_v1_original_sha256": "69edd692a8f12c6d78100b549a75bfdba177c88cbde43082ddc92da2818da755",
+    "rollback_v1_and_v2_public_bytes_equal_corresponding_private_originals": true,
+    "redline_basis": "实际只读 Git diff/show/index bytes 与 hash；所有 Git 调用 GIT_OPTIONAL_LOCKS=0，不用当前恢复源码冒充原 after 测试 source。"
+  },
+  "original_evidence_integrity": {
+    "verification_method": "tarfile 只读内存遍历、不 extract；逐成员原 bytes/路径/kind/mode/inventory 核对，PNG magic 与 PIL verify/decode，manifest/repeat/hash 和公开副本逐项核对。",
+    "archives": [
+      {"side": "before", "archive": "raw/before-original.tar", "sha256": "0ea93bc4fdcbd74af1d8512e984a04e927213a6bbaa4604ae14baab3f3aa8fa1", "members": 456, "regular_files": 352, "pngs": 68, "all_member_payloads_equal_originals": true, "all_member_modes_equal": true, "unsafe_paths_links_duplicate_members_or_AppleDouble": 0},
+      {"side": "after", "archive": "raw/after-original-v1.tar.gz", "sha256": "fd4807954ed5539bea8cdd4020842d9f6ebd06976ab9622a26167ea0998f9342", "members": 458, "regular_files": 354, "pngs": 68, "all_member_payloads_equal_originals": true, "all_member_modes_equal": true, "unsafe_paths_links_duplicate_members_or_AppleDouble": 0}
+    ],
+    "archive_hashes_match_original_package_logs_and_contracts": true,
+    "historical_extraction_not_reexecuted": true,
+    "after_original_intake_filter_recorded": "data",
+    "before_archive_source_and_contract_verified": true,
+    "matrix_original_png_total": 136,
+    "original_to_public_PNG_byte_pairs_verified": 136,
+    "publication_file_hash_pairs_verified_per_capture_matrix": 345,
+    "camera_and_fixture_checks": "逐个核对全部 136 window/ready、捕获窗口编号/-l、frame/content/scale/appearance/effective_dark/locale/large_type，及各场景原环境和 Workbench 日常/首次使用参数；双方 34/34 均与预冻结 geometry 匹配。",
+    "geometry_fixture_environment_cross_job_equal_scenes": 34,
+    "matrices": [
+      {"side": "before", "job": "style-r7-before-v1", "job_sha256": "f105ca02922cf5124c7f68296b0a395ad93362a0ec8ff9a1f6850976a093a63f", "enqueued_at": "2026-11-19T17:12:24+08:00", "terminal_at": "2026-11-19T17:21:02+08:00", "terminal_exit": 0, "source_HEAD": "ec3372c8d81dd5844bbfc4bdf5d973be80ef2bb4", "dirty": false, "manifest_sha256": "6e6c49035ab22fa82affefb872f04577507c52a309b8d8cf5a41441665075034", "scenes": 34, "original_pngs": 68, "repeat_RGBA_visible_and_byte_pairs_passed": 34, "commands": 140, "command_exit_counts": {"0": 72, "-15": 68}},
+      {"side": "after", "job": "style-r7-after-v1", "job_sha256": "0dfa1d6c7f5d1620c3487540040726c53c5f9d44a14815ea71c823b8e1c84c78", "enqueued_at": "2026-11-19T17:57:59+08:00", "terminal_at": "2026-11-19T18:05:50+08:00", "terminal_exit": 0, "source_HEAD": "5970638a64a73e352867ad8e5ffeca9341f9d66b", "dirty": false, "manifest_sha256": "5bdf4ea05d164707ffa18d09f17c66e2cda242a6f0998e66019983a488a8b0b3", "scenes": 34, "original_pngs": 68, "repeat_RGBA_visible_and_byte_pairs_passed": 34, "commands": 140, "command_exit_counts": {"0": 72, "-15": 68}}
+    ],
+    "scene_classification": {"main": 13, "workbench": 16, "sidebar": 3, "composer": 2, "light": 19, "dark": 15, "Workbench_first_use": 8},
+    "command_exit_scope": "每侧 4 个 build+68 个 screencapture exit0，68 个就绪后由既有 driver 主动 terminate 的持久 capture fixture 为 -15；不把 140 条命令全称 exit0。",
+    "support_and_job_bytes_match_originals_and_frozen_workspace_inputs": true,
+    "host_binary_sha256_log_values_only": {
+      "before": "a85ac235314f009487c9fe10e81f6bb7acd375f684bab623273ac9c1ef139955",
+      "after": "80f2759d63ec9fb9684e0e4700a4654315e6091a2cb457bab24c877db5e032f4",
+      "original_executable_files_available_for_independent_rehash": false,
+      "reproducible_binary_or_build_cause_certified": false
+    }
+  },
+  "independent_pixel_computation": {
+    "actual_completed_at": "2026-11-19T18:49:06+08:00",
+    "tool": "functions.Bash / python3 -B",
+    "method": "从全部原 PNG streaming PIL verify/convert RGBA；signed numpy RGB 增量和 bounded pad 边缘/膨胀独立实现；white-visible=(RGB*alpha+255*(255-alpha)+127)//255。冻结 comparer/reader 仅导入已审读纯函数作交叉检查，不调用任何写 output 的 main/CLI/freeze。父代理结果在计算完成后才用作比对。",
+    "all_original_PNGs_actually_decoded": 136,
+    "repeat_byte_and_pixel_pairs_per_matrix": 34,
+    "cross_job_repeat_PNG_byte_pairs_checked": 68,
+    "cross_job_RGBA_and_white_visible_scene_pairs_checked": 34,
+    "preproduct_anchor_sha256": {
+      "color-geometry-before.json": "b767459491bc0eb17b1a3760eaf1037d770139396dfcf679da4a8e571eff37d7",
+      "frozen-masks.json": "7418ab2190596ee647a4f5f6db41e2fcda6aeb806b4dcc58ec4c55e001710104",
+      "contracts/compare-quiet-captures.py": "6d7f2e3ca2abd18504b08b69d2d40347c1627893f6b85652f28e429b5bde5589",
+      "protected_matrix_reader": "8033f3645ee458cbdb540243c4d9318543193a77013be630fca9d4c241f33b8e",
+      "protected_PNG_reader": "9d4e7eeba751edccac29645cf7099bdafa3b53d54952f2bc6d62a365134b1237"
+    },
+    "all_bound_expected_list_wrappers_driver_and_readers_hashes_verified": true,
+    "frozen_mask_reconstruction": {
+      "source": "新 before only；不消费 after 构造/扩张 mask",
+      "masks_recomputed_equal_pixel_for_pixel": 15,
+      "all_mask_payload_hashes_dimensions_binary_values_counts_and_before_PNG_bindings_verified": true,
+      "edge_neighborhood": 8,
+      "Chebyshev_dilation_radius": 3,
+      "quiet_sRGB_seed": [133, 140, 156],
+      "seed_maximum_channel_distance": 3,
+      "mask_rules_and_color_rules_changed": false
+    },
+    "contract": {
+      "light_full_window_RGBA_white_visible_and_cross_job_PNG_bytes_tolerance": 0,
+      "dark_outside_mask_RGBA_and_white_visible_tolerance": 0,
+      "dark_alpha_increment": 0,
+      "dark_RGB_channel_increment_minimum": 0,
+      "dark_RGB_channel_increment_maximum": 8,
+      "dark_increment_channel_span_maximum": 3,
+      "hidden_transparent_RGBA_must_remain_identical": true,
+      "required_changed_scenes": ["main-dark", "workbench-dark"]
+    },
+    "color_result": "FAIL",
+    "unexpected_groups": ["main-find", "main-find-dark"],
+    "missing_required_changes": ["workbench-dark"],
+    "light_scenes_fully_zero_RGBA_visible_and_bytes": 18,
+    "light_scenes_required_zero": 19,
+    "cross_job_changed_scenes": 6,
+    "cross_job_PNG_byte_identical_scenes": 28,
+    "all_changed_alpha_pixels": 0,
+    "all_changed_hidden_transparent_RGBA_pixels": 0,
+    "full_computed_result_equals_original_and_public_results_except_verified_at": true,
+    "actual_original_and_public_color_CLI_exit_codes_from_original_receipts": [1, 1],
+    "original_color_CLI_finished_at": "2026-11-19T18:07:24+08:00",
+    "public_color_CLI_finished_at": "2026-11-19T18:14:10+08:00",
+    "this_review_color_CLI_rerun": false,
+    "group_metrics_column_semantics": "RGBA/visible 与 outside_RGBA/outside_visible 分别实算。以下 ordinary_group_pass 不含 required_changed_scenes；workbench-dark 必需变化单列失败。bbox 为原 PNG 半开坐标。",
+    "group_metrics": [
+      {"scene": "composer-dark", "dimensions": [760, 500], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true},
+      {"scene": "composer-light", "dimensions": [760, 500], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true},
+      {"scene": "main-dark", "dimensions": [1536, 900], "RGBA": 1707, "visible": 1707, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": false, "ordinary_group_pass": true, "bbox": [357, 67, 1422, 859]},
+      {"scene": "main-dashboard", "dimensions": [1536, 900], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true},
+      {"scene": "main-english", "dimensions": [1536, 900], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true},
+      {"scene": "main-english-dark", "dimensions": [1536, 900], "RGBA": 1658, "visible": 1658, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": false, "ordinary_group_pass": true, "bbox": [357, 67, 1453, 859]},
+      {"scene": "main-english-large-type", "dimensions": [1536, 900], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true},
+      {"scene": "main-english-large-type-dark", "dimensions": [1536, 900], "RGBA": 2361, "visible": 2361, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": false, "ordinary_group_pass": true, "bbox": [347, 67, 1453, 859]},
+      {"scene": "main-find", "dimensions": [1536, 900], "RGBA": 32953, "visible": 32953, "outside_RGBA": 32953, "outside_visible": 32953, "invalid_color": 32953, "cross_job_bytes_equal": false, "ordinary_group_pass": false, "bbox": [276, 46, 1218, 95]},
+      {"scene": "main-find-dark", "dimensions": [1536, 900], "RGBA": 38005, "visible": 38005, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 36298, "cross_job_bytes_equal": false, "ordinary_group_pass": false, "bbox": [276, 46, 1422, 859]},
+      {"scene": "main-inspector-closed", "dimensions": [1536, 900], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true},
+      {"scene": "main-large-type", "dimensions": [1536, 900], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true},
+      {"scene": "main-large-type-dark", "dimensions": [1536, 900], "RGBA": 2431, "visible": 2431, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": false, "ordinary_group_pass": true, "bbox": [347, 67, 1422, 859]},
+      {"scene": "main-light", "dimensions": [1536, 900], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true},
+      {"scene": "main-scroll", "dimensions": [1536, 900], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true},
+      {"scene": "sidebar-dark", "dimensions": [1100, 760], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true},
+      {"scene": "sidebar-english", "dimensions": [1100, 760], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true},
+      {"scene": "sidebar-light", "dimensions": [1100, 760], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true},
+      {"scene": "workbench-dark", "dimensions": [1120, 820], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true, "required_change_pass": false},
+      {"scene": "workbench-empty-dark", "dimensions": [1120, 820], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true},
+      {"scene": "workbench-empty-english", "dimensions": [1120, 820], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true},
+      {"scene": "workbench-empty-english-dark", "dimensions": [1120, 820], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true},
+      {"scene": "workbench-empty-english-large-type", "dimensions": [1120, 820], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true},
+      {"scene": "workbench-empty-english-large-type-dark", "dimensions": [1120, 820], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true},
+      {"scene": "workbench-empty-large-type", "dimensions": [1120, 820], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true},
+      {"scene": "workbench-empty-large-type-dark", "dimensions": [1120, 820], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true},
+      {"scene": "workbench-empty-light", "dimensions": [1120, 820], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true},
+      {"scene": "workbench-english", "dimensions": [1120, 820], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true},
+      {"scene": "workbench-english-dark", "dimensions": [1120, 820], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true},
+      {"scene": "workbench-english-large-type", "dimensions": [1120, 820], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true},
+      {"scene": "workbench-english-large-type-dark", "dimensions": [1120, 820], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true},
+      {"scene": "workbench-large-type", "dimensions": [1120, 820], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true},
+      {"scene": "workbench-large-type-dark", "dimensions": [1120, 820], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true},
+      {"scene": "workbench-light", "dimensions": [1120, 820], "RGBA": 0, "visible": 0, "outside_RGBA": 0, "outside_visible": 0, "invalid_color": 0, "cross_job_bytes_equal": true, "ordinary_group_pass": true}
+    ],
+    "dominant_original_RGBA_pairs": [
+      {"scene": "main-find", "before": [235, 231, 237, 255], "after": [233, 229, 236, 255], "pixels": 28911},
+      {"scene": "main-find-dark", "before": [38, 38, 48, 255], "after": [36, 37, 48, 255], "pixels": 10145}
+    ],
+    "not_a_global_capture_comparability_or_causal_certificate": true
+  },
+  "independent_visual_inspection": {
+    "coverage_status": "ALL_10_REQUIRED_IMAGES_ACTUALLY_VIEWED",
+    "visual_verdict": "FAIL",
+    "tool": "functions.ReadMediaFile",
+    "actual_image_payloads_received": true,
+    "full_resolution_argument": true,
+    "all_tool_results_reported_native_resolution_no_downscaling": true,
+    "full_original_png_count": 8,
+    "auxiliary_derived_image_count": 2,
+    "numeric_or_OCR_only_substitution_used": false,
+    "parent_visual_observations_used_as_independent_evidence": false,
+    "image_capability_coverage_blocker": false,
+    "range_semantics": "先列 normalized_full_range，再列 original_pixel_range；均为实际工具完整图像读取，不是只看裁剪。",
+    "images": [
+      {"path": "raw/before-original/capture/main-find/repeat-1/capture.png", "tool": "functions.ReadMediaFile", "normalized_full_range": [0, 0, 1, 1], "original_pixel_range": [0, 0, 1536, 900], "actual_viewed": true, "observation": "实际看到 light 完整主窗口、平面侧栏、顶部展开查找条、正文/composer 及打开的右侧 inspector。查找输入、全部、无匹配与控件均在完整图内；这是 before 观察，不从它单独推断跨作业零差异。"},
+      {"path": "raw/after-original/capture/main-find/repeat-1/capture.png", "tool": "functions.ReadMediaFile", "normalized_full_range": [0, 0, 1, 1], "original_pixel_range": [0, 0, 1536, 900], "actual_viewed": true, "observation": "实际看到与 before 对应的完整 light 布局、相同查找/正文/inspector 内容，未见控件整体移位。1x 色阶差很微弱，不能据近似外观判 RGBA/字节相同；下述 3x 只辅助观察底色差，数量由原 PNG 实算。"},
+      {"path": "raw/before-original/capture/main-find-dark/repeat-1/capture.png", "tool": "functions.ReadMediaFile", "normalized_full_range": [0, 0, 1, 1], "original_pixel_range": [0, 0, 1536, 900], "actual_viewed": true, "observation": "实际看到 dark 完整主窗口与展开查找条；查找输入框、模式/范围、无匹配及关闭按钮在顶部，正文、右侧 diff 和底部 composer 同时在原图内。未以工具显示的外观推断材料/focus 根因。"},
+      {"path": "raw/after-original/capture/main-find-dark/repeat-1/capture.png", "tool": "functions.ReadMediaFile", "normalized_full_range": [0, 0, 1, 1], "original_pixel_range": [0, 0, 1536, 900], "actual_viewed": true, "observation": "实际看到对应 dark 全窗口；查找条底色色阶与 before 有细微差异，而主内容/按钮位置对应。查找条变化并非可直接归为辅助文字提亮；具体违规量及 alpha/隐藏 RGBA 的不变来自独立数值检验，不由目视代替。"},
+      {"path": "raw/before-original/capture/main-dark/repeat-1/capture.png", "tool": "functions.ReadMediaFile", "normalized_full_range": [0, 0, 1, 1], "original_pixel_range": [0, 0, 1536, 900], "actual_viewed": true, "observation": "实际看到不展开查找条的 dark 全窗口，工作过程/1 个工具、回复操作行 Recap、侧栏、inspector 和 composer 均完整进入视野；未作全应用文字逐字验收。"},
+      {"path": "raw/after-original/capture/main-dark/repeat-1/capture.png", "tool": "functions.ReadMediaFile", "normalized_full_range": [0, 0, 1, 1], "original_pixel_range": [0, 0, 1536, 900], "actual_viewed": true, "observation": "实际看到对应全窗口，主体布局与文字内容一致，辅助前景的色阶变化很小，未见整体布局漂移。局部颜色允许性由原 PNG/mask 实算认证；这对图不能抵销两个查找场景及 Workbench 必需变化 FAIL。"},
+      {"path": "raw/before-original/capture/workbench-dark/repeat-1/capture.png", "tool": "functions.ReadMediaFile", "normalized_full_range": [0, 0, 1, 1], "original_pixel_range": [0, 0, 1120, 820], "actual_viewed": true, "observation": "实际看到完整 Workbench dark 日常 fixture：顶部预览状态/任务组/机器筛选器、左侧导航、三张状态摘要和下方会话列表；本图不是首次使用或所有语言组合的人工验收。"},
+      {"path": "raw/after-original/capture/workbench-dark/repeat-1/capture.png", "tool": "functions.ReadMediaFile", "normalized_full_range": [0, 0, 1, 1], "original_pixel_range": [0, 0, 1120, 820], "actual_viewed": true, "observation": "实际看到同一完整日常 fixture，前后未见辅助前景提亮或布局/内容差异。严格 0 变化与字节完全相同由原 PNG 独立实算确认，不能以看起来稳定满足预写必需变化。"},
+      {"path": "docs/design/20x-style-rounds/round-7/visuals/main-find-3x.png", "tool": "functions.ReadMediaFile", "normalized_full_range": [0, 0, 1, 1], "original_pixel_range": [0, 0, 2952, 476], "actual_viewed": true, "observation": "实际看到带 BEFORE/AFTER 标记的两条完整 3x nearest 查找裁剪。上下底色有轻微差异，输入文字、全部、无匹配及按钮位置对应，没有把该观察放大误作新增机位或量化比较；本图不代替两张完整原 PNG。"},
+      {"path": "docs/design/20x-style-rounds/round-7/visuals/main-find-dark-3x.png", "tool": "functions.ReadMediaFile", "normalized_full_range": [0, 0, 1, 1], "original_pixel_range": [0, 0, 2952, 476], "actual_viewed": true, "observation": "实际看到 dark BEFORE/AFTER 两条完整 3x nearest 裁剪，after 底色色阶略暗/不同，输入框、全部、无匹配与关闭按钮仍位置对应。观察不确定 focus/材料/编译根因，不把在 mask 内等同颜色规则通过。"}
+    ],
+    "crop_provenance": {
+      "source": "docs/design/20x-style-rounds/round-7/visuals/crop-provenance.json",
+      "source_crop_normalized_xywh": [0.171875, 0.042222222222222223, 0.640625, 0.07333333333333333],
+      "source_crop_pixels_half_open": [264, 38, 1248, 104],
+      "scale": 3,
+      "resampling": "nearest",
+      "white_alpha_composition": true,
+      "each_entire_derived_image_dimensions": [2952, 476],
+      "before_panel_pixels_half_open": [0, 32, 2952, 230],
+      "after_panel_pixels_half_open": [0, 270, 2952, 468],
+      "original_source_and_derived_hashes_verified": true,
+      "both_panels_each_reconstructed_in_memory_and_pixel_equal": true,
+      "public_and_private_provenance_and_derived_PNG_bytes_equal": true,
+      "records": [
+        {"scene": "main-find", "before_sha256": "a06d11e2d07c0163edc37d12a9489b0dc2619f263a41ec55c4a18ece35a0ca4b", "after_sha256": "4ff33a50f17cb0db4640cd33192ac62c56f01b744e84d63736aec5ea55a53e04", "derived_sha256": "1307852c133a474a18cbc64d74d16fe589b1a671ac46675a131d745fe95460f0"},
+        {"scene": "main-find-dark", "before_sha256": "186556a8fdf45f94bdb18c2a31bd53acbc7f230c7e7166bfd802474e1e3e6db9", "after_sha256": "af14e8d84a71dba2bd8199eb4a987fa84dd481b240e2d34a0318272f5aaa047f", "derived_sha256": "b15efe2fb75368e48dbba6a1cba359fd6fc2c7d30aadd798f0ab92c19362926d"}
+      ],
+      "post_failure_observation_crop_changes_contract": false
+    },
+    "not_certified": "未人工逐字看完 136 PNG、全部语言/字号组合或所有普通 preview；不签全应用 18pt、全局 OS 明暗、真实连接/会话、审美或 compositor 光学/材料因果。"
+  },
+  "gates_and_stop_evidence": {
+    "capture_job_builds_verified_per_side": {"host": "exit0", "existing_Workbench_preview": "exit0", "existing_Sidebar_preview": "exit0", "existing_Composer_preview": "exit0"},
+    "build_basis": "原 wrapper、driver、各侧 manifest 的四条 build command 和相应 build logs；不运行它们，不扩认 production build。",
+    "Mac_full_gates": "NOT_RUN",
+    "Mac_production_build": "NOT_RUN",
+    "Mac_WorkbenchChecks": "NOT_RUN",
+    "Mac_radius": "NOT_RUN",
+    "Mac_localization": "NOT_RUN",
+    "Mac_five_cold_launches": "NOT_RUN",
+    "Mac_normal_non_capture_native_design": "NOT_RUN",
+    "round7_native_regression_original_PNGs": 0,
+    "prepared_gates_job_is_dispatch_or_PASS": false,
+    "Linux_prior_portable": {"checks": 10, "status": "passed", "process_exit": 0, "source_HEAD_during_run": "ec3372c8d81dd5844bbfc4bdf5d973be80ef2bb4", "dirty_during_run": true, "candidate_Theme_already_written_at_run": true, "Linux_Swift_or_WorkbenchChecks_executed_or_certified": false, "clean_candidate_or_restored_worktree_test_claimed": false, "rerun_by_review": false},
+    "stop_snapshot": {
+      "original_log": "raw/start-receipts/stop-observation-v1.log",
+      "public_log": "docs/design/20x-style-rounds/round-7/contracts/failure-and-stop-receipts/stop-observation-v1.log",
+      "original_and_public_bytes_equal": true,
+      "snapshot_at": "2026-11-19T18:22:07+08:00",
+      "original_observation_process_exit": 0,
+      "runner_pid": 69667,
+      "queued_jobs": 0,
+      "before_terminal_exit": 0,
+      "after_terminal_exit": 0,
+      "r7_gates_and_r8_before_absence_checked_by_original_observer": true,
+      "shared_Mac_HEAD": "5970638a64a73e352867ad8e5ffeca9341f9d66b",
+      "shared_Mac_porcelain_lines": 0,
+      "shared_Mac_clean_candidate_not_rolled_back": true,
+      "Mac_rollback_certified": false,
+      "live_remote_query_in_this_review": false,
+      "scope": "原已完成短观察的时间点事实，不证明所有未来时间无队列/作业；本线程源码恢复不等于 Mac 回滚。"
+    },
+    "frozen_raw_has_new_gates_or_native_design_evidence_directories": false,
+    "full_contract_continues_NOT_PASSED": true,
+    "INDEX_and_STOP_completed_rounds_remaining_14_and_withdrawn_R7_cross_checked": true
+  },
+  "honesty_and_publication_audits": {
+    "actual_readonly_disposition_check_completed_at": "2026-11-19T18:56:00+08:00",
+    "original_digit_receipts_verified": [
+      {"path": "raw/start-receipts/after-original-comparison-v1.receipt.json", "exit": 1, "finished_at": "2026-11-19T18:07:24+08:00", "original_sha256": "48558015b5d2b6cf504138cf48cbf2540c43709143bea9a87f17568edda87a49", "public_sha256": "93de6ec15092ec10839134391ce1b7d0869dac8472ae92c10a22c684ecf82e6c"},
+      {"path": "raw/start-receipts/after-publication-comparison-v1.receipt.json", "exit": 1, "finished_at": "2026-11-19T18:14:10+08:00", "original_and_public_sha256": "0f42b113644fed7ddeddc9e0a803d2b01073239225db10a96a6ea23a35d69bab"},
+      {"path": "raw/start-receipts/after-observation-v1.receipt.json", "exit": 0, "finished_at": "2026-11-19T18:01:20+08:00"},
+      {"path": "raw/start-receipts/after-observation-v2.receipt.json", "exit": 0, "finished_at": "2026-11-19T18:06:29+08:00"},
+      {"path": "raw/start-receipts/queued-publication-snapshot-v1.receipt.json", "exit": 1, "finished_at": "2026-11-19T18:03:42+08:00", "files": 449, "findings": 1},
+      {"path": "raw/start-receipts/queued-publication-snapshot-v2.receipt.json", "exit": 0, "finished_at": "2026-11-19T18:04:43+08:00", "files": 450, "findings": 0},
+      {"path": "raw/start-receipts/stop-observation-v1.receipt.json", "exit": 0, "finished_at": "2026-11-19T18:22:08+08:00", "original_and_public_sha256": "ab637dec7884a9dcb0e634ae0cb46dbad9ca15dae3ffa3665d154df73fc53e98"}
+    ],
+    "failure_receipt_original_and_public_file_hash_pairs_verified": 28,
+    "observer_v1_and_v2_and_negative_lines_preserved": true,
+    "publication_redaction": {
+      "private_original_and_retained_initial_public_sha256": "48aa53a96291ca556ff2cd3fed0809485cdc4e11944a6dd42431239cfbf78eea",
+      "current_explicit_redacted_public_sha256": "63df18661c2bcf24bc3cc55df505adafa9d7446f35f3d042ca625300f303c393",
+      "private_original_and_initial_public_bytes_equal": true,
+      "only_known_bot_email_argument_redacted_plus_explicit_note": true,
+      "independent_initial_email_pattern_count": 1,
+      "independent_current_redacted_receipt_pattern_count": 0,
+      "real_Git_footer_matches_private_original_command": true,
+      "real_Git_footer_UTF8_sha256": "93faa3877d62fbcbca7bb753975c37250568a1bbd4db292877d3fbefe3c99d2c",
+      "real_Git_show_commit_message_UTF8_sha256": "de72e9184d723cedb5edc0b5faa6163ec419711a34f6b5f7b857abb3dbae58b5",
+      "actual_commit_process_exit": 0,
+      "private_source_hashes_matching_initial_manifest": 20,
+      "public_old_hashes_matching_initial_manifest": 19,
+      "public_authorized_redaction_hashes_matching": 1,
+      "initial_manifest_or_negative_log_rewritten": false,
+      "real_email_written_into_this_public_JSON": false,
+      "scanner_or_exemptions_or_config_modified": false
+    },
+    "rollback_v1_negative_precision_retained_and_v2_limited_scope_verified": true,
+    "reviewer_own_readonly_diagnostic_attempts": [
+      {"attempt": 1, "process_exit": 1, "error": "KeyError: 'passed'", "cause": "本评审脚本误假定 portable 汇总字段为 passed；现场实际字段为 status。", "input_or_output_file_written": false, "classification": "reviewer schema assumption error, not product/GUI/portable failure"},
+      {"attempt": 2, "process_exit": 0, "summary_field_used": "status", "all_receipt_redaction_stop_and_portable_assertions_completed": true, "input_file_written": false, "original_failure_erased_or_relabeled_PASS": false}
+    ],
+    "actual_prewrite_pattern_scans": [
+      {"tool": "functions.Bash", "command_display": "GIT_OPTIONAL_LOCKS=0 python3 -B scripts/check-public-source.py --snapshot docs/design/20x-style-rounds/round-7", "files": 850, "findings": 0, "process_exit": 0},
+      {"tool": "functions.Bash", "command_display": "GIT_OPTIONAL_LOCKS=0 python3 -B scripts/check-public-source.py --snapshot docs/design/20x-style-loop", "files": 3, "findings": 0, "process_exit": 0},
+      {"tool": "functions.Bash", "command_display": "GIT_OPTIONAL_LOCKS=0 python3 -B scripts/check-public-source.py", "files": 8648, "findings": 0, "process_exit": 0, "mode": "current publication_paths; not --history"}
+    ],
+    "earlier_expanded_scan_receipt_retained": {"path": "raw/start-receipts/failure-expanded-snapshot-v1.log", "files": 849, "findings": 0, "scope": "seal 前更早的 expanded snapshot；不混作本次 850 文件扫描"},
+    "pattern_scan_boundary": "所有 0 findings 仅表示既有 scanner 模式无命中；不认证图片内容/隐私、未知凭据格式、真实 Git 身份历史、授权、所有权或许可。"
+  },
+  "historical_preservation_validation": {
+    "source": "docs/design/20x-style-rounds/round-7/contracts/historical-findings.json",
+    "source_sha256": "f9001f688c1b32587085eb06508ae1b1a3dd2abc86f3f3f8dd37a125d2304612",
+    "original_review_counts": [{"round": 2, "findings": 4}, {"round": 3, "findings": 5}, {"round": 4, "findings": 9}, {"round": 5, "findings": 1}, {"round": 6, "findings": 1}],
+    "original_finding_count": 20,
+    "all_original_source_file_hashes_match_manifest": true,
+    "all_original_finding_objects_and_verdicts_equal_current_source_reviews": true,
+    "original_source_bytes_equal_current_HEAD_and_parent": true,
+    "round2_original_verdict_unchanged": true,
+    "round4_original_verdict_FAIL_unchanged": true,
+    "round4_image_supplement_PASS_LIMITED_separate_and_unchanged": true,
+    "insertion_policy": "下方 historical_originals 嵌入已核验原 manifest 全文/完整对象，不摘要、不补改原 finding/status/verdict。其历史时点计数/未认证边界原样保留，不当成本轮计数。"
+  },
+  "input_protection": {
+    "seal": "docs/design/20x-style-rounds/round-7/contracts/review-input-seal-v1.json",
+    "explicit_payload_sha256": "9720e2be9e5e46a6da050d4f800ba0b96ad7d35305f249318f5c3240d0ed5867",
+    "protected_record_count": 11163,
+    "physical_index_sha256": "8cb0c296fe7a3e186db80263fb6d36ccb1e6bd5652e53217e511b21e8ad97db6",
+    "authorized_output": "docs/design/20x-style-rounds/round-7/review-7.json",
+    "entry": {"status": "passed", "actual_verify_at": "2026-11-19T18:44:35+08:00", "process_exit": 0, "hashes_modes_kinds_inventory_unchanged": true, "branch_HEAD_parent_status_and_physical_index_unchanged": true},
+    "before_write": {"status": "passed", "actual_verify_at": "2026-11-19T18:59:01+08:00", "process_exit": 0, "hashes_modes_kinds_inventory_unchanged": true, "branch_HEAD_parent_status_and_physical_index_unchanged": true},
+    "before_verbatim_history_insertion": {"status": "passed", "actual_verify_at": "2026-11-19T19:04:56+08:00", "process_exit": 0, "hashes_modes_kinds_inventory_unchanged": true, "branch_HEAD_parent_status_and_physical_index_unchanged": true},
+    "after_write": {"status": "passed", "actual_verify_at": "2026-11-19T19:04:56+08:00", "process_exit": 0, "hashes_modes_kinds_inventory_unchanged": true, "branch_HEAD_parent_status_and_physical_index_unchanged": true},
+    "final": {"status": "passed", "actual_verify_at": "2026-11-19T19:06:14+08:00", "process_exit": 0, "hashes_modes_kinds_inventory_unchanged": true, "branch_HEAD_parent_status_and_physical_index_unchanged": true, "checkpoint_after_full_content_write_and_actual_JSON_snapshot_validation": true, "recorded_before_result_only_update_of_seal_excluded_review": true},
+    "verification_command_display_redacted": "python3 -B raw/seal-review-inputs.py --action verify --workspace <workspace> --raw <raw> --seal docs/design/20x-style-rounds/round-7/contracts/review-input-seal-v1.json --seal-sha256 9720e2be9e5e46a6da050d4f800ba0b96ad7d35305f249318f5c3240d0ed5867",
+    "actual_execution": "functions.Bash 执行任务指定绝对路径命令，stdout 保存于本线程工具回执，未传 --output；所有 Python -B、Git GIT_OPTIONAL_LOCKS=0。",
+    "scope": "seal 自身由明确 payload hash 保护，所有 tracked/相关旧未跟踪资产/raw 的 hash/mode/kind/inventory 与 branch/HEAD/parent/status/物理 index 在本 seal 期保护。review 自身明确排除，只允许本文件新增。",
+    "recording_policy": "这里的写后/最终时间均来自已经实际完成的原 seal 校验，不冒充结果回填后的未来时间；最后仅回填授权 review 的结论后，再实际检查最终 JSON、snapshot scanner 与原 seal，最终工具 stdout 为末次回执。seal 不包含 review，不伪造自包含输出 hash 或预置未执行 PASS。",
+    "input_change_policy": "如任何输入变化立即停止写入并报告，不修 seal 或输入。"
+  },
+  "output_verification": {
+    "status": "passed",
+    "basis": "完整内容与历史原文写入后已实际完成 JSON 内容校验及 snapshot scanner，均 exit0；本 JSON 只回填这些既有结果，最终交付版本复验的回执采用同线程工具 stdout，不另写日志或预测未来验证时间。",
+    "strict_JSON": {"process_exit": 0, "duplicate_keys_or_nonfinite_constants": 0, "new_findings": 7, "retained_original_findings": 20, "historical_manifest_UTF8_bytes_embedded_verbatim": true, "all_original_objects_and_verdicts_equal": true, "original_round2_and_round4_verdicts_retained": true, "scene_metrics_checked": 34, "required_actual_image_records_checked": 10},
+    "snapshot_scan": {"tool": "functions.Bash", "command_display": "GIT_OPTIONAL_LOCKS=0 python3 -B scripts/check-public-source.py --snapshot docs/design/20x-style-rounds/round-7", "publication_files": 851, "findings": 0, "process_exit": 0, "scope": "pattern check only; no image privacy/unknown credential/license certification"},
+    "only_authorized_new_path": "docs/design/20x-style-rounds/round-7/review-7.json",
+    "no_additional_report_log_temp_or_generated_image_written": true
+  },
+  "historical_originals": {
+  "schema_version": 1,
+  "purpose": "Retain all original round2/3/4/5/6 finding objects and original verdicts verbatim; no new aesthetic or historical adjudication.",
+  "original_finding_count": 20,
+  "original_reviews": [
+    {
+      "round": 2,
+      "source": "docs/design/20x-style-rounds/round-2/review-2.json",
+      "source_sha256": "ea03a9d7caebe0726ffa071fe04e9be607297486efed02c6d7ac70dc592803db",
+      "verdict": {
+        "rollback_and_stop": "PASS_LIMITED",
+        "candidate_visual": "FAIL",
+        "complete_contract": "NOT_PASSED",
+        "S02_delivery": "WITHDRAWN",
+        "aesthetic_judgment": "NOT_PERFORMED",
+        "iteration_resumption": "NOT_AUTHORIZED",
+        "round_counted_complete": false,
+        "remaining_rounds_to_report": 18,
+        "statement": "可以确认本地可核对范围内的回滚与停止处置合规；本轮视觉契约失败，完整契约仍未通过，S02 不再交付。处置 PASS 不等于视觉 PASS，不增加完成轮数，不恢复 S03 或其他审美迭代。"
+      },
+      "original_finding_count": 4,
+      "findings": [
+        {
+          "id": "S02-F01",
+          "severity": "P1",
+          "severity_scope": "撤回候选的视觉契约与交付阻断，不是回滚处置不合规",
+          "status": "CONFIRMED_CANDIDATE_FAILURE_RETAINED",
+          "original_text": "- 三个既有 preview 全部逐像素不变；不新增 preview 或验收页面。",
+          "finding": "composer-dark 的 before/after 在相同已记录机位、fixture、语言、字号和有效外观下有 376604 个可见变化像素，全部属于不允许变化的 preview，bbox 为 [0,0,760,500)。独立零容差白底合成重算与归档比较一致。11 个 inspector 场景受控、单侧双跑稳定、构建和 portable 通过都不能抵消这一契约失败；本轮视觉 FAIL、交付不可接受。",
+          "evidence": [
+            "docs/design/20x-style-rounds/round-2/expected-differences.md:18-28",
+            "docs/design/20x-style-rounds/round-2/visual-comparison.json:10-33",
+            "docs/design/20x-style-rounds/round-2/before/composer-dark/repeat-1/capture.png",
+            "docs/design/20x-style-rounds/round-2/after/composer-dark/repeat-1/capture.png",
+            "docs/design/20x-style-rounds/round-2/before/composer-dark/repeat-1/window.json",
+            "docs/design/20x-style-rounds/round-2/after/composer-dark/repeat-1/window.json",
+            "docs/design/20x-style-rounds/round-2/README.md:68-84"
+          ],
+          "disposition_recommendation": "维持已执行的 spacing 回滚和停止规则②，保留失败及撤回 after，不交付 S02、不计完成、不启动 S03。不得扩大允许区、忽略 1–2 级 RGB 差异或挑选替代截图。窗口 tint 仅是未认证假设，不把墙纸或系统状态写成已证明因果。"
+        },
+        {
+          "id": "S02-F02",
+          "severity": "P2",
+          "severity_scope": "Mac gates 整体失败与正常外观运行覆盖缺口",
+          "status": "CONFIRMED_CONTRACT_NOT_PASSED",
+          "original_text": "assert result[\"revision\"] == sys.argv[2]",
+          "finding": "gates-v1 将 PerchSourceRevision 的 git describe 字符串 v0.8.1-283-g92b718d5 与完整候选 SHA 比较。5/5 冷启动已完成且第一条 passed/数量断言成立，随后这条身份格式断言必然失败，原作业 exit 1；正常 native-design 调用位于该断言之后，未执行。不能把已完成子步骤包装为整体 gates PASS，也不能背书系统外观跟随、Settings 覆盖的本轮正常运行验收。",
+          "evidence": [
+            "docs/design/20x-style-rounds/round-2/contracts/style-r2-gates-v1.job:30-48",
+            "docs/design/20x-style-rounds/round-2/contracts/mac-gates/style-r2-gates-v1.log:7-13",
+            "docs/design/20x-style-rounds/round-2/contracts/mac-gates/app-launch/result.json",
+            "docs/design/20x-style-rounds/round-2/contracts/mac-gates/app-launch.log",
+            "scripts/build.sh:69-78",
+            "Tests/HostLifecycleChecks/NativeDesignChecks.swift:457-480"
+          ],
+          "disposition_recommendation": "保留 gates exit 1 与 native-design 未执行，维持完整契约 NOT_PASSED。Git full SHA 和 bundle describe stamp 分开记录；本轮不修改测量/CI、不补跑或重跑。后续任何基础链路处置须另获用户指示，不能由本评审恢复审美轮。"
+        },
+        {
+          "id": "S02-F03",
+          "severity": "P2",
+          "severity_scope": "已处置的历史作业调用错误，非产品编译失败",
+          "status": "RESOLVED_BY_RECORDED_BEFORE_V2",
+          "original_text": "check-host-lifecycle.py: error: --build-only requires a new --app path and no --phase",
+          "finding": "before-v1 的 --build-host 间接调用 --build-only，却复用既有默认 host app 路径，正确触发 CLI 拒绝。内层参数校验 exit 2、外层作业 exit 1，manifest comparisons 为空，0 张有效截图。before-v2 改用新的作业隔离 app 路径并显式使用 canonical Node helper，取得 22 场景双跑成功；旧失败未被抹除。",
+          "evidence": [
+            "docs/design/20x-style-rounds/round-2/contracts/before-v1/capture/logs/build-host.log:1-8",
+            "docs/design/20x-style-rounds/round-2/contracts/before-v1/capture/manifest.json",
+            "docs/design/20x-style-rounds/round-2/contracts/before-v1/style-r2-before-v1.log:18-37",
+            "docs/design/20x-style-rounds/round-2/contracts/style-r2-before-v2.job:18-29",
+            "docs/design/20x-style-rounds/round-2/contracts/mac-before/style-r2-before-v2.log",
+            "docs/design/20x-style-rounds/round-2/before/manifest.json:315-327"
+          ],
+          "disposition_recommendation": "维持当前如实归类：CLI 调用契约失败而非产品编译、截图漂移或 runner 会话失效。保留 v1、旧 app 与 v2；不删除旧产物绕过参数契约，不重派完成作业，不操作权限或服务。"
+        },
+        {
+          "id": "S02-F04",
+          "severity": "P3",
+          "severity_scope": "发布说明的三秒时间记录不一致，不改变视觉失败或回滚判定",
+          "status": "DOCUMENTATION_DISCREPANCY_REPORTED_ONLY",
+          "original_text": "- `style-r2-before-v2`：2026-11-18 16:42:06 至 16:48:54（+08:00），exit 0；porcelain 前后均为 0。",
+          "finding": "README 的 before-v2 起始时间为 16:42:06，而发布的原作业日志首行是 start=2026-11-18T16:42:03+08:00，相差三秒。结束时间、代码头、清单 hash、比较数量和 exit 均吻合。本评审采用日志的 16:42:03 作为记录起点，不把说明与原记录声称为完全一致，也不将这项小差异误作额外取证结论。",
+          "evidence": [
+            "docs/design/20x-style-rounds/round-2/README.md:33",
+            "docs/design/20x-style-rounds/round-2/contracts/mac-before/style-r2-before-v2.log:1-19"
+          ],
+          "disposition_recommendation": "只记录差异。若父代理随后统一发布说明，应明确区分日志起点与其他开始时点，并保留原日志；本代理不修改 README、日志、diff 或行尾空格。无需为此重跑截图或构建。"
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "source": "docs/design/20x-style-rounds/round-3/review-3.json",
+      "source_sha256": "272cc7215e163faad8752dba52e478e269d9a09e66b6099284b7128bf3139ff4",
+      "verdict": "PASS_LIMITED",
+      "original_finding_count": 5,
+      "findings": [
+        {
+          "id": "I01-R3-F01",
+          "severity": "P3",
+          "category": "retained_certification_boundary",
+          "new_regression": false,
+          "blocking": false,
+          "finding_verbatim": "Linux portable 是实际候选的 10/10 通过且 dirty=true；Linux WorkbenchChecks 没有实际运行，保留日志仅为 swift: command not found。127 是既有前置失败记录，不是 WorkbenchChecks 测试结果，该单行日志也没有独立数字退出码行。本评审未在 Linux 重跑或把它改写为 PASS。",
+          "evidence": [
+            "docs/design/20x-style-rounds/round-3/contracts/linux-portable/results.json:5-6,141",
+            "docs/design/20x-style-rounds/round-3/contracts/linux-workbench-prerequisite.log:1",
+            "docs/design/20x-style-rounds/round-3/README.md:83-85"
+          ],
+          "required_disposition": "继续分列 Linux portable PASS、Linux WorkbenchChecks 前置失败/未执行与 Mac WorkbenchChecks 实际 PASS；不得用 portable 或 Mac 结果冒充 Linux Swift 执行。"
+        },
+        {
+          "id": "I01-R3-F02",
+          "severity": "P3",
+          "category": "retained_certification_boundary",
+          "new_regression": false,
+          "blocking": false,
+          "finding_verbatim": "A/B 像素与 PNG 字节相同只认证这两个独立作业的捕获可比性，不能证明历史壁纸/tint 因果或所有未来环境稳定。系统全局明暗没有切换补测；源码 .system 返回 nil、普通路径不加背景及正常 native-design 的显式 light/dark PASS 是已核对范围，不是所有普通 preview 的完整人工交互验收或审美批准。",
+          "evidence": [
+            "Sources/AgentWorkbench/WorkbenchTheme.swift:323-328",
+            "Sources/AgentWorkbench/WorkbenchApp.swift:11-21",
+            "Tests/HostLifecycleChecks/StyleCapture.swift:4-17",
+            "Tests/HostLifecycleChecks/NativeDesignChecks.swift:475-494",
+            "docs/design/20x-style-rounds/round-3/contracts/regression-observations.md:18-21"
+          ],
+          "required_disposition": "保留历史因果、系统全局切换与普通 preview 完整人工交互未认证的限制；仅对本轮源码不变策略、已执行正常路径和这些矩阵背书，不扩大成全产品或美学结论。"
+        },
+        {
+          "id": "I01-R3-F03",
+          "severity": "P3",
+          "category": "retained_historical_boundary",
+          "new_regression": false,
+          "blocking": false,
+          "finding_verbatim": "S02 inspector 标题与 S03 Workbench preview 筛选器的既有截断仍在队列。I01 只证明本轮声明外没有新增像素改变，不能宣称全产品已经没有截断或重叠。round 2 仍是候选撤回、视觉 FAIL、完整契约 NOT_PASSED；本轮修复与限定评审不能改判该历史结果。",
+          "evidence": [
+            "docs/design/20x-style-loop/INDEX.md:12-18,27-30,46-47",
+            "docs/design/20x-style-rounds/round-2/README.md:5-8,71-87,104-145",
+            "docs/design/20x-style-rounds/round-3/contracts/regression-observations.md:9,22-23"
+          ],
+          "required_disposition": "保持 S02/S03 未解决和 round 2 原判；评审文件不是同轮归档，round 3 目前不计完成，距汇报仍 18 轮，不开启 S02 或继续审美迭代。"
+        },
+        {
+          "id": "I01-R3-F04",
+          "severity": "P3",
+          "category": "retained_build_boundary",
+          "new_regression": false,
+          "blocking": false,
+          "finding_verbatim": "after-A/B 的完整源码头相同且 22 场景所有重复组合的原 PNG 字节相同，但原作业记录的 host 可执行文件 SHA256 不同。已核对原日志与发布日志的这些记录；本评审没有可执行文件原件来重新计算其 hash，截图稳定不能推出二进制一致或可重复构建。",
+          "evidence": [
+            "docs/design/20x-style-rounds/round-3/contracts/mac-after-a/job.log:9,17",
+            "docs/design/20x-style-rounds/round-3/contracts/mac-after-b/job.log:7,15",
+            "docs/design/20x-style-rounds/round-3/contracts/cross-job-png-integrity.json"
+          ],
+          "logged_after_a_host_sha256": "5028ce9eeac6625c93b2f7442228bc0578449e91b68e454886c6875fb587cfb2",
+          "logged_after_b_host_sha256": "113545f605c0189c16d5400a4c5233a5d90968d6e206ff753336a37b2d528128",
+          "required_disposition": "保留不同的二进制 hash 为原日志值，源码头、bundle describe stamp、截图与二进制记录分开陈述；不宣称可重复构建，也不为此重派已完成作业。"
+        },
+        {
+          "id": "I01-R3-F05",
+          "severity": "P3",
+          "category": "first_write_attestation_limit",
+          "new_regression": false,
+          "blocking": false,
+          "finding_verbatim": "预写差异清单 hash 在 before 原作业的捕获结果之前已有记录，三个 Mac 副本与本地原文逐字节一致，允许区 hash 与 after 副本也一致。现有只读材料可验证声明、冻结内容及作业条件，但没有清单/允许区首次文件写入的独立操作日志；不能编造首次写入时刻或证明封存之前从未发生任何改写。",
+          "evidence": [
+            "docs/design/20x-style-rounds/round-3/contracts/mac-before/job.log:11-18",
+            "docs/design/20x-style-rounds/round-3/expected-differences.md:3",
+            "docs/design/20x-style-rounds/round-3/contracts/style-r3-after-b-v1.job:35-40",
+            "docs/design/20x-style-rounds/round-3/contracts/review-input-sha256.json:2-5"
+          ],
+          "required_disposition": "保留原 hash 和既有时序声明，将首次实际写入时序注明为非独立认证；不得补造操作时间、运行证据，或用文件 mtime/Git 提交时间顶替首次写入日志。"
+        }
+      ]
+    },
+    {
+      "round": 4,
+      "source": "docs/design/20x-style-rounds/round-4/review-4.json",
+      "source_sha256": "91f8ff0b5e89c86f4793abe0c32e02d40f2446bb334ab5d7a25d123d85be261c",
+      "verdict": "FAIL",
+      "original_finding_count": 9,
+      "findings": [
+        {
+          "id": "S02-R4-F01",
+          "severity": "P2",
+          "category": "required_independent_visual_review_missing",
+          "blocking": true,
+          "new_product_regression": false,
+          "original_text": [
+            {
+              "path": "docs/design/20x-style-rounds/round-4/contracts/visual-validation.md",
+              "line": 27,
+              "text": "四个英文组合均从`Current workspac…`恢复为完整`Current workspace diff`，`2 files`完整、无重叠；四个中文组合的标题和`2 个文件`仍完整。"
+            }
+          ],
+          "required_review_text": "目视8组3x nearest header前后对与两张全窗口对，验证来源/crop/provenance准确；四个English组合须完整 Current workspace diff 和 2 files，无重叠；Chinese仍完整。",
+          "finding_verbatim": "当前评审模型缺少 image_in，图片读取明确被能力限制拒绝；八组 header 和两张全窗口对的独立目视没有执行。原 PNG、像素、来源与预写区域已全部独立核验，但这些结果、源码字符串及父代理的既有目视说明都不能替代本次必需的独立 rendered-text 完整性与无重叠认证。完整独立复核因此 FAIL；这是评审覆盖阻断，不是已观察到产品标题失败，不推翻实际像素或 Mac gates PASS。",
+          "evidence": [
+            "docs/design/20x-style-rounds/round-4/comparison/headers-before-after.png",
+            "docs/design/20x-style-rounds/round-4/comparison/main-english-full-before-after.png",
+            "docs/design/20x-style-rounds/round-4/comparison/main-english-dark-full-before-after.png",
+            "docs/design/20x-style-rounds/round-4/contracts/visual-validation.md:25-30",
+            "Current Read tool error: missing image_in capability"
+          ],
+          "reviewer_disposition": "REPORTED_ONLY_NO_ACTION; no model switch, delegate, GUI, new screenshot, rollback or product edit. This JSON is not a complete S02 acceptance; any decision to accept a smaller reviewed scope remains the user's."
+        },
+        {
+          "id": "S02-R4-F02",
+          "severity": "P3",
+          "category": "documentation_preview_scene_classification",
+          "blocking": false,
+          "new_product_regression": false,
+          "original_text": [
+            {
+              "path": "docs/design/20x-style-rounds/round-4/README.md",
+              "line": 40,
+              "text": "八个preview场景全部零差异，S03截断仍留队列。"
+            },
+            {
+              "path": "docs/design/20x-style-rounds/round-4/contracts/visual-validation.md",
+              "line": 20,
+              "text": "其余11场景（含三个既有preview的8场景）"
+            },
+            {
+              "path": "docs/design/20x-style-rounds/round-4/contracts/regression-observations.md",
+              "line": 16,
+              "text": "三个既有preview共八场景，总计22场景、各双跑。"
+            }
+          ],
+          "finding_verbatim": "独立按现有 driver、wrapper、实际 manifest 和全部原 PNG 枚举为 main 13、Workbench 4、Sidebar 3、Composer 2，共22场景；preview 实际是常规8场景加 workbench-empty-light 1场景，共9。说明写为8而未明确另列该既有 preview 空态，回归文句的总数分类少算1。实际88原 PNG没有缺场景、重复冒充覆盖或允许区扩面，所有9个preview场景均零差异；这是说明分类不一致，不是视觉阻断。",
+          "evidence": [
+            "scripts/capture-style-loop.py:217-230",
+            "docs/design/20x-style-rounds/round-4/before/manifest.json",
+            "docs/design/20x-style-rounds/round-4/after/manifest.json",
+            "docs/design/20x-style-rounds/round-4/before/workbench-empty-light/repeat-1/capture.png",
+            "docs/design/20x-style-rounds/round-4/after/workbench-empty-light/repeat-2/capture.png"
+          ],
+          "reviewer_disposition": "REPORTED_ONLY_NO_DOCUMENT_EDIT; distinguish regular eight plus existing empty-state one when interpreting coverage."
+        },
+        {
+          "id": "S02-R4-F03",
+          "severity": "P3",
+          "category": "documentation_stale_gate_status",
+          "blocking": false,
+          "new_product_regression": false,
+          "original_text": [
+            {
+              "path": "docs/design/20x-style-rounds/round-4/contracts/visual-validation.md",
+              "line": 32,
+              "text": "视觉通过不等于尚未完成的Mac gates或独立评审通过；本轮仍未计完成。"
+            }
+          ],
+          "finding_verbatim": "visual-validation.md 末段仍称 Mac gates 尚未完成，而 style-r4-gates-v1 实际21:54:34终结、有.done、末行exit=0，生产build、WorkbenchChecks、5/5冷启动和正常native-design真实执行通过。该过时措辞与同轮 README、回归结果和原日志不一致；应采用实际终结证据，不据此把 Mac gates 写为 NOT_RUN，也不把 gate PASS当成尚缺目视的独立复核 PASS。本轮未计完成的状态保持正确。",
+          "evidence": [
+            "docs/design/20x-style-rounds/round-4/contracts/visual-validation.md:32",
+            "docs/design/20x-style-rounds/round-4/contracts/mac-gates/job.log:10-16",
+            "docs/design/20x-style-rounds/round-4/contracts/mac-gates/job.done",
+            "docs/design/20x-style-rounds/round-4/README.md:45-49",
+            "docs/design/20x-style-rounds/round-4/contracts/regression-observations.md:26-29"
+          ],
+          "reviewer_disposition": "REPORTED_ONLY_NO_DOCUMENT_EDIT; preserve actual gate PASS and incomplete round/review as separate states."
+        },
+        {
+          "id": "S02-R4-F04",
+          "severity": "P3",
+          "category": "retained_type_width_count_boundary",
+          "blocking": false,
+          "new_product_regression": false,
+          "original_text": [
+            {
+              "path": "docs/design/20x-style-rounds/round-4/contracts/regression-observations.md",
+              "line": 17,
+              "text": "标题仍为固定14pt、计数固定12pt，不声称整个应用字体都放大到18pt或任意字号/inspector宽度均不截断。"
+            }
+          ],
+          "finding_verbatim": "放大主窗口 fixture 的 .xxxLarge 声明和正文18pt路径均核对，但 header 标题固定14pt、计数固定12pt、外层字体14pt。默认/放大同语言外观的 header 裁剪像素相同符合该固定字号契约，不认证全应用18pt、任意 Dynamic Type、inspector 宽度或更多文件计数。3x nearest 是观察放大，不是3x backing-scale运行；实际机位为1536x900、scale1。",
+          "evidence": [
+            "Tests/HostLifecycleChecks/StyleCapture.swift:13-18",
+            "Tests/HostLifecycleChecks/NativeDesignChecks.swift:470-473",
+            "Sources/AgentWorkbench/WorkbenchTheme.swift:140-146",
+            "Sources/AgentWorkbench/WorkspaceInspector.swift:203-221",
+            "docs/design/20x-style-rounds/round-4/comparison/provenance.json"
+          ],
+          "reviewer_disposition": "REPORTED_ONLY_RETAIN_SCOPE; do not expand typography, width, count or backing-scale certification."
+        },
+        {
+          "id": "S02-R4-F05",
+          "severity": "P3",
+          "category": "retained_appearance_native_cache_and_runtime_boundary",
+          "blocking": false,
+          "new_product_regression": false,
+          "original_text": [
+            {
+              "path": "docs/design/20x-style-rounds/round-4/contracts/regression-observations.md",
+              "line": 10,
+              "text": "该源码证据不能替代操作系统全局明暗切换的运行认证。"
+            },
+            {
+              "path": "docs/design/20x-style-rounds/round-4/contracts/mac-gates/native-design/native-layout.json",
+              "line": 84,
+              "text": "native window geometry; view-cache PNGs exclude composited Liquid Glass, *-composited-*.png include it"
+            }
+          ],
+          "finding_verbatim": "系统外观策略和 Settings 覆盖源码零diff；正常非捕获态 native-design 真实运行27.70秒并执行显式 app light/dark preconditions。未做全局 OS 明暗切换，不认证所有普通 preview 人工交互。其12张原图为 view-cache PNG，布局 scope明确排除窗口服务器合成 Liquid Glass，不能当成完整 compositor 光学验收。全部运行是离线合成 runtime，不是实际 SSH、真实 Agent、用户会话、权限或性能认证；已裁决玻璃/sidebar/inspector方向不重开。",
+          "evidence": [
+            "Sources/AgentWorkbench/WorkbenchApp.swift:11-21",
+            "Sources/AgentWorkbench/WorkbenchTheme.swift:323-328",
+            "Tests/HostLifecycleChecks/NativeDesignChecks.swift:427-494",
+            "docs/design/20x-style-rounds/round-4/contracts/style-r4-gates-v1.job:9-63",
+            "docs/design/20x-style-rounds/round-4/contracts/mac-gates/native-design.log:8-16",
+            "docs/design/20x-style-rounds/round-4/contracts/mac-gates/native-design/native-layout.json:84"
+          ],
+          "reviewer_disposition": "REPORTED_ONLY_RETAIN_SCOPE; explicit app appearance execution is not a global OS-following or aesthetics certificate."
+        },
+        {
+          "id": "S02-R4-F06",
+          "severity": "P3",
+          "category": "retained_Linux_precommit_provenance_and_Swift_boundary",
+          "blocking": false,
+          "new_product_regression": false,
+          "original_text": [
+            {
+              "path": "docs/design/20x-style-rounds/round-4/contracts/linux-portable/results.json",
+              "line": 5,
+              "text": "\"commit\": \"aad604b9ce5294b52951f189b3895b69edd12f31\""
+            },
+            {
+              "path": "docs/design/20x-style-rounds/round-4/contracts/linux-portable/results.json",
+              "line": 6,
+              "text": "\"dirty\": true"
+            },
+            {
+              "path": "docs/design/20x-style-rounds/round-4/contracts/archive-validation.json",
+              "line": 19,
+              "text": "Executed before candidate commit, HEAD is the baseline and dirty is true; source-scope.json records the exact one-line source hash."
+            }
+          ],
+          "finding_verbatim": "Linux portable 10/10、codex-schema36方法有实际日志；运行在候选单行写入后、commit前，日志身份仍baseline aad604b9且dirty=true，不是clean 4b647966测试。source-scope候选hash f7009912…与当前源码及候选提交中保留的该产物吻合；不由dirty布尔值重建当时全部文件清单。Linux没有Swift，WorkbenchChecks未运行；实际认证来自新Mac gates，不能用portable或Mac结果冒充Linux Swift执行。",
+          "evidence": [
+            "docs/design/20x-style-rounds/round-4/contracts/linux-portable/results.json:5-6",
+            "docs/design/20x-style-rounds/round-4/contracts/linux-portable/codex-schema.log:39",
+            "docs/design/20x-style-rounds/round-4/contracts/source-scope.json:2-10",
+            "docs/design/20x-style-rounds/round-4/contracts/archive-validation.json:18-22",
+            "docs/design/20x-style-rounds/round-4/contracts/mac-gates/workbench-checks.log:123"
+          ],
+          "reviewer_disposition": "REPORTED_ONLY_RETAIN_SCOPE; separate baseline/dirty Linux portable PASS, Linux WorkbenchChecks NOT_RUN and actual Mac WorkbenchChecks PASS."
+        },
+        {
+          "id": "S02-R4-F07",
+          "severity": "P3",
+          "category": "retained_postprocess_failure_not_capture_failure",
+          "blocking": false,
+          "new_product_regression": false,
+          "original_text": [
+            {
+              "path": "docs/design/20x-style-rounds/round-4/contracts/postprocess-observation.json",
+              "line": 3,
+              "text": "\"initial_aggregate_exit\": 1"
+            },
+            {
+              "path": "docs/design/20x-style-rounds/round-4/contracts/postprocess-observation.json",
+              "line": 4,
+              "text": "incorrectly required all manifest commands to exit 0 after successful compare, render and archive"
+            }
+          ],
+          "finding_verbatim": "后处理初次aggregate exit1及错误断言保留；实际每矩阵92命令为4build+44screencapture共48个exit0，以及44个ready/截图后由既有driver主动SIGTERM的持久fixture，记录-15。原manifest、driver和截图不改、不重跑。该诊断是错误要求fixture也exit0，不是capture FAIL或正常native-design退出失败。初始完整postprocess traceback未出现在本次读取的日志输入中，初始错误回执按postprocess-observation保留；退出分类及因果已独立核对原manifest和driver。",
+          "evidence": [
+            "docs/design/20x-style-rounds/round-4/contracts/postprocess-observation.json:3-14",
+            "scripts/capture-style-loop.py:186-194",
+            "docs/design/20x-style-rounds/round-4/before/manifest.json",
+            "docs/design/20x-style-rounds/round-4/after/manifest.json",
+            "docs/design/20x-style-rounds/round-4/contracts/mac-gates/native-design.log:14-16"
+          ],
+          "reviewer_disposition": "REPORTED_ONLY_RETAIN_NEGATIVE_RECORD; never relabel all92 exits as0, edit manifests or confuse capture teardown with native-design runtime gates."
+        },
+        {
+          "id": "S02-R4-F08",
+          "severity": "P3",
+          "category": "retained_publication_and_whitespace_negative_receipts",
+          "blocking": false,
+          "new_product_regression": false,
+          "original_text": [
+            {
+              "path": "docs/design/20x-style-rounds/round-4/contracts/public-source-candidate.log",
+              "line": 12,
+              "text": "Checked 5942 publication files; 11 finding(s). Matched values are never printed."
+            },
+            {
+              "path": "docs/design/20x-style-rounds/round-4/contracts/archive-validation.json",
+              "line": 4,
+              "text": "\"initial_staged_whitespace_exit\": 2"
+            },
+            {
+              "path": "docs/design/20x-style-rounds/round-4/contracts/review-archive-whitespace.log",
+              "line": 1,
+              "text": "Publication diagnostic summary; original complete diagnostic output is retained externally."
+            }
+          ],
+          "finding_verbatim": "初次publication11个personal-path findings来自两份portable文本：bridge.log1个、results.json10个；本次对外部原件实算逐条与负回执吻合。发布副本只替换HOME前缀后为0，负回执和原件保留，不能抹成初次PASS。原编译日志/diff尾随空格保留；分阶段3+2正好五个原证据路径排除，其余authored/staged whitespace实际通过，完整未排除检查仍exit2。发布的负诊断摘要仅省去两行重复编译上下文，完整外部诊断核对保留。模式0 findings不认证图片隐私、未知凭据、授权或许可；历史5942全仓库扫描没有由本代理重跑。",
+          "evidence": [
+            "docs/design/20x-style-rounds/round-4/contracts/public-source-candidate.log:1-13",
+            "docs/design/20x-style-rounds/round-4/contracts/linux-portable/archive-summary.json",
+            "docs/design/20x-style-rounds/round-4/contracts/archive-validation.json:4-21",
+            "docs/design/20x-style-rounds/round-4/contracts/review-archive-whitespace.log:1-3",
+            "docs/design/20x-style-rounds/round-4/before/logs/build-host.log:67",
+            "docs/design/20x-style-rounds/round-4/before/logs/build-sidebar.log:43",
+            "docs/design/20x-style-rounds/round-4/contracts/source-change.diff:7",
+            "docs/design/20x-style-rounds/round-4/after/logs/build-host.log:67",
+            "docs/design/20x-style-rounds/round-4/contracts/mac-gates/build.log:43"
+          ],
+          "reviewer_disposition": "REPORTED_ONLY_RETAIN_NEGATIVE_RECORDS_AND_ORIGINAL_BYTES; no evidence cleanup, broader exclusions or privacy overclaim."
+        },
+        {
+          "id": "S02-R4-F09",
+          "severity": "P3",
+          "category": "retained_history_S03_and_loop_accounting_boundary",
+          "blocking": false,
+          "new_product_regression": false,
+          "original_text": [
+            {
+              "path": "docs/design/20x-style-rounds/round-4/contracts/regression-observations.md",
+              "line": 19,
+              "text": "S03的英文Workbench筛选器既有`All…`属于下一队列项，不把S02成功外推为全产品没有截断。"
+            },
+            {
+              "path": "docs/design/20x-style-loop/INDEX.md",
+              "line": 18,
+              "text": "距上次用户汇报还剩 **17 轮**"
+            }
+          ],
+          "finding_verbatim": "Workbench-english原PNG及其他清单外场景与before字节/像素相同；S03筛选器既有截断仍留队列，本次未独立目视其文字，也不宣布全产品无截断。round2维持撤回、视觉FAIL、完整契约NOT_PASSED，不复活候选或改历史评审；round3已完成并归档aad604b9，其旧五项边界及真实测试头025dc61c保持。round4尚未计完成，真实测试/当前HEAD仍4b647966，距汇报17，不把待amend本地证据覆盖层说成parent checkout clean或已重新测试归档头。",
+          "evidence": [
+            "docs/design/20x-style-loop/INDEX.md:10-19",
+            "docs/design/20x-style-loop/INDEX.md:30-31",
+            "docs/design/20x-style-loop/INDEX.md:47-49",
+            "docs/design/20x-style-rounds/round-2/review-2.json:3-12",
+            "docs/design/20x-style-rounds/round-3/README.md:98-103",
+            "docs/design/20x-style-rounds/round-3/review-3.json:378-430",
+            "docs/design/20x-style-rounds/round-4/README.md:45-49"
+          ],
+          "reviewer_disposition": "REPORTED_ONLY_NO_HISTORY_INDEX_GOAL_OR_COUNTER_CHANGE; no continuation or finding disposal authorized by this review."
+        }
+      ]
+    },
+    {
+      "round": 5,
+      "source": "docs/design/20x-style-rounds/round-5/review-5.json",
+      "source_sha256": "281f695742acc952a223968c3dda85498c426505c7ca84fb71290bcaa47a52e0",
+      "verdict": "PASS_LIMITED",
+      "original_finding_count": 1,
+      "findings": [
+        {
+          "id": "S03-R5-F01",
+          "severity": "P3",
+          "category": "negative_receipt_numeric_exit_attestation_limit",
+          "blocking": false,
+          "new_product_regression": false,
+          "status": "REPORTED_ONLY_NOT_DISPOSED",
+          "finding_verbatim": "首push的原日志保留TLS断连、unexpected disconnect和误导的Everything up-to-date尾句，但没有原process数字退出码行；exit1在本轮README:33与任务锚点中有记录，不能表述为本评审从push-initial.log独立读出的数字回执。远端失败后仍baseline、相同候选SHA正常重推及精确远端记录均已核对，故不把首推包装为PASS。这是负回执的退出码取证精度边界，不是产品、视觉或Mac gate失败；本评审不重推、不读取或改动TLS、credentials、hooks或permissions配置来补证。",
+          "finding_utf8_sha256": "baec479a0bb8d36191ae56714812c4121e5eb9fcd293d4e2adfdbadedd00332a",
+          "original_text": [
+            {
+              "path": "docs/design/20x-style-rounds/round-5/README.md",
+              "line": 33,
+              "text": "- 一个conventional候选头`0b05897bad0dfaa22aef446422bbd3a5c31f92ea`已提交。首次push发生真实TLS断连、exit1，不采信其`Everything up-to-date`尾句；短查询确认远端仍baseline，随后同一SHA正常显式重推成功，11:19:29精确核验远端，Mac独立查询也一致。hook／scanner／TLS／credentials／权限配置均未改，原失败与成功日志保留在[candidate publication](contracts/candidate-publication/)。"
+            },
+            {
+              "path": "docs/design/20x-style-rounds/round-5/contracts/candidate-publication/push-initial.log",
+              "line": 2,
+              "text": "error: RPC failed; curl 35 OpenSSL SSL_connect: SSL_ERROR_SYSCALL in connection to github.com:443 "
+            },
+            {
+              "path": "docs/design/20x-style-rounds/round-5/contracts/candidate-publication/push-initial.log",
+              "line": 5,
+              "text": "Everything up-to-date"
+            }
+          ],
+          "sources": [
+            "docs/design/20x-style-rounds/round-5/contracts/candidate-publication/push-initial.log",
+            "docs/design/20x-style-rounds/round-5/contracts/candidate-publication/remote-after-error.txt",
+            "docs/design/20x-style-rounds/round-5/contracts/candidate-publication/push-retry.log",
+            "docs/design/20x-style-rounds/round-5/contracts/candidate-publication/remote-verified.txt",
+            "docs/design/20x-style-rounds/round-5/README.md:33"
+          ],
+          "verified": [
+            "原TLS错误和误导尾句存在且发布hash与原件记录一致",
+            "失败后远端记录仍为真实baseline",
+            "重推日志更新同一候选SHA，精确远端记录为该完整SHA"
+          ],
+          "not_verified": [
+            "从原push日志独立读取数字exit1",
+            "本次实时远端查询或全局TLS/credential/hook/permission配置历史"
+          ],
+          "certification_boundary": "签发归档负回执的错误类别与SHA一致性，不把作者的数字退出码说明升级为原process数字回执。",
+          "disposition": "仅报告并保留精度边界；不修输入、补造回执、重推、改配置或代父代理归档计轮。"
+        }
+      ]
+    },
+    {
+      "round": 6,
+      "source": "docs/design/20x-style-rounds/round-6/review-6.json",
+      "source_sha256": "5918281ee481c5158ec02cc6c88de4f6396abd4dc18ba5593df0852db8540fb2",
+      "verdict": "PASS_LIMITED",
+      "findings": [
+        {
+          "id": "S09-R6-F01",
+          "severity": "P3",
+          "blocking": false,
+          "category": "negative_receipt_numeric_exit_attestation_limit",
+          "new_product_regression": false,
+          "status": "REPORTED_ONLY_NOT_DISPOSED",
+          "finding_verbatim": "after 本地消费整体 shell 的 141 按父代理实际工具回执及 README:41／after-consumer-observations.md:7 保留；已独立核对原包、原件／发布 hash、比较结果及 Mac 作业 terminal exit0，但本次读取的冻结输入没有该次 shell 原 process 的数字退出码与末段 jq|head 管线的原始完整回执。不能把 141 表述为本评审从原 process 记录独立读出的退出码，也不能升级整体 shell 为 exit0；最后摘要管线 SIGPIPE 的解释保留为父代理操作回执记录，不当作本次重新认证的 GUI／像素／Mac gates 失败或取证因果。本项仅为非阻断 P3 回执精度边界，不重跑消费器、GUI、构建或任何配置／权限操作。",
+          "finding_utf8_sha256": "7bf06d0f25fbfe787a7161851fd558be0418573d3325fd75c57a1985abfadca6",
+          "evidence_sources": [
+            "docs/design/20x-style-rounds/round-6/README.md:41",
+            "docs/design/20x-style-rounds/round-6/contracts/after-consumer-observations.md:5-9",
+            "docs/design/20x-style-rounds/round-6/contracts/before-after-original-comparison.json",
+            "docs/design/20x-style-rounds/round-6/contracts/before-after-comparison.json",
+            "docs/design/20x-style-rounds/round-6/contracts/mac-after/style-r6-after-v1.log:18-19",
+            "docs/design/20x-style-rounds/round-6/contracts/mac-gates/style-r6-gates-v1.log:15-16",
+            "本次任务锚点明确记录父代理实际工具回执141；不是本子代理重新取得的原process数字回执"
+          ],
+          "disposition": "仅逐字报告并保留独立认证精度边界；不修改输入、补造回执、重跑、归档或计轮。"
+        }
+      ]
+    }
+  ],
+  "round4_image_supplement": {
+    "source": "docs/design/20x-style-rounds/round-4/review-4-image-recheck.json",
+    "source_sha256": "cd58aa98a1a14bbe29931a4d6f27445c531f46f9da4a09ab55036de145900add",
+    "verdict": "PASS_LIMITED"
+  }
+}
+
+}

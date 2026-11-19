@@ -1,0 +1,8 @@
+observed_at=2026-11-19T17:12:15+08:00
+runner_pids=69667
+queued_jobs=0
+shared_porcelain=0
+shared_head=7e66eb2e5a9dac92eea8d6178e55e7ab5f38e554
+65cf2fc67623a916f12797371d1ca087c911b24f	refs/heads/main
+ec3372c8d81dd5844bbfc4bdf5d973be80ef2bb4	refs/heads/style/loop-main
+NEW_R7_SUPPORT_READY

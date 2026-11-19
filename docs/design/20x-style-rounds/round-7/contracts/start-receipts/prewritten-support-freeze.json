@@ -1,0 +1,22 @@
+{
+  "frozen_at": "2026-11-19T17:09:03+08:00",
+  "baseline_head": "ec3372c8d81dd5844bbfc4bdf5d973be80ef2bb4",
+  "profile_sha256": "b767459491bc0eb17b1a3760eaf1037d770139396dfcf679da4a8e571eff37d7",
+  "checksum_file_sha256": "baad91b8c2393f92aa681049b7f1c772ce0d70eaabb1c884538d42ca5fe756b9",
+  "support_files": [
+    {
+      "name": "capture-matrix.py",
+      "sha256": "cb1833ce3761136fac334541164af317a7513a71d819e4e6028f6a6979f41576"
+    },
+    {
+      "name": "expected-differences.md",
+      "sha256": "abcbfe32964def8c8215f5242ceab2909820ba771bd3dcb1c4b013a825a22a31"
+    },
+    {
+      "name": "color-geometry-before.json",
+      "sha256": "b767459491bc0eb17b1a3760eaf1037d770139396dfcf679da4a8e571eff37d7"
+    }
+  ],
+  "product_modified": false,
+  "GUI_started": false
+}

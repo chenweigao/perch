@@ -1,0 +1,8 @@
+observed_at=2026-11-19T18:22:07+08:00
+runner_pids=69667
+queued_jobs=0
+before_last=exit=0
+after_last=exit=0
+gates_and_next_round=not_queued
+shared_head=5970638a64a73e352867ad8e5ffeca9341f9d66b
+shared_porcelain_lines=0

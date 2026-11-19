@@ -1,0 +1,77 @@
+{
+  "status": "FAIL_OBSERVED",
+  "recorded_at": "2026-11-19T18:24:44+08:00",
+  "scope": "failure and reference sentinel images only, not the full regression matrix",
+  "real_test_candidate": "5970638a64a73e352867ad8e5ffeca9341f9d66b",
+  "actual_raw_view_calls": 8,
+  "actual_derived_view_calls": 2,
+  "actual_views_completed": true,
+  "views": [
+    {
+      "scene": "main-find",
+      "phase": "before",
+      "original": "before-original/capture/main-find/repeat-1/capture.png",
+      "sha256": "a06d11e2d07c0163edc37d12a9489b0dc2619f263a41ec55c4a18ece35a0ca4b",
+      "actual_tool": "functions.view_image"
+    },
+    {
+      "scene": "main-find",
+      "phase": "after",
+      "original": "after-original/capture/main-find/repeat-1/capture.png",
+      "sha256": "4ff33a50f17cb0db4640cd33192ac62c56f01b744e84d63736aec5ea55a53e04",
+      "actual_tool": "functions.view_image"
+    },
+    {
+      "scene": "main-find-dark",
+      "phase": "before",
+      "original": "before-original/capture/main-find-dark/repeat-1/capture.png",
+      "sha256": "186556a8fdf45f94bdb18c2a31bd53acbc7f230c7e7166bfd802474e1e3e6db9",
+      "actual_tool": "functions.view_image"
+    },
+    {
+      "scene": "main-find-dark",
+      "phase": "after",
+      "original": "after-original/capture/main-find-dark/repeat-1/capture.png",
+      "sha256": "af14e8d84a71dba2bd8199eb4a987fa84dd481b240e2d34a0318272f5aaa047f",
+      "actual_tool": "functions.view_image"
+    },
+    {
+      "scene": "main-dark",
+      "phase": "before",
+      "original": "before-original/capture/main-dark/repeat-1/capture.png",
+      "sha256": "e0850313f2dc065a86609ffc0a4af651a74a0ec7a04665478797b7da69faf9f5",
+      "actual_tool": "functions.view_image"
+    },
+    {
+      "scene": "main-dark",
+      "phase": "after",
+      "original": "after-original/capture/main-dark/repeat-1/capture.png",
+      "sha256": "9031fbbc64ab1bfc937d45f480e02f932755f30bb9cb8bfdea7d315a5e462ea1",
+      "actual_tool": "functions.view_image"
+    },
+    {
+      "scene": "workbench-dark",
+      "phase": "before",
+      "original": "before-original/capture/workbench-dark/repeat-1/capture.png",
+      "sha256": "87399e070805940c824ff29c64259b64d03cf0efc9b35f9f407f1f10e17e1002",
+      "actual_tool": "functions.view_image"
+    },
+    {
+      "scene": "workbench-dark",
+      "phase": "after",
+      "original": "after-original/capture/workbench-dark/repeat-1/capture.png",
+      "sha256": "87399e070805940c824ff29c64259b64d03cf0efc9b35f9f407f1f10e17e1002",
+      "actual_tool": "functions.view_image"
+    }
+  ],
+  "derived_crop_provenance": "visuals/crop-provenance.json",
+  "observations": [
+    "Selected light/dark find-bar pairs show no obvious text relocation or new overlap; subtle background color differences are quantified by the frozen comparer, not by eye.",
+    "Workbench-dark selected pair appears unchanged and its raw PNG bytes are identical; the prewritten required-change condition was not met.",
+    "Main-dark selected quiet foreground is slightly brighter as expected locally, but this cannot override the find-bar FAIL.",
+    "No confirmed focus, material, executable or token-scope root cause is asserted."
+  ],
+  "whole_language_font_matrix_manually_certified": false,
+  "full_visual_verdict": "FAIL",
+  "full_contract": "NOT_PASSED"
+}

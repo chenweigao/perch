@@ -1,0 +1,13 @@
+{
+  "command": [
+    "scp",
+    "-o",
+    "BatchMode=yes",
+    "candidate-revision.txt",
+    "mac-mini:Library/PerfRunner/results/style-r7-support-v1/candidate-revision.upload-v1.txt"
+  ],
+  "started_at": "2026-11-19T17:57:02+08:00",
+  "finished_at": "2026-11-19T17:57:04+08:00",
+  "process_return_code": 0,
+  "original_log": "candidate-support-transfer-v1.log"
+}

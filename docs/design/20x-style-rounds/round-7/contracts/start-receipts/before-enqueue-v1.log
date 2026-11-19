@@ -1,0 +1,7 @@
+69667
+capture-matrix.py: OK
+expected-differences.md: OK
+color-geometry-before.json: OK
+queued_at=2026-11-19T17:12:24+08:00
+job_sha256=f105ca02922cf5124c7f68296b0a395ad93362a0ec8ff9a1f6850976a093a63f
+status=queued_only
