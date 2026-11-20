@@ -1,0 +1,18 @@
+observed_at=2026-11-20T12:43:38+08:00
+terminal_marker=true
+Host lifecycle fixture ready in 29.36 s
+<MAC_HOME>/Library/PerfRunner/results/style-r8-capture-gates-20261120-v1/HostLifecycleChecks.app
+{"schema_version": 1, "command": ["python3", "-B", "scripts/check-host-lifecycle.py", "--build-only", "--app", "<MAC_HOME>/Library/PerfRunner/results/style-r8-capture-gates-20261120-v1/HostLifecycleChecks.app"], "started_at": "2026-11-20T12:37:39+08:00", "finished_at": "2026-11-20T12:38:09+08:00", "process_exit": 0, "exception": null, "stdin_sha256": null, "log_sha256": "48c091e864c49b8f1a90368b9ccce7102677a2c9e6157240b3dc3fd0c41a8bb6"}
+Traceback (most recent call last):
+  File "<MAC_HOME>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop-narrow.py", line 170, in <module>
+    main()
+  File "<MAC_HOME>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop-narrow.py", line 155, in main
+    raise RuntimeError(f"{name}: zero-tolerance PNG stability failed")
+RuntimeError: light: zero-tolerance PNG stability failed
+{"schema_version": 1, "command": ["python3", "-B", "scripts/capture-style-loop-narrow.py", "--host-app", "<MAC_HOME>/Library/PerfRunner/results/style-r8-capture-gates-20261120-v1/HostLifecycleChecks.app", "--output", "<MAC_HOME>/Library/PerfRunner/results/style-r8-capture-gates-20261120-v1/narrow-pilot", "--scenes", "light"], "started_at": "2026-11-20T12:38:09+08:00", "finished_at": "2026-11-20T12:38:29+08:00", "process_exit": 1, "exception": null, "stdin_sha256": null, "log_sha256": "b6f224f4e89b59448c8ec261602201e3991fca3bd8d3ccc6784a9fb60a87243c"}
+body_exit=1
+end=2026-11-20T12:38:29+08:00
+{"archive": "style-r8-capture-gates-20261120-v1.raw.tar.gz", "sha256": "1269e7efb0d99db7d51be45a2140b8533fda50b43a777ae227e0941874547fa4", "original_files": 35}
+exit=1
+{"narrow_pilot_verdict": "FAIL", "completed_scenes": ["light"], "error": {"type": "RuntimeError", "message": "light: zero-tolerance PNG stability failed"}}
+raw_archive_present=true

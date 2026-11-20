@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "event": "old frozen-head guard attempted after the predeclared capture-helper edit",
+  "parent_exec_process_exit": 1,
+  "original_error": "guard-inputs.py fixed_state: assert not git(\"diff\", \"--name-only\", \"HEAD\", \"--\", \"Sources\", \"Tests\", \"scripts\") -> AssertionError; following stdout JSON parser -> JSONDecodeError",
+  "old_guard_modified": false,
+  "old_review_modified": false,
+  "commit_or_push_executed": false,
+  "classification": "old diagnostic guard deliberately requires zero Tests edits and is not the authorized new-round verifier",
+  "disposition": "retain negative receipt; verify old inputs independently with the v2 predeclared exact write scope, without changing the old validator"
+}

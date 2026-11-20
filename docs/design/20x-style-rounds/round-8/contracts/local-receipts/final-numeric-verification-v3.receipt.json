@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "command": [
+    "python3",
+    "-B",
+    "<LINUX_HOME>/code/_evidence/style-loop-narrow-stability-20261120/tools/verify-final-failure-v3-v2.py"
+  ],
+  "started_at": "2026-11-20T13:22:14+08:00",
+  "finished_at": "2026-11-20T13:22:15+08:00",
+  "process_exit": 0,
+  "exception": null,
+  "stdin_sha256": null,
+  "log_sha256": "bd35f729449106c195817430500e0027740ff2e9bda43a87e1ed938c3523a44f"
+}

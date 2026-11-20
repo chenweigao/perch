@@ -1,0 +1,19 @@
+{
+  "started_at": "2026-11-20T13:12:55.362+08:00",
+  "settings": {},
+  "requested_capture_size": [
+    836,
+    900
+  ],
+  "capture_exit": null,
+  "fixture_exit_after_cleanup": -15,
+  "fixture_TMPDIR": "/private/var/folders/jn/8snzbw196hjf498pq_nsggyc0000gn/T/perch-style-narrow-i37jp058/",
+  "preferences_before_exit": 1,
+  "fixture_pid": 5717,
+  "error": {
+    "type": "RuntimeError",
+    "message": "Fixture does not honor the fixed narrow capture size"
+  },
+  "preferences_after_exit": 0,
+  "finished_at": "2026-11-20T13:13:04.315+08:00"
+}

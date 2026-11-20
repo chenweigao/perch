@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "command": [
+    "python3",
+    "-B",
+    "scripts/capture-style-loop-narrow.py",
+    "--host-app",
+    "<MAC_HOME>/Library/PerfRunner/results/style-functional-contract-gates-20261120-v2/HostLifecycleChecks.app",
+    "--output",
+    "<MAC_HOME>/Library/PerfRunner/results/style-r8-capture-gates-20261120-v1/old-size-negative-control",
+    "--scenes",
+    "light"
+  ],
+  "started_at": "2026-11-20T12:37:30+08:00",
+  "finished_at": "2026-11-20T12:37:39+08:00",
+  "process_exit": 1,
+  "exception": null,
+  "stdin_sha256": null,
+  "log_sha256": "9bd422b963bff50203776b96acbc8573bf1b74b45eead69f4991a7c66ff6f9fb"
+}

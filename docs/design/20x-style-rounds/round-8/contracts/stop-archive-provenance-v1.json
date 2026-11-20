@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "evidence_root_label": "style-loop-stop-finalization-20261120",
+  "records": [
+    {
+      "source": "review-8-original.json",
+      "destination": "review-8.json",
+      "transformation": "byte_exact",
+      "sha256": "cb09432c3436e3bbd50781f3e82ad221cdf09de19fde995cf181eb4907e7b92b",
+      "bytes": 50853
+    },
+    {
+      "source": "receipts/parent-review-reception-v1.json",
+      "destination": "contracts/parent-review-reception-v1.json",
+      "transformation": "byte_exact",
+      "sha256": "b2146e1a585e8f3bc4762115b3b80ed20f04dc26d8e06ed7e261f43a215c5dd4",
+      "bytes": 1116
+    },
+    {
+      "source": "receipts/parent-archive-protection-before-stage-v1.json",
+      "destination": "contracts/parent-archive-protection-before-stage-v1.json",
+      "transformation": "byte_exact",
+      "sha256": "de095d83cf1e337746c2ed52a24c14d2a71870225c8d7254d357e29260207067",
+      "bytes": 2561
+    }
+  ],
+  "originals_rewritten": false,
+  "final_HEAD_self_reference": false,
+  "original_220_records_unchanged": true,
+  "completed_round_delta": 0,
+  "remaining": 14
+}

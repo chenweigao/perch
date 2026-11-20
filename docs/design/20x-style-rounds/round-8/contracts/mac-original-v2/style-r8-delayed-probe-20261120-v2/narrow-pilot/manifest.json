@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "started_at": "2026-11-20T12:54:31+08:00",
+  "binary_sha256": "f342c570bdcd6de7e6efbb35880d31e7269a489a0845d33486925b7670288e70",
+  "info_plist_sha256": "704173d60f3594e37c4ecfd1ce05fefe988a96188ad207bae4e26f5331e35b09",
+  "capture_script_sha256": "98708bf2c8624dbc26328349162eb3f476a47a83ef4a56c6a2f404f3bbebe028",
+  "node_sha256": "ee6fb0e015284d83a91e8ec5213f43a157f8a392b58555301682892ba928c04a",
+  "fixture_domain": "dev.agentworkbench.hostqa.40c61e06b795435cba22d83da47ea551",
+  "permission_changes": false,
+  "fallback": false,
+  "fixture_state": "existing PERCH_STYLE_CAPTURE stopped fixture",
+  "scenes": {
+    "light": {
+      "captures": [
+        {
+          "started_at": "2026-11-20T12:54:31.267+08:00",
+          "settings": {},
+          "requested_capture_size": [
+            836,
+            900
+          ],
+          "capture_exit": 0,
+          "fixture_exit_after_cleanup": -15,
+          "fixture_TMPDIR": "/private/var/folders/jn/8snzbw196hjf498pq_nsggyc0000gn/T/perch-style-narrow-lpzg9nmp/",
+          "preferences_before_exit": 1,
+          "fixture_pid": 2674,
+          "window": {
+            "appearance": "NSAppearanceNameAqua",
+            "backing_scale": 1,
+            "content_bounds": [
+              0,
+              0,
+              836,
+              900
+            ],
+            "dark": false,
+            "effective_dark": false,
+            "large_type": false,
+            "locale": "zh-Hans",
+            "window_frame": [
+              48,
+              72,
+              836,
+              900
+            ],
+            "window_number": 28738
+          },
+          "screenshot_command": [
+            "<MAC_HOME>/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+            "-e",
+            "const result=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(result.status??1)",
+            "--",
+            "-x",
+            "-o",
+            "-t",
+            "png",
+            "-l",
+            "28738",
+            "<MAC_HOME>/Library/PerfRunner/results/style-r8-delayed-probe-20261120-v2/narrow-pilot/light/repeat-1/capture.png"
+          ],
+          "fixed_settle_seconds_after_ready": 5,
+          "png_dimensions": [
+            836,
+            900
+          ],
+          "png_sha256": "fca6b0ca0d087871e4d8db0aca370fb4e5ca47d9f3318463d651702a56207c09",
+          "preferences_after_exit": 0,
+          "finished_at": "2026-11-20T12:54:45.449+08:00"
+        },
+        {
+          "started_at": "2026-11-20T12:54:45.450+08:00",
+          "settings": {},
+          "requested_capture_size": [
+            836,
+            900
+          ],
+          "capture_exit": 0,
+          "fixture_exit_after_cleanup": -15,
+          "fixture_TMPDIR": "/private/var/folders/jn/8snzbw196hjf498pq_nsggyc0000gn/T/perch-style-narrow-gtj2xx2r/",
+          "preferences_before_exit": 1,
+          "fixture_pid": 2770,
+          "window": {
+            "appearance": "NSAppearanceNameAqua",
+            "backing_scale": 1,
+            "content_bounds": [
+              0,
+              0,
+              836,
+              900
+            ],
+            "dark": false,
+            "effective_dark": false,
+            "large_type": false,
+            "locale": "zh-Hans",
+            "window_frame": [
+              48,
+              72,
+              836,
+              900
+            ],
+            "window_number": 28745
+          },
+          "screenshot_command": [
+            "<MAC_HOME>/.local/opt/node-v24.18.0-darwin-arm64/bin/node",
+            "-e",
+            "const result=require('child_process').spawnSync('/usr/sbin/screencapture',process.argv.slice(1),{stdio:'inherit'});process.exit(result.status??1)",
+            "--",
+            "-x",
+            "-o",
+            "-t",
+            "png",
+            "-l",
+            "28745",
+            "<MAC_HOME>/Library/PerfRunner/results/style-r8-delayed-probe-20261120-v2/narrow-pilot/light/repeat-2/capture.png"
+          ],
+          "fixed_settle_seconds_after_ready": 5,
+          "png_dimensions": [
+            836,
+            900
+          ],
+          "png_sha256": "fca6b0ca0d087871e4d8db0aca370fb4e5ca47d9f3318463d651702a56207c09",
+          "preferences_after_exit": 0,
+          "finished_at": "2026-11-20T12:54:59.893+08:00"
+        }
+      ],
+      "PNG_bytes_identical": true
+    }
+  },
+  "capture_verdict": "PASS_BYTES",
+  "finished_at": "2026-11-20T12:54:59+08:00"
+}

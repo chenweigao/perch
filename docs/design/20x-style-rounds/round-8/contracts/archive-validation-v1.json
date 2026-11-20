@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "phase": "first_pre_commit_snapshot_before_security_publication_derivatives",
+  "evidence_root_label": "style-loop-stop-finalization-20261120",
+  "review_sha256": "cb09432c3436e3bbd50781f3e82ad221cdf09de19fde995cf181eb4907e7b92b",
+  "parent_reception_protection": {
+    "verified_at": "2026-11-20T13:56:41+08:00",
+    "process_exit": 0,
+    "input_count": 11384,
+    "protected_changes": 0,
+    "candidate_HEAD": "0e2758ecffef5964d99c3d833e0b1535468a59d5",
+    "physical_index_sha256": "4eaacbc5880f980ab73aa4021c0a3473ac5e09e6ffeb9a12d6c40491aba87fc8"
+  },
+  "after_authorized_description_updates": {
+    "input_count": 11384,
+    "description_updates": 4,
+    "original_description_copies_match_frozen_hashes": true,
+    "other_protected_inputs_unchanged": 11380,
+    "original_review_unchanged": true,
+    "source_records_verified": 220,
+    "complete_capture_copies": 6,
+    "historical_review_anchors_unchanged": 4
+  },
+  "stage_validation": {
+    "finished_at": "2026-11-20T14:04:16+08:00",
+    "git_stage_process_exit": 0,
+    "snapshot_path_count": 232,
+    "scope_check_uses_no_renames": true,
+    "staged_source_diff_bytes_to_829ba3a9": 0,
+    "old_untracked_assets_staged": false,
+    "nonraw_whitespace_process_exit": 0,
+    "raw_evidence_not_reformatted": true,
+    "initial_R100_path_assertion_failure_retained": true,
+    "stage_repeated_to_fix_assertion": false
+  },
+  "whole_repo_publication_scan": {
+    "started_at": "2026-11-20T14:02:11+08:00",
+    "finished_at": "2026-11-20T14:04:40+08:00",
+    "process_exit": 0,
+    "publication_files": 9446,
+    "findings": 0,
+    "log_sha256": "fad411bde490a3c51bdddec87330ea375a1a211b72671350970f022a20c1b416",
+    "scope_precedes_final_report_and_this_receipt": true,
+    "old_timeout124_rewritten": false
+  },
+  "final_directory_snapshot_receipts": "receipts/publication-post-report-v1.receipt.json",
+  "first_commit_negative_receipt": "receipts/commit-v1.receipt.json (actual exit1; no new commit)",
+  "publication_derivative_overlay": "contracts/security-publication-overlay-v1.json",
+  "commit_and_push_receipts": "receipts/commit-v2.receipt.json; receipts/push-v1.receipt.json; final-head-v1.json",
+  "final_commit_SHA_self_reference": false,
+  "visual_verdict": "FAIL",
+  "full_contract": "NOT_PASSED",
+  "normal_gates": "NOT_RUN",
+  "Mac_source_or_runtime_restore": "UNVERIFIED",
+  "completed_round_delta": 0,
+  "remaining": 14,
+  "aesthetic_restoration_authorized": false,
+  "PR_or_merge_authorized": false
+}

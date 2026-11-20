@@ -1,0 +1,32 @@
+{
+  "anchors": [
+    {
+      "path": "docs/design/20x-style-rounds/round-7/review-7.json",
+      "sha256": "004c000b4f47420b3f09dde23d5dfd5f0bb8c1792bb2d03b6ff4483922633621",
+      "finding_count": 7,
+      "preservation": "original JSON/verdict/findings remain unchanged; no prior PASS expanded"
+    },
+    {
+      "path": "docs/design/20x-style-loop/diagnostics/20261119-matrix-capture/review-matrix-v1.json",
+      "sha256": "066f6981464b998983f062387783a928b80d3413e0851abbf0cf29f26f6e7d5b",
+      "finding_count": 6,
+      "preservation": "original JSON/verdict/findings remain unchanged; no prior PASS expanded"
+    },
+    {
+      "path": "docs/design/20x-style-loop/diagnostics/20261119-functional-contract/review-functional-v1.json",
+      "sha256": "c3fd449f9eed76dd1e96d6c0b16cdb386b1e79c1d3ca223c9870114978618cf5",
+      "finding_count": 2,
+      "preservation": "original JSON/verdict/findings remain unchanged; no prior PASS expanded"
+    },
+    {
+      "path": "docs/design/20x-style-loop/diagnostics/20261120-narrow-composited/review-narrow-v1.json",
+      "sha256": "4c07c570a8f31864782c588ebe63408f2149d39014a0f07b548f5601c219a24d",
+      "finding_count": 0,
+      "preservation": "original JSON/verdict/findings remain unchanged; no prior PASS expanded"
+    }
+  ],
+  "old_round7_visual_verdict": "FAIL",
+  "old_round7_full_contract": "NOT_PASSED",
+  "old_round7_gates": "NOT_RUN",
+  "old_narrow_685_pixel_zero_tolerance": "NOT_PASSED"
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "command": [
+    "git",
+    "commit",
+    "--amend",
+    "--no-edit"
+  ],
+  "started_at": "2026-11-20T13:10:54+08:00",
+  "finished_at": "2026-11-20T13:11:09+08:00",
+  "process_exit": 0,
+  "exception": null,
+  "stdin_sha256": null,
+  "log_sha256": "a0cc98bcb96a54624636d35da37cbdbeef5ec2e17105187aa4f7c49def7e7b71"
+}

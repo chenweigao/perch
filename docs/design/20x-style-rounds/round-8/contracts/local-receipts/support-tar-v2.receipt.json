@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "command": [
+    "tar",
+    "-czf",
+    "<LINUX_HOME>/code/_evidence/style-loop-narrow-stability-20261120/support-upload-v2.tar.gz",
+    "-C",
+    "<LINUX_HOME>/code/_evidence/style-loop-narrow-stability-20261120/support-v2",
+    "capture-delayed-v2.py",
+    "perfrunner-probe-v2.job",
+    "pack-evidence-v1.py",
+    "record-command.py",
+    "plan-v2.json",
+    "SHA256SUMS"
+  ],
+  "started_at": "2026-11-20T12:54:18+08:00",
+  "finished_at": "2026-11-20T12:54:18+08:00",
+  "process_exit": 0,
+  "exception": null,
+  "stdin_sha256": null,
+  "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-11-20T12:55:00+08:00",
+  "job": "style-r8-delayed-probe-20261120-v2",
+  "app_bundle_excluded": true,
+  "files": [
+    {
+      "path": "plan-original-v2.json",
+      "bytes": 799,
+      "sha256": "aa866ea40250d275e1f6898bf9a6046444142341559525727e732aef773a5034"
+    },
+    {
+      "path": "support.sha256",
+      "bytes": 427,
+      "sha256": "afcdbdb94fc8995975fde8344259dc7917956cec487e287a4fdf0332172ed5a0"
+    },
+    {
+      "path": "narrow-pilot/manifest.json",
+      "bytes": 4519,
+      "sha256": "b49f4cc072f66a873187cc9d2e251a6e011b9df1dfbb9412cb2b85b5e062c35f"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-1/capture-receipt.json",
+      "bytes": 1412,
+      "sha256": "95b7e9a51776ef54905aeea4e842922444611d2c85df7b01bb424bc4ada677d3"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-1/capture.png",
+      "bytes": 187707,
+      "sha256": "fca6b0ca0d087871e4d8db0aca370fb4e5ca47d9f3318463d651702a56207c09"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-1/capture.png.ready.json",
+      "bytes": 305,
+      "sha256": "7e6d5faa0c78e63cdfdbd5d3dfb0684629880493c2db9e5093d5bac4acfbff52"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-1/fixture.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-1/preferences-after.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-1/preferences-before.log",
+      "bytes": 118,
+      "sha256": "e1ed65771bf1ba2b332ea5c8d3156236e68aa0e304791e8ceb69155b0fb9358c"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-1/screencapture.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-1/window.json",
+      "bytes": 305,
+      "sha256": "7e6d5faa0c78e63cdfdbd5d3dfb0684629880493c2db9e5093d5bac4acfbff52"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-2/capture-receipt.json",
+      "bytes": 1412,
+      "sha256": "cd5e19707ceea9f0b631f5aa2e6a2cdb5d2434a976da4082ed39edd478dda1b3"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-2/capture.png",
+      "bytes": 187707,
+      "sha256": "fca6b0ca0d087871e4d8db0aca370fb4e5ca47d9f3318463d651702a56207c09"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-2/capture.png.ready.json",
+      "bytes": 305,
+      "sha256": "5aaf207719186c2444822b1b85fa437bacda744a633f5b96a373a4a96417d039"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-2/fixture.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-2/preferences-after.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-2/preferences-before.log",
+      "bytes": 118,
+      "sha256": "e1ed65771bf1ba2b332ea5c8d3156236e68aa0e304791e8ceb69155b0fb9358c"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-2/screencapture.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-2/window.json",
+      "bytes": 305,
+      "sha256": "5aaf207719186c2444822b1b85fa437bacda744a633f5b96a373a4a96417d039"
+    },
+    {
+      "path": "receipts/delayed-pilot.log",
+      "bytes": 47,
+      "sha256": "d15cee4febbbe47906a6cf305cffed51773c72f39827064ff117d3d3acff563c"
+    },
+    {
+      "path": "receipts/delayed-pilot.receipt.json",
+      "bytes": 697,
+      "sha256": "4ea66f2fb1749046120dc8dc77b2804586971c1c06b334e7e0417a9c24e8037f"
+    }
+  ]
+}

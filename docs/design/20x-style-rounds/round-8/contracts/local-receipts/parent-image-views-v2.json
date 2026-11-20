@@ -1,0 +1,20 @@
+{
+  "recorded_at": "2026-11-20T13:10:19+08:00",
+  "views": [
+    {
+      "path": "<LINUX_HOME>/code/_evidence/style-loop-narrow-stability-20261120/raw/original-v2/style-r8-delayed-probe-20261120-v2/narrow-pilot/light/repeat-1/capture.png",
+      "sha256": "fca6b0ca0d087871e4d8db0aca370fb4e5ca47d9f3318463d651702a56207c09",
+      "tool": "functions.view_image",
+      "actual_full_original_view": true
+    },
+    {
+      "path": "<LINUX_HOME>/code/_evidence/style-loop-narrow-stability-20261120/raw/original-v2/style-r8-delayed-probe-20261120-v2/narrow-pilot/light/repeat-2/capture.png",
+      "sha256": "fca6b0ca0d087871e4d8db0aca370fb4e5ca47d9f3318463d651702a56207c09",
+      "tool": "functions.view_image",
+      "actual_full_original_view": true
+    }
+  ],
+  "observation": "两原图同一静态窄窗，未见原cache式明显叠字；既有sidebar遮挡仍在，不称产品修复",
+  "limited_scene": "Chinese light 14pt",
+  "full_contract": "NOT_PASSED"
+}

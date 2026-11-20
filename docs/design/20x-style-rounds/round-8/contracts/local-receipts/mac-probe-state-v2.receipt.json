@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "command": [
+    "ssh",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "ConnectTimeout=10",
+    "mac-mini",
+    "output=\"$HOME/Library/PerfRunner/results/style-r8-delayed-probe-20261120-v2\"; date -Iseconds; if test -f \"$output.done\"; then printf \"terminal_marker=true\\n\"; else printf \"terminal_marker=false\\n\"; fi; if test -f \"$output.log\"; then tail -n 14 \"$output.log\"; fi"
+  ],
+  "started_at": "2026-11-20T12:56:51+08:00",
+  "finished_at": "2026-11-20T12:56:52+08:00",
+  "process_exit": 0,
+  "exception": null,
+  "stdin_sha256": null,
+  "log_sha256": "5e2fcacdbf4863e451362aaea7352d766a581089d887e5f7e167f37c5340e6e3"
+}

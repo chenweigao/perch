@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-11-20T12:54:18+08:00",
+  "head": "91711d43897f6e3d2726ea45e3bcad0f3fb71f44",
+  "job": "style-r8-delayed-probe-20261120-v2",
+  "fixed_wait_after_ready_seconds": 5,
+  "base_repo_script_sha256": "1f6b1f65bbfe424fdaa5b9ce138dd68b898e9166a7adf136e2749286da2078f9",
+  "probe_script_sha256": "98708bf2c8624dbc26328349162eb3f476a47a83ef4a56c6a2f404f3bbebe028",
+  "repo_source_changes": 0,
+  "binary_sha256": "f342c570bdcd6de7e6efbb35880d31e7269a489a0845d33486925b7670288e70",
+  "info_plist_sha256": "704173d60f3594e37c4ecfd1ce05fefe988a96188ad207bae4e26f5331e35b09",
+  "limited_scenes": [
+    "light"
+  ],
+  "independent_launches": 2,
+  "pixel_tolerance": 0,
+  "PNG_byte_tolerance": 0,
+  "stop_if_fail": true,
+  "remaining": 14,
+  "completed_round_delta": 0
+}

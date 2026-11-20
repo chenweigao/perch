@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "command": [
+    "python3",
+    "-B",
+    "scripts/check-public-source.py",
+    "--snapshot",
+    "<LINUX_HOME>/code/_evidence/style-loop-narrow-stability-20261120/published-source-candidate-v1"
+  ],
+  "started_at": "2026-11-20T12:27:10+08:00",
+  "finished_at": "2026-11-20T12:27:10+08:00",
+  "process_exit": 0,
+  "exception": null,
+  "stdin_sha256": null,
+  "log_sha256": "2cc0146b4ace4078af291d4ba12808b8fe385c54afbfa4a155918fd05f0d6ef2"
+}

@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "review_received": true,
+  "delivery": "completed_task_notification_and_actual_JSON_read",
+  "review_path": "docs/design/20x-style-rounds/round-8/review-8.json",
+  "review_sha256": "cb09432c3436e3bbd50781f3e82ad221cdf09de19fde995cf181eb4907e7b92b",
+  "review_verdict": "PASS_LIMITED",
+  "visual_verdict": "FAIL",
+  "full_contract": "NOT_PASSED",
+  "normal_gates": "NOT_RUN",
+  "parent_frozen_verification": {
+    "verified_at": "2026-11-20T13:56:41+08:00",
+    "process_exit": 0,
+    "input_count": 11384,
+    "protected_changes": 0,
+    "seal_sha256": "33cd8f9ed561eaaefb55969a3dfbd394d90ade7e65c3a75a1fae6ef783adcea7",
+    "branch": "style/loop-main",
+    "head": "0e2758ecffef5964d99c3d833e0b1535468a59d5",
+    "physical_index_sha256": "4eaacbc5880f980ab73aa4021c0a3473ac5e09e6ffeb9a12d6c40491aba87fc8",
+    "effective_Sources_Tests_scripts_diff_bytes_to_829ba3a9": 0
+  },
+  "new_findings": {"P1": 1, "P2": 3, "P3": 1},
+  "completed_round_delta": 0,
+  "remaining": 14,
+  "task_restarted_or_polled": false,
+  "GUI_or_build_repeated": false,
+  "aesthetic_restoration_authorized": false
+}

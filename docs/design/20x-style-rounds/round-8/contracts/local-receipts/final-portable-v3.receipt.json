@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "command": [
+    "python3",
+    "-B",
+    "scripts/check-functional.py",
+    "portable",
+    "--output",
+    "<LINUX_HOME>/code/_evidence/style-loop-narrow-stability-20261120/local-portable-v3"
+  ],
+  "started_at": "2026-11-20T13:09:11+08:00",
+  "finished_at": "2026-11-20T13:09:26+08:00",
+  "process_exit": 0,
+  "exception": null,
+  "stdin_sha256": null,
+  "log_sha256": "8e698d6b7580c6d1fb6d9a6dd69e03a27785be336b8251a77ce7493a95d6f7d1"
+}

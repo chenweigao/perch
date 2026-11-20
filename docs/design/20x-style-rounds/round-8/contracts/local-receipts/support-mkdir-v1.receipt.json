@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "command": [
+    "ssh",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "ConnectTimeout=10",
+    "mac-mini",
+    "test ! -e \"$HOME/Library/PerfRunner/results/style-r8-support-20261120-v1\" && mkdir \"$HOME/Library/PerfRunner/results/style-r8-support-20261120-v1\""
+  ],
+  "started_at": "2026-11-20T12:37:20+08:00",
+  "finished_at": "2026-11-20T12:37:21+08:00",
+  "process_exit": 0,
+  "exception": null,
+  "stdin_sha256": null,
+  "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

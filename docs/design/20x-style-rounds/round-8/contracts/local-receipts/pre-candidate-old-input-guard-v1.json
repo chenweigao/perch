@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-11-20T12:22:44+08:00",
+  "input_count": 10865,
+  "protected_changes": 0,
+  "declared_changes": [
+    {
+      "prior": {
+        "root": "handoff",
+        "path": "20261118-style-loop-continuity.md",
+        "sha256": "8530efd5eb3dbddca3f667b02518e397d94e3534b61651adce40864ef50e1d9b",
+        "mode": 420,
+        "kind": "file"
+      },
+      "current": {
+        "root": "handoff",
+        "path": "20261118-style-loop-continuity.md",
+        "sha256": "437f4cc95f67f88de76345adff6f71edd5646fba1fe889b0cdaf9732d52cbb1e",
+        "mode": 420,
+        "kind": "file"
+      }
+    },
+    {
+      "prior": {
+        "root": "repo",
+        "path": "Tests/HostLifecycleChecks/StyleCapture.swift",
+        "sha256": "301846c08eae360d809145d251146bded8157386e4fdeb2a91a8d34fdab95071",
+        "mode": 420,
+        "kind": "file"
+      },
+      "current": {
+        "root": "repo",
+        "path": "Tests/HostLifecycleChecks/StyleCapture.swift",
+        "sha256": "0b7fc844eb0580d019f273744f980f7b84a19a372ee1a3373a93af3ca69b65fd",
+        "mode": 420,
+        "kind": "file"
+      }
+    },
+    {
+      "prior": {
+        "root": "repo",
+        "path": "docs/design/20x-style-loop/INDEX.md",
+        "sha256": "ce94c1bd6f7bb61270b092bc52b19d37865757b15196e9c288e9dfb2f5511345",
+        "mode": 420,
+        "kind": "file"
+      },
+      "current": {
+        "root": "repo",
+        "path": "docs/design/20x-style-loop/INDEX.md",
+        "sha256": "fe8907e08f9895d3de4b4aefc4eccbf7e1c17edfd2e893eb43faeafc19f2a1a5",
+        "mode": 420,
+        "kind": "file"
+      }
+    },
+    {
+      "prior": {
+        "root": "repo",
+        "path": "docs/design/20x-style-loop/diagnostics/20261120-narrow-composited/README.md",
+        "sha256": "092f08dd56cfaf10c01ff0ffe57178e18fd77c2182e76a3d72aa4e1c83e3831a",
+        "mode": 420,
+        "kind": "file"
+      },
+      "current": {
+        "root": "repo",
+        "path": "docs/design/20x-style-loop/diagnostics/20261120-narrow-composited/README.md",
+        "sha256": "3c04bc3bad6fbda6311737a674c32d854ffa7f95b81d8bb7f83168517578fd91",
+        "mode": 420,
+        "kind": "file"
+      }
+    }
+  ],
+  "seal_sha256": "23414aa540b91d9884119712bef2d51461f160a4049c2a07c8ff3eb5ebe33a2f",
+  "branch": "style/loop-main",
+  "head": "829ba3a9a5250883c61e6278f8f397a7643a7664",
+  "physical_index_sha256": "4bae0242fc88d8ce5ce73e5e8d8dad8330da9923d872c73830002e8d60c62898",
+  "allowed_capture_source_paths": [
+    "Tests/HostLifecycleChecks/StyleCapture.swift",
+    "scripts/capture-style-loop-narrow.py"
+  ],
+  "old_round_verdicts_rewritten": false,
+  "old_frozen_validator_modified": false
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "command": [
+    "python3",
+    "-B",
+    "<MAC_HOME>/Library/PerfRunner/results/style-r8-probe-support-20261120-v2/capture-delayed-v2.py",
+    "--host-app",
+    "<MAC_HOME>/Library/PerfRunner/results/style-r8-capture-gates-20261120-v1/HostLifecycleChecks.app",
+    "--output",
+    "<MAC_HOME>/Library/PerfRunner/results/style-r8-delayed-probe-20261120-v2/narrow-pilot",
+    "--scenes",
+    "light"
+  ],
+  "started_at": "2026-11-20T12:54:31+08:00",
+  "finished_at": "2026-11-20T12:54:59+08:00",
+  "process_exit": 0,
+  "exception": null,
+  "stdin_sha256": null,
+  "log_sha256": "d15cee4febbbe47906a6cf305cffed51773c72f39827064ff117d3d3acff563c"
+}

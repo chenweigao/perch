@@ -1,0 +1,16 @@
+2026-11-20T12:56:52+08:00
+terminal_marker=true
+HEAD is now at 91711d43 chore(style): add deterministic narrow capture geometry
+capture-delayed-v2.py: OK
+pack-evidence-v1.py: OK
+perfrunner-probe-v2.job: OK
+plan-v2.json: OK
+record-command.py: OK
+start=2026-11-20T12:54:31+08:00
+source_head=91711d43897f6e3d2726ea45e3bcad0f3fb71f44
+{"scenes": 1, "capture_verdict": "PASS_BYTES"}
+{"schema_version": 1, "command": ["python3", "-B", "<MAC_HOME>/Library/PerfRunner/results/style-r8-probe-support-20261120-v2/capture-delayed-v2.py", "--host-app", "<MAC_HOME>/Library/PerfRunner/results/style-r8-capture-gates-20261120-v1/HostLifecycleChecks.app", "--output", "<MAC_HOME>/Library/PerfRunner/results/style-r8-delayed-probe-20261120-v2/narrow-pilot", "--scenes", "light"], "started_at": "2026-11-20T12:54:31+08:00", "finished_at": "2026-11-20T12:54:59+08:00", "process_exit": 0, "exception": null, "stdin_sha256": null, "log_sha256": "d15cee4febbbe47906a6cf305cffed51773c72f39827064ff117d3d3acff563c"}
+body_exit=0
+end=2026-11-20T12:55:00+08:00
+{"archive": "style-r8-delayed-probe-20261120-v2.raw.tar.gz", "sha256": "33de4bd0ab40c6847b451446b89dc585cf661289d61604cf008cebdf847af898", "original_files": 21}
+exit=0

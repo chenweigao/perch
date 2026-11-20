@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "command": [
+    "bash",
+    "-c",
+    "ssh -o BatchMode=yes -o ConnectTimeout=10 mac-mini 'cat \"$HOME/Library/PerfRunner/results/style-r8-capture-gates-20261120-v3.done\"' > \"$1\"",
+    "bash",
+    "<LINUX_HOME>/code/_evidence/style-loop-narrow-stability-20261120/raw/perfrunner-v3-original.done"
+  ],
+  "started_at": "2026-11-20T13:19:51+08:00",
+  "finished_at": "2026-11-20T13:19:52+08:00",
+  "process_exit": 0,
+  "exception": null,
+  "stdin_sha256": null,
+  "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

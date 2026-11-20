@@ -1,0 +1,7 @@
+Secret and publication checks passed.
+[style/loop-main 0e2758ec] chore(style): add deterministic narrow capture geometry
+ Date: Fri Nov 20 12:27:10 2026 +0800
+ 4 files changed, 226 insertions(+), 1 deletion(-)
+ create mode 100644 docs/design/20x-style-rounds/round-8/EXPECTED.md
+ create mode 100644 docs/design/20x-style-rounds/round-8/README.md
+ create mode 100644 scripts/capture-style-loop-narrow.py

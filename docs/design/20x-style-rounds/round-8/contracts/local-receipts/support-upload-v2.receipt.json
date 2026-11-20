@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "command": [
+    "ssh",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "ConnectTimeout=10",
+    "mac-mini",
+    "tar -xzf - -C \"$HOME/Library/PerfRunner/results/style-r8-probe-support-20261120-v2\" && cd \"$HOME/Library/PerfRunner/results/style-r8-probe-support-20261120-v2\" && shasum -a 256 -c SHA256SUMS"
+  ],
+  "started_at": "2026-11-20T12:54:19+08:00",
+  "finished_at": "2026-11-20T12:54:20+08:00",
+  "process_exit": 0,
+  "exception": null,
+  "stdin_sha256": "cc52a2616ca600493a2363e406517e1cebfd7571bc3c571f261bf0c1f4f79cef",
+  "log_sha256": "3610469ad08bb620320c84074918701c1ceb009e496f27de85b94e7af5ec715d"
+}

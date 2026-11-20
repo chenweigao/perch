@@ -1,0 +1,20 @@
+{
+  "restored_at": "2026-11-20T13:23:34+08:00",
+  "baseline": "829ba3a9a5250883c61e6278f8f397a7643a7664",
+  "candidate": "0e2758ecffef5964d99c3d833e0b1535468a59d5",
+  "active_Sources_Tests_scripts_diff": 0,
+  "helper_bytes_equal_to_baseline": true,
+  "new_capture_script_removed_from_active_scripts": true,
+  "physical_index_changed": false,
+  "candidate_sources_preserved": [
+    {
+      "path": "Tests/HostLifecycleChecks/StyleCapture.swift",
+      "candidate_sha256": "0b7fc844eb0580d019f273744f980f7b84a19a372ee1a3373a93af3ca69b65fd"
+    },
+    {
+      "path": "scripts/capture-style-loop-narrow.py",
+      "candidate_sha256": "98708bf2c8624dbc26328349162eb3f476a47a83ef4a56c6a2f404f3bbebe028"
+    }
+  ],
+  "Mac_source_or_running_program_restore_certified": false
+}

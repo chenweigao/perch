@@ -1,0 +1,8 @@
+69667
+pack-evidence-v1.py: OK
+perfrunner-r8-v1.job: OK
+plan-v1.json: OK
+record-command.py: OK
+verify-source-v1.py: OK
+enqueued_at=2026-11-20T12:37:23+08:00
+job=style-r8-capture-gates-20261120-v1

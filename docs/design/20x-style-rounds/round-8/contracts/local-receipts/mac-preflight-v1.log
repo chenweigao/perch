@@ -1,0 +1,8 @@
+observed_at=2026-11-20T12:11:54+08:00
+69667
+nonterminal_jobs=0
+build_or_fixture_processes=
+65cf2fc67623a916f12797371d1ca087c911b24f	refs/heads/main
+829ba3a9a5250883c61e6278f8f397a7643a7664	refs/heads/style/loop-main
+{"node_child_AXIsProcessTrusted": false, "permission_request": false, "GUI_action": false}
+preflight=PASS_NO_GUI_OR_BUILD

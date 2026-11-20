@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "command": [
+    "python3",
+    "-B",
+    "scripts/check-host-lifecycle.py",
+    "--build-only",
+    "--app",
+    "<MAC_HOME>/Library/PerfRunner/results/style-r8-capture-gates-20261120-v1/HostLifecycleChecks.app"
+  ],
+  "started_at": "2026-11-20T12:37:39+08:00",
+  "finished_at": "2026-11-20T12:38:09+08:00",
+  "process_exit": 0,
+  "exception": null,
+  "stdin_sha256": null,
+  "log_sha256": "48c091e864c49b8f1a90368b9ccce7102677a2c9e6157240b3dc3fd0c41a8bb6"
+}

@@ -1,0 +1,25 @@
+Gitleaks blocked this operation (exit 1). Credential values are hidden.
+docs/design/20x-style-rounds/round-8/contracts/mac-original-v1/style-r8-capture-gates-20261120-v1/plan-original-v1.json:197: generic-api-key
+docs/design/20x-style-rounds/round-8/contracts/mac-original-v1/style-r8-capture-gates-20261120-v1/plan-original-v1.json:394: generic-api-key
+docs/design/20x-style-rounds/round-8/contracts/mac-original-v1/style-r8-capture-gates-20261120-v1/plan-original-v1.json:403: generic-api-key
+docs/design/20x-style-rounds/round-8/contracts/mac-original-v1/style-r8-capture-gates-20261120-v1/plan-original-v1.json:507: generic-api-key
+docs/design/20x-style-rounds/round-8/contracts/local-receipts/local-final-pinned-source-v3.json:178: generic-api-key
+docs/design/20x-style-rounds/round-8/contracts/local-receipts/local-final-pinned-source-v3.json:375: generic-api-key
+docs/design/20x-style-rounds/round-8/contracts/local-receipts/local-final-pinned-source-v3.json:384: generic-api-key
+docs/design/20x-style-rounds/round-8/contracts/local-receipts/local-final-pinned-source-v3.json:488: generic-api-key
+docs/design/20x-style-rounds/round-8/contracts/mac-original-v3/style-r8-capture-gates-20261120-v3/plan-original-v1.json:197: generic-api-key
+docs/design/20x-style-rounds/round-8/contracts/mac-original-v3/style-r8-capture-gates-20261120-v3/plan-original-v1.json:394: generic-api-key
+docs/design/20x-style-rounds/round-8/contracts/mac-original-v3/style-r8-capture-gates-20261120-v3/plan-original-v1.json:403: generic-api-key
+docs/design/20x-style-rounds/round-8/contracts/mac-original-v3/style-r8-capture-gates-20261120-v3/plan-original-v1.json:507: generic-api-key
+docs/design/20x-style-rounds/round-8/contracts/mac-original-v1/style-r8-capture-gates-20261120-v1/source-before-v1.json:178: generic-api-key
+docs/design/20x-style-rounds/round-8/contracts/mac-original-v1/style-r8-capture-gates-20261120-v1/source-before-v1.json:375: generic-api-key
+docs/design/20x-style-rounds/round-8/contracts/mac-original-v1/style-r8-capture-gates-20261120-v1/source-before-v1.json:384: generic-api-key
+docs/design/20x-style-rounds/round-8/contracts/mac-original-v1/style-r8-capture-gates-20261120-v1/source-before-v1.json:488: generic-api-key
+docs/design/20x-style-rounds/round-8/contracts/support-v3/plan-v3.json:197: generic-api-key
+docs/design/20x-style-rounds/round-8/contracts/support-v3/plan-v3.json:394: generic-api-key
+docs/design/20x-style-rounds/round-8/contracts/support-v3/plan-v3.json:403: generic-api-key
+docs/design/20x-style-rounds/round-8/contracts/support-v3/plan-v3.json:507: generic-api-key
+docs/design/20x-style-rounds/round-8/contracts/mac-original-v3/style-r8-capture-gates-20261120-v3/source-before-v1.json:178: generic-api-key
+docs/design/20x-style-rounds/round-8/contracts/mac-original-v3/style-r8-capture-gates-20261120-v3/source-before-v1.json:375: generic-api-key
+docs/design/20x-style-rounds/round-8/contracts/mac-original-v3/style-r8-capture-gates-20261120-v3/source-before-v1.json:384: generic-api-key
+docs/design/20x-style-rounds/round-8/contracts/mac-original-v3/style-r8-capture-gates-20261120-v3/source-before-v1.json:488: generic-api-key

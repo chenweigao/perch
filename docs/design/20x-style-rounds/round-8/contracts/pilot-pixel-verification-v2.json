@@ -1,0 +1,16 @@
+{
+  "verified_at": "2026-11-20T13:03:54+08:00",
+  "original_files_verified": 21,
+  "PNG_bytes_identical": true,
+  "RGBA_changed_pixels": 0,
+  "visible_changed_pixels": 0,
+  "alpha_changed_pixels": 0,
+  "fixed_wait_after_ready_seconds": 5,
+  "limited_scenes": [
+    "Chinese light 14pt"
+  ],
+  "full_contract": "NOT_PASSED",
+  "normal_gates": "NOT_RUN",
+  "completed_round_delta": 0,
+  "remaining": 14
+}

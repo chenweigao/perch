@@ -1,0 +1,41 @@
+{
+  "prepared_at": "2026-11-20T13:12:36+08:00",
+  "head": "0e2758ecffef5964d99c3d833e0b1535468a59d5",
+  "main": "65cf2fc67623a916f12797371d1ca087c911b24f",
+  "job": "style-r8-capture-gates-20261120-v3",
+  "files": [
+    {
+      "path": "enqueue-v3.sh",
+      "sha256": "258788dafb245bfdf43d24670ab2724ee0da701bfc2df9c6a7d24c03e7edc420"
+    },
+    {
+      "path": "pack-evidence-v1.py",
+      "sha256": "793aecdaab46fbb3cf9798dd878b131178c3c01f96d160db8871f6210e63ef10"
+    },
+    {
+      "path": "perfrunner-r8-v3.job",
+      "sha256": "65da42b609682f7c9b344b9ff6b342acbb0db6e3b6bde626f67940fa8b1797d1"
+    },
+    {
+      "path": "plan-v3.json",
+      "sha256": "4738ebd469e1efeba05ece3e6e350b5eaf7d3f6218a53d1b1d072110a1a35dee"
+    },
+    {
+      "path": "preflight-v3.sh",
+      "sha256": "091439655a04590bbdf167c8b12bbf52935b66841c19c6afefd1afb4c856740c"
+    },
+    {
+      "path": "record-command.py",
+      "sha256": "4eafb46ec6388e61bf9114ce522f76674b97e9e543d08bd18638bd229f4c743b"
+    },
+    {
+      "path": "verify-source-v1.py",
+      "sha256": "fd1359015f862330246e00b70742355f37058f0f0204b8673bd9a23579427d97"
+    }
+  ],
+  "source_files_pinned": 507,
+  "old_jobs_rerun": false,
+  "normal_gate_semantics_changed": false,
+  "completed_round_delta": 0,
+  "remaining": 14
+}

@@ -1,0 +1,10 @@
+69667
+enqueue-v3.sh: OK
+pack-evidence-v1.py: OK
+perfrunner-r8-v3.job: OK
+plan-v3.json: OK
+preflight-v3.sh: OK
+record-command.py: OK
+verify-source-v1.py: OK
+enqueued_at=2026-11-20T13:12:45+08:00
+job=style-r8-capture-gates-20261120-v3

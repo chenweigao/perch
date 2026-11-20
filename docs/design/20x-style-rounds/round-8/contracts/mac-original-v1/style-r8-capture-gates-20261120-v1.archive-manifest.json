@@ -1,0 +1,183 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-11-20T12:38:29+08:00",
+  "job": "style-r8-capture-gates-20261120-v1",
+  "app_bundle_excluded": true,
+  "files": [
+    {
+      "path": "plan-original-v1.json",
+      "bytes": 61658,
+      "sha256": "5cd0eaec2ef74ffce408a7a026860f5fa32a2c41315d28036fee3a54066b7bf4"
+    },
+    {
+      "path": "protected-sources.diff",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "source-before-v1.json",
+      "bytes": 61022,
+      "sha256": "6e92c635dfa756d7232d3c86e609c427eec1e6f521ce7a9b89c62ec8e34ceb0b"
+    },
+    {
+      "path": "support.sha256",
+      "bytes": 422,
+      "sha256": "94da3eebced33d4f7f587df48dfee6575861f7892ae2d1db2f094df51d550771"
+    },
+    {
+      "path": "system-version.txt",
+      "bytes": 66,
+      "sha256": "4ef10a0fc370704ea84699cf3851e51488598c5f1ab35cb572eb6b96278a8e5c"
+    },
+    {
+      "path": "tmpdir-canonicalization.json",
+      "bytes": 279,
+      "sha256": "0969f90300ba0bdb1d1cf5c4e0165124ee82047104e27af210ad4a1cbd9917de"
+    },
+    {
+      "path": "narrow-pilot/manifest.json",
+      "bytes": 4520,
+      "sha256": "c250f2676c3e3be9f68961b79fb3171ecf097b9fa239ab76be53ebafef9b6cbf"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-1/capture-receipt.json",
+      "bytes": 1370,
+      "sha256": "4c4b9727b2d9fa32827a45e49d8fb65df62c01420fc7604140fc1b4f7cfa3a0f"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-1/capture.png",
+      "bytes": 187707,
+      "sha256": "fca6b0ca0d087871e4d8db0aca370fb4e5ca47d9f3318463d651702a56207c09"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-1/capture.png.ready.json",
+      "bytes": 305,
+      "sha256": "f182c787e67f2531d2cfd2db4c51e2608a2cdaddcdbc7c7eb1372d0885459b2e"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-1/fixture.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-1/preferences-after.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-1/preferences-before.log",
+      "bytes": 118,
+      "sha256": "e1ed65771bf1ba2b332ea5c8d3156236e68aa0e304791e8ceb69155b0fb9358c"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-1/screencapture.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-1/window.json",
+      "bytes": 305,
+      "sha256": "f182c787e67f2531d2cfd2db4c51e2608a2cdaddcdbc7c7eb1372d0885459b2e"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-2/capture-receipt.json",
+      "bytes": 1370,
+      "sha256": "e82833d4a356680c9444852d5aebd05ecda58746449e5e02f0ffa78bdd11a380"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-2/capture.png",
+      "bytes": 187670,
+      "sha256": "120b5ba15e747d57acd9ea0c0be97d7ca13ea75a86830a82603d4ad1696ffb09"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-2/capture.png.ready.json",
+      "bytes": 305,
+      "sha256": "69948adbcfda107700861d0a8ef9b4abe496f7c91693317a1fbac23d8a9574ec"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-2/fixture.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-2/preferences-after.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-2/preferences-before.log",
+      "bytes": 118,
+      "sha256": "e1ed65771bf1ba2b332ea5c8d3156236e68aa0e304791e8ceb69155b0fb9358c"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-2/screencapture.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "narrow-pilot/light/repeat-2/window.json",
+      "bytes": 305,
+      "sha256": "69948adbcfda107700861d0a8ef9b4abe496f7c91693317a1fbac23d8a9574ec"
+    },
+    {
+      "path": "old-size-negative-control/manifest.json",
+      "bytes": 837,
+      "sha256": "138cc9ec3da3b7b53b854c1d89673d499ece1f281668203599079c24c1722f41"
+    },
+    {
+      "path": "old-size-negative-control/light/repeat-1/capture-receipt.json",
+      "bytes": 545,
+      "sha256": "eb1ea4d8e2eefc17042259e46aa1caa7927ea44a4401ac641446b616ae10f2a7"
+    },
+    {
+      "path": "old-size-negative-control/light/repeat-1/capture.png.ready.json",
+      "bytes": 307,
+      "sha256": "46855f4659e31f803e74efbd5c964679709b451e720f5390f3eb295b1a7e3f34"
+    },
+    {
+      "path": "old-size-negative-control/light/repeat-1/fixture.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "old-size-negative-control/light/repeat-1/preferences-after.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "old-size-negative-control/light/repeat-1/preferences-before.log",
+      "bytes": 118,
+      "sha256": "6e21cf94fbb8f5dab8ffff9488e187d46ca805a20a3fb312cdf062e65892db77"
+    },
+    {
+      "path": "receipts/narrow-pilot.log",
+      "bytes": 416,
+      "sha256": "b6f224f4e89b59448c8ec261602201e3991fca3bd8d3ccc6784a9fb60a87243c"
+    },
+    {
+      "path": "receipts/narrow-pilot.receipt.json",
+      "bytes": 631,
+      "sha256": "69203130633892886ba6d42f7596bddc03add4e98959aa570340907d0f6be6e0"
+    },
+    {
+      "path": "receipts/old-size-negative-control.log",
+      "bytes": 870,
+      "sha256": "9bd422b963bff50203776b96acbc8573bf1b74b45eead69f4991a7c66ff6f9fb"
+    },
+    {
+      "path": "receipts/old-size-negative-control.receipt.json",
+      "bytes": 653,
+      "sha256": "69e16d6856cc86ff549c1471b9c7dce2263a9c147b1b42f3e89791873d6e6672"
+    },
+    {
+      "path": "receipts/pilot-host-build.log",
+      "bytes": 7652,
+      "sha256": "48c091e864c49b8f1a90368b9ccce7102677a2c9e6157240b3dc3fd0c41a8bb6"
+    },
+    {
+      "path": "receipts/pilot-host-build.receipt.json",
+      "bytes": 495,
+      "sha256": "542724cdc06648afbd677a6c2efa3e19126ea1fb324e7d293841f856f305e135"
+    }
+  ]
+}

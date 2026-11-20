@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "started_at": "2026-11-20T13:12:55+08:00",
+  "binary_sha256": "78554ceb1feb6764e9630938ac696a2051e798c8951b83c7c29f450fc1554f05",
+  "info_plist_sha256": "46f71da6131742ec9fbeb35ecef675c8049e4c5aed2449aafe48bdca76e4396f",
+  "capture_script_sha256": "98708bf2c8624dbc26328349162eb3f476a47a83ef4a56c6a2f404f3bbebe028",
+  "node_sha256": "ee6fb0e015284d83a91e8ec5213f43a157f8a392b58555301682892ba928c04a",
+  "fixture_domain": "dev.agentworkbench.hostqa.087b704e842348039558c676596a0bad",
+  "permission_changes": false,
+  "fallback": false,
+  "fixture_state": "existing PERCH_STYLE_CAPTURE stopped fixture",
+  "scenes": {},
+  "capture_verdict": "FAIL",
+  "error": {
+    "type": "RuntimeError",
+    "message": "Fixture does not honor the fixed narrow capture size"
+  },
+  "finished_at": "2026-11-20T13:13:04+08:00"
+}

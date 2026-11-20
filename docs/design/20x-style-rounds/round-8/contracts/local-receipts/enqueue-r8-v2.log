@@ -1,0 +1,8 @@
+69667
+capture-delayed-v2.py: OK
+pack-evidence-v1.py: OK
+perfrunner-probe-v2.job: OK
+plan-v2.json: OK
+record-command.py: OK
+enqueued_at=2026-11-20T12:54:21+08:00
+job=style-r8-delayed-probe-20261120-v2

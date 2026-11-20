@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "command": [
+    "python3",
+    "-B",
+    "scripts/check-public-source.py"
+  ],
+  "started_at": "2026-11-20T12:22:44+08:00",
+  "finished_at": "2026-11-20T12:24:44+08:00",
+  "process_exit": null,
+  "exception": {
+    "type": "TimeoutExpired",
+    "timeout": 120
+  },
+  "stdin_sha256": null,
+  "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

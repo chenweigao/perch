@@ -1,0 +1,7 @@
+observed_at=2026-11-20T13:12:37+08:00
+69667
+nonterminal_jobs=0
+build_or_fixture_processes=
+65cf2fc67623a916f12797371d1ca087c911b24f	refs/heads/main
+0e2758ecffef5964d99c3d833e0b1535468a59d5	refs/heads/style/loop-main
+preflight=PASS_NO_GUI_OR_BUILD

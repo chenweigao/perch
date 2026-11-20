@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-11-20T14:13:05+08:00",
+  "transformation": "sha256-json-byte-array",
+  "marker": "publication_source_hashes_encoding",
+  "records": [
+    {
+      "destination": "contracts/local-receipts/local-final-pinned-source-v3.json",
+      "original_source": "receipts/local-final-pinned-source-v3.json",
+      "frozen_publication_sha256": "a5ec5aff35b999cdb62b9e4d28a6fec48d726e1de410f373d1ab975bc94542fd",
+      "derived_publication_sha256": "1c089afe0dd3471309b0928dd54f596f290a1cf8c8125acee69969c77c7869cb",
+      "original_bytes": 61022,
+      "derived_bytes": 85942,
+      "source_hash_entries": 507,
+      "flagged_lines": [
+        178,
+        375,
+        384,
+        488
+      ],
+      "verified_flagged_source_paths": [
+        "Sources/WorkbenchCore/KimiAPI.swift",
+        "Tests/WorkbenchCoreTests/KimiAPILifecycleTests.swift",
+        "Tests/WorkbenchCoreTests/NarrativeByteKeyTests.swift",
+        "scripts/check-radius-tokens.py"
+      ],
+      "flagged_values_equal_actual_pinned_git_blob_SHA256": true,
+      "original_publication_backup": "blocked-publication-originals-v1/contracts/local-receipts/local-final-pinned-source-v3.json",
+      "decoded_JSON_and_reverse_bytes_equal_original": true
+    },
+    {
+      "destination": "contracts/mac-original-v1/style-r8-capture-gates-20261120-v1/plan-original-v1.json",
+      "original_source": "raw/original-v1/style-r8-capture-gates-20261120-v1/plan-original-v1.json",
+      "frozen_publication_sha256": "5cd0eaec2ef74ffce408a7a026860f5fa32a2c41315d28036fee3a54066b7bf4",
+      "derived_publication_sha256": "ac9bb236c522dab7f7d023a4bdb32f1fac1cf9d150d062dcca703f0374c35f30",
+      "original_bytes": 61658,
+      "derived_bytes": 86583,
+      "source_hash_entries": 507,
+      "flagged_lines": [
+        197,
+        394,
+        403,
+        507
+      ],
+      "verified_flagged_source_paths": [
+        "Sources/WorkbenchCore/KimiAPI.swift",
+        "Tests/WorkbenchCoreTests/KimiAPILifecycleTests.swift",
+        "Tests/WorkbenchCoreTests/NarrativeByteKeyTests.swift",
+        "scripts/check-radius-tokens.py"
+      ],
+      "flagged_values_equal_actual_pinned_git_blob_SHA256": true,
+      "original_publication_backup": "blocked-publication-originals-v1/contracts/mac-original-v1/style-r8-capture-gates-20261120-v1/plan-original-v1.json",
+      "decoded_JSON_and_reverse_bytes_equal_original": true
+    },
+    {
+      "destination": "contracts/mac-original-v1/style-r8-capture-gates-20261120-v1/source-before-v1.json",
+      "original_source": "raw/original-v1/style-r8-capture-gates-20261120-v1/source-before-v1.json",
+      "frozen_publication_sha256": "6e92c635dfa756d7232d3c86e609c427eec1e6f521ce7a9b89c62ec8e34ceb0b",
+      "derived_publication_sha256": "bb80e78514d90a1425b093fd1a835ccbf03e9f1b0ddf8d1dcbc483d35ed1a384",
+      "original_bytes": 61022,
+      "derived_bytes": 85947,
+      "source_hash_entries": 507,
+      "flagged_lines": [
+        178,
+        375,
+        384,
+        488
+      ],
+      "verified_flagged_source_paths": [
+        "Sources/WorkbenchCore/KimiAPI.swift",
+        "Tests/WorkbenchCoreTests/KimiAPILifecycleTests.swift",
+        "Tests/WorkbenchCoreTests/NarrativeByteKeyTests.swift",
+        "scripts/check-radius-tokens.py"
+      ],
+      "flagged_values_equal_actual_pinned_git_blob_SHA256": true,
+      "original_publication_backup": "blocked-publication-originals-v1/contracts/mac-original-v1/style-r8-capture-gates-20261120-v1/source-before-v1.json",
+      "decoded_JSON_and_reverse_bytes_equal_original": true
+    },
+    {
+      "destination": "contracts/mac-original-v3/style-r8-capture-gates-20261120-v3/plan-original-v1.json",
+      "original_source": "raw/original-v3/style-r8-capture-gates-20261120-v3/plan-original-v1.json",
+      "frozen_publication_sha256": "4738ebd469e1efeba05ece3e6e350b5eaf7d3f6218a53d1b1d072110a1a35dee",
+      "derived_publication_sha256": "9ddb6eac1c18b22ba1383b463dfdec0ad9b0b6fed76e851e8b2f88ea2a1b8b0a",
+      "original_bytes": 61865,
+      "derived_bytes": 86785,
+      "source_hash_entries": 507,
+      "flagged_lines": [
+        197,
+        394,
+        403,
+        507
+      ],
+      "verified_flagged_source_paths": [
+        "Sources/WorkbenchCore/KimiAPI.swift",
+        "Tests/WorkbenchCoreTests/KimiAPILifecycleTests.swift",
+        "Tests/WorkbenchCoreTests/NarrativeByteKeyTests.swift",
+        "scripts/check-radius-tokens.py"
+      ],
+      "flagged_values_equal_actual_pinned_git_blob_SHA256": true,
+      "original_publication_backup": "blocked-publication-originals-v1/contracts/mac-original-v3/style-r8-capture-gates-20261120-v3/plan-original-v1.json",
+      "decoded_JSON_and_reverse_bytes_equal_original": true
+    },
+    {
+      "destination": "contracts/mac-original-v3/style-r8-capture-gates-20261120-v3/source-before-v1.json",
+      "original_source": "raw/original-v3/style-r8-capture-gates-20261120-v3/source-before-v1.json",
+      "frozen_publication_sha256": "55f62e9aa6658f745cc91d2d0d3dbe450c4a8ba0958fea971ee3f93f1ddde1d4",
+      "derived_publication_sha256": "ecac30066553fef4b7bd80ef1f9105c15bfe25a95237a0bbf501c4fd9eb38227",
+      "original_bytes": 61022,
+      "derived_bytes": 85942,
+      "source_hash_entries": 507,
+      "flagged_lines": [
+        178,
+        375,
+        384,
+        488
+      ],
+      "verified_flagged_source_paths": [
+        "Sources/WorkbenchCore/KimiAPI.swift",
+        "Tests/WorkbenchCoreTests/KimiAPILifecycleTests.swift",
+        "Tests/WorkbenchCoreTests/NarrativeByteKeyTests.swift",
+        "scripts/check-radius-tokens.py"
+      ],
+      "flagged_values_equal_actual_pinned_git_blob_SHA256": true,
+      "original_publication_backup": "blocked-publication-originals-v1/contracts/mac-original-v3/style-r8-capture-gates-20261120-v3/source-before-v1.json",
+      "decoded_JSON_and_reverse_bytes_equal_original": true
+    },
+    {
+      "destination": "contracts/support-v3/plan-v3.json",
+      "original_source": "support-v3/plan-v3.json",
+      "frozen_publication_sha256": "4738ebd469e1efeba05ece3e6e350b5eaf7d3f6218a53d1b1d072110a1a35dee",
+      "derived_publication_sha256": "9ddb6eac1c18b22ba1383b463dfdec0ad9b0b6fed76e851e8b2f88ea2a1b8b0a",
+      "original_bytes": 61865,
+      "derived_bytes": 86785,
+      "source_hash_entries": 507,
+      "flagged_lines": [
+        197,
+        394,
+        403,
+        507
+      ],
+      "verified_flagged_source_paths": [
+        "Sources/WorkbenchCore/KimiAPI.swift",
+        "Tests/WorkbenchCoreTests/KimiAPILifecycleTests.swift",
+        "Tests/WorkbenchCoreTests/NarrativeByteKeyTests.swift",
+        "scripts/check-radius-tokens.py"
+      ],
+      "flagged_values_equal_actual_pinned_git_blob_SHA256": true,
+      "original_publication_backup": "blocked-publication-originals-v1/contracts/support-v3/plan-v3.json",
+      "decoded_JSON_and_reverse_bytes_equal_original": true
+    }
+  ],
+  "original_commit_process_exit": 1,
+  "verified_hash_false_positive_count": 24,
+  "private_originals_and_220_record_provenance_rewritten": false,
+  "review_scope_is_pre_derivative_snapshot": true,
+  "security_configuration_changed": false,
+  "hook_skipped_or_allowlist_changed": false,
+  "production_or_executable_plan_changes": false,
+  "visual_verdict": "FAIL",
+  "full_contract": "NOT_PASSED",
+  "completed_round_delta": 0,
+  "remaining": 14
+}

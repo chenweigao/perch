@@ -1,0 +1,5 @@
+pack-evidence-v1.py: OK
+perfrunner-r8-v1.job: OK
+plan-v1.json: OK
+record-command.py: OK
+verify-source-v1.py: OK

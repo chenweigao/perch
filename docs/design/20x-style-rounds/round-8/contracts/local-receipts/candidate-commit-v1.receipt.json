@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "command": [
+    "git",
+    "commit",
+    "-m",
+    "chore(style): add deterministic narrow capture geometry",
+    "-m",
+    "Co-Authored-By: Claude Code <<PUBLIC_COAUTHOR_EMAIL>>"
+  ],
+  "started_at": "2026-11-20T12:27:10+08:00",
+  "finished_at": "2026-11-20T12:27:25+08:00",
+  "process_exit": 0,
+  "exception": null,
+  "stdin_sha256": null,
+  "log_sha256": "ee929598a97d442d72e64e45d791d1bf18c7eee022466ba834ac55ca14916752"
+}

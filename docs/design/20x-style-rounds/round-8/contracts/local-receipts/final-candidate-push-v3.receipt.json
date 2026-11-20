@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "command": [
+    "git",
+    "push",
+    "--force-with-lease=refs/heads/style/loop-main:91711d43897f6e3d2726ea45e3bcad0f3fb71f44",
+    "origin",
+    "style/loop-main:refs/heads/style/loop-main"
+  ],
+  "started_at": "2026-11-20T13:11:12+08:00",
+  "finished_at": "2026-11-20T13:12:03+08:00",
+  "process_exit": 0,
+  "exception": null,
+  "stdin_sha256": null,
+  "log_sha256": "e3898aa26a1bbde269c5a6c6dc6a0c0e49bc176785ea82468585da84cb3d18a9"
+}

@@ -7,6 +7,16 @@ conventional commit。只修改 macOS 主窗口、既有 preview 与主题 token
 
 ## 当前状态
 
+- **2026-11-20 round8 / I02按规则②停止**：最终取证候选`0e2758ec`的v3原body／runner均exit1，两中文light14pt同机位原PNG仍RGBA200／visible200／alpha0差异；三作业91原件／6PNG保留。唯一[独立停止复核PASS_LIMITED](../20x-style-rounds/round-8/review-8.json)已交付，五项发现[逐字处置](../20x-style-rounds/round-8/review-disposition.md)；仅认证失败证据、本地源码恢复与停止处置，不改变视觉FAIL／完整契约NOT_PASSED／完整Mac覆盖NOT_RUN。父代理13:56:41复验11,384项冻结输入及候选HEAD/index无变化，复核后按授权同轮回滚归档，最终头另由实际Git／远端回执确认；Mac源码／程序恢复及最高thinking实执行仍UNVERIFIED。定时器停用、不再GUI、不重派、不恢复S04/S05；失败轮不计，仍余14轮，没有PR或合并批准。全部轮次与截图见[STOP-20261120-R8.md](STOP-20261120-R8.md)。
+
+### 历史取证进度（已终结，不作续作入口）
+- round8最终候选为`0e2758ec`：2026-11-20 13:11:09同轮amend、13:12:03精确lease显式push均exit0，保持每轮一提交；原`91711d43`取证与负回执保留。固定等待与实测副本逐字一致，重验8控制／portable10/10、源快照5文件／0 findings、10,865旧输入保护通过。Mac短查13:12:37队列0、无build／fixture进程；新且唯一`style-r8-capture-gates-20261120-v3`于13:12:45入队，507份源码摘要固定，待实际terminal／八组合／正常11gates／5冷启动／34场景A/B。仍delta0／余14轮，未开始S04/S05；不重跑v1／v2、不把queued写成PASS。
+- 2026-11-20用户明确要求“持续做、别来问”：自主持续目标active，先推进[round8 / I02](../20x-style-rounds/round-8/README.md)，不逐步索要继续批准。几何初候选`91711d43`的v1于12:38:29原exit1，RGBA383／visible381／alpha7变化，正常gates、八组合和34矩阵均NOT_RUN。唯一固定5秒补证v2于12:55:00原exit0；两独立进程中文light14pt原PNG字节／RGBA／visible／alpha全0，21原文件已核验，父代理已实际目视两完整原图；仅pilot通过，不认证根因或完整契约。现进入最终候选准备，已把实测等待逐字落实到截图脚本，随后跑八组合及剩余完整证据；不重派v1／v2，不改Source产品、正常验收或测量CI语义。仍delta0／余14轮。续作stage在外部证据`style-loop-narrow-stability-20261120/continuation-v1.json`；GUI阶段才启用五分钟兜底，独立review前停用并按T3完成唤醒。每20轮／队列收尾与硬性停止规则保留，未批准不PR／合并。
+- 用户于2026-11-19回复“继续”的[同头完整功能补证](diagnostics/20261119-functional-contract/README.md)现已交付限定独立复核PASS_LIMITED，固定`829ba3a9`，不重拍原34场景A/B。v1原exit1保留；v2只规范job-local TMPDIR为同一物理目录，不改测试／CI／性能语义，2026-11-20 00:15:37原exit0，11/11关卡、Mac/Linux portable10/10、57项supervisor测试、5/5冷启动及12原PNG通过；Linux无Swift。原provider/model的thinking=max已成功请求且child配置核实，实际执行仍UNVERIFIED。新增两项P2逐字保留：执行认证边界、836×900原view-cache窄窗叠读观察；不能认证全部图无重叠或真实合成窗口故障。完成通知后结果已读取一次，不重派；同阶段归档、不计轮，无Git写入。审美停止、S04/S05未启动、delta0、仍14轮。
+- 2026-11-19用户进一步批准[完整34场景同头诊断](diagnostics/20261119-matrix-capture/README.md)：新A/B于22:39:36／22:47:24实际exit0，原顺序各68 capture事件／68原PNG；独立复核PASS_LIMITED，136原PNG／204组比较RGBA／visible／alpha全0且PNG字节相同，18张完整原PNG实际目视。六项发现逐字处置；无产品／基建源码改动，不认证根因、不改round7原判、不恢复S04/S05、不计轮，仍14轮。
+- 此前34场景诊断阶段（不含本次2026-11-20功能补证）的完整功能gates为NOT_RUN；当时唯一实际评审为指定同模型mode=default，注册表只暴露mode，最高thinking配置／执行未认证。原两项P2完整轮次阻断及四项P3认证边界保留；[原review](diagnostics/20261119-matrix-capture/review-matrix-v1.json)与评审时README／INDEX原字节均留存，不追改历史或重派已完成作业／复核。
+- 用户2026-11-20回复“继续”授权的[同头窄窗真实合成诊断](diagnostics/20261120-narrow-composited/README.md)已完成限定独立复核PASS_LIMITED、逐字处置及续作归档：两次既有836×900中文light默认14pt合成窗口未见原cache式明显叠字，既有遮挡仍在；双跑RGBA／visible685像素非零、alpha0，零容差及完整style均NOT_PASSED。原GUI仅一次exit0，无重拍／构建；新登记P2一项为已声明边界，新未声明缺口0，原两P2完整保留、修复／豁免0。原review／seal／10,865项输入／HEAD／index均核验不变，完成后结果仅读取一次。末次发布后交付53份记录／3份provenance／38份严格JSON／5目标PNG原字节通过；11:50:11原snapshot59文件／0 findings／exit0仅覆盖当时说明，衔接更新后的末次回执单列于诊断证据receipts/closure-*及snapshot-scan-closure-v1。P2-001实际max执行UNVERIFIED、P2-002原cache观察与round7原FAIL保持。当前无运行中独立委派，不自行恢复审美；若继续先预写窄窗稳定性基建契约，delta0／仍余14轮。
+- 2026-11-19用户只授权先恢复截图基建；[查找栏同头最小诊断](diagnostics/20261119-find-capture/README.md)已结束：回滚头`829ba3a9`上两个新独立PerfRunner作业均exit0，8原PNG的6组比较全窗口RGBA／可见像素／alpha零差异且PNG字节相同。只认证缩小矩阵，不认证根因或完整capture恢复；无产品／基建源码改动，在最小诊断阶段未派发完整34场景验证，未启动S04/S05，不计轮，仍14轮。round7原FAIL与停止记录不改。
 - round 0：基建与队列初始化，证据见 [round 0 报告](../20x-style-rounds/round-0/README.md)。
 - round 1 / S01：一行产品修复、三层证据与独立评审已完成；限定范围 PASS，无新增 P1/P2 finding。
 - round 2 / S02：历史视觉契约失败，产品候选已回滚；当时`composer-dark`跨作业底色漂移触发停止规则②，原判保留。
@@ -28,6 +38,7 @@ conventional commit。只修改 macOS 主窗口、既有 preview 与主题 token
 
 | ID | 区域 | 基线观察到的问题 | 单一假设 | 预计视觉差异 | 触碰已裁决方向 | 状态 |
 |---|---|---|---|---|---|---|
+| I02 | 既有静态主窗口窄窗截图几何 | 正常动态 native-design 两次合成有685像素变化；旧 capture fixture 已静态，但内容尺寸硬定1536 | 截图 helper 增加 opt-in 固定内容尺寸，既有静态模式在836×900就绪后捕获，正常验收与默认矩阵不变 | 仅本次静态窄窗捕获的指定机位；新同头A/B零容差，产品／normal gates零变化 | 否 | round8最终v3仍200像素非零、规则②停止；源码已恢复、独立停止复核待完成；不计完成、仍余14轮 |
 | I01 | Composer preview 捕获态背景 | round 2 同机位跨作业有 376604 个清单外像素；历史底色也跨轮变化 | 捕获态应显式使用已有内容背景，避开未固定的平台窗口背景 | 仅 Composer 背景及其合成颜色修复；其余 20 场景零差异，after 跨作业全部零差异 | 否 | round 3 完成：限定独立评审PASS；认证边界保留 |
 | S01 | 主窗口回复操作行 | 正文 18pt 时 `Recap` 被截成 `Re…`，违反放大字号不截断契约 | 操作行应给文字标签保留最小固有宽度，图标间距让位于完整标签 | 仅放大字号的操作标签恢复完整；默认字号不变 | 否 | 完成：限定范围独立评审 PASS |
 | S02 | 主窗口 inspector 标题 | 英文默认宽度下 `Current workspace diff` 被截成 `Current workspac…` | 标题区可减少非标题控件的占位竞争，让完整标题优先显示 | 仅 inspector header 的标题与相邻水平留白变化；其他区域不变 | 否 | round4完成：实际关卡与独立目视补证通过，精确同轮首次归档已核实；round2仍撤回 |
@@ -54,6 +65,7 @@ conventional commit。只修改 macOS 主窗口、既有 preview 与主题 token
 | [5](../20x-style-rounds/round-5/README.md) | 两项既有WB Picker当前值宽度 | 九组合中英当前值完整，九header声明内变化、其余十八RGBA／visible／PNG字节零差异；120原PNG | before／after各27/27双跑、19控制、portable10/10及完整Mac gates实际PASS；未认证边界保留 | [PASS_LIMITED](../20x-style-rounds/round-5/review-5.json)，唯一P3逐字处置；同轮归档／首次精确远端与源码核验通过后计完成 | 15轮 |
 | [6](../20x-style-rounds/round-6/README.md) | 既有预览状态当前值宽度契约 | 新before／after各34/34双跑、136矩阵＋12原生PNG；十八场景零差异，首次使用八组完整 | 冻结契约、26控制、portable10/10、目视及完整Mac gates／5冷启动PASS，负回执保留 | [PASS_LIMITED](../20x-style-rounds/round-6/review-6.json)，唯一P3逐字处置；首归档／精确远端与源码再验通过后计完成 | 14轮 |
 | [7](../20x-style-rounds/round-7/README.md) | 暗色 quiet 共享前景层级 | before／after各34/34双跑、136原PNG；两查找场景color FAIL、Workbench-dark必需变化缺失 | 原件与发布副本同一FAIL；Theme恢复基线，Mac完整gates NOT_RUN，规则②停止 | [停止处置PASS_LIMITED](../20x-style-rounds/round-7/review-7.json)；七项新发现逐字处置，四项交付阻断保留，不裁美／不授权恢复 | 未计完成，仍14轮 |
+| [8](../20x-style-rounds/round-8/README.md) | 窄窗静态截图几何／固定等待基建尝试 | v1 FAIL、v2仅中文light14pt pilot PASS、最终v3仍RGBA200／visible200／alpha0非零；候选源码恢复 | 原三作业91文件／6PNG保留；本地8控制及portable10/10通过；完整Mac gates／5冷启动／八组合／34矩阵NOT_RUN | [停止处置PASS_LIMITED](../20x-style-rounds/round-8/review-8.json)已交付；五项发现逐字保留，回滚归档不等于契约通过；不裁美／不授权恢复 | 未计完成，仍14轮 |
 
 ## 可验证的续作锚点
 

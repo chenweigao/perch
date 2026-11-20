@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "command": [
+    "git",
+    "ls-remote",
+    "origin",
+    "refs/heads/main",
+    "refs/heads/style/loop-main"
+  ],
+  "started_at": "2026-11-20T13:11:10+08:00",
+  "finished_at": "2026-11-20T13:11:11+08:00",
+  "process_exit": 0,
+  "exception": null,
+  "stdin_sha256": null,
+  "log_sha256": "1c5b151d12ff940ee5f4427156932e342d0cb9f5888b14f5912eab541101000a"
+}

@@ -1,0 +1,101 @@
+#!/bin/bash
+set -euo pipefail
+export GIT_OPTIONAL_LOCKS=0
+export PYTHONDONTWRITEBYTECODE=1
+export PERCH_STYLE_CAPTURE_NODE="$HOME/.local/opt/node-v24.18.0-darwin-arm64/bin/node"
+unset PERCH_STYLE_CAPTURE PERCH_STYLE_CAPTURE_SIZE PERCH_STYLE_DARK PERCH_STYLE_LARGE_TYPE PERCH_STYLE_LOCALE PERCH_STYLE_SCENARIO PERCH_STYLE_FIRST_USE PERCH_DESIGN_COMPOSITED PERCH_DESIGN_CAPTURES
+unset WORKBENCH_LIVE_HOST WORKBENCH_GIT_WRITE_HOST WORKBENCH_BUILD_CONFIGURATION WORKBENCH_APP_DIR WORKBENCH_PREVIEW_BUILD_ROOT
+revision=0e2758ecffef5964d99c3d833e0b1535468a59d5
+support="$HOME/Library/PerfRunner/results/style-r8-support-20261120-v3"
+output="$HOME/Library/PerfRunner/results/style-r8-capture-gates-20261120-v3"
+printf 'start=%s\nsource_revision=%s\n' "$(date -Iseconds)" "$revision"
+cd "$HOME/_worktrees/20x-loop-20261112/perch"
+test -z "$(git status --porcelain=v1)"
+git fetch origin main style/loop-main
+test "$(git rev-parse origin/style/loop-main)" = "$revision"
+test "$(git rev-parse origin/main)" = 65cf2fc67623a916f12797371d1ca087c911b24f
+git checkout --detach "$revision"
+test "$(git rev-parse HEAD)" = "$revision"
+(cd "$support" && shasum -a 256 -c SHA256SUMS)
+test ! -e "$output"
+mkdir -p "$output/receipts"
+cp "$support/plan-v3.json" "$output/plan-original-v1.json"
+cp "$support/SHA256SUMS" "$output/support.sha256"
+sw_vers > "$output/system-version.txt"
+finish() {
+    local status=$?
+    trap - EXIT
+    printf 'body_exit=%s\nend=%s\n' "$status" "$(date -Iseconds)"
+    python3 -B "$support/pack-evidence-v1.py" "$output" || true
+    exit "$status"
+}
+trap finish EXIT
+git diff origin/main HEAD -- Sources ':(exclude)Sources/AgentWorkbench' > "$output/protected-sources.diff"
+test ! -s "$output/protected-sources.diff"
+python3 -B "$support/verify-source-v1.py" --plan "$support/plan-v3.json" --output "$output/source-before-v1.json"
+original_temp_directory=$(python3 -B -c 'import tempfile; print(tempfile.gettempdir())')
+canonical_temp_directory=$(python3 -B -c 'from pathlib import Path; import sys; print(Path(sys.argv[1]).resolve(strict=True))' "$original_temp_directory")
+python3 -B - "$original_temp_directory" "$canonical_temp_directory" "$output/tmpdir-canonicalization.json" <<'PY'
+from datetime import datetime
+import json
+import os
+from pathlib import Path
+import sys
+original, canonical, target = sys.argv[1:]
+assert os.path.samefile(original, canonical) and os.access(canonical, os.W_OK | os.X_OK)
+with Path(target).open('x') as output:
+    json.dump({'verified_at':datetime.now().astimezone().isoformat(timespec='seconds'),'original':original,'canonical':canonical,'same_physical_directory':True,'job_local_only':True,'test_source_changes':0},output,indent=2)
+    output.write('\n')
+PY
+export TMPDIR="$canonical_temp_directory"
+record() {
+    local name=$1
+    local timeout=$2
+    shift 2
+    python3 -B "$support/record-command.py" --directory "$output/receipts" --name "$name" --timeout "$timeout" -- "$@"
+}
+old_app="$HOME/Library/PerfRunner/results/style-functional-contract-gates-20261120-v2/HostLifecycleChecks.app"
+test "$(shasum -a 256 "$old_app/Contents/MacOS/HostLifecycleChecks" | cut -d ' ' -f1)" = 78554ceb1feb6764e9630938ac696a2051e798c8951b83c7c29f450fc1554f05
+set +e
+record old-size-negative-control 90 python3 -B scripts/capture-style-loop-narrow.py --host-app "$old_app" --output "$output/old-size-negative-control" --scenes light
+negative_status=$?
+set -e
+printf 'old_size_negative_control_exit=%s expected=1\n' "$negative_status"
+test "$negative_status" = 1
+record pilot-host-build 600 python3 -B scripts/check-host-lifecycle.py --build-only --app "$output/HostLifecycleChecks.app"
+record narrow-pilot 180 python3 -B scripts/capture-style-loop-narrow.py --host-app "$output/HostLifecycleChecks.app" --output "$output/narrow-pilot" --scenes light
+record narrow-representative 1200 python3 -B scripts/capture-style-loop-narrow.py --host-app "$output/HostLifecycleChecks.app" --output "$output/narrow-representative" --scenes all
+run_gate() {
+    local name=$1
+    local timeout=$2
+    shift 2
+    record "$name" "$timeout" "$@"
+    printf '%s\n' "$name" >> "$output/gate-order.txt"
+}
+run_gate build 900 bash scripts/build.sh
+run_gate workbench-checks 300 swift run WorkbenchChecks
+run_gate portable 600 python3 -B scripts/check-functional.py portable --output "$output/portable"
+run_gate radius 60 python3 -B scripts/check-radius-tokens.py
+run_gate localization 60 python3 -B scripts/check-localization.py
+run_gate preview-workbench 300 bash scripts/build-workbench-preview.sh
+run_gate preview-sidebar 300 bash scripts/build-sidebar-preview.sh
+run_gate preview-composer 300 bash scripts/build-composer-preview.sh
+run_gate cold-launches 180 python3 -B scripts/check-app-launch.py --app build/Perch.app --output "$output/app-launch"
+run_gate host-build 300 python3 -B scripts/check-host-lifecycle.py --build-only --app "$output/HostLifecycleChecks.app"
+mkdir "$output/native-design"
+export PERCH_DESIGN_CAPTURES="$output/native-design"
+run_gate native-design 300 python3 -B scripts/check-host-lifecycle.py --app "$output/HostLifecycleChecks.app" --phase native-design
+unset PERCH_DESIGN_CAPTURES
+record standard-matrix-a 1800 python3 -B docs/design/20x-style-rounds/round-7/contracts/capture-matrix.py --host-app "$output/HostLifecycleChecks.app" --output "$output/standard-matrix-a"
+record standard-matrix-b 1800 python3 -B docs/design/20x-style-rounds/round-7/contracts/capture-matrix.py --host-app "$output/HostLifecycleChecks.app" --output "$output/standard-matrix-b"
+for app in build/Perch.app "$output/HostLifecycleChecks.app" 'build/Workbench Preview.app' 'build/Sidebar Preview.app' 'build/Composer Preview.app'; do
+    info="$app/Contents/Info.plist"
+    executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$info")
+    label=$(basename "$app" .app | tr ' ' '-')
+    codesign --verify --strict "$app"
+    printf 'binary_sha256=%s app=%s\n' "$(shasum -a 256 "$app/Contents/MacOS/$executable" | cut -d ' ' -f1)" "$label"
+    cp "$info" "$output/$label-Info.plist"
+done
+python3 -B "$support/verify-source-v1.py" --plan "$support/plan-v3.json" --output "$output/source-after-v1.json"
+test -z "$(git status --porcelain=v1)"
+printf 'shared_after=%s\n' "$(git rev-parse HEAD)"

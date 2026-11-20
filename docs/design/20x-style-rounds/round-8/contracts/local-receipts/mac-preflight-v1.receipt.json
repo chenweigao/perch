@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "command": [
+    "ssh",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "ConnectTimeout=10",
+    "mac-mini",
+    "bash",
+    "-s"
+  ],
+  "started_at": "2026-11-20T12:11:53+08:00",
+  "finished_at": "2026-11-20T12:11:59+08:00",
+  "process_exit": 0,
+  "exception": null,
+  "stdin_sha256": "661485ad2fef37b31d36c8aa51262983671b72d08d2818e01425dce087e507ff",
+  "log_sha256": "f2905c419c9e3f9df2b0013e9007977b65fc9540a357965142e97245672c5ffd"
+}

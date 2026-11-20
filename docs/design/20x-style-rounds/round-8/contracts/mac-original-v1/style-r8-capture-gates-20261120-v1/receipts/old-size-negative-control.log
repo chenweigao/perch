@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "<MAC_HOME>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop-narrow.py", line 170, in <module>
+    main()
+  File "<MAC_HOME>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop-narrow.py", line 148, in main
+    entries = [capture(binary, domain, node, output / name / f"repeat-{repeat}", SCENES[name])
+  File "<MAC_HOME>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop-narrow.py", line 148, in <listcomp>
+    entries = [capture(binary, domain, node, output / name / f"repeat-{repeat}", SCENES[name])
+  File "<MAC_HOME>/_worktrees/20x-loop-20261112/perch/scripts/capture-style-loop-narrow.py", line 70, in capture
+    raise RuntimeError("Fixture does not honor the fixed narrow capture size")
+RuntimeError: Fixture does not honor the fixed narrow capture size

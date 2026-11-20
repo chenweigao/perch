@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-11-20T14:00:59+08:00",
+  "phase": "before-stage",
+  "input_count": 11384,
+  "protected_inputs_unchanged": 11380,
+  "protected_changes": 0,
+  "authorized_description_updates": [
+    {
+      "root": "handoff",
+      "path": "20261118-style-loop-continuity.md",
+      "frozen_sha256": "e534c0951a9129686f4e0d6c2bf89fac9101fcced9175daf80c81b4118a47428",
+      "current_sha256": "66e7721ca70e1d0f60afff860a8027dd83b035c4fc94f4bdea0120c56369a162",
+      "original_copy_matches_frozen_hash": true,
+      "mode_and_kind_unchanged": true
+    },
+    {
+      "root": "repo",
+      "path": "docs/design/20x-style-loop/INDEX.md",
+      "frozen_sha256": "9f0e20d1a9bb8e11b80674fd603d16adf304ed8ac9d74fe4a1b17224edce5099",
+      "current_sha256": "6e70983284a6613267a037282e8e12d3a31e5efc04599e531ad54bba68932708",
+      "original_copy_matches_frozen_hash": true,
+      "mode_and_kind_unchanged": true
+    },
+    {
+      "root": "repo",
+      "path": "docs/design/20x-style-loop/STOP-20261120-R8.md",
+      "frozen_sha256": "20d73a4001b2cc53e19851350f40896269312504658760969f6e8b6c162f0e04",
+      "current_sha256": "9297b21b3d72387b37158556bfef9b300452ffad7bf5ba49eca2b3f1ab469e67",
+      "original_copy_matches_frozen_hash": true,
+      "mode_and_kind_unchanged": true
+    },
+    {
+      "root": "repo",
+      "path": "docs/design/20x-style-rounds/round-8/README.md",
+      "frozen_sha256": "83435469de270e9237cec39a425211dac66cc8782ee4d7fb0ae2714cd9a06acf",
+      "current_sha256": "7e39cb817199459494636503176a8d6a12d5790060b29f48d90a0488e6ff5491",
+      "original_copy_matches_frozen_hash": true,
+      "mode_and_kind_unchanged": true
+    }
+  ],
+  "seal_sha256": "33cd8f9ed561eaaefb55969a3dfbd394d90ade7e65c3a75a1fae6ef783adcea7",
+  "review_sha256": "cb09432c3436e3bbd50781f3e82ad221cdf09de19fde995cf181eb4907e7b92b",
+  "verbatim_findings_and_required_dispositions_preserved": 5,
+  "publication_source_records_verified": 220,
+  "strict_JSON_count": 102,
+  "complete_original_capture_copies": 6,
+  "historical_review_anchors_unchanged": 4,
+  "physical_index_original_saved_unchanged": true,
+  "branch": "style/loop-main",
+  "checked_HEAD": "0e2758ecffef5964d99c3d833e0b1535468a59d5",
+  "checked_physical_index_sha256": "4eaacbc5880f980ab73aa4021c0a3473ac5e09e6ffeb9a12d6c40491aba87fc8",
+  "effective_source_diff_bytes_to_baseline": 0,
+  "visual_verdict": "FAIL",
+  "full_contract": "NOT_PASSED",
+  "normal_gates": "NOT_RUN",
+  "Mac_source_or_runtime_restore": "UNVERIFIED",
+  "completed_round_delta": 0,
+  "remaining": 14
+}

@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-11-20T13:22:15+08:00",
+  "branch": "style/loop-main",
+  "head": "0e2758ecffef5964d99c3d833e0b1535468a59d5",
+  "job": "style-r8-capture-gates-20261120-v3",
+  "original_job_body_exit": 1,
+  "original_runner_exit": 1,
+  "original_files_verified": 35,
+  "PNG_original_count": 2,
+  "archive_sha256": "db6230aecef7b38316532c832255da54654389e1758aa9f294cdc2d1142ed398",
+  "source_files_pinned": 507,
+  "fixed_settle_seconds_after_ready": 5,
+  "metadata_identical": true,
+  "comparison": {
+    "left": "<LINUX_HOME>/code/_evidence/style-loop-narrow-stability-20261120/raw/original-v3/style-r8-capture-gates-20261120-v3/narrow-pilot/light/repeat-1/capture.png",
+    "right": "<LINUX_HOME>/code/_evidence/style-loop-narrow-stability-20261120/raw/original-v3/style-r8-capture-gates-20261120-v3/narrow-pilot/light/repeat-2/capture.png",
+    "dimensions": [
+      836,
+      900
+    ],
+    "left_sha256": "fca6b0ca0d087871e4d8db0aca370fb4e5ca47d9f3318463d651702a56207c09",
+    "right_sha256": "ab3e04a8a56eaba94861e148811b42165c1a9ea9d0e22e36ba6acd592028ea27",
+    "png_bytes_equal": false,
+    "rgba": {
+      "changed_pixels": 200,
+      "bbox": [
+        5,
+        4,
+        831,
+        889
+      ]
+    },
+    "visible_white_integer": {
+      "changed_pixels": 200,
+      "bbox": [
+        5,
+        4,
+        831,
+        889
+      ]
+    },
+    "alpha": {
+      "changed_pixels": 0,
+      "bbox": null
+    }
+  },
+  "receipts": {
+    "old-size-negative-control": {
+      "process_exit": 1,
+      "log_sha256": "baafbb64e045876468cb2e769980e0c37b35ce49e1fbb5466c936bd17d1a92d5",
+      "started_at": "2026-11-20T13:12:55+08:00",
+      "finished_at": "2026-11-20T13:13:04+08:00"
+    },
+    "pilot-host-build": {
+      "process_exit": 0,
+      "log_sha256": "991ce80d1b9046445b2d11e255f5454ffa5957015fe323a8b1306381ab3d582f",
+      "started_at": "2026-11-20T13:13:04+08:00",
+      "finished_at": "2026-11-20T13:13:31+08:00"
+    },
+    "narrow-pilot": {
+      "process_exit": 1,
+      "log_sha256": "314b458fe38d9e2457785402720040dffefc0bc852c87bf328331f171b896183",
+      "started_at": "2026-11-20T13:13:31+08:00",
+      "finished_at": "2026-11-20T13:14:02+08:00"
+    }
+  },
+  "capture_verdict": "FAIL",
+  "full_contract": "NOT_PASSED",
+  "normal_gates": "NOT_RUN",
+  "cold_launches": "NOT_RUN",
+  "eight_scenes": "NOT_RUN",
+  "standard_34_scene_matrix": "NOT_RUN",
+  "root_cause": "UNVERIFIED",
+  "old_v1_FAIL_rewritten": false,
+  "old_v2_limited_PASS_rewritten": false,
+  "old_round7_verdicts_rewritten": false,
+  "completed_round_delta": 0,
+  "remaining": 14
+}

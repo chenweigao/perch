@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "command": [
+    "python3",
+    "-B",
+    "scripts/check-public-source.py",
+    "--snapshot",
+    "docs/design/20x-style-rounds/round-8"
+  ],
+  "started_at": "2026-11-20T12:19:57+08:00",
+  "finished_at": "2026-11-20T12:19:57+08:00",
+  "process_exit": 0,
+  "exception": null,
+  "stdin_sha256": null,
+  "log_sha256": "b42894946d7f67fab30b51e618c581ae0f6bce67f7c4a84efa6d8d4c15d75f97"
+}

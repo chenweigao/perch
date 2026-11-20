@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "command": [
+    "python3",
+    "-B",
+    "<LINUX_HOME>/code/_evidence/style-loop-narrow-stability-20261120/tools/test-capture-v1.py"
+  ],
+  "started_at": "2026-11-20T13:03:54+08:00",
+  "finished_at": "2026-11-20T13:03:54+08:00",
+  "process_exit": 0,
+  "exception": null,
+  "stdin_sha256": null,
+  "log_sha256": "a9c199bb0815a7b52a3d2e9557612f346083a2ce10987206094238eea8e13936"
+}

@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-11-20T14:14:37+08:00",
+  "phase": "staged",
+  "input_count": 11384,
+  "protected_inputs_unchanged": 11374,
+  "protected_changes": 0,
+  "authorized_description_updates": [
+    {
+      "root": "handoff",
+      "path": "20261118-style-loop-continuity.md",
+      "frozen_sha256": "e534c0951a9129686f4e0d6c2bf89fac9101fcced9175daf80c81b4118a47428",
+      "current_sha256": "9474c583363d50ff26a8a2b7af9ed73cc0d8e4aef8c4a3be65a1f71786506e99",
+      "original_copy_matches_frozen_hash": true,
+      "mode_and_kind_unchanged": true
+    },
+    {
+      "root": "repo",
+      "path": "docs/design/20x-style-loop/INDEX.md",
+      "frozen_sha256": "9f0e20d1a9bb8e11b80674fd603d16adf304ed8ac9d74fe4a1b17224edce5099",
+      "current_sha256": "6e70983284a6613267a037282e8e12d3a31e5efc04599e531ad54bba68932708",
+      "original_copy_matches_frozen_hash": true,
+      "mode_and_kind_unchanged": true
+    },
+    {
+      "root": "repo",
+      "path": "docs/design/20x-style-loop/STOP-20261120-R8.md",
+      "frozen_sha256": "20d73a4001b2cc53e19851350f40896269312504658760969f6e8b6c162f0e04",
+      "current_sha256": "7eeae93d1a04cca5bd8cfbfcbcfad911ce5f429123e3e988eeec8d64c5c40615",
+      "original_copy_matches_frozen_hash": true,
+      "mode_and_kind_unchanged": true
+    },
+    {
+      "root": "repo",
+      "path": "docs/design/20x-style-rounds/round-8/README.md",
+      "frozen_sha256": "83435469de270e9237cec39a425211dac66cc8782ee4d7fb0ae2714cd9a06acf",
+      "current_sha256": "5e2e77724dd267b7eef55a3c8a58d47332ee9230b38b48aef88f89acf8000e48",
+      "original_copy_matches_frozen_hash": true,
+      "mode_and_kind_unchanged": true
+    }
+  ],
+  "lossless_publication_serialization_derivatives": [
+    {
+      "path": "docs/design/20x-style-rounds/round-8/contracts/local-receipts/local-final-pinned-source-v3.json",
+      "frozen_sha256": "a5ec5aff35b999cdb62b9e4d28a6fec48d726e1de410f373d1ab975bc94542fd",
+      "derived_sha256": "1c089afe0dd3471309b0928dd54f596f290a1cf8c8125acee69969c77c7869cb",
+      "original_bytes_saved": true,
+      "lossless_JSON_and_reverse_byte_validation": true
+    },
+    {
+      "path": "docs/design/20x-style-rounds/round-8/contracts/mac-original-v1/style-r8-capture-gates-20261120-v1/plan-original-v1.json",
+      "frozen_sha256": "5cd0eaec2ef74ffce408a7a026860f5fa32a2c41315d28036fee3a54066b7bf4",
+      "derived_sha256": "ac9bb236c522dab7f7d023a4bdb32f1fac1cf9d150d062dcca703f0374c35f30",
+      "original_bytes_saved": true,
+      "lossless_JSON_and_reverse_byte_validation": true
+    },
+    {
+      "path": "docs/design/20x-style-rounds/round-8/contracts/mac-original-v1/style-r8-capture-gates-20261120-v1/source-before-v1.json",
+      "frozen_sha256": "6e92c635dfa756d7232d3c86e609c427eec1e6f521ce7a9b89c62ec8e34ceb0b",
+      "derived_sha256": "bb80e78514d90a1425b093fd1a835ccbf03e9f1b0ddf8d1dcbc483d35ed1a384",
+      "original_bytes_saved": true,
+      "lossless_JSON_and_reverse_byte_validation": true
+    },
+    {
+      "path": "docs/design/20x-style-rounds/round-8/contracts/mac-original-v3/style-r8-capture-gates-20261120-v3/plan-original-v1.json",
+      "frozen_sha256": "4738ebd469e1efeba05ece3e6e350b5eaf7d3f6218a53d1b1d072110a1a35dee",
+      "derived_sha256": "9ddb6eac1c18b22ba1383b463dfdec0ad9b0b6fed76e851e8b2f88ea2a1b8b0a",
+      "original_bytes_saved": true,
+      "lossless_JSON_and_reverse_byte_validation": true
+    },
+    {
+      "path": "docs/design/20x-style-rounds/round-8/contracts/mac-original-v3/style-r8-capture-gates-20261120-v3/source-before-v1.json",
+      "frozen_sha256": "55f62e9aa6658f745cc91d2d0d3dbe450c4a8ba0958fea971ee3f93f1ddde1d4",
+      "derived_sha256": "ecac30066553fef4b7bd80ef1f9105c15bfe25a95237a0bbf501c4fd9eb38227",
+      "original_bytes_saved": true,
+      "lossless_JSON_and_reverse_byte_validation": true
+    },
+    {
+      "path": "docs/design/20x-style-rounds/round-8/contracts/support-v3/plan-v3.json",
+      "frozen_sha256": "4738ebd469e1efeba05ece3e6e350b5eaf7d3f6218a53d1b1d072110a1a35dee",
+      "derived_sha256": "9ddb6eac1c18b22ba1383b463dfdec0ad9b0b6fed76e851e8b2f88ea2a1b8b0a",
+      "original_bytes_saved": true,
+      "lossless_JSON_and_reverse_byte_validation": true
+    }
+  ],
+  "source_digest_false_positives_independently_verified": 24,
+  "seal_sha256": "33cd8f9ed561eaaefb55969a3dfbd394d90ade7e65c3a75a1fae6ef783adcea7",
+  "review_sha256": "cb09432c3436e3bbd50781f3e82ad221cdf09de19fde995cf181eb4907e7b92b",
+  "verbatim_findings_and_required_dispositions_preserved": 5,
+  "publication_source_records_verified": 220,
+  "strict_JSON_count": 107,
+  "complete_original_capture_copies": 6,
+  "historical_review_anchors_unchanged": 4,
+  "physical_index_original_saved_unchanged": true,
+  "branch": "style/loop-main",
+  "checked_HEAD": "0e2758ecffef5964d99c3d833e0b1535468a59d5",
+  "checked_physical_index_sha256": "6ddb0a0ee2d541bb9e065f23dcfbcc126ebf20d98f5f1baa02d3318c30cae5e2",
+  "effective_source_diff_bytes_to_baseline": 0,
+  "visual_verdict": "FAIL",
+  "full_contract": "NOT_PASSED",
+  "normal_gates": "NOT_RUN",
+  "Mac_source_or_runtime_restore": "UNVERIFIED",
+  "completed_round_delta": 0,
+  "remaining": 14
+}
