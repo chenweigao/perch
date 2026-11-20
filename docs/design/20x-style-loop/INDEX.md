@@ -7,6 +7,7 @@ conventional commit。只修改 macOS 主窗口、既有 preview 与主题 token
 
 ## 当前状态
 
+- **2026-11-20 用户明确结束循环**：用户要求「把代码提交然后收尾吧，不做了」，覆盖此前持续自主推进授权。本次只提交收尾说明，不改产品、不计新轮、不再补证或评审；既有代码、截图及失败原判保留。续作定时器已删除，本线程消息队列为空；不再自动恢复，也不开 PR 或合并 main。已完成6轮、剩余14轮的历史计数冻结，最终说明见[用户收尾记录](STOP-20261120-R8.md#用户最终收尾2026-11-20)。
 - **2026-11-20 round8 / I02按规则②停止**：最终取证候选`0e2758ec`的v3原body／runner均exit1，两中文light14pt同机位原PNG仍RGBA200／visible200／alpha0差异；三作业91原件／6PNG保留。唯一[独立停止复核PASS_LIMITED](../20x-style-rounds/round-8/review-8.json)已交付，五项发现[逐字处置](../20x-style-rounds/round-8/review-disposition.md)；仅认证失败证据、本地源码恢复与停止处置，不改变视觉FAIL／完整契约NOT_PASSED／完整Mac覆盖NOT_RUN。父代理13:56:41复验11,384项冻结输入及候选HEAD/index无变化，复核后按授权同轮回滚归档，最终头另由实际Git／远端回执确认；Mac源码／程序恢复及最高thinking实执行仍UNVERIFIED。定时器停用、不再GUI、不重派、不恢复S04/S05；失败轮不计，仍余14轮，没有PR或合并批准。全部轮次与截图见[STOP-20261120-R8.md](STOP-20261120-R8.md)。
 
 ### 历史取证进度（已终结，不作续作入口）
