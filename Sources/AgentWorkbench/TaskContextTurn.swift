@@ -248,49 +248,48 @@ struct TaskSessionOverviewSection: View {
         .accessibilityElement(children: .contain)
     }
 
-    /// Default 3–5 line summary covering goal, completed progress, current status/next step, and blockers.
+    /// The default overview is three fixed rows — 目标 / 已完成 / 下一步 (or what is
+    /// in progress) — so the same question is always on the same line. A blocker,
+    /// when there is one, takes the first row in the attention color, matching the
+    /// sidebar's 待处理. Each row keeps at most two lines; 展开 shows everything.
     @ViewBuilder private func compactBody(_ overview: SessionOverview) -> some View {
-        if !overview.blockers.isEmpty {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text("阻塞")
-                    .font(.system(size: WorkbenchTheme.Typography.caption, weight: .semibold))
-                    .foregroundStyle(WorkbenchTheme.Status.attention)
-                Text(verbatim: overview.blockers.joined(separator: "；"))
-                    .font(.system(size: WorkbenchTheme.Typography.caption))
-                    .foregroundStyle(WorkbenchTheme.Status.attention)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+        VStack(alignment: .leading, spacing: 6) {
+            if !overview.blockers.isEmpty {
+                compactRow("阻塞", text: overview.blockers.joined(separator: "；"),
+                           tint: WorkbenchTheme.Status.attention)
             }
-        }
-        Text(verbatim: compactParagraph(overview))
-            .font(.system(size: WorkbenchTheme.Typography.caption))
-            .foregroundStyle(WorkbenchTheme.ink.opacity(0.88))
-            .lineSpacing(3)
-            .lineLimit(overview.blockers.isEmpty ? 5 : 4)
-            .truncationMode(.tail)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            compactRow("目标", text: overview.goal)
+            compactRow("已完成", text: overview.completed.isEmpty ? L("暂无已完成项") : overview.completed.joined(separator: "；"),
+                       tint: overview.completed.isEmpty ? WorkbenchTheme.quiet : nil)
+            if let next = compactNext(overview) {
+                compactRow(next.label, text: next.text)
+            }
+        }.frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func compactParagraph(_ overview: SessionOverview) -> String {
-        func trimSentence(_ text: String) -> String {
-            var trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            while trimmed.hasSuffix("。") || trimmed.hasSuffix(".") || trimmed.hasSuffix("；") || trimmed.hasSuffix(";") {
-                trimmed.removeLast()
-            }
-            return trimmed
+    private func compactNext(_ overview: SessionOverview) -> (label: LocalizedStringKey, text: String)? {
+        if !overview.inProgress.isEmpty { return ("进行中", overview.inProgress.joined(separator: "；")) }
+        if !overview.nextSteps.isEmpty { return ("下一步", overview.nextSteps.joined(separator: "；")) }
+        if !overview.planned.isEmpty { return ("计划", overview.planned.joined(separator: "；")) }
+        return nil
+    }
+
+    private func compactRow(_ label: LocalizedStringKey, text: String, tint: Color? = nil) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(label)
+                .font(.system(size: WorkbenchTheme.Typography.caption, weight: .semibold))
+                .foregroundStyle(tint ?? WorkbenchTheme.quiet)
+                .frame(minWidth: 40, alignment: .leading)
+                .fixedSize()
+            Text(verbatim: text)
+                .font(.system(size: WorkbenchTheme.Typography.caption))
+                .foregroundStyle(tint ?? WorkbenchTheme.ink.opacity(0.88))
+                .lineSpacing(2)
+                .lineLimit(2)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
-        var sentences: [String] = [trimSentence(overview.goal)]
-        if !overview.completed.isEmpty {
-            sentences.append("\(L("已完成"))：\(overview.completed.map(trimSentence).joined(separator: "；"))")
-        }
-        if !overview.inProgress.isEmpty {
-            sentences.append("\(L("进行中"))：\(overview.inProgress.map(trimSentence).joined(separator: "；"))")
-        } else if !overview.planned.isEmpty {
-            sentences.append("\(L("计划"))：\(overview.planned.map(trimSentence).joined(separator: "；"))")
-        } else if !overview.nextSteps.isEmpty {
-            sentences.append("\(L("下一步"))：\(overview.nextSteps.map(trimSentence).joined(separator: "；"))")
-        }
-        return sentences.filter { !$0.isEmpty }.joined(separator: "。") + "。"
+        .accessibilityElement(children: .combine)
     }
 
     @ViewBuilder private func expandedBody(_ overview: SessionOverview) -> some View {
