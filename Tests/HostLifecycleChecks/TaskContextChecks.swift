@@ -725,7 +725,6 @@ private struct TaskContextInspectorFixture: View {
         let inspectorVisible = model.taskContextWindow.embeddedVisible &&
             !model.showDashboard && !model.draftingNewTask
         WorkspaceSplitView(
-            newConversation: {},
             inspectorVisible: inspectorVisible,
             sidebar: { Color.clear },
             header: { Text("准备调研报告") },

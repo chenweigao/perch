@@ -192,7 +192,7 @@ struct PerformanceSurface: View {
             PerformanceTranscript(conversation: conversation, marker: marker)
         }
         #else
-        WorkspaceSplitView(newConversation: {}, sidebar: { sidebar },
+        WorkspaceSplitView(sidebar: { sidebar },
                            header: { Text("本地性能验收").font(.headline) },
                            actions: { Image(systemName: "ellipsis") }) {
             ObservedPerformanceTranscript(model: model, marker: marker)

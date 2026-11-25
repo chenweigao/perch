@@ -25,7 +25,7 @@ private struct SidebarPreview: View {
     @State private var groupCreations = 0
     @State private var filter = SidebarRecentFilter.all
     var body: some View {
-        WorkspaceSplitView(newConversation: { title = "新建会话"; page = .other }) {
+        WorkspaceSplitView {
             WorkspaceSidebarShell(page: page, attentionCount: 2, environmentSummary: "1 个 SSH",
                                   onSearch: { showSearch = true },
                                   onNew: { title = "新建会话"; page = .other },

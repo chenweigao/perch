@@ -49,7 +49,7 @@ private struct PublicDemo: View {
     }()
 
     var body: some View {
-        WorkspaceSplitView(newConversation: { showNotice = true }) {
+        WorkspaceSplitView {
             WorkspaceSidebarShell(page: .other, attentionCount: 0, environmentSummary: "演示环境",
                                   onSearch: { showNotice = true },
                                   onNew: { showNotice = true },

@@ -78,7 +78,6 @@ private struct WorkbenchWorkspace: View, Equatable {
                 onRestart: { model.restartCommandLineIsland() }))
         }
         WorkspaceSplitView(
-            newConversation: { model.startNewTask() },
             canNavigate: { model.canNavigate($0) },
             navigate: { model.navigate($0) },
             inspectorVisible: inspectorVisible,

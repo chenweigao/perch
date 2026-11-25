@@ -13,7 +13,7 @@ import WorkbenchCore
 private struct PreviewWorkspace: View, Equatable {
     static func == (lhs: Self, rhs: Self) -> Bool { true }
     var body: some View {
-        WorkspaceSplitView(newConversation: {}, sidebar: { PreviewSidebar() }, header: { PreviewHeader() }, actions: { Text("当前会话") }, content: { PreviewControls() })
+        WorkspaceSplitView(sidebar: { PreviewSidebar() }, header: { PreviewHeader() }, actions: { Text("当前会话") }, content: { PreviewControls() })
     }
 }
 private struct PreviewHeader: View {

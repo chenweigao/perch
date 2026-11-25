@@ -168,8 +168,6 @@ struct WorkbenchDashboard<RowActions: View>: View {
                     Text("掌握进展，继续工作。").font(.system(size: WorkbenchTheme.Typography.label)).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 16)
-                Button(action: onNewTask) { Label("新建会话", systemImage: "plus") }
-                    .buttonStyle(.bordered).controlSize(.large)
             }
             HStack {
                 Picker("工作台视图", selection: $homeSection) {

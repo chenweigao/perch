@@ -84,7 +84,7 @@ private struct DashboardPreview: View {
         return sessions.filter { $0.section == .attention || $0.section == .review }
     }
     var body: some View {
-        WorkspaceSplitView(newConversation: { notice = "新建会话" }) {
+        WorkspaceSplitView {
             WorkspaceSidebarShell(page: inbox ? .inbox : .home,
                                   attentionCount: SidebarProjection(sessions: sessions, starred: [], filter: .all).attentionCount,
                                   environmentSummary: "演示环境", onSearch: { notice = "搜索" }, onNew: { notice = "新建会话" },
