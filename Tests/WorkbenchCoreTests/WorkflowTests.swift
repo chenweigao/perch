@@ -224,6 +224,26 @@ func checkWorkflow() throws {
     precondition(pages.step(-1, isAvailable: reachable) == .inbox(group: group), "Back returns to the scoped inbox")
     precondition(pages.step(-1, isAvailable: reachable) == .home(group: nil), "Back skips an unavailable session")
     precondition(WorkbenchRoute.inbox(group: group).groupID == group && WorkbenchRoute.session("a").groupID == nil)
+    // Width classes at the default panel widths (docs/design/layout.md「宽度分档」).
+    let metrics = WorkspaceWidthPlan.Metrics(frameInset: 6, sidebarGap: 10, contentMinimum: 600, inspectorReadingMinimum: 320)
+    func plan(_ width: Double, sidebar: Bool = true, inspector: Bool = true, revealed: Bool = false) -> WorkspaceWidthPlan {
+        WorkspaceWidthPlan.resolve(availableWidth: width, sidebarWidth: 260, inspectorWidth: 312,
+                                   sidebarVisible: sidebar, inspectorVisible: inspector,
+                                   revealedOverInspector: revealed, metrics: metrics)
+    }
+    let wide = plan(1194)
+    precondition(wide.widthClass == .wide && wide.sidebarAvoided && wide.inspectorWidth == 312 && wide.contentLeading == 276)
+    precondition(plan(1193).widthClass == .regular && plan(1193).sidebarYields, "Below wide the sidebar yields to the inspector")
+    precondition(!plan(1193, inspector: false).sidebarYields && plan(1193, inspector: false).sidebarAvoided)
+    let revealedPlan = plan(1000, revealed: true)
+    precondition(!revealedPlan.sidebarYields && revealedPlan.revealedOverInspector, "A reveal brings a yielding sidebar back")
+    precondition(!plan(1300, revealed: true).revealedOverInspector, "A reveal ends once all three fit")
+    let between = plan(900)
+    precondition(between.widthClass == .regular && !between.sidebarYields && between.inspectorWidth == 298,
+                 "Between 882 and 924 the sidebar stays and the reader keeps its 320pt minimum")
+    let half = plan(760)
+    precondition(half.widthClass == .compact && half.sidebarOverlaysContent && half.contentLeading == 6)
+    precondition(half.inspectorWidth == 312 && plan(600).inspectorWidth == 268, "Compact keeps a 320pt reader beside the inspector")
 
     var events = TaskEventTracker()
     let working = SessionTurn(running: true, pending: false, failed: false, completion: nil)

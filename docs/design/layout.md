@@ -51,13 +51,14 @@ Perch 的骨架是 Mail、Finder、Xcode 沿用多年的三栏：侧栏 → 正�
 
 ## 宽度分档
 
-窗口宽度决定侧栏与检查器是并排还是让位。逻辑在 `WorkbenchSplitController.updateWorkspaceLayout()`，
-尺寸常量在 `WorkspaceLayoutMetrics`。按默认宽度（侧栏 260、检查器 312、正文最小 600、外框 6、侧栏间隙 10）计算：
+窗口宽度决定侧栏与检查器是并排还是让位。分档由纯函数 `WorkspaceWidthPlan.resolve`
+（`Sources/WorkbenchCore/WorkspaceWidthPlan.swift`）决定，`WorkbenchSplitController.updateWorkspaceLayout()` 只负责应用；
+尺寸常量在 `WorkspaceLayoutMetrics`，`WorkbenchChecks` 按默认宽度核对各档边界。按默认宽度（侧栏 260、检查器 312、正文最小 600、外框 6、侧栏间隙 10）计算：
 
 | 档位 | 窗口宽度 | 侧栏 | 检查器 |
 |---|---|---|---|
 | 宽 | ≥ 1194pt | 并排 | 并排 |
-| 中 | 882–1193pt | 并排；检查器打开且窗口 ≥ 924pt 时侧栏让位，再次切换侧栏可让它临时盖在正文上 | 并排 |
+| 中 | 882–1193pt | 并排；检查器打开且窗口 ≥ 924pt 时侧栏让位，再次切换侧栏可让它临时盖在正文上 | 并排；不足 924pt 时收窄，阅读区至少保留 320pt |
 | 窄 | < 882pt | 盖在正文上 | 并排，但阅读区至少保留 320pt，检查器随之收窄 |
 
 - 分界随用户调整的侧栏、检查器宽度变化，上表只是默认值下的结果。

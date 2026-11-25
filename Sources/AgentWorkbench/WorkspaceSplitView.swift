@@ -36,6 +36,9 @@ enum WorkspaceLayoutMetrics {
     static let inspectorDefaultWidth: CGFloat = 312
     static let inspectorMinimumWidth: CGFloat = 280
     static let inspectorMaximumWidth: CGFloat = 400
+    static let widthPlan = WorkspaceWidthPlan.Metrics(
+        frameInset: frameInset, sidebarGap: sidebarGap, contentMinimum: contentMinimumWidth,
+        inspectorReadingMinimum: inspectorReadingMinimumWidth)
 }
 
 struct WorkbenchToolbarSymbol: View {
@@ -817,6 +820,8 @@ final class WorkbenchSplitController: NSSplitViewController {
     /// its sidebar on resize, instead of the inspector covering the reply. The
     /// saved visibility is unchanged; widening the window brings it back.
     private(set) var isSidebarYieldingToInspector = false
+    /// The current width class, from the last layout pass.
+    private(set) var widthClass: WorkspaceWidthClass = .wide
     /// The reader asked for the sidebar while it was yielding: it then overlays
     /// as before, until the inspector closes or the window fits all three.
     private var sidebarRevealedOverInspector = false
@@ -1109,32 +1114,23 @@ final class WorkbenchSplitController: NSSplitViewController {
         updatePanelCornerRadius()
 
         // The outer sheet stays fixed; its reader yields space to the internal inspector.
-        let availableWidth = view.bounds.width
-        let minimum = WorkspaceLayoutMetrics.contentMinimumWidth - 0.5
-        let avoidance = WorkspaceLayoutMetrics.sidebarInset + floatingSidebarWidth +
-            WorkspaceLayoutMetrics.sidebarGap
-        let inspectorAvoidance = WorkspaceLayoutMetrics.frameInset + floatingInspectorWidth
-        let fitsSidebar = availableWidth - avoidance - WorkspaceLayoutMetrics.frameInset >= minimum
-        let fitsBoth = availableWidth - avoidance - inspectorAvoidance >= minimum
-        let fitsInspectorAlone = availableWidth - WorkspaceLayoutMetrics.frameInset - inspectorAvoidance >= minimum
-        let bothOpen = isFloatingSidebarVisible && isFloatingInspectorVisible
-        if !bothOpen || fitsBoth { sidebarRevealedOverInspector = false }
-        // The reply keeps priority over navigation: rather than letting the
-        // inspector cover it, the sidebar steps aside while the card still fits.
-        isSidebarYieldingToInspector = bothOpen && fitsSidebar && !fitsBoth && fitsInspectorAlone &&
-            !sidebarRevealedOverInspector
-        let sidebarShown = isSidebarShown
-        let avoidSidebar = sidebarShown && fitsSidebar
-        let leading = avoidSidebar ? avoidance : WorkspaceLayoutMetrics.frameInset
-        detailController?.setContentInsets(leading: avoidSidebar ? avoidance : 0,
-                                          trailing: 0)
-        let inspectorWidth = isFloatingInspectorVisible
-            ? min(floatingInspectorWidth, max(0, availableWidth - leading -
-                WorkspaceLayoutMetrics.frameInset - WorkspaceLayoutMetrics.inspectorReadingMinimumWidth))
-            : 0
+        // Width classes are decided in one pure function (docs/design/layout.md「宽度分档」).
+        let plan = WorkspaceWidthPlan.resolve(
+            availableWidth: view.bounds.width, sidebarWidth: floatingSidebarWidth,
+            inspectorWidth: floatingInspectorWidth, sidebarVisible: isFloatingSidebarVisible,
+            inspectorVisible: isFloatingInspectorVisible, revealedOverInspector: sidebarRevealedOverInspector,
+            metrics: WorkspaceLayoutMetrics.widthPlan)
+        widthClass = plan.widthClass
+        sidebarRevealedOverInspector = plan.revealedOverInspector
+        isSidebarYieldingToInspector = plan.sidebarYields
+        let sidebarShown = plan.sidebarShown
+        let avoidSidebar = plan.sidebarAvoided
+        let leading = CGFloat(plan.contentLeading)
+        detailController?.setContentInsets(leading: avoidSidebar ? leading : 0, trailing: 0)
+        let inspectorWidth = CGFloat(plan.inspectorWidth)
         detailController?.setInspectorWidth(inspectorWidth)
         if isFloatingInspectorVisible { inspectorWidthConstraint?.constant = inspectorWidth }
-        isSidebarOverlayingContent = sidebarShown && !avoidSidebar
+        isSidebarOverlayingContent = plan.sidebarOverlaysContent
         let headerLeading: CGFloat
         if isSidebarOverlayingContent {
             headerLeading = floatingSidebarWidth + WorkspaceLayoutMetrics.sidebarGap + WorkbenchTheme.Reading.inset
