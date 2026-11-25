@@ -133,7 +133,7 @@ final class WorkbenchModel {
     var companionShortcutError: String?
     @ObservationIgnored var followUpLoop: Task<Void, Never>?
     var followUpNotices: [String] = []
-    private(set) var navigation: SessionNavigation {
+    private(set) var navigation: NavigationHistory<WorkbenchRoute> {
         get { navigationState.navigation }
         set { navigationState.navigation = newValue }
     }
@@ -213,7 +213,7 @@ final class WorkbenchModel {
             canSaveWorkspace = false
             workspaceError = L("本地工作台读取失败，原文件已保留：\(error.localizedDescription)")
         }
-        if let reference = selectedReference { navigation.visit(reference.id) }
+        navigation.visit(route)
         taskNotifications.start(onOpen: { [weak self] id in self?.openNotifiedTask(id) },
                                 onOpenDashboard: { [weak self] in self?.showHome() })
         wireFileAvailability()
@@ -539,8 +539,9 @@ final class WorkbenchModel {
     func setScope(groupID: UUID?) {
         // Changing the scope narrows the current page; it does not leave it.
         let inbox = onlyAttention, allGroups = showAllTaskGroups
-        showHome(groupID: groupID)
+        resetToHome(groupID: groupID)
         onlyAttention = inbox; showAllTaskGroups = allGroups
+        noteRoute()
     }
     func setScope(hostID: UUID?) { scopeHostID = hostID }
     /// Clears one facet, or both. A group filter and a machine filter answer
@@ -657,8 +658,8 @@ final class WorkbenchModel {
     func select(_ identity: String) {
         let probe = PerfDiagnostics.begin()
         defer { PerfDiagnostics.end("session_select", probe, detail: selectedReference.map { "kind=\($0.kind.rawValue)" }) }
-        if !navigatingHistory { navigation.visit(identity) }
         tabs.select(identity); showDashboard = false; draftingNewTask = false
+        noteRoute()
         if let reference = selectedReference {
             activateAgentEnvironment(reference.hostID)
             selectedHostID = reference.hostID
@@ -672,17 +673,49 @@ final class WorkbenchModel {
     private var navigableSessionIDs: Set<String> {
         Set(openedSessions.map { $0.session.id }).union(allSessions.filter { $0.online && !$0.archived }.map(\.id))
     }
+    /// The page on screen, read from the navigation flags. Every page change
+    /// goes through `showHome`, `showInbox`, `showAllSessions`, `showArchive`
+    /// or `select`, which record it with `noteRoute()`.
+    var route: WorkbenchRoute {
+        if !showDashboard, let id = tabs.selectedID { return .session(id) }
+        if showArchived { return .archive }
+        if showSessionDirectory { return .allSessions }
+        if onlyAttention { return .inbox(group: selectedGroupID) }
+        return .home(group: selectedGroupID)
+    }
+    private func noteRoute() {
+        if !navigatingHistory { navigation.visit(route) }
+    }
+    /// Shows a page. History steps use this too, so a page reached by Back looks
+    /// exactly like one reached from the sidebar.
+    func go(_ route: WorkbenchRoute) {
+        switch route {
+        case .session(let id):
+            if openedSessions.contains(where: { $0.session.id == id }) { select(id) }
+            else if let item = allSessions.first(where: { $0.id == id && $0.online && !$0.archived }) { open(item) }
+        case .home(let group): showHome(groupID: group)
+        case .inbox(let group): showInbox(groupID: group)
+        case .allSessions: showAllSessions()
+        case .archive: showArchive()
+        }
+    }
+    /// A history entry is skipped when its session went offline or was archived,
+    /// or its task group was deleted.
+    private func isNavigable(_ route: WorkbenchRoute, sessions: Set<String>) -> Bool {
+        if let id = route.sessionID { return sessions.contains(id) }
+        if let group = route.groupID { return workspace.groups.contains { $0.id == group } }
+        return true
+    }
     func canNavigate(_ delta: Int) -> Bool {
-        let available = navigableSessionIDs
-        return navigation.canStep(delta, isAvailable: available.contains)
+        let sessions = navigableSessionIDs
+        return navigation.canStep(delta) { isNavigable($0, sessions: sessions) }
     }
     func navigate(_ delta: Int) {
-        let available = navigableSessionIDs
-        guard let id = navigation.step(delta, isAvailable: available.contains) else { return }
+        let sessions = navigableSessionIDs
+        guard let route = navigation.step(delta, isAvailable: { isNavigable($0, sessions: sessions) }) else { return }
         navigatingHistory = true
         defer { navigatingHistory = false }
-        if openedSessions.contains(where: { $0.session.id == id }) { select(id); return }
-        if let item = allSessions.first(where: { $0.id == id && $0.online && !$0.archived }) { open(item) }
+        go(route)
     }
     func nextAttentionTask() {
         let items = allSessions.filter { $0.online && !$0.archived && ($0.section == .attention || $0.section == .review) }
@@ -693,7 +726,7 @@ final class WorkbenchModel {
     func close(_ identity: String) {
         tabs.close(identity); openedSessions.removeAll { $0.session.id == identity }
         if let selected = tabs.selectedID, !showDashboard { select(selected) }
-        else { showDashboard = true; saveWorkspace() }
+        else { showDashboard = true; noteRoute(); saveWorkspace() }
     }
     func start() {
         guard !started else { return }
@@ -704,7 +737,10 @@ final class WorkbenchModel {
             if connection.host.autoConnectSSH { connectSSH(connection.id) }
         }
     }
-    func showHome(groupID: UUID? = nil) {
+    func showHome(groupID: UUID? = nil) { resetToHome(groupID: groupID); noteRoute() }
+    /// The workbench page with every other page flag cleared. Callers that land
+    /// on a different page set its flag afterwards and record the route once.
+    private func resetToHome(groupID: UUID? = nil) {
         onlyAttention = false; search = ""; showSessionDirectory = false
         showArchived = false; draftingNewTask = false
         // Leaving for the workbench, inbox or session list closes the full group
@@ -717,8 +753,8 @@ final class WorkbenchModel {
         showDashboard = true
         tabs.showOverview(); saveWorkspace()
     }
-    func showInbox(groupID: UUID? = nil) { showHome(groupID: groupID); onlyAttention = true }
-    func showAllSessions() { showHome(); showSessionDirectory = true }
+    func showInbox(groupID: UUID? = nil) { resetToHome(groupID: groupID); onlyAttention = true; noteRoute() }
+    func showAllSessions() { resetToHome(); showSessionDirectory = true; noteRoute() }
     func newKimiCreated(_ session: KimiSession) {
         search = ""; onlyAttention = false; showArchived = false
         let reference = SessionReference(hostID: kimi.host.id, terminalID: session.id, kind: .kimi)
@@ -866,7 +902,7 @@ final class WorkbenchModel {
         showSessionDirectory = false; search = ""
         showArchived = true; onlyAttention = false
         selectedGroupID = nil; clearScope(); showDashboard = true
-        tabs.showOverview(); saveWorkspace()
+        tabs.showOverview(); noteRoute(); saveWorkspace()
     }
     func toggleStar(_ reference: SessionReference) {
         animateCatalogChange { workspace.toggleStar(reference) }

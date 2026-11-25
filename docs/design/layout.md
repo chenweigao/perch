@@ -39,10 +39,15 @@ Perch 的骨架是 Mail、Finder、Xcode 沿用多年的三栏：侧栏 → 正�
 
 ## 导航与恢复
 
-目标：当前页面由**一个**路由值描述，前进/后退、启动恢复、深链接和快捷键都从它派生。
-现状：页面由 `WorkbenchNavigationState` 中的多个布尔量组合（`showDashboard`、`showAllTaskGroups`、
-`homeSection`、`selectedGroupID`、`showArchived`、`showSessionDirectory`、`onlyAttention`），
-持久化的 `WorkspaceDestination` 只区分 `home` 与 `session`，前进/后退只记录会话。迁移按小步进行，每步保持行为不变。
+- 当前页面由一个 `WorkbenchRoute`（`Sources/WorkbenchCore/WorkbenchRoute.swift`）描述：工作台（可限定任务组）、
+  待处理（可限定任务组）、全部会话、已归档、某个会话。`WorkbenchModel.route` 从导航状态读出它，
+  `WorkbenchModel.go(_:)` 显示它。
+- 换页只走 `showHome`、`showInbox`、`showAllSessions`、`showArchive`、`select` 五个入口，各自在改完状态后记录一次路由；
+  不要在视图里直接改 `showDashboard`、`onlyAttention` 等标志来换页。
+- 前进/后退（⌘[ / ⌘]、工具栏箭头）走同一份 `NavigationHistory<WorkbenchRoute>`：页面和会话都在历史里，
+  从工作台打开会话后「后退」回到工作台。离线、归档的会话和已删除的任务组在历史中被跳过。
+- 工作台内的「概览 / 项目 / 任务组」切换和新建会话草稿不是路由：前者是页内视图，后者是盖在当前页上的临时界面。
+- 持久化的 `WorkspaceDestination` 仍只区分 `home` 与 `session`，保证旧版本能读新文件；恢复时其他页面回到工作台。
 
 ## 宽度分档
 

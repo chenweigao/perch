@@ -213,6 +213,17 @@ func checkWorkflow() throws {
     precondition(navigation.step(-1, isAvailable: available.contains) == "a", "Restored sessions remain reachable after a failed back")
     navigation.visit("e")
     precondition(navigation.entries == ["a", "e"], "A new visit branches from the visible history position")
+    // Pages share the same history as sessions: Back from a session returns to
+    // the page it was opened from, and skips a session that went offline.
+    let group = UUID()
+    var pages = NavigationHistory<WorkbenchRoute>()
+    pages.visit(.home(group: nil)); pages.visit(.session("a")); pages.visit(.inbox(group: group))
+    pages.visit(.session("b")); pages.visit(.session("b"))
+    precondition(pages.entries.count == 4, "Repeating the current page is not a new history entry")
+    let reachable: (WorkbenchRoute) -> Bool = { $0.sessionID != "a" }
+    precondition(pages.step(-1, isAvailable: reachable) == .inbox(group: group), "Back returns to the scoped inbox")
+    precondition(pages.step(-1, isAvailable: reachable) == .home(group: nil), "Back skips an unavailable session")
+    precondition(WorkbenchRoute.inbox(group: group).groupID == group && WorkbenchRoute.session("a").groupID == nil)
 
     var events = TaskEventTracker()
     let working = SessionTurn(running: true, pending: false, failed: false, completion: nil)

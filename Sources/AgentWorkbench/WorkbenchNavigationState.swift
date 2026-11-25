@@ -15,5 +15,5 @@ final class WorkbenchNavigationState {
     var showSessionDirectory: Bool = false
     var search: String = ""
     var onlyAttention: Bool = false
-    var navigation: SessionNavigation = SessionNavigation()
+    var navigation = NavigationHistory<WorkbenchRoute>()
 }
