@@ -475,6 +475,10 @@ struct QueueRow<Actions: View>: View {
     @UILocalization private var L
     let item: WorkspaceSession
     let time: String?
+    /// A live request for the reader: the row carries an attention rail and a
+    /// visible 去处理 button that opens the existing approval / answer panel
+    /// (`WorkspaceActionDetail`), so the queue is one step from action without
+    /// a second approval path.
     var waiting = false
     let metadata: String
     let groups: [SessionGroupIndex.Membership]
@@ -521,6 +525,13 @@ struct QueueRow<Actions: View>: View {
                     .opacity(showActions && showsHoverAction ? 0 : 1)
                     .accessibilityHidden(true)
             }
+            if waiting {
+                Button("去处理", action: openIfOnline)
+                    .buttonStyle(.borderedProminent).controlSize(.small)
+                    .tint(WorkbenchTheme.accent).foregroundStyle(WorkbenchTheme.actionGlyph)
+                    .fixedSize()
+                    .accessibilityLabel(Text("去处理：\(item.title)"))
+            }
             if showsHoverAction {
                 Button("已查看", action: onMarkReviewed)
                     .font(.system(size: WorkbenchTheme.Typography.meta))
@@ -531,6 +542,12 @@ struct QueueRow<Actions: View>: View {
                     .opacity(showActions ? 1 : 0)
             }
         }.padding(.horizontal, 10).padding(.vertical, 11)
+            .overlay(alignment: .leading) {
+                if waiting {
+                    Capsule().fill(WorkbenchTheme.Status.attention).frame(width: 3)
+                        .padding(.vertical, 10).accessibilityHidden(true)
+                }
+            }
             .opacity(item.online ? 1 : 0.55)
             .contentShape(Rectangle())
             .onTapGesture { openIfOnline() }
