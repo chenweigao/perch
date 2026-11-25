@@ -294,21 +294,21 @@ struct ConnectionChecks {
         return client
     }
 
-    /// The observed 2026-11-04 case: a v13 client meets the v12 process that still
-    /// runs a Codex task. The connection comes up through the old bridge, the
+    /// A v15 client meets the v14 process that still runs a Codex task. The
+    /// connection comes up through the old bridge, the
     /// catalog loads on a cold start, selection and a steering write work, and the
     /// transition names the protecting task.
     @MainActor
     static func checkBridgeTransitionKeepsCatalogLive() async throws {
         let fixture = TransportFixture()
-        fixture.healthVersion = 12
+        fixture.healthVersion = 14
         fixture.sessions["a"]?["busy"] = true
         fixture.ensureEndpoint = ["port": 43210, "token": "fixture-token", "pid": 1234, "restartPending": 1]
         let client = transitionClient(fixture, "Transition")
         await client.connectOnceForCheck()
         precondition(client.online && client.error == nil,
                      "A compatible old bridge keeps the connection up during the upgrade window")
-        precondition(client.bridgeTransition == BridgeTransition(serving: 12, activeTasks: 1))
+        precondition(client.bridgeTransition == BridgeTransition(serving: 14, activeTasks: 1))
         precondition(!client.needsBridgeUpdate, "A staged update is not a missing update")
         precondition(client.runtime.version == "fixture-implementation",
                      "The serving process identity is still reported")
@@ -319,7 +319,7 @@ struct ConnectionChecks {
                      "The running task stays listed during the window")
         client.select("a")
         await settle { client.snapshot?.id == "a" }
-        // The v12 write path is identical for a steering message; it must flow.
+        // The v14 write path is identical for a steering message; it must flow.
         precondition(client.modes(for: "a").contains(.steer))
         client.drafts["a"] = "继续处理这个子任务"
         client.send(mode: .steer)
@@ -335,7 +335,7 @@ struct ConnectionChecks {
     @MainActor
     static func checkBridgeTransitionSwitchesWhenIdle() async throws {
         let fixture = TransportFixture()
-        fixture.healthVersion = 12
+        fixture.healthVersion = 14
         fixture.sessions["a"]?["busy"] = true
         fixture.ensureEndpoint = ["port": 43210, "token": "fixture-token", "pid": 1234, "restartPending": 2]
         let client = transitionClient(fixture, "Switch")
@@ -348,7 +348,7 @@ struct ConnectionChecks {
         let started = Date()
         // The first recheck still finds two active sessions: only the count moves.
         for tick in 0..<4 { try await client.poll(now: started.addingTimeInterval(Double(tick) * 0.4)) }
-        precondition(client.bridgeTransition == BridgeTransition(serving: 12, activeTasks: 2),
+        precondition(client.bridgeTransition == BridgeTransition(serving: 14, activeTasks: 2),
                      "A busy window rechecks without switching")
         precondition(fixture.ensureProbes >= 2, "The window re-probes the endpoint")
         // The tasks finish and the staged service has replaced the old process.
@@ -399,7 +399,7 @@ struct ConnectionChecks {
         await client.connectOnceForCheck()
         precondition(!client.online && client.bridgeTransition == nil && !client.needsBridgeUpdate)
         // Idleness that cannot be confirmed is refused before any bridge read.
-        fixture.healthVersion = 12
+        fixture.healthVersion = 14
         let healthBefore = fixture.healthRequests
         fixture.ensureEndpoint = ["port": 43210, "token": "fixture-token", "pid": 1234, "restartPending": -1]
         await client.connectOnceForCheck()
@@ -413,7 +413,7 @@ struct ConnectionChecks {
     @MainActor
     static func checkBridgeTransitionIsolationAcrossHosts() async throws {
         let upgrading = TransportFixture()
-        upgrading.healthVersion = 12
+        upgrading.healthVersion = 14
         upgrading.ensureEndpoint = ["port": 43210, "token": "fixture-token", "pid": 1234, "restartPending": 1]
         let steady = TransportFixture()
         let upgradingClient = transitionClient(upgrading, "Upgrading")
