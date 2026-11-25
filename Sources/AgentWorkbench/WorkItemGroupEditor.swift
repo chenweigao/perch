@@ -39,7 +39,7 @@ struct WorkItemGroupEditor: View {
                         })) {
                             VStack(alignment: .leading, spacing: 4) {
                                 Label { Text(item.title) } icon: { AgentMark(kind: item.reference.kind, size: 12) }
-                                    .font(.system(size: 12)).lineLimit(1)
+                                    .font(.system(size: WorkbenchTheme.Typography.caption)).lineLimit(1)
                                 Text("\(item.hostName) · \(item.detail)").font(.subheadline).foregroundStyle(.secondary)
                             }
                         }.toggleStyle(.checkbox)

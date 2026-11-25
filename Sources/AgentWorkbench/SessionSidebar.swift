@@ -145,7 +145,7 @@ struct WorkbenchSidebar: View {
                 view = AnyView(sessionRow(item, groups: index[item.id]))
             }
             return .init(id: entry.id, session: session, height: height,
-                         content: AnyView(view.id(entry.id).font(.system(size: 13)).environment(\.locale, locale)))
+                         content: AnyView(view.id(entry.id).font(.system(size: WorkbenchTheme.Typography.label)).environment(\.locale, locale)))
         }
         return AcceptanceSidebarTable(items: items)
     }
@@ -509,7 +509,7 @@ private struct SidebarPinPicker: View {
                             HStack(spacing: 8) {
                                 SidebarAgentIndicator(item: item)
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(item.title).font(.system(size: 12)).lineLimit(1)
+                                    Text(item.title).font(.system(size: WorkbenchTheme.Typography.caption)).lineLimit(1)
                                     Text(item.hostName + " · " + item.directory).font(.system(size: SidebarMetrics.detailSize))
                                         .foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                                 }

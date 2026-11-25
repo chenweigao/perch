@@ -8,7 +8,7 @@ struct GroupProgressView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack {
-                Text("完成标准").font(.system(size: 13, weight: .medium))
+                Text("完成标准").font(.system(size: WorkbenchTheme.Typography.title, weight: .medium))
                 Spacer()
                 Picker("阶段", selection: Binding(get: { group.stage }, set: { stage in
                     var updated = group; updated.stage = stage; model.updateGroup(updated)
@@ -32,7 +32,7 @@ struct GroupProgressView: View {
             }
             Divider()
             HStack {
-                Text("成果与决策").font(.system(size: 13, weight: .medium))
+                Text("成果与决策").font(.system(size: WorkbenchTheme.Typography.title, weight: .medium))
                 Spacer()
                 Button("添加成果") { addingOutcome = true }.buttonStyle(QuietLinkStyle())
             }
@@ -62,7 +62,7 @@ struct GroupProgressView: View {
                     }
                 }.padding(.vertical, 6)
             }
-        }.font(.system(size: 12))
+        }.font(.system(size: WorkbenchTheme.Typography.caption))
             .sheet(isPresented: $addingOutcome) { GroupOutcomeEditor(model: model, group: group) }
     }
 }

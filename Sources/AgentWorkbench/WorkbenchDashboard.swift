@@ -73,9 +73,9 @@ struct WorkbenchDashboard<RowActions: View>: View {
                         VStack(spacing: 10) {
                             Image(systemName: "checkmark.circle").font(.system(size: 34, weight: .light))
                                 .foregroundStyle(WorkbenchTheme.Status.success)
-                            Text("全部处理完了").font(.system(size: 15, weight: .medium))
+                            Text("全部处理完了").font(.system(size: WorkbenchTheme.Typography.Display.emptyTitle, weight: .medium))
                             Text("没有等待确认、回答或处理的事项；查看结果请到工作台。")
-                                .font(.system(size: 12)).foregroundStyle(.secondary)
+                                .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
                             Button("返回工作台", action: onShowHome).padding(.top, 4)
                         }.frame(maxWidth: .infinity).padding(.vertical, 56)
                     } else {
@@ -101,7 +101,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
                                 Text("最近会话").accessibilityAddTraits(.isHeader)
                                 Spacer()
                                 if group == nil { Button("查看全部", action: onShowAll).buttonStyle(QuietLinkStyle()) }
-                            }.font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary).padding(.bottom, 8)
+                            }.font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium)).foregroundStyle(.secondary).padding(.bottom, 8)
                             ForEach(projection.recent) { row($0, in: .other) }
                             if group != nil && projection.other.count > projection.recent.count {
                                 DisclosureGroup("全部关联会话") {
@@ -115,13 +115,13 @@ struct WorkbenchDashboard<RowActions: View>: View {
                     if !changes.isEmpty {
                         DisclosureGroup("新进展 · \(changes.count)") { changeSummary.padding(.top, 8) }
                             .disclosureGroupStyle(WorkbenchDisclosureStyle(minHeight: 36))
-                            .font(.system(size: 12)).foregroundStyle(.secondary)
+                            .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
                     }
                     if isArchiving {
                         HStack(spacing: 8) {
                             ProgressView().controlSize(.small)
                             Text("正在归档…")
-                        }.font(.system(size: 12)).foregroundStyle(.secondary)
+                        }.font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
                     }
                     if archiveResult != nil {
                         BatchArchiveControls(showsArchiveAction: false, count: projection.archiveCount,
@@ -141,7 +141,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
                     } label: {
                         Label("状态未同步 · \(projection.offline.count)", systemImage: "wifi.slash")
                     }.disclosureGroupStyle(WorkbenchDisclosureStyle(minHeight: 36))
-                        .font(.system(size: 12)).foregroundStyle(.secondary)
+                        .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
                 }
                 if !attentionOnly && showsActivity { groupHistory }
                 if !attentionOnly && showsActivity && !context.restoreReport.isEmpty { restoreReportSection }
@@ -164,8 +164,8 @@ struct WorkbenchDashboard<RowActions: View>: View {
         VStack(alignment: .leading, spacing: 20) {
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("工作台").font(.system(size: 26, weight: .semibold))
-                    Text("掌握进展，继续工作。").font(.system(size: 13)).foregroundStyle(.secondary)
+                    Text("工作台").font(.system(size: WorkbenchTheme.Typography.Display.page, weight: .semibold))
+                    Text("掌握进展，继续工作。").font(.system(size: WorkbenchTheme.Typography.label)).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 16)
                 Button(action: onNewTask) { Label("新建会话", systemImage: "plus") }
@@ -211,10 +211,10 @@ struct WorkbenchDashboard<RowActions: View>: View {
                               tint: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 14) {
-                Label(title, systemImage: symbol).font(.system(size: 12, weight: .medium))
+                Label(title, systemImage: symbol).font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
                     .foregroundStyle(count > 0 ? tint : .secondary)
                 HStack(alignment: .firstTextBaseline) {
-                    Text("\(count)").font(.system(size: 28, weight: .medium)).monospacedDigit()
+                    Text("\(count)").font(.system(size: WorkbenchTheme.Typography.Display.metric, weight: .medium)).monospacedDigit()
                         .foregroundStyle(.primary)
                     Spacer()
                     Image(systemName: "arrow.up.right").font(.system(size: 11)).foregroundStyle(.tertiary)
@@ -231,7 +231,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Label("新进展 · \(changes.count)", systemImage: "sparkle")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
                 Spacer()
                 if let onAcknowledgeChanges { Button("确认看过这些变化", action: onAcknowledgeChanges).buttonStyle(QuietLinkStyle()) }
             }
@@ -247,7 +247,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
                 }.buttonStyle(ChangeRowStyle())
             }
             if changes.count > 5 { Text("其余变化可在下方对应分区查看。").font(.subheadline).foregroundStyle(.secondary) }
-        }.font(.system(size: 12))
+        }.font(.system(size: WorkbenchTheme.Typography.caption))
             .padding(14).frame(maxWidth: .infinity, alignment: .leading)
             .background(WorkbenchTheme.Fill.surface,
                         in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
@@ -264,19 +264,19 @@ struct WorkbenchDashboard<RowActions: View>: View {
         VStack(alignment: .leading, spacing: 9) {
             if let group, !attentionOnly {
                 if let facet = context.scope.facets.first(where: { $0.kind == .group }) {
-                    Button("工作台") { onClearScope(facet) }.buttonStyle(QuietLinkStyle()).font(.system(size: 12))
+                    Button("工作台") { onClearScope(facet) }.buttonStyle(QuietLinkStyle()).font(.system(size: WorkbenchTheme.Typography.caption))
                 }
-                Text(group.name).font(.system(size: 25, weight: .semibold)).textSelection(.enabled)
-            } else { Text(title).font(.system(size: 25, weight: .semibold)) }
+                Text(group.name).font(.system(size: WorkbenchTheme.Typography.Display.page, weight: .semibold)).textSelection(.enabled)
+            } else { Text(title).font(.system(size: WorkbenchTheme.Typography.Display.page, weight: .semibold)) }
             if !visibleFacets.isEmpty { scopeChips }
             if attentionOnly && !projection.attention.isEmpty {
                 Text("共 \(projection.attention.items.count) 项 · 确认、回答或处理错误；查看结果请到工作台。")
-                    .font(.system(size: 12)).foregroundStyle(.secondary)
+                    .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
             } else if !attentionOnly && (group != nil || projection.emptyState == nil || projection.emptyState == .nothingPending) {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 14) { summary }
                     VStack(alignment: .leading, spacing: 5) { summary }
-                }.font(.system(size: 12)).foregroundStyle(.secondary)
+                }.font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
             }
         }
     }
@@ -290,12 +290,12 @@ struct WorkbenchDashboard<RowActions: View>: View {
     }
     private var scopeChips: some View {
         HStack(spacing: 6) {
-            Text("筛选中").font(.system(size: 11)).foregroundStyle(.tertiary)
+            Text("筛选中").font(.system(size: WorkbenchTheme.Typography.meta)).foregroundStyle(.tertiary)
             ForEach(visibleFacets, id: \.self) { facet in
                 Button { onClearScope(facet) } label: {
                     HStack(spacing: 5) {
                         Image(systemName: facet.symbol).font(.system(size: 10))
-                        Text(facet.name).font(.system(size: 11)).lineLimit(1).truncationMode(.middle)
+                        Text(facet.name).font(.system(size: WorkbenchTheme.Typography.meta)).lineLimit(1).truncationMode(.middle)
                         Image(systemName: "xmark.circle.fill").font(.system(size: 10)).foregroundStyle(.tertiary)
                     }.padding(.horizontal, 9).frame(minHeight: 28)
                         .background(WorkbenchTheme.Fill.surface, in: Capsule()).contentShape(Capsule())
@@ -303,7 +303,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
                     .help("取消筛选：\(facet.name)").accessibilityLabel("取消筛选：\(facet.name)")
             }
             if visibleFacets.count > 1 {
-                Button("全部清除", action: onClearAllScopes).buttonStyle(QuietLinkStyle()).font(.system(size: 11))
+                Button("全部清除", action: onClearAllScopes).buttonStyle(QuietLinkStyle()).font(.system(size: WorkbenchTheme.Typography.meta))
             }
         }
     }
@@ -355,14 +355,14 @@ struct WorkbenchDashboard<RowActions: View>: View {
                     if value.section == .attention {
                         Button("进入待处理", action: onShowInbox).buttonStyle(QuietLinkStyle())
                     }
-                }.font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary).padding(.bottom, 8)
+                }.font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium)).foregroundStyle(.secondary).padding(.bottom, 8)
             }
             ForEach(value.items.prefix(limit)) { row($0, in: value.section) }
             if value.items.count > limit && value.section != .attention {
                 DisclosureGroup("展开其余 \(value.items.count - limit) 个会话") {
                     VStack(spacing: 0) { ForEach(value.items.dropFirst(limit)) { row($0, in: value.section) } }
                 }.disclosureGroupStyle(WorkbenchDisclosureStyle(minHeight: 36))
-                    .font(.system(size: 12)).foregroundStyle(.secondary).padding(.top, 12)
+                    .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary).padding(.top, 12)
             }
         }.id(value.section)
     }
@@ -377,9 +377,9 @@ struct WorkbenchDashboard<RowActions: View>: View {
                 Image(systemName: state.symbol).font(.system(size: 30, weight: .light))
                     .foregroundStyle(.secondary)
             }
-            Text(LocalizedStringKey(state.title)).font(.system(size: 15, weight: .medium))
+            Text(LocalizedStringKey(state.title)).font(.system(size: WorkbenchTheme.Typography.Display.emptyTitle, weight: .medium))
             if state == .noEnvironment {
-                Text("本地与远程 Agent 的一个家。").font(.system(size: 12)).foregroundStyle(.secondary)
+                Text("本地与远程 Agent 的一个家。").font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
                 HStack(spacing: 10) {
                     Button("添加机器…", action: onConnectRemote).buttonStyle(.borderedProminent)
                         .tint(WorkbenchTheme.accent).foregroundStyle(WorkbenchTheme.actionGlyph)
@@ -425,7 +425,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
                 }
             }.padding(.top, 10)
         }.disclosureGroupStyle(WorkbenchDisclosureStyle(minHeight: 36))
-            .font(.system(size: 12)).foregroundStyle(.secondary)
+            .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
     }
 
     private var restoration: some View {
@@ -444,12 +444,12 @@ struct WorkbenchDashboard<RowActions: View>: View {
         } label: {
             Label("等待恢复 · \(context.pendingRestoration.count) 个会话", systemImage: "clock.arrow.circlepath")
         }.disclosureGroupStyle(WorkbenchDisclosureStyle(minHeight: 36))
-            .font(.system(size: 12)).foregroundStyle(.secondary)
+            .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
     }
 
     private func storageBanner(_ message: String) -> some View {
         Label(message, systemImage: "exclamationmark.triangle")
-            .font(.system(size: 12)).foregroundStyle(WorkbenchTheme.Status.attention).textSelection(.enabled)
+            .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.Status.attention).textSelection(.enabled)
             .fixedSize(horizontal: false, vertical: true)
             .padding(14).frame(maxWidth: .infinity, alignment: .leading)
             .background(WorkbenchTheme.Status.attention.opacity(0.08), in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
@@ -507,14 +507,14 @@ struct QueueRow<Actions: View>: View {
             SessionStatusIndicator(item: item).frame(width: 17, height: 16).padding(.top, 2).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {
                 // The row's button reads the title and metadata, so the text is not read twice.
-                Text(item.title).font(.system(size: 13, weight: .medium)).lineLimit(2).accessibilityHidden(true)
+                Text(item.title).font(.system(size: WorkbenchTheme.Typography.title, weight: .medium)).lineLimit(2).accessibilityHidden(true)
                 HStack(spacing: 6) {
                     Text(metadata).lineLimit(1).truncationMode(.middle).layoutPriority(-1).accessibilityHidden(true)
                     membershipControls
-                }.font(.system(size: 11)).foregroundStyle(.secondary)
+                }.font(.system(size: WorkbenchTheme.Typography.meta)).foregroundStyle(.secondary)
             }.frame(maxWidth: .infinity, alignment: .leading)
             if let time {
-                Text(time).font(.system(size: 11)).monospacedDigit()
+                Text(time).font(.system(size: WorkbenchTheme.Typography.meta)).monospacedDigit()
                     .foregroundStyle(waiting ? AnyShapeStyle(WorkbenchTheme.Status.attention) : AnyShapeStyle(.tertiary))
                     .fixedSize()
                     .padding(.top, 2)
@@ -523,7 +523,7 @@ struct QueueRow<Actions: View>: View {
             }
             if showsHoverAction {
                 Button("已查看", action: onMarkReviewed)
-                    .font(.system(size: 11))
+                    .font(.system(size: WorkbenchTheme.Typography.meta))
                     .padding(.horizontal, 8).padding(.vertical, 2)
                     .background(WorkbenchTheme.Fill.surface, in: Capsule())
                     .padding(.top, 1).fixedSize()

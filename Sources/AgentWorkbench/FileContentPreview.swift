@@ -143,7 +143,7 @@ private struct DelimitedFileView: View {
                     ForEach(Array(preview.rows.enumerated()), id: \.offset) { index, row in
                         HStack(alignment: .top, spacing: 0) {
                             ForEach(Array(row.enumerated()), id: \.offset) { _, cell in
-                                Text(cell).textSelection(.enabled).font(.system(size: 12, weight: index == 0 ? .semibold : .regular))
+                                Text(cell).textSelection(.enabled).font(.system(size: WorkbenchTheme.Typography.caption, weight: index == 0 ? .semibold : .regular))
                                     .lineLimit(8).frame(width: 180, alignment: .leading).padding(8)
                             }
                         }

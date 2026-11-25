@@ -46,13 +46,13 @@ struct NativeSubagentSheet: View {
     private func header(_ task: KimiTask?) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Label("子 Agent 过程", systemImage: "person.2").font(.system(size: 14, weight: .semibold))
+                Label("子 Agent 过程", systemImage: "person.2").font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold))
                 Spacer()
                 Button("关闭") { dismiss() }.keyboardShortcut(.cancelAction)
             }
-            Text(task?.description ?? subject.key).font(.system(size: 12)).foregroundStyle(.secondary)
+            Text(task?.description ?? subject.key).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
                 .lineLimit(2).textSelection(.enabled)
-            Text(meta(task)).font(.system(size: 11)).foregroundStyle(.tertiary).lineLimit(1).truncationMode(.middle)
+            Text(meta(task)).font(.system(size: WorkbenchTheme.Typography.meta)).foregroundStyle(.tertiary).lineLimit(1).truncationMode(.middle)
         }.padding(.horizontal, WorkbenchTheme.Dialog.padding).padding(.vertical, 16)
     }
 
@@ -71,7 +71,7 @@ struct NativeSubagentSheet: View {
 
     @ViewBuilder private func content(_ rows: [SubagentTranscriptRow]) -> some View {
         if !connection.online {
-            Text("连接已断开，以下为最后读取的内容。").font(.system(size: 12)).foregroundStyle(WorkbenchTheme.Status.attention)
+            Text("连接已断开，以下为最后读取的内容。").font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.Status.attention)
                 .padding(.bottom, 10)
         }
         if let transcript {
@@ -94,7 +94,7 @@ struct NativeSubagentSheet: View {
             ProgressView().frame(maxWidth: .infinity, minHeight: 120)
         }
         if let error = state.error {
-            Text(error).font(.system(size: 12)).foregroundStyle(WorkbenchTheme.Status.attention).textSelection(.enabled)
+            Text(error).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.Status.attention).textSelection(.enabled)
                 .padding(.top, 10)
         }
     }
@@ -103,9 +103,9 @@ struct NativeSubagentSheet: View {
         HStack(spacing: 12) {
             if live || status == nil {
                 Text("子 Agent 在远端继续运行；关闭这里不会停止它。")
-                    .font(.system(size: 11)).foregroundStyle(.tertiary)
+                    .font(.system(size: WorkbenchTheme.Typography.meta)).foregroundStyle(.tertiary)
             } else if let status {
-                Text(status).font(.system(size: 11)).foregroundStyle(.tertiary)
+                Text(status).font(.system(size: WorkbenchTheme.Typography.meta)).foregroundStyle(.tertiary)
             }
             Spacer()
         }.padding(.horizontal, WorkbenchTheme.Dialog.padding).padding(.vertical, 10)

@@ -11,16 +11,16 @@ struct GroupWorkbenchHeader: View {
                     Label("目标与下一步", systemImage: "target").foregroundStyle(.secondary)
                     Spacer()
                     Button("编辑目标") { model.editGroup(group) }.buttonStyle(QuietLinkStyle())
-                }.font(.system(size: 12))
+                }.font(.system(size: WorkbenchTheme.Typography.caption))
                 if group.goal.isEmpty {
                     Button("写下目标") { model.editGroup(group) }.buttonStyle(QuietLinkStyle())
-                } else { Text(group.goal).font(.system(size: 14)).textSelection(.enabled) }
+                } else { Text(group.goal).font(.system(size: WorkbenchTheme.Typography.body)).textSelection(.enabled) }
                 HStack(alignment: .top, spacing: 12) {
                     Text("下一步").foregroundStyle(.secondary)
                     if group.nextStep.isEmpty {
                         Button("记下回来后先做什么") { model.editGroup(group) }.buttonStyle(QuietLinkStyle())
                     } else { Text(group.nextStep).textSelection(.enabled) }
-                }.font(.system(size: 13))
+                }.font(.system(size: WorkbenchTheme.Typography.label))
                 HStack(spacing: 14) {
                     if let resume = model.groupResumeSession,
                        model.scopeHost == nil || resume.reference.hostID == model.scopeHost?.id {
@@ -73,7 +73,7 @@ struct GroupWorkbenchHistory: View {
                     Text("另有 \(missing) 个关联会话尚未同步，可在关联管理中查看。")
                     Button("管理关联") { model.editGroup(group, sessionsOnly: true) }.buttonStyle(QuietLinkStyle())
                 }
-            }.font(.system(size: 12)).foregroundStyle(.secondary)
+            }.font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
         }
     }
 }

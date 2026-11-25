@@ -37,7 +37,7 @@ struct KimiWorkspaceView: View {
             } else {
                 Spacer()
                 Image(systemName: "bubble.left.and.text.bubble.right").font(.system(size: 42, weight: .light)).foregroundStyle(kimiAccent)
-                Text(connection.loading ? "正在读取会话…" : "继续你的 Kimi 对话").font(.system(size: 23, weight: .semibold)).padding(.top, 16)
+                Text(connection.loading ? "正在读取会话…" : "继续你的 Kimi 对话").font(.system(size: WorkbenchTheme.Typography.Display.page, weight: .semibold)).padding(.top, 16)
                 Text("选择已有会话，或从一个项目目录开始。") .foregroundStyle(.secondary).padding(.top, 3)
                 Button("新建会话") { onNew() }.buttonStyle(.borderedProminent).padding(.top, 18).disabled(!connection.online)
                 if let problem = connection.actionError { ConversationNotice(text: problem) }

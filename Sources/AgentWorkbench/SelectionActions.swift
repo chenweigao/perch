@@ -259,7 +259,7 @@ private struct SelectionActionButton: View {
         Button(action: action) {
             HStack(spacing: 5) {
                 Image(systemName: systemImage).font(.system(size: 11))
-                Text(title).font(.system(size: 12))
+                Text(title).font(.system(size: WorkbenchTheme.Typography.caption))
             }.padding(.horizontal, 9).padding(.vertical, 6).contentShape(Rectangle())
                 .background(hovered ? WorkbenchTheme.Fill.hover : .clear,
                             in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row))

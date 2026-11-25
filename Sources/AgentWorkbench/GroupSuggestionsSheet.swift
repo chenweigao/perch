@@ -34,7 +34,7 @@ struct GroupSuggestionsSheet: View {
                                 Text(model.allSessions.first { $0.id == suggestion.sessionID }?.title ?? suggestion.sessionID).fontWeight(.medium)
                                 Text("→ \(model.workspace.groups.first { $0.id == suggestion.groupID }?.name ?? "")")
                                 Text(suggestion.reason).foregroundStyle(.secondary).textSelection(.enabled)
-                            }.font(.system(size: 12))
+                            }.font(.system(size: WorkbenchTheme.Typography.caption))
                         }.toggleStyle(.checkbox).disabled(state.applied)
                     }
                     if !state.generated {

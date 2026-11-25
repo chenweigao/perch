@@ -46,8 +46,8 @@ struct NewTaskDirectoryPicker: View {
                                 HStack(spacing: 10) {
                                     Image(systemName: "folder").foregroundStyle(.secondary)
                                     VStack(alignment: .leading, spacing: 3) {
-                                        Text((path as NSString).lastPathComponent).font(.system(size: 13, weight: .medium))
-                                        Text(path).font(.system(size: 11)).foregroundStyle(.secondary)
+                                        Text((path as NSString).lastPathComponent).font(.system(size: WorkbenchTheme.Typography.title, weight: .medium))
+                                        Text(path).font(.system(size: WorkbenchTheme.Typography.meta)).foregroundStyle(.secondary)
                                     }.lineLimit(1).truncationMode(.middle)
                                     Spacer(minLength: 0)
                                     if path == cwd { Image(systemName: "checkmark").font(.system(size: 11)) }

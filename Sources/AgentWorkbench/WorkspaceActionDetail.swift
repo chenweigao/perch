@@ -136,7 +136,7 @@ private struct PublicResultPreview: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(completed ? "结果预览" : "最近回复").font(.system(size: 13, weight: .medium))
+            Text(completed ? "结果预览" : "最近回复").font(.system(size: WorkbenchTheme.Typography.title, weight: .medium))
             if excerpt.isEmpty { Text("没有可预览的文字，请打开完整会话。").foregroundStyle(.secondary) }
             else {
                 KimiMarkdown(text: String(excerpt.prefix(3000)))
@@ -163,7 +163,7 @@ private struct PublicResultPreview: View {
                             }
                         }
                     }
-                }.font(.system(size: 12))
+                }.font(.system(size: WorkbenchTheme.Typography.caption))
             }
         }
     }

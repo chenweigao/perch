@@ -56,7 +56,7 @@ struct FollowUpManager: View {
                         }
                         Divider()
                     }
-                }.font(.system(size: 12))
+                }.font(.system(size: WorkbenchTheme.Typography.caption))
             }
         }.padding(24).frame(width: 660, height: 700)
             .onAppear { target = model.selectedReference; model.followUpNotices = [] }

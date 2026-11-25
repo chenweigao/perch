@@ -15,7 +15,7 @@ struct TaskGroupOverview: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Text(model.showAllTaskGroups ? "全部任务组" : "正在推进的任务组")
-                        .font(.system(size: 13, weight: .medium)).accessibilityAddTraits(.isHeader)
+                        .font(.system(size: WorkbenchTheme.Typography.title, weight: .medium)).accessibilityAddTraits(.isHeader)
                     Spacer()
                     Button(model.showAllTaskGroups ? "收起任务组" : "全部任务组") {
                         model.showAllTaskGroups.toggle()
@@ -34,7 +34,7 @@ struct TaskGroupOverview: View {
                     Button { model.showHome(groupID: summary.id) } label: {
                         VStack(alignment: .leading, spacing: 7) {
                             HStack(alignment: .firstTextBaseline) {
-                                Text(summary.group.name).font(.system(size: 14, weight: .medium)).lineLimit(2)
+                                Text(summary.group.name).font(.system(size: WorkbenchTheme.Typography.title, weight: .medium)).lineLimit(2)
                                 Spacer()
                                 Text(L(key: summary.group.stage.title)).foregroundStyle(.secondary)
                                 Image(systemName: "chevron.right").font(.system(size: 10)).foregroundStyle(.secondary)
@@ -53,7 +53,7 @@ struct TaskGroupOverview: View {
                             } else if let result = summary.latestResult {
                                 Text("待查看结果：\(result.title)").lineLimit(1).foregroundStyle(.secondary)
                             }
-                        }.font(.system(size: 12)).padding(.vertical, 12)
+                        }.font(.system(size: WorkbenchTheme.Typography.caption)).padding(.vertical, 12)
                             .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
                     }.buttonStyle(GroupRowStyle())
                         .accessibilityIdentifier("workbench.group.\(summary.id)")
@@ -65,7 +65,7 @@ struct TaskGroupOverview: View {
                 if !model.showAllTaskGroups && active.count > visible.count {
                     Button("查看全部任务组") { model.showAllTaskGroups = true }.buttonStyle(QuietLinkStyle())
                 }
-            }.font(.system(size: 12))
+            }.font(.system(size: WorkbenchTheme.Typography.caption))
         }
     }
     @ViewBuilder private func activity(_ value: TaskGroupSummary) -> some View {

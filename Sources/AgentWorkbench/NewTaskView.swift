@@ -166,7 +166,7 @@ struct NewTaskView: View {
             ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 VStack(spacing: 10) {
-                    Text("想做点什么？").font(.system(size: 28, weight: .medium))
+                    Text("想做点什么？").font(.system(size: WorkbenchTheme.Typography.Display.hero, weight: .medium))
                     if let group = model.selectedGroup {
                         Text(group.name).font(.callout).foregroundStyle(.secondary)
                     }
@@ -368,7 +368,7 @@ struct NewTaskView: View {
             Spacer(minLength: 0)
             if !hasInitialContent && attachments.isEmpty {
                 Button(creating ? L("正在创建…") : L("仅创建空会话")) { create(sendInitialPrompt: false) }
-                    .buttonStyle(.plain).font(.system(size: 12)).disabled(!canCreateEmpty)
+                    .buttonStyle(.plain).font(.system(size: WorkbenchTheme.Typography.caption)).disabled(!canCreateEmpty)
             }
         }.foregroundStyle(.secondary).padding(.horizontal, 6).disabled(creating)
     }
@@ -395,7 +395,7 @@ struct NewTaskView: View {
                         Spacer(minLength: 0)
                         Button("连接") { native.connect() }
                     }
-                }.font(.system(size: 12)).foregroundStyle(.secondary).buttonStyle(.plain)
+                }.font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary).buttonStyle(.plain)
                 if showConnectionDetails, let connectionError {
                     Text(connectionError).font(.subheadline).foregroundStyle(.secondary).textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)

@@ -142,11 +142,30 @@ enum WorkbenchTheme {
 extension WorkbenchTheme {
     /// Stable interface roles. Reading zoom changes prose, not navigation or controls.
     /// Titles and secondary labels share the body size; weight and color give hierarchy.
+    /// Views never write a literal text size: `scripts/check-font-tokens.py` fails on
+    /// one. SF Symbols keep their own optical sizes and may use literals.
     enum Typography {
         static let body: CGFloat = 14
         static let title: CGFloat = body
         static let secondary: CGFloat = body
+        /// Compact controls and the live status line (pickers, sidebar sections).
+        static let label: CGFloat = 13
+        /// Time, counts, shortcuts and other auxiliary notes.
         static let caption: CGFloat = 12
+        /// The floor for text: dense metadata under a name (paths, hints, counts
+        /// in a filter strip). Nothing is set below it.
+        static let meta: CGFloat = 11
+        /// Page-level display sizes, outside the 14 / 12 interface ramp.
+        enum Display {
+            /// The title of an empty or all-done state.
+            static let emptyTitle: CGFloat = 15
+            /// Page titles: Workbench, a task group, an empty conversation.
+            static let page: CGFloat = 26
+            /// The new-session greeting.
+            static let hero: CGFloat = 28
+            /// Large dashboard counts.
+            static let metric: CGFloat = 28
+        }
     }
     /// PI composer-menus.css: compact rows, source rail and reasoning track.
     enum Composer {

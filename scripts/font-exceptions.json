@@ -1,0 +1,4 @@
+{
+  "comment": "Pinned literal text sizes. Each entry must match exactly one live line (file + stripped line text). Prefer a WorkbenchTheme.Typography role; see scripts/check-font-tokens.py.",
+  "exceptions": []
+}

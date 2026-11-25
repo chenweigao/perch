@@ -34,13 +34,13 @@ struct ConversationLiveStatus: View, Equatable {
                 ConversationWorkIndicator(phase: phase, animated: !reduceMotion) { clockVisible = $0 }
                     .frame(width: 13, height: 13).accessibilityHidden(true)
                 Text(verbatim: title)
-                    .font(.system(size: 13, weight: phase.needsInput ? .medium : .regular))
+                    .font(.system(size: WorkbenchTheme.Typography.label, weight: phase.needsInput ? .medium : .regular))
                     .foregroundStyle(phase.needsInput ? WorkbenchTheme.Status.attention : WorkbenchTheme.quiet)
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .help(Text(verbatim: title))
                 if let timing {
-                    Text(verbatim: "·").font(.system(size: 12)).foregroundStyle(WorkbenchTheme.quiet.opacity(0.45))
+                    Text(verbatim: "·").font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet.opacity(0.45))
                     ConversationWorkClock(timing: timing, visible: clockVisible)
                         .fixedSize(horizontal: true, vertical: false).accessibilityHidden(true)
                 }
@@ -68,7 +68,7 @@ private struct ConversationWorkClock: View {
             let isZh = locale.language.languageCode?.identifier.hasPrefix("zh") ?? true
             let duration = ConversationTiming.duration(timing.elapsed(at: context.date), chinese: isZh)
             Text(verbatim: duration)
-                .font(.system(size: 12)).monospacedDigit().foregroundStyle(WorkbenchTheme.quiet.opacity(0.75))
+                .font(.system(size: WorkbenchTheme.Typography.caption)).monospacedDigit().foregroundStyle(WorkbenchTheme.quiet.opacity(0.75))
                 .help(timing.observedOnly
                       ? Text("从客户端首次观察到本轮开始计时，包含等待；此前用时未知。")
                       : Text("从提交本轮请求到现在的经过时间，包含通信、工具调用和等待。"))

@@ -69,9 +69,9 @@ struct SessionDirectoryTable: NSViewRepresentable {
             more.title = ""; more.isBordered = false
             more.image = NSImage(systemSymbolName: "ellipsis", accessibilityDescription: nil)
             more.target = self; more.action = #selector(showMenu)
-            titleLabel.font = .systemFont(ofSize: 14)
-            detail.font = .systemFont(ofSize: 12); detail.textColor = .secondaryLabelColor
-            time.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular); time.textColor = .tertiaryLabelColor
+            titleLabel.font = .systemFont(ofSize: WorkbenchTheme.Typography.body)
+            detail.font = .systemFont(ofSize: WorkbenchTheme.Typography.caption); detail.textColor = .secondaryLabelColor
+            time.font = .monospacedDigitSystemFont(ofSize: WorkbenchTheme.Typography.caption, weight: .regular); time.textColor = .tertiaryLabelColor
             titleLabel.lineBreakMode = .byTruncatingTail
             detail.lineBreakMode = .byTruncatingMiddle
             for label in [titleLabel, detail, time] {
