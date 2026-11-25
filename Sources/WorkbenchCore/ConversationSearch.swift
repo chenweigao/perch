@@ -391,24 +391,26 @@ public final class ConversationSearch {
     }
 
 }
-public struct SessionNavigation {
-    public private(set) var entries: [String] = []
+/// Back/forward history over any page identity. A visit equal to the current
+/// entry is ignored; a visit after stepping back drops the forward branch.
+public struct NavigationHistory<Entry: Equatable> {
+    public private(set) var entries: [Entry] = []
     public private(set) var index = -1
     public init() {}
     public var canGoBack: Bool { index > 0 }
     public var canGoForward: Bool { index + 1 < entries.count }
-    public mutating func visit(_ id: String) {
+    public mutating func visit(_ id: Entry) {
         guard index < 0 || entries[index] != id else { return }
         entries = Array(entries.prefix(index + 1)); entries.append(id); index = entries.count - 1
     }
-    public func canStep(_ delta: Int, isAvailable: (String) -> Bool) -> Bool {
+    public func canStep(_ delta: Int, isAvailable: (Entry) -> Bool) -> Bool {
         destinationIndex(delta, isAvailable: isAvailable) != nil
     }
-    public mutating func step(_ delta: Int, isAvailable: (String) -> Bool = { _ in true }) -> String? {
+    public mutating func step(_ delta: Int, isAvailable: (Entry) -> Bool = { _ in true }) -> Entry? {
         guard let next = destinationIndex(delta, isAvailable: isAvailable) else { return nil }
         index = next; return entries[next]
     }
-    private func destinationIndex(_ delta: Int, isAvailable: (String) -> Bool) -> Int? {
+    private func destinationIndex(_ delta: Int, isAvailable: (Entry) -> Bool) -> Int? {
         guard delta != 0 else { return nil }
         var next = index + delta
         while entries.indices.contains(next) {
@@ -418,3 +420,5 @@ public struct SessionNavigation {
         return nil
     }
 }
+
+public typealias SessionNavigation = NavigationHistory<String>

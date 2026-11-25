@@ -146,8 +146,9 @@ struct WorkbenchDashboard<RowActions: View>: View {
                 if !attentionOnly && showsActivity { groupHistory }
                 if !attentionOnly && showsActivity && !context.restoreReport.isEmpty { restoreReportSection }
                 if !attentionOnly && showsActivity && !context.pendingRestoration.isEmpty { restoration }
-            }.padding(.horizontal, 32).padding(.top, 24).padding(.bottom, 32)
-                .frame(maxWidth: 944).frame(maxWidth: .infinity)
+            }.padding(.horizontal, WorkbenchPageLayout.horizontalPadding).padding(.top, 24)
+                .padding(.bottom, WorkbenchPageLayout.bottomPadding)
+                .workbenchPageColumn()
                 .id("dashboard.top")
                 #if PERCH_ACCEPTANCE
                 .background(NativeDashboardProbe(projection: projection, attentionOnly: attentionOnly, groupID: group?.id))
@@ -162,15 +163,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
 
     private var homeHeader: some View {
         VStack(alignment: .leading, spacing: 20) {
-            HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("工作台").font(.system(size: WorkbenchTheme.Typography.Display.page, weight: .semibold))
-                    Text("掌握进展，继续工作。").font(.system(size: WorkbenchTheme.Typography.label)).foregroundStyle(.secondary)
-                }
-                Spacer(minLength: 16)
-                Button(action: onNewTask) { Label("新建会话", systemImage: "plus") }
-                    .buttonStyle(.bordered).controlSize(.large)
-            }
+            WorkbenchPageHeader(Text("工作台"), subtitle: Text("掌握进展，继续工作。"))
             HStack {
                 Picker("工作台视图", selection: $homeSection) {
                     ForEach(WorkbenchHomeSection.allCases, id: \.self) { value in
@@ -182,8 +175,9 @@ struct WorkbenchDashboard<RowActions: View>: View {
                 Button("全部会话", action: onShowAll).buttonStyle(QuietLinkStyle())
             }
             if !visibleFacets.isEmpty { scopeChips }
-        }.padding(.horizontal, 32).padding(.top, 28).padding(.bottom, 20)
-            .frame(maxWidth: 944).frame(maxWidth: .infinity)
+        }.padding(.horizontal, WorkbenchPageLayout.horizontalPadding)
+            .padding(.top, WorkbenchPageLayout.topPadding).padding(.bottom, 20)
+            .workbenchPageColumn()
             .overlay(alignment: .bottom) { Divider() }
     }
 
@@ -266,8 +260,8 @@ struct WorkbenchDashboard<RowActions: View>: View {
                 if let facet = context.scope.facets.first(where: { $0.kind == .group }) {
                     Button("工作台") { onClearScope(facet) }.buttonStyle(QuietLinkStyle()).font(.system(size: WorkbenchTheme.Typography.caption))
                 }
-                Text(group.name).font(.system(size: WorkbenchTheme.Typography.Display.page, weight: .semibold)).textSelection(.enabled)
-            } else { Text(title).font(.system(size: WorkbenchTheme.Typography.Display.page, weight: .semibold)) }
+                Text(group.name).workbenchPageTitle().textSelection(.enabled)
+            } else { Text(title).workbenchPageTitle() }
             if !visibleFacets.isEmpty { scopeChips }
             if attentionOnly && !projection.attention.isEmpty {
                 Text("共 \(projection.attention.items.count) 项 · 确认、回答或处理错误；查看结果请到工作台。")

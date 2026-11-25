@@ -36,6 +36,9 @@ enum WorkspaceLayoutMetrics {
     static let inspectorDefaultWidth: CGFloat = 312
     static let inspectorMinimumWidth: CGFloat = 280
     static let inspectorMaximumWidth: CGFloat = 400
+    static let widthPlan = WorkspaceWidthPlan.Metrics(
+        frameInset: frameInset, sidebarGap: sidebarGap, contentMinimum: contentMinimumWidth,
+        inspectorReadingMinimum: inspectorReadingMinimumWidth)
 }
 
 struct WorkbenchToolbarSymbol: View {
@@ -77,7 +80,6 @@ struct WorkbenchToolbarButtonStyle: ButtonStyle {
 /// workspace sheet floats above it and contains the reader and inspector; their hosts survive resizing.
 struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: View>: NSViewControllerRepresentable {
     @Environment(\.locale) private var locale
-    let newConversation: () -> Void
     let canNavigate: (Int) -> Bool
     let navigate: (Int) -> Void
     let inspectorVisible: Bool
@@ -91,13 +93,11 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
     let commandLineVisible: Bool
     let content: Content
 
-    init(newConversation: @escaping () -> Void,
-         canNavigate: @escaping (Int) -> Bool = { _ in false },
+    init(canNavigate: @escaping (Int) -> Bool = { _ in false },
          navigate: @escaping (Int) -> Void = { _ in },
          @ViewBuilder sidebar: () -> Sidebar,
          @ViewBuilder header: () -> Header, @ViewBuilder actions: () -> Actions,
          @ViewBuilder content: () -> Content) {
-        self.newConversation = newConversation
         self.canNavigate = canNavigate
         self.navigate = navigate
         inspectorVisible = false
@@ -110,8 +110,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         self.content = content()
     }
 
-    init<Inspector: View>(newConversation: @escaping () -> Void,
-                          canNavigate: @escaping (Int) -> Bool = { _ in false },
+    init<Inspector: View>(canNavigate: @escaping (Int) -> Bool = { _ in false },
                           navigate: @escaping (Int) -> Void = { _ in },
                           inspectorVisible: Bool,
                           commandLineVisible: Bool = false,
@@ -121,7 +120,6 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
                           @ViewBuilder actions: () -> Actions,
                           @ViewBuilder inspector: () -> Inspector,
                           @ViewBuilder content: () -> Content) {
-        self.newConversation = newConversation
         self.canNavigate = canNavigate
         self.navigate = navigate
         self.inspectorVisible = inspectorVisible
@@ -178,7 +176,6 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
 
     func updateNSViewController(_ controller: WorkbenchSplitController, context: Context) {
         let coordinator = context.coordinator
-        coordinator.newConversation = newConversation
         coordinator.canNavigate = canNavigate
         coordinator.navigate = navigate
         coordinator.locale = locale
@@ -230,13 +227,11 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
         var commandLineHost: NSHostingView<WorkspaceFloatingPanelRoot<AnyView>>?
         weak var controller: WorkbenchSplitController?
         var locale: Locale
-        var newConversation: () -> Void
         var canNavigate: (Int) -> Bool
         var navigate: (Int) -> Void
         private let backID = NSToolbarItem.Identifier("WorkbenchBack")
         private let forwardID = NSToolbarItem.Identifier("WorkbenchForward")
         private let toggleID = NSToolbarItem.Identifier("WorkbenchSidebarToggle")
-        private let composeID = NSToolbarItem.Identifier("WorkbenchCompose")
         private let toolbarItems = NSHashTable<NSToolbarItem>.weakObjects()
 
         init(_ view: WorkspaceSplitView) {
@@ -252,7 +247,6 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
                 NSHostingView(rootView: WorkspaceFloatingPanelRoot(content: $0, locale: view.locale))
             }
             locale = view.locale
-            newConversation = view.newConversation
             canNavigate = view.canNavigate
             navigate = view.navigate
             super.init()
@@ -285,7 +279,7 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             [toggleID]
         }
         func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-            [toggleID, composeID, backID, forwardID, .flexibleSpace]
+            [toggleID, backID, forwardID, .flexibleSpace]
         }
         func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier id: NSToolbarItem.Identifier,
                      willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
@@ -306,6 +300,9 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
                 item.validate()
                 return item
             }
+            // A saved customization may still name the retired compose item
+            // (new sessions start from the sidebar); unknown items are dropped.
+            guard id == toggleID || id == .flexibleSpace else { return nil }
             let item = NSToolbarItem(itemIdentifier: id)
             toolbarItems.add(item)
             if id == toggleID {
@@ -315,15 +312,8 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
                 item.target = controller
                 item.action = #selector(WorkbenchSplitController.toggleSidebar(_:))
                 item.isBordered = false
-            } else if id == composeID {
-                item.label = L("新建会话")
-                item.toolTip = L("新建会话 · ⌘N")
-                item.image = NSImage(systemSymbolName: "square.and.pencil", accessibilityDescription: item.label)
-                item.target = self
-                item.action = #selector(compose)
-                item.isBordered = false
             }
-            if id == toggleID || id == composeID {
+            if id == toggleID {
                 item.view = navigationButton(for: item)
             }
             return item
@@ -340,7 +330,6 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
                 case backID: item.label = L("Back"); item.toolTip = item.label + " · ⌘["
                 case forwardID: item.label = L("Forward"); item.toolTip = item.label + " · ⌘]"
                 case toggleID: item.label = L("切换侧栏"); item.toolTip = L("显示或隐藏侧栏")
-                case composeID: item.label = L("新建会话"); item.toolTip = L("新建会话 · ⌘N")
                 default: break
                 }
                 if let button = item.view as? NSButton {
@@ -379,7 +368,6 @@ struct WorkspaceSplitView<Sidebar: View, Header: View, Actions: View, Content: V
             ])
             return button
         }
-        @objc private func compose() { newConversation() }
         @objc private func goBack() { navigate(-1); controller?.workspaceToolbar?.validateVisibleItems() }
         @objc private func goForward() { navigate(1); controller?.workspaceToolbar?.validateVisibleItems() }
     }
@@ -832,6 +820,8 @@ final class WorkbenchSplitController: NSSplitViewController {
     /// its sidebar on resize, instead of the inspector covering the reply. The
     /// saved visibility is unchanged; widening the window brings it back.
     private(set) var isSidebarYieldingToInspector = false
+    /// The current width class, from the last layout pass.
+    private(set) var widthClass: WorkspaceWidthClass = .wide
     /// The reader asked for the sidebar while it was yielding: it then overlays
     /// as before, until the inspector closes or the window fits all three.
     private var sidebarRevealedOverInspector = false
@@ -1124,32 +1114,23 @@ final class WorkbenchSplitController: NSSplitViewController {
         updatePanelCornerRadius()
 
         // The outer sheet stays fixed; its reader yields space to the internal inspector.
-        let availableWidth = view.bounds.width
-        let minimum = WorkspaceLayoutMetrics.contentMinimumWidth - 0.5
-        let avoidance = WorkspaceLayoutMetrics.sidebarInset + floatingSidebarWidth +
-            WorkspaceLayoutMetrics.sidebarGap
-        let inspectorAvoidance = WorkspaceLayoutMetrics.frameInset + floatingInspectorWidth
-        let fitsSidebar = availableWidth - avoidance - WorkspaceLayoutMetrics.frameInset >= minimum
-        let fitsBoth = availableWidth - avoidance - inspectorAvoidance >= minimum
-        let fitsInspectorAlone = availableWidth - WorkspaceLayoutMetrics.frameInset - inspectorAvoidance >= minimum
-        let bothOpen = isFloatingSidebarVisible && isFloatingInspectorVisible
-        if !bothOpen || fitsBoth { sidebarRevealedOverInspector = false }
-        // The reply keeps priority over navigation: rather than letting the
-        // inspector cover it, the sidebar steps aside while the card still fits.
-        isSidebarYieldingToInspector = bothOpen && fitsSidebar && !fitsBoth && fitsInspectorAlone &&
-            !sidebarRevealedOverInspector
-        let sidebarShown = isSidebarShown
-        let avoidSidebar = sidebarShown && fitsSidebar
-        let leading = avoidSidebar ? avoidance : WorkspaceLayoutMetrics.frameInset
-        detailController?.setContentInsets(leading: avoidSidebar ? avoidance : 0,
-                                          trailing: 0)
-        let inspectorWidth = isFloatingInspectorVisible
-            ? min(floatingInspectorWidth, max(0, availableWidth - leading -
-                WorkspaceLayoutMetrics.frameInset - WorkspaceLayoutMetrics.inspectorReadingMinimumWidth))
-            : 0
+        // Width classes are decided in one pure function (docs/design/layout.md「宽度分档」).
+        let plan = WorkspaceWidthPlan.resolve(
+            availableWidth: view.bounds.width, sidebarWidth: floatingSidebarWidth,
+            inspectorWidth: floatingInspectorWidth, sidebarVisible: isFloatingSidebarVisible,
+            inspectorVisible: isFloatingInspectorVisible, revealedOverInspector: sidebarRevealedOverInspector,
+            metrics: WorkspaceLayoutMetrics.widthPlan)
+        widthClass = plan.widthClass
+        sidebarRevealedOverInspector = plan.revealedOverInspector
+        isSidebarYieldingToInspector = plan.sidebarYields
+        let sidebarShown = plan.sidebarShown
+        let avoidSidebar = plan.sidebarAvoided
+        let leading = CGFloat(plan.contentLeading)
+        detailController?.setContentInsets(leading: avoidSidebar ? leading : 0, trailing: 0)
+        let inspectorWidth = CGFloat(plan.inspectorWidth)
         detailController?.setInspectorWidth(inspectorWidth)
         if isFloatingInspectorVisible { inspectorWidthConstraint?.constant = inspectorWidth }
-        isSidebarOverlayingContent = sidebarShown && !avoidSidebar
+        isSidebarOverlayingContent = plan.sidebarOverlaysContent
         let headerLeading: CGFloat
         if isSidebarOverlayingContent {
             headerLeading = floatingSidebarWidth + WorkspaceLayoutMetrics.sidebarGap + WorkbenchTheme.Reading.inset
