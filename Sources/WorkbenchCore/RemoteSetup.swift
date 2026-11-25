@@ -64,19 +64,20 @@ public struct KimiServiceEndpoint: Equatable, Sendable {
 
 /// Saved endpoints contain routing information only. Agent credentials stay remote.
 public enum RemoteSetup {
-    public static let agents: [SessionKind] = [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex, .claude]
+    public static let agents: [SessionKind] = [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex, .claude, .agy]
 
     /// The bridge protocol this build speaks. It must match SERVICE_VERSION in
     /// remote/native-agent-service.py; scripts/check-version.py enforces that.
-    public static let bridgeServiceVersion = 14
+    public static let bridgeServiceVersion = 15
 
     /// Whether a bridge still serving an older protocol keeps every request this
     /// build may send meaningful while its replacement waits for a safe window.
     /// v13 capped snapshot pages at 500 messages and v14 coalesces ACP chunks and
-    /// adds Kimi ACP synchronization; every v14 request exists in v12 and v13 with
-    /// the same meaning. Any other gap stays gated.
+    /// adds Kimi ACP synchronization. v14 serves existing sessions compatibly while
+    /// v15 waits to add agy; earlier gaps stay gated.
     public static func bridgeTransitionCompatible(serving: Int, expected: Int = bridgeServiceVersion) -> Bool {
         serving == expected || ((serving == 12 || serving == 13) && (expected == 13 || expected == 14))
+            || (serving == 14 && expected == 15)
     }
 
     public static func sshAliases(_ config: String) -> [String] {

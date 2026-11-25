@@ -21,7 +21,7 @@ public struct SSHHost: Codable, Identifiable, Equatable, Sendable {
     public static let defaultKimiTokenPath = "~/.kimi-code/server.token"
 
     public init(id: UUID = UUID(), name: String, destination: String,
-                enabledAgents: [SessionKind] = [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex, .claude],
+                enabledAgents: [SessionKind] = [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex, .claude, .agy],
                 kimiPort: Int = 58627, kimiTokenPath: String = SSHHost.defaultKimiTokenPath,
                 autoConnectSSH: Bool = true, autoConnectHerdr: Bool = true) {
         self.id = id; self.name = name; self.destination = destination
@@ -35,7 +35,7 @@ public struct SSHHost: Codable, Identifiable, Equatable, Sendable {
         name = try c.decode(String.self, forKey: .name)
         destination = try c.decode(String.self, forKey: .destination)
         // Existing saved hosts retain their previous connections until reconfigured.
-        enabledAgents = try c.decodeIfPresent([SessionKind].self, forKey: .enabledAgents) ?? [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex, .claude]
+        enabledAgents = try c.decodeIfPresent([SessionKind].self, forKey: .enabledAgents) ?? [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex, .claude, .agy]
         autoConnectSSH = try c.decodeIfPresent(Bool.self, forKey: .autoConnectSSH) ?? true
         autoConnectHerdr = try c.decodeIfPresent(Bool.self, forKey: .autoConnectHerdr) ?? true
         localAgentPaths = try c.decodeIfPresent([String: String].self, forKey: .localAgentPaths) ?? [:]
@@ -45,7 +45,7 @@ public struct SSHHost: Codable, Identifiable, Equatable, Sendable {
         kimiManaged = try c.decodeIfPresent(Bool.self, forKey: .kimiManaged) ?? false
         kimiEnvironment = try c.decodeIfPresent([String: String].self, forKey: .kimiEnvironment) ?? [:]
     }
-    public var hasNativeAgents: Bool { enabledAgents.contains { [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains($0) } }
+    public var hasNativeAgents: Bool { enabledAgents.contains { [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex, .claude, .agy].contains($0) } }
     /// Inert view state for an empty workspace; never listed, saved or connected.
     public static let unconfigured = SSHHost(id: UUID(uuidString: "00000000-0000-4000-8000-000000000000")!,
                                             name: "", destination: "", enabledAgents: [])

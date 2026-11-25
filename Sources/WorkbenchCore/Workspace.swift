@@ -3,10 +3,10 @@ import Foundation
 public enum SessionKind: String, Codable, Sendable {
     // terminal stays only for decoding hosts/sessions saved while Herdr panes
     // existed; nothing produces it anymore.
-    case terminal, kimi, omp, qoder, qoderintl, dsh, codex, claude
+    case terminal, kimi, omp, qoder, qoderintl, dsh, codex, claude, agy
     public var symbol: String {
         [Self.terminal: "terminal", .kimi: "sparkles", .omp: "bolt", .qoder: "curlybraces", .qoderintl: "curlybraces",
-         .dsh: "brain.head.profile", .codex: "chevron.left.forwardslash.chevron.right", .claude: "sparkle"][self]!
+         .dsh: "brain.head.profile", .codex: "chevron.left.forwardslash.chevron.right", .claude: "sparkle", .agy: "a.circle"][self]!
     }
     public var label: String {
         switch self {
@@ -18,6 +18,7 @@ public enum SessionKind: String, Codable, Sendable {
         case .dsh: return "DeepSeek"
         case .codex: return "Codex"
         case .claude: return "Claude Code"
+        case .agy: return "Antigravity"
         }
     }
 }

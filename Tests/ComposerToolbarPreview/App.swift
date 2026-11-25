@@ -27,7 +27,7 @@ private struct ToolbarPreview: View {
     @State private var stopCount = 0
     @State private var sendCount = 0
     @State private var lastPayload = "Not sent"
-    private let permissionProviders: [SessionKind] = [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex, .claude]
+    private let permissionProviders: [SessionKind] = [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex, .claude, .agy]
     private var selectedProvider: SessionKind { SessionKind(rawValue: permissionProvider) ?? .kimi }
     private var permissionCapability: PermissionCapability {
         PermissionCatalog.capability(for: selectedProvider, selected: permissionMode)

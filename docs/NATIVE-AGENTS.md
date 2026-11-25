@@ -1,6 +1,6 @@
-# OMP / Qoder CN / Qoder / DeepSeek / Codex / Claude Code 原生对话
+# OMP / Qoder CN / Qoder / DeepSeek / Codex / Claude Code / Antigravity 原生对话
 
-Mac 界面、远端执行。⌘N 选择 Kimi、OMP、Qoder CN、Qoder、DeepSeek、Codex 或 Claude Code，默认沿用当前目录，也可选择最近目录；名称由第一条消息生成，自动关联当前任务组。置顶、分组、待处理队列与工作现场共用，顶部不恢复重复标签栏。
+Mac 界面、远端执行。⌘N 选择 Kimi、OMP、Qoder CN、Qoder、DeepSeek、Codex、Claude Code 或 Antigravity，默认沿用当前目录，也可选择最近目录；名称由第一条消息生成，自动关联当前任务组。置顶、分组、待处理队列与工作现场共用，顶部不恢复重复标签栏。
 
 ## 已核对的运行时
 
@@ -11,11 +11,13 @@ Mac 界面、远端执行。⌘N 选择 Kimi、OMP、Qoder CN、Qoder、DeepSeek
 - Codex CLI（安装不钉版本，跟随官方 latest）：按 `app-server generate-json-schema --experimental` 生成的完整 schema 核对协议；0.155.1 实机验证创建、无工具 turn、恢复、归档、恢复归档与删除，0.162.1 复核 schema 中 model/list、thread/start|resume|archive、thread/items/list、turn/start|steer|interrupt 均保留，并实机验证创建、归档与模型目录。升级后运行 `scripts/check-codex-schema.py` 核对协议（重新生成 schema 并比对桥用到的全部方法，缺失即失败；无 codex 的环境自动跳过），协议行为变化还须实机复核。只使用 `codex app-server --listen stdio://` 的 JSON-RPC，不启动 PTY，也不抓取终端画面。创建与恢复分别调用 `thread/start`、`thread/resume`，Perch 会话 ID 就是原生 thread UUID；历史通过 `thread/items/list` 恢复。发送、运行中引导和停止分别使用 `turn/start`、`turn/steer`、`turn/interrupt`。上下文压缩由桥自身提供 /compact（`thread/compact/start` 只回执，压缩作为独立轮次运行，由 `contextCompaction` 条目或已弃用的 `thread/compacted` 通知收尾；该轮次不进入待查看队列）；Codex 因上下文窗口耗尽失败整轮时，报错附带可发送 /compact 或新建会话的指引。流式正文、思考、计划、工具和 token usage 转入统一对话；`item/reasoning/summaryPartAdded` 与 `summaryTextDelta` 作为结构化 `activity_summary` 元数据传给活动叙事，不把原始 reasoning 当作摘要。`item/completed` 的权威 summary/content 覆盖增量草稿并标记 final，`thread/items/list` 恢复历史时也生成同样元数据。模型及 reasoning effort 来自 `model/list`，创建和切换时均拒绝目录之外的值，切换仅用于后续 turn。command、file change、permissions、tool input 与 MCP elicitation 等 app-server 反向请求全部显示在 Mac 上并等待明确回答，不自动批准或静默拒绝。输入框支持附件（一次最多 5 个、单个 10MB）：桥把文件落到远端 `attachments/` 目录，图片以 `localImage` 输入项随 `turn/start` 发送，其他文件在文本中附远端路径供读取；运行中引导（steer）不带附件，带附件的消息排队到下一轮。
 - Claude Code：官方 `@anthropic-ai/claude-agent-sdk` 0.3.302，驱动远端已安装并登录的 `claude` CLI（建议 2.1.302，与 SDK 同版；SDK 0.3.N 对应 CLI 2.1.N）。0.3.302 含 0.3.284 的修复：后台子 Agent 结束唤起的追加轮不再因 stdin 已关而让 hook、`canUseTool`、SDK MCP 调用失败（"Stream closed"）；升级经 native service v8 触发各机器重装组件。消息类型与 Qoder SDK 同构（system init / assistant / user / stream_event / result），桥与 Mac 复用同一 worker 事件协议：SDK `query`、`canUseTool`、`interrupt`、`resume`。沿用远端 CLI 登录与凭据，桥不接触；每次 `query` 带当前权限模式，切换从下一轮生效；`bypassPermissions` 同时显式设置 `allowDangerouslySkipPermissions`。模型目录由 SDK `supportedModels()` 读取，返回当前 CLI/账号支持的入口、alias 的 `resolvedModel` 与各入口的 effort，不发送 prompt，也不代表已验证模型鉴权；留空使用 CLI 默认模型。目录与创建时模型/effort 需 native service v11，旧桥按提示更新组件即可。输入框支持附件（一次最多 5 个、单个 10MB）：桥把文件落到远端 `attachments/` 目录，图片（png/jpeg/gif/webp）经 SDK streaming-input 以 image 块发送，其他文件在文本中附远端路径供 Read 查看；历史中只保留 `[图片: 名称]` 标记，不提供图片本体回看。每轮最后一条主循环 assistant 消息的 per-request `usage`（input+cache+output 即当前窗口占用）与 result 的 `modelUsage` 的 `contextWindow` 转成上下文余量上报；result 自带的 `usage` 是整轮跨请求合计，不代表窗口，不能用。result 之后 worker 再请求 SDK `getContextUsage`（summary），带回解析后的压缩窗口（1M 模型默认可能是 200K）覆盖声明上限；旧 CLI 不支持时保留估算读数。无回复的轮次与归零的崩溃结果不覆盖有效读数。worker 与 Codex 一样注入代理环境（检测到本机代理时读取 `~/proxy.env`），否则 CLI 回连功能开关/遥测的请求会静默卡住首轮。
 
+- Antigravity（agy）1.5.16：走标准 ACP v1（`agy acp`，stdio JSON-RPC）。实机核对 `initialize` 返回图片输入与 `session/resume` 能力；未认证环境中的 `session/new` 正确返回 `Authentication required`，尚未实机验证登录后的对话。沿用远端 CLI 的凭据，模型目录在握手后从 ACP config options 缓存；发送、停止和逐次审批分别使用 `session/prompt`、`session/cancel` 与 `session/request_permission`，不自动传 `--dangerously-skip-permissions`。图片以 ACP image block 发送，其他附件以远端路径提供。
+
 参考：[OMP 18.1.16 RPC 文档](https://github.com/can1357/oh-my-pi/blob/v18.1.16/docs/rpc.md)、[Qoder CN 官方 SDK](https://docs.qoder.cn/cli/sdk/overview)、[dsh ACP 包说明](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/acp/acp)、[Codex app-server](https://github.com/openai/codex/tree/main/codex-rs/app-server)、[Claude Agent SDK](https://www.npmjs.com/package/@anthropic-ai/claude-agent-sdk)。
 
 ## 远端托管
 
-`remote/native-agent-service.py` 是仅监听远端 127.0.0.1 的独立进程，通过系统 SSH 隧道访问；持有 OMP 的 stdin/stdout、Qoder 与 Claude 的 SDK worker、dsh 的 ACP 进程与 Codex app-server。Mac 断线、退出不关闭这些管道，因此 Agent、工具及待审批请求继续存在。远端使用随机访问令牌，目录/文件限定当前用户访问，Mac 只在内存持有令牌。
+`remote/native-agent-service.py` 是仅监听远端 127.0.0.1 的独立进程，通过系统 SSH 隧道访问；持有 OMP 的 stdin/stdout、Qoder 与 Claude 的 SDK worker、dsh、Kimi 与 agy 的 ACP 进程及 Codex app-server。Mac 断线、退出不关闭这些管道，因此 Agent、工具及待审批请求继续存在。远端使用随机访问令牌，目录/文件限定当前用户访问，Mac 只在内存持有令牌。
 
 远端安装位置：`~/.local/share/agent-workbench/native`。会话目录保存工作台转译后的消息、状态和上游 resume 标识；不会保存 OMP get_state 中的模型 headers、认证配置。Codex 身份与凭据由远端 `codex` CLI 管理，支持官方登录和自定义模型供应商；桥保存 thread UUID、所选 HOME 和供应商标识，不保存凭据。SDK 使用独立 npm 目录，不替换全局 CLI。dsh 会话使用独立的 `DSH_HOME`（托管目录下 `dsh-home/`），不读写用户的 `~/.dsh`；遥测显式 `DSH_TELEMETRY_MODE=DISABLED`；模型凭据沿用远端 `DEEPSEEK_API_KEY` 环境变量，桥不接触。
 
@@ -26,6 +28,7 @@ Mac 界面、远端执行。⌘N 选择 Kimi、OMP、Qoder CN、Qoder、DeepSeek
 ./scripts/install-native-service.sh my-server --provider=dsh
 ./scripts/install-native-service.sh my-server --provider=codex
 ./scripts/install-native-service.sh my-server --provider=claude
+./scripts/install-native-service.sh my-server --provider=agy
 # 保留旧的全套安装方式：<host> 或 <host> --with-dsh
 ```
 
@@ -37,7 +40,7 @@ Mac 保持 400ms 调度周期；目录在有运行任务时每 2 秒、全空闲
 
 ## 模型选择
 
-桥的 `/models` 是合并目录，每条带 `agent` 字段说明谁能路由它：OMP 来自 `omp models --json`（18.1.16 输出 `{"models":[...]}` 包装，桥负责展开），Qoder CN 与 Qoder 分别来自各自 SDK daemon 的 `accountInfo()` 取得 userId 后调用 `getModels({ fetchStrategy: "live", uid })`，Claude Code 来自 SDK `supportedModels()`，dsh 来自 ACP config options（首次握手后缓存到 `dsh-catalog.json`）。Mac 端按当前 Agent 过滤；两套 Qoder 目录分别标记 `qoder` 与 `qoderintl`，不会跨区域串用。
+桥的 `/models` 是合并目录，每条带 `agent` 字段说明谁能路由它：OMP 来自 `omp models --json`（18.1.16 输出 `{"models":[...]}` 包装，桥负责展开），Qoder CN 与 Qoder 分别来自各自 SDK daemon 的 `accountInfo()` 取得 userId 后调用 `getModels({ fetchStrategy: "live", uid })`，Claude Code 来自 SDK `supportedModels()`，dsh、Kimi 与 agy 来自 ACP config options（首次握手后分别缓存）。Mac 端按当前 Agent 过滤；两套 Qoder 目录分别标记 `qoder` 与 `qoderintl`，不会跨区域串用。
 
 新建任务面板里 Kimi、OMP、Qoder CN、Qoder、dsh、Codex 与 Claude Code 都可从对应的可搜索目录选择模型；只有运行时允许的入口继续接受目录外 id。模型留空表示沿用运行时默认，不注入模型或思考强度。Claude Code 只展示 `supportedModels()` 明确声明的入口和 effort，创建时由桥校验并传给 SDK；已有 Claude 会话的模型/思考仍只读，不伪称已支持热切换。会话内模型和思考强度使用两个轻量入口。模型弹层提供搜索和按 Agent 过滤的列表；思考弹层只展示当前模型由服务端声明的档位，名称保留英文，不从模型名称猜测能力。Qoder 选中模型时会校验 id 与档位；旧档位不适用时回退到该模型声明的默认档位，目录未声明则不发送。Qoder 会话可为后续轮次切换模型与思考强度，也可恢复 SDK 默认；运行中、离线或正在更新设置时仍可打开查看，修改控件禁用并说明原因。Claude Code 仍只读展示。未读取到模型能力与模型未提供档位分别提示。目录读取失败保留上一次的有效列表，错误只出现在模型控件上，不占用会话横幅。窄窗口下工具栏自动分为两行：主行保留附件、模型/思考与发送，次行放置权限和上下文余量。
 
@@ -98,7 +101,7 @@ OMP 运行中使用 `steer` RPC，Codex 使用 `turn/steer`；菜单都可改选
 
 消息发送后在会话正文显示完整文字和状态。RPC 确认只表示已接收；观察到运行时的 user message 回显后才合并到历史。引导不会替换当前 turnId，停止仍针对当前任务。失败或未确认的消息保持可见，不自动重放。
 
-更新桥接文件后，已运行的服务仍是旧代码；下一次检查会读取会话状态，仅在没有运行中任务、待审批请求和异步命令时自动替换旧服务，不会为了升级中断已有任务。等待期间（`--ensure` 返回 `restartPending`）客户端不再离线报错：对明确核实兼容的协议组合（当前为 v12↔v13，以及同版本仅源码指纹不同的刷新），连接继续经由旧进程读写，侧栏环境行显示「桥接更新待生效 · N 个任务运行中」，并周期重探；任务全部结束后自动切到新服务，目录、选中的会话与对话现场保持不变。不兼容的旧协议仍按版本门禁拒绝，保留上次成功目录为离线状态，不读写。
+更新桥接文件后，已运行的服务仍是旧代码；下一次检查会读取会话状态，仅在没有运行中任务、待审批请求和异步命令时自动替换旧服务，不会为了升级中断已有任务。等待期间（`--ensure` 返回 `restartPending`）客户端不再离线报错：对明确核实兼容的协议组合（当前为 v12↔v13、v14 向 v15 过渡，以及同版本仅源码指纹不同的刷新），连接继续经由旧进程读写，侧栏环境行显示「桥接更新待生效 · N 个任务运行中」，并周期重探；任务全部结束后自动切到新服务，目录、选中的会话与对话现场保持不变。agy 需 v15 起；旧桥继续服务既有 Agent，不能创建 agy 会话。不兼容的旧协议仍按版本门禁拒绝，保留上次成功目录为离线状态，不读写。
 
 ## 接入检查
 
@@ -132,7 +135,7 @@ HOME 的 app-server `account/read` 检查鉴权模式：官方供应商需要已
 
 ## 权限模式
 
-设置 → 新会话默认权限可分别配置 Kimi、OMP、Qoder CN、Qoder、Codex 与 Claude Code；新建任务时仍可覆盖，修改默认值不会改变已有会话。输入框旁会显示当前模式和生效范围：Kimi 可为下一条消息切换，Qoder CN、Qoder 与 Claude Code 可为下一轮切换；OMP 与 Codex 在创建时固定，只读展示。dsh 不伪造全局权限模式，继续使用 ACP 运行时审批卡片逐次确认。
+设置 → 新会话默认权限可分别配置 Kimi、OMP、Qoder CN、Qoder、Codex 与 Claude Code；新建任务时仍可覆盖，修改默认值不会改变已有会话。输入框旁会显示当前模式和生效范围：Kimi 可为下一条消息切换，Qoder CN、Qoder 与 Claude Code 可为下一轮切换；OMP 与 Codex 在创建时固定，只读展示。dsh 与 Antigravity 不伪造全局权限模式，继续使用 ACP 运行时审批卡片逐次确认。
 
 | Agent | 模式（粗体为安全默认） | 传递方式 | 生效范围 |
 |---|---|---|---|
@@ -140,7 +143,7 @@ HOME 的 app-server `account/read` 检查鉴权模式：官方供应商需要已
 | OMP | **`always-ask`** / `write` / `yolo` | `omp --approval-mode` | 创建会话时固定 |
 | Qoder CN | **`default`** / `acceptEdits` / `plan` / `dontAsk` / `auto` / `bypassPermissions` | 每次 SDK `query` 的 `permissionMode` | 下一轮 |
 | Qoder | **`default`** / `acceptEdits` / `plan` / `dontAsk` / `auto` / `bypassPermissions` | 每次 SDK `query` 的 `permissionMode` | 下一轮 |
-| dsh | runtime-managed | ACP `session/request_permission` | 每次请求 |
+| dsh / Antigravity | runtime-managed | ACP `session/request_permission` | 每次请求 |
 | Codex | `read-only` / **`workspace-ask`** / `workspace-auto` / `full-access` | app-server 参数，见下表 | 创建会话时固定 |
 | Claude Code | **`default`** / `acceptEdits` / `plan` / `bypassPermissions` | 每次 SDK `query` 的 `permissionMode` | 下一轮 |
 
@@ -157,4 +160,4 @@ Codex 的 reviewer 始终为 `user`，四档映射如下：
 
 Perch 不修改远端 `config.toml`，也不会在恢复时放宽会话权限。旧 Codex 默认值 `ask`、`auto-review` 安全迁移为 `workspace-ask`，`full-access` 保留。管理策略或运行时不接受所选权限时，错误仍通过任务错误通道展示，不自动降级或放宽。
 
-权限字段及 Codex 参数已对照当前运行时协议；Codex 权限需 native service v3 起，Claude Code 附件需 v5 起，Codex 附件需 v6 起，Claude Code 子 Agent 需 v7 起，Claude Agent SDK 0.3.302 需 v8 起，Codex 子线程需 v9 起，Qoder 双区模型目录与切换需 v10 起，Claude 模型目录与创建时 effort 需 v11 起，服务升级应等待活跃任务结束。Codex 官方语义见 [Sandbox](https://learn.chatgpt.com/docs/sandboxing)。
+权限字段及 Codex 参数已对照当前运行时协议；Codex 权限需 native service v3 起，Claude Code 附件需 v5 起，Codex 附件需 v6 起，Claude Code 子 Agent 需 v7 起，Claude Agent SDK 0.3.302 需 v8 起，Codex 子线程需 v9 起，Qoder 双区模型目录与切换需 v10 起，Claude 模型目录与创建时 effort 需 v11 起，Antigravity 需 v15 起，服务升级应等待活跃任务结束。Codex 官方语义见 [Sandbox](https://learn.chatgpt.com/docs/sandboxing)。

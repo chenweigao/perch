@@ -5,15 +5,15 @@ installation paths and the inherited PATH with a bounded `--version` probe.
 Use **Choose path** for an installation outside those paths. A successful probe
 establishes CLI availability, not credentials or successful model inference.
 
-Kimi and Codex can be connected and used in an existing Mac project directory.
+Kimi, Codex and Antigravity can be connected and used in an existing Mac project directory.
 OMP, Claude Code, Qoder and dsh are detected but do not yet offer local execution.
 The selected executable paths are saved with the stable local environment.
 
-- Kimi and Codex both run through the local native agent bridge (`native-agent-service.py --ensure`),
+- Kimi, Codex and Antigravity run through the local native agent bridge (`native-agent-service.py --ensure`),
   with bridge state in `~/.local/share/perch/local-native`. Kimi speaks standard ACP over stdio
-  (`kimi acp`), and Codex uses its `app-server` adapter, matching remote sessions without starting
+  (`kimi acp` / `agy acp`), and Codex uses its `app-server` adapter, matching remote sessions without starting
   or managing a `kimi web` HTTP server. The selected executable paths are passed via
-  `PERCH_LOCAL_KIMI` and `PERCH_LOCAL_CODEX`.
+  `PERCH_LOCAL_KIMI`, `PERCH_LOCAL_CODEX` and `PERCH_LOCAL_AGY`.
 - Existing conversation, effort, approval, stop and reconnect controls are reused.
   Closing Perch disconnects the client without terminating active tasks.
 - File and Git browsing execute the existing read-only commands in the selected

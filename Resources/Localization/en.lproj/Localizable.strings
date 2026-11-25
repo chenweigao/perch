@@ -681,6 +681,7 @@
 "跳过 Qoder 权限检查，允许危险操作。" = "Skip Qoder permission checks and allow dangerous operations.";
 "跳过 Claude Code 权限检查，允许危险操作。" = "Skip Claude Code permission checks and allow dangerous operations.";
 "DeepSeek 在每次需要权限时通过运行时审批卡片询问。" = "DeepSeek requests approval through a runtime card whenever permission is needed.";
+"Antigravity 在每次需要权限时通过运行时审批卡片询问。" = "Antigravity requests approval through a runtime card whenever permission is needed.";
 "仅允许读取；写入和其他额外权限需要批准。" = "Only allow reads; writes and other permissions require approval.";
 "允许在工作区内写入，额外权限由你批准。" = "Allow writes in the workspace; you approve additional permissions.";
 "允许在工作区内写入且不再请求批准。" = "Allow writes in the workspace without requesting approval.";

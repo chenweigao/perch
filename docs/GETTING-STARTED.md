@@ -33,7 +33,7 @@ Fresh installations have no preset host.
    If a fingerprint or login needs attention, the error explains the next step
    and opens Terminal on that host. Ports, jump hosts and keys remain in your
    system SSH configuration. Perch does not store SSH passwords or bypass host-key checks.
-2. **Prepare agent.** Choose Kimi, OMP, Qoder CN, Qoder, DeepSeek, Codex or Claude Code, then
+2. **Prepare agent.** Choose Kimi, OMP, Qoder CN, Qoder, DeepSeek, Codex, Claude Code or Antigravity, then
    click **Check agent**. Each check displays its result and repair actions.
    CLI installation and login open in Terminal; the displayed install commands
    use the documented tested versions. Agent credentials stay on the server.
@@ -62,6 +62,7 @@ Host my-server
 | Qoder | Install CLI (`curl -fsSL https://qoder.com/install | bash`), sign in, install bridge and SDK | CLI version, Node and SDK presence, bridge health, CLI login and the international SDK model catalog |
 | Claude Code | Install CLI, sign in, install bridge and SDK | CLI version, Node and SDK presence, bridge health; login is verified on the first message |
 | DeepSeek | Install bridge with bundled dsh runtime; configure remote `DEEPSEEK_API_KEY` | Runtime version and credential presence in the bridge environment; models are read during the first ACP session handshake |
+| Antigravity | Install `agy`, sign in with `agy acp --login`, install bridge | CLI version and bridge health; models and authentication are verified during the ACP session handshake |
 
 Checks do not send model prompts or prove successful model inference. For Qoder,
 the selected regional SDK catalog confirms CLI login without running a model turn.
@@ -70,7 +71,7 @@ to the first message; the wizard shows these boundaries directly.
 
 The packaged app includes the first-party bridge installer. **Install / update
 bridge** installs only the selected adapter's dependencies: OMP needs Python 3,
-Qoder and Claude Code also need Node.js/npm and their SDKs, and DeepSeek uses a pinned Python wheel.
+Qoder and Claude Code also need Node.js/npm and their SDKs, DeepSeek uses a pinned Python wheel, and Antigravity reuses the installed `agy` CLI.
 The operation does not stop a running service. An older bridge without `/setup`
 needs an update and a manual restart after its active tasks finish. Cancelling
 setup closes local checks; it does not undo remote installation or stop agents.
@@ -108,7 +109,7 @@ Kimi and remote OMP send running-task messages as steering by default. Choose
 “Send next turn” from the adjacent menu to queue instead. Pending text and its
 delivery state remain visible in the conversation. Qoder CN / Qoder / dsh / Claude Code queue for the
 next turn. Update the remote native bridge to enable OMP steering.
-Local Agent setup discovers installed Kimi and Codex, connects their authenticated
+Local Agent setup discovers installed Kimi, Codex and Antigravity, connects their authenticated
 loopback services, and adds this Mac as a separate task environment. Other detected
 agents are shown as installed without offering local execution. See [Local agents](LOCAL-AGENTS.md)
 for setup and acceptance scope. File viewing and read-only Git diff are

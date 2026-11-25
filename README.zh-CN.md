@@ -2,7 +2,7 @@
 <p align="center"><strong>给 coding agent 一个原生的 Mac 工作台。</strong><br>本机与远端任务，都有清楚的工作现场。</p>
 <p align="center"><a href="README.md">English</a> · 简体中文 · <a href="docs/GETTING-STARTED.md">快速开始</a> · <a href="#当前进展">当前进展</a></p>
 
-在 Mac 上使用 Kimi 或 Codex，也可以通过 SSH 连接远端 Agent。Perch 将对话、任务、
+在 Mac 上使用 Kimi、Codex 或 Antigravity，也可以通过 SSH 连接远端 Agent。Perch 将对话、任务、
 工具输出与审批放进一个原生工作台：先看结果，需要时展开过程，再决定下一步。
 
 使用 SwiftUI、AppKit 和 Ghostty 构建，保留原生文本编辑、键盘操作，以及 macOS 26
@@ -43,15 +43,16 @@
 | Qoder CN | 远端桥接官方 Agent SDK | 原生对话 |
 | Qoder | 远端桥接官方 Agent SDK | 原生对话 |
 | Claude Code | 远端桥接官方 Agent SDK | 原生对话 |
+| Antigravity（agy） | 远端桥接 ACP | 原生对话 |
 | DeepSeek Harness（dsh） | 远端桥接 ACP | 原生对话 |
 | Codex | 远端桥接 `codex app-server` stdio JSON-RPC | 原生对话 |
 | 其他 CLI Agent | Herdr + SSH | 终端 |
 
 原生接入共用对话组件。欢迎扩展 RPC、SDK 或 ACP 适配器；目前不宣称任意协议即插即用。
-已验证版本与恢复边界见 [Kimi](docs/KIMI.md)、[OMP / Qoder CN / Qoder / dsh / Codex / Claude Code](docs/NATIVE-AGENTS.md)。
+已验证版本与恢复边界见 [Kimi](docs/KIMI.md)、[OMP / Qoder CN / Qoder / dsh / Codex / Claude Code / Antigravity](docs/NATIVE-AGENTS.md)。
 凭据和模型由对应 CLI 配置，Perch 不直连模型服务商。
 
-本机已接通 Kimi 与 Codex，其他 Agent 仍仅支持发现；见[本机 Agent](docs/LOCAL-AGENTS.md)。Kimi、远端 OMP 与 Codex 支持运行中即时引导，
+本机已接通 Kimi、Codex 与 Antigravity，其他 Agent 仍仅支持发现；见[本机 Agent](docs/LOCAL-AGENTS.md)。Kimi、远端 OMP 与 Codex 支持运行中即时引导，
 也可显式选择下一轮发送。Codex 沿用原生 thread ID 和历史，模型与思考强度来自 `model/list`；
 app-server 发起的每个审批与提问都会显示并等待明确回答，不会自动允许或静默拒绝。Qoder CN / Qoder / dsh /
 Claude Code 支持停止与下一轮消息排队；Herdr 中的现有会话继续使用终端。

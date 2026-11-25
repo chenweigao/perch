@@ -42,8 +42,8 @@ public enum DiscoveryState: Equatable, Sendable {
 /// absolute paths plus whatever PATH does contain — never a shell command built by
 /// string concatenation.
 public enum LocalAgentDiscovery {
-    public static let agents: [SessionKind] = [.kimi, .codex, .omp, .claude, .qoder, .qoderintl, .dsh]
-    public static let supported: [SessionKind] = [.kimi, .codex]
+    public static let agents: [SessionKind] = [.kimi, .codex, .omp, .claude, .qoder, .qoderintl, .dsh, .agy]
+    public static let supported: [SessionKind] = [.kimi, .codex, .agy]
     public static func executableName(_ kind: SessionKind) -> String {
         kind == .qoder ? "qoderclicn" : kind == .qoderintl ? "qodercli" : kind.rawValue
     }

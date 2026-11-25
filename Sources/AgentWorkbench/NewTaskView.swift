@@ -43,14 +43,14 @@ struct NewTaskView: View {
         availableModels.first { $0.id == agentModel }
     }
     private var supportsModelCatalog: Bool {
-        [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(provider)
+        [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex, .claude, .agy].contains(provider)
     }
     private var catalogID: String { provider.rawValue + "@" + native.host.id.uuidString + "@" + String(native.online) }
     private var modelCatalogID: String {
         availableModels.map { "\($0.provider):\($0.id):\($0.thinking.map(\.rawValue).joined(separator: ","))" }.joined(separator: "|")
     }
-    private var supportsAttachments: Bool { [.kimi, .claude, .codex].contains(provider) }
-    private var inlineAttachments: Bool { [.kimi, .claude, .codex].contains(provider) }
+    private var supportsAttachments: Bool { [.kimi, .claude, .codex, .agy].contains(provider) }
+    private var inlineAttachments: Bool { [.kimi, .claude, .codex, .agy].contains(provider) }
     private var inlineAttachmentBlocker: String? {
         guard inlineAttachments else { return nil }
         if attachments.count > InlineAttachments.maximumCount { return L("附件一次最多 5 个") }
@@ -135,7 +135,7 @@ struct NewTaskView: View {
     }
 
     @ViewBuilder private var modelControl: some View {
-        if supportsModelCatalog && !(availableModels.isEmpty && (provider == .kimi || provider == .omp || provider == .dsh)) {
+        if supportsModelCatalog && !(availableModels.isEmpty && (provider == .kimi || provider == .omp || provider == .dsh || provider == .agy)) {
             ComposerModelPicker(models: availableModels, modelID: agentModel, thinking: thinking,
                 disabledReason: creating ? L("正在启动…") : nil,
                 catalogError: native.modelsError,
@@ -197,7 +197,7 @@ struct NewTaskView: View {
                         // The session composer's control: elevated and dangerous
                         // defaults show their color and name before the task starts.
                         PermissionPicker(provider: provider, capability: permissionCapability,
-                                         disabled: creating, allowsSelection: provider != .dsh) { mode in
+                                         disabled: creating, allowsSelection: provider != .dsh && provider != .agy) { mode in
                             permissionMode = mode
                         }
                         Spacer(minLength: 0)

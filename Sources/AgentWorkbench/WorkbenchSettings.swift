@@ -17,6 +17,7 @@ struct WorkbenchSettings: View {
     @UILocalization private var L
     private let readingSize = ReadingBodySize.shared
     private let permissionProviders: [SessionKind] = [.kimi, .omp, .qoder, .qoderintl, .codex, .claude]
+    private let runtimePermissionProviders: [SessionKind] = [.dsh, .agy]
     @AppStorage("settings.pane") private var pane = SettingsPane.agents
     var body: some View {
         NavigationSplitView {
@@ -97,9 +98,11 @@ struct WorkbenchSettings: View {
                     PermissionDefaults.set(mode, for: provider)
                 }
             }
-            PermissionPicker(provider: .dsh,
-                             capability: PermissionCatalog.capability(for: .dsh),
-                             layout: .form, allowsSelection: false) { _ in }
+            ForEach(runtimePermissionProviders, id: \.rawValue) { provider in
+                PermissionPicker(provider: provider,
+                                 capability: PermissionCatalog.capability(for: provider),
+                                 layout: .form, allowsSelection: false) { _ in }
+            }
             HStack {
                 Spacer()
                 Button("恢复安全默认") {
