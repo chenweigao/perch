@@ -246,6 +246,18 @@ class MathPerformanceTests(unittest.TestCase):
         runs["candidate"]["typeset-32"][2]["measurements"]["first_light_dark_draw"]["total_ms"] = 53
         MODULE.compare(runs)
 
+    def test_typeset_single_fast_baseline_round_passes(self):
+        runs = fixtures()
+        totals = {"baseline": [100, 230, 220], "candidate": [150, 290, 200]}
+        for variant, values in totals.items():
+            for record, total in zip(runs[variant]["typeset-128"], values):
+                record["measurements"]["cold_attachment"]["total_ms"] = total / 2
+                record["measurements"]["first_light_dark_draw"]["total_ms"] = total / 2
+        result = MODULE.compare(runs)
+        comparison = result["comparison"]["typeset-128"]
+        self.assertGreater(comparison["best_ratio"], 1.15)
+        self.assertLess(comparison["candidate_best_ms"], comparison["baseline_cold_and_draw_ms"] * 1.15)
+
     def test_schedule_order_shortens_only_identical_valid_fingerprints(self):
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory) / "base.app"
