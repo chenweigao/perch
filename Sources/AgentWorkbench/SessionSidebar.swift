@@ -540,11 +540,15 @@ struct SessionDirectoryView: View {
         let sessions = result.sessions
         let index = model.groupIndex
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text(L(key: isSearchSheet ? "搜索项目与会话" : "全部会话")).font(.title2.weight(.semibold))
-                Text("\(sessions.count) 个会话").font(.subheadline).foregroundStyle(.secondary)
-                Spacer()
-                if isSearchSheet { Button("完成") { dismiss() }.keyboardShortcut(.cancelAction) }
+            if isSearchSheet {
+                HStack {
+                    Text(L(key: "搜索项目与会话")).font(.title2.weight(.semibold))
+                    Text("\(sessions.count) 个会话").font(.subheadline).foregroundStyle(.secondary)
+                    Spacer()
+                    Button("完成") { dismiss() }.keyboardShortcut(.cancelAction)
+                }
+            } else {
+                WorkbenchPageHeader(Text(L(key: "全部会话")), subtitle: Text("\(sessions.count) 个会话"))
             }
             TextField("标题、Agent、环境或目录", text: $query).textFieldStyle(.roundedBorder).focused($focused)
                 .onSubmit { if let item = sessions.first(where: { $0.id == selection }) { open(item) } }
@@ -555,7 +559,10 @@ struct SessionDirectoryView: View {
                                       groups: index, now: timeline.date, onOpen: open,
                                       menu: { NSHostingMenu(rootView: SessionActionsMenu(model: model, item: $0).environment(\.locale, L.locale)) })
             }.overlay { if sessions.isEmpty { Text("没有找到会话").foregroundStyle(.secondary) } }
-        }.padding(isSearchSheet ? WorkbenchTheme.Dialog.padding : 24).frame(maxWidth: 950, maxHeight: .infinity, alignment: .topLeading)
+        }.padding(.horizontal, isSearchSheet ? WorkbenchTheme.Dialog.padding : WorkbenchPageLayout.horizontalPadding)
+            .padding(.top, isSearchSheet ? WorkbenchTheme.Dialog.padding : WorkbenchPageLayout.topPadding)
+            .padding(.bottom, isSearchSheet ? WorkbenchTheme.Dialog.padding : 24)
+            .frame(maxWidth: isSearchSheet ? 950 : WorkbenchPageLayout.maxWidth, maxHeight: .infinity, alignment: .topLeading)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .onAppear { if isSearchSheet { focused = true }; selection = result.online.first?.id }
             .onChange(of: query) { _, _ in selection = result.online.first?.id }
@@ -701,13 +708,15 @@ struct ArchivedSessionsView: View {
         let index = model.groupIndex
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 18) {
-                Text("已归档").font(.title.weight(.semibold))
-                Text("Kimi 归档与服务端同步；终端归档只整理本机列表，不结束远端进程。").foregroundStyle(.secondary)
+                WorkbenchPageHeader(Text("已归档"),
+                                    subtitle: Text("Kimi 归档与服务端同步；终端归档只整理本机列表，不结束远端进程。"))
                 ForEach(sessions) { item in
                     SessionSidebarRow(model: model, item: item, groups: index[item.id], selected: false, onOpen: {})
                 }
                 if sessions.isEmpty { Text("没有归档会话").foregroundStyle(.secondary) }
-            }.padding(32).frame(maxWidth: 950).frame(maxWidth: .infinity, alignment: .leading)
+            }.padding(.horizontal, WorkbenchPageLayout.horizontalPadding)
+                .padding(.top, WorkbenchPageLayout.topPadding).padding(.bottom, WorkbenchPageLayout.bottomPadding)
+                .workbenchPageColumn(alignment: .leading)
         }
     }
 }
