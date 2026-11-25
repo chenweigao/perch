@@ -36,7 +36,7 @@ struct ConversationNotice: View {
     /// Already localized; upstream errors are shown verbatim.
     let text: String
     var symbol = "exclamationmark.circle"
-    var tint: Color = .orange
+    var tint: Color = WorkbenchTheme.Status.attention
     var action: Action? = nil
 
     var body: some View {

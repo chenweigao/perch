@@ -113,7 +113,7 @@ private struct WorkbenchDetail: View {
                     // Natural size: a 28 pt target would make the notice bar taller.
                     Button { model.taskNotice = nil } label: { Image(systemName: "xmark") }
                         .help("关闭提示").accessibilityLabel("关闭提示")
-                }.font(.system(size: 12)).padding(10).background(.orange.opacity(0.06))
+                }.font(.system(size: 12)).padding(10).background(WorkbenchTheme.Status.attention.opacity(0.06))
             }
             if !model.draftingNewTask && model.showConversationFind && (model.showKimi || model.showNative) {
                 ConversationFindBar(model: model, kimi: model.kimi, native: model.native)

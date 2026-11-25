@@ -103,13 +103,13 @@ struct GoalHeaderBar: View {
                     switch turn {
                     case .running: EmptyView()
                     // The turn, not the goal, is what needs the reader.
-                    case .waiting: Label("等你处理", systemImage: "hand.raised").foregroundStyle(.orange)
-                    case .failed: Label("本轮失败", systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
+                    case .waiting: Label("等你处理", systemImage: "hand.raised").foregroundStyle(WorkbenchTheme.Status.attention)
+                    case .failed: Label("本轮失败", systemImage: "exclamationmark.triangle").foregroundStyle(WorkbenchTheme.Status.attention)
                     case .finished, .idle: Label("待续跑", systemImage: "clock").foregroundStyle(.secondary)
                     }
                 case "paused": Label("已暂停", systemImage: "pause.circle").foregroundStyle(.secondary)
                 case "complete": Label("已完成", systemImage: "checkmark.circle").foregroundStyle(.secondary)
-                case "blocked": Label("需处理", systemImage: "exclamationmark.circle").foregroundStyle(.orange)
+                case "blocked": Label("需处理", systemImage: "exclamationmark.circle").foregroundStyle(WorkbenchTheme.Status.attention)
                 default: Label("状态未知", systemImage: "questionmark.circle").foregroundStyle(.secondary)
                 }
             }.frame(minHeight: Self.statusHeight)

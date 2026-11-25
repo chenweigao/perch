@@ -40,7 +40,7 @@ struct KimiAttachmentView: View {
                     }.controlSize(.small)
                 }
             }.foregroundStyle(.secondary)
-            if let error { Text(error).font(.system(size: 11)).foregroundStyle(.orange) }
+            if let error { Text(error).font(.system(size: 11)).foregroundStyle(WorkbenchTheme.Status.attention) }
         }.task(id: ImageRequest(fileId: fileId, scale: displayScale)) {
             guard part.type == "image" else { return }
             do {

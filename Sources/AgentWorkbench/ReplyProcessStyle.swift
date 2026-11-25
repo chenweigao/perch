@@ -32,8 +32,9 @@ extension ReplyStyle {
     }
 }
 
-/// A tool's compact outcome stays visible beside its label: tuned warm amber
-/// with a gentle soft halo while running, and calm emerald once completed.
+/// A tool's compact outcome stays visible beside its label: a neutral dot with a
+/// gentle breathing halo while running (motion, not hue, says "live"), the
+/// attention color while it waits for the reader, and calm emerald once done.
 struct ProcessStatusDot: View {
     let status: VisibleTool.Status
     @State private var pulsing = false
@@ -42,9 +43,10 @@ struct ProcessStatusDot: View {
     private var active: Bool { status == .running }
     private var color: Color {
         switch status {
-        case .running, .awaitingApproval: return Color(nsColor: WorkbenchTheme.statusRunningNS)
+        case .running: return Color(nsColor: WorkbenchTheme.statusRunningNS)
+        case .awaitingApproval: return WorkbenchTheme.Status.attention
         case .succeeded, .returned: return Color(nsColor: WorkbenchTheme.statusSuccessNS)
-        case .failed: return Color(nsColor: .systemRed)
+        case .failed: return WorkbenchTheme.Status.danger
         case .missingResult, .disconnected: return WorkbenchTheme.quiet
         }
     }
@@ -64,7 +66,7 @@ struct ProcessStatusDot: View {
     }
 }
 
-/// PI's activity-marker geometry, using the tuned warm amber live color.
+/// PI's activity-marker geometry, using the neutral live color; the pulse carries it.
 struct ProcessLivePulse: View {
     @State private var pulsing = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion

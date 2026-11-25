@@ -159,6 +159,7 @@ def main():
             ("localization", [python, "scripts/check-localization.py"], 60),
             ("localization-tests", [python, "-m", "unittest", "discover", "-s", "Tests/Localization"], 60),
             ("radius", [python, "scripts/check-radius-tokens.py"], 60),
+            ("colors", [python, "scripts/check-color-tokens.py"], 60),
             # Preview apps compile explicit source lists that CI never builds.
             ("preview-sources", [python, "scripts/check-preview-sources.py"], 60),
             ("acceptance-supervisor", [python, "-m", "unittest", "discover", "-s", "Tests/Performance"], 60),

@@ -202,7 +202,7 @@ struct ContextMeter: View {
     private var tint: Color {
         guard !isStale, let budget else { return .secondary }
         let percent = displayedPercent ?? budget.remainingPercent
-        return percent <= 10 ? .red : percent <= 25 ? .orange : .secondary
+        return percent <= 10 ? WorkbenchTheme.Status.danger : percent <= 25 ? WorkbenchTheme.Status.attention : .secondary
     }
     private var displayedPercent: Int? { budget.map { 100 - Int(($0.usedFraction * 100).rounded()) } }
     var body: some View {

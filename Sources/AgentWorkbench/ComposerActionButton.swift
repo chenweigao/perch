@@ -113,7 +113,7 @@ struct ComposerDeliveryHint: View {
     /// Character count of a long draft, so a wall of text is visible at a glance.
     var draftLength: Int = 0
     var body: some View {
-        if let saveError { Text(saveError).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.orange).textSelection(.enabled) }
+        if let saveError { Text(saveError).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.Status.attention).textSelection(.enabled) }
         else if sending { Text("Sending…").font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary) }
         else if draftLength >= 200 {
             Text("草稿 \(draftLength) 字").font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.tertiary)

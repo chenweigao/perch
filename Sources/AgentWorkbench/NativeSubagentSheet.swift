@@ -71,7 +71,7 @@ struct NativeSubagentSheet: View {
 
     @ViewBuilder private func content(_ rows: [SubagentTranscriptRow]) -> some View {
         if !connection.online {
-            Text("连接已断开，以下为最后读取的内容。").font(.system(size: 12)).foregroundStyle(.orange)
+            Text("连接已断开，以下为最后读取的内容。").font(.system(size: 12)).foregroundStyle(WorkbenchTheme.Status.attention)
                 .padding(.bottom, 10)
         }
         if let transcript {
@@ -94,7 +94,7 @@ struct NativeSubagentSheet: View {
             ProgressView().frame(maxWidth: .infinity, minHeight: 120)
         }
         if let error = state.error {
-            Text(error).font(.system(size: 12)).foregroundStyle(.orange).textSelection(.enabled)
+            Text(error).font(.system(size: 12)).foregroundStyle(WorkbenchTheme.Status.attention).textSelection(.enabled)
                 .padding(.top, 10)
         }
     }

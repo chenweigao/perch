@@ -117,7 +117,7 @@ struct TaskContextDetailView: View {
             }.font(.system(size: WorkbenchTheme.Typography.caption))
             actions(task, current: current, readsOutput: readsOutput)
             if let error = state.actionErrors[task.id] {
-                Text(error).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.red)
+                Text(error).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.Status.danger)
                     .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -229,7 +229,7 @@ struct TaskContextDetailView: View {
                 else { Text("暂无输出").foregroundStyle(WorkbenchTheme.quiet) }
             }
             if let failure {
-                Text(failure).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.orange)
+                Text(failure).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.Status.attention)
                     .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
             }
         }.padding(16).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -252,7 +252,7 @@ struct TaskContextDetailView: View {
                 Text(task.isRunning ? "运行结束后在这里显示结果。" : "没有返回结果。").foregroundStyle(WorkbenchTheme.quiet)
             } else {
                 ScrollView {
-                    Text(text).foregroundStyle(task.isFailed ? Color.red : .primary).textSelection(.enabled)
+                    Text(text).foregroundStyle(task.isFailed ? WorkbenchTheme.Status.danger : .primary).textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .topLeading)
                 }.accessibilityIdentifier("task-context-result")
             }
@@ -266,7 +266,7 @@ struct TaskStatusSymbol: View {
     let task: KimiTask
     var body: some View {
         Image(systemName: Self.name(of: task))
-            .foregroundStyle(task.isFailed ? Color.red : Color.secondary)
+            .foregroundStyle(task.isFailed ? WorkbenchTheme.Status.danger : Color.secondary)
             .frame(width: 16).accessibilityHidden(true)
     }
     static func name(of task: KimiTask) -> String {

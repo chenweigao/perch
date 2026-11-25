@@ -95,7 +95,7 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                 Text("设置与环境").lineLimit(1)
                 Spacer(minLength: 4)
                 if environmentNeedsAttention {
-                    Circle().fill(.orange).frame(width: 6, height: 6)
+                    Circle().fill(WorkbenchTheme.Status.attention).frame(width: 6, height: 6)
                 }
             }.font(.system(size: SidebarMetrics.navigationSize)).foregroundStyle(WorkbenchTheme.ink)
                 .padding(.horizontal, SidebarMetrics.rowInset).frame(height: SidebarMetrics.navigationHeight)
@@ -119,7 +119,7 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                         navigation("环境管理", symbol: "server.rack") { showEnvironments = true }
                             .help(environmentSummary)
                         if environmentNeedsAttention {
-                            Text("环境需要处理").font(.subheadline).foregroundStyle(.orange)
+                            Text("环境需要处理").font(.subheadline).foregroundStyle(WorkbenchTheme.Status.attention)
                                 .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 10)
                         }
                         navigation("已归档会话", symbol: "archivebox", selected: page == .archive) {
@@ -148,7 +148,7 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                 if count > 0 {
                     // Orange, like a task group's attention count: something waits on the reader.
                     Text("\(count)").font(.system(size: SidebarMetrics.detailSize, weight: .medium)).monospacedDigit()
-                        .foregroundStyle(Color.orange)
+                        .foregroundStyle(WorkbenchTheme.Status.attention)
                 }
                 if let shortcut { shortcutHint(shortcut) }
             }.font(.system(size: SidebarMetrics.navigationSize))

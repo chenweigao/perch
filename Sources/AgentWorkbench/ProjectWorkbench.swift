@@ -14,7 +14,7 @@ struct ProjectWorkbenchOverview: View {
                 }
                 if !model.followUpNotices.isEmpty {
                     Label("有 \(model.followUpNotices.count) 个任务长时间没有更新", systemImage: "clock.badge.exclamationmark")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(WorkbenchTheme.Status.attention)
                 }
                 if projects.isEmpty {
                     Text("项目会随会话自动出现。").foregroundStyle(.secondary)

@@ -27,7 +27,7 @@ struct ConversationFindBar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             controls
-            if let error = result.queryError { Text(error).font(.system(size: 11)).foregroundStyle(.orange) }
+            if let error = result.queryError { Text(error).font(.system(size: 11)).foregroundStyle(WorkbenchTheme.Status.attention) }
             if hits.indices.contains(index) { Text(hits[index].excerpt).lineLimit(2).textSelection(.enabled).foregroundStyle(.secondary) }
             if hasOlder { Text("Matches cover loaded messages. Load full history to search older replies.").foregroundStyle(.secondary) }
         }.font(.system(size: 12)).padding(10).background(.regularMaterial)

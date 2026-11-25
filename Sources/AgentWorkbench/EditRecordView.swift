@@ -43,7 +43,7 @@ struct EditRecordInspectorView: View {
                                 EditStatText(stat: record.appliedTotal)
                             }
                             if !record.hasTurn {
-                                Text("当前只载入了部分轮次记录。").foregroundStyle(.orange)
+                                Text("当前只载入了部分轮次记录。").foregroundStyle(WorkbenchTheme.Status.attention)
                             }
                         }
                         ForEach(wholeTurn ? record.turn : [record.step]) { tool in
@@ -52,7 +52,7 @@ struct EditRecordInspectorView: View {
                                     Text(ToolPresentation.target(tool)).lineLimit(1).truncationMode(.middle)
                                     Spacer()
                                     Text(ConversationActivity.status(of: tool, exitCode: tool.exitCodeReport))
-                                        .foregroundStyle(tool.status == .awaitingApproval ? Color.orange : WorkbenchTheme.quiet)
+                                        .foregroundStyle(tool.status == .awaitingApproval ? WorkbenchTheme.Status.attention : WorkbenchTheme.quiet)
                                 }
                                 if tool.name.lowercased().hasPrefix("write") {
                                     Text("写入内容；调用未提供旧文件，无法计算净删除行数。")

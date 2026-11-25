@@ -13,7 +13,7 @@ struct ActivityNarrativeHistoryView: View {
             if narrative.phase == .blocked {
                 Image(systemName: "exclamationmark.circle")
                     .font(.system(size: ReplyStyle.captionSize, weight: .medium))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(WorkbenchTheme.Status.attention)
                     .accessibilityLabel(Text(narrative.phase.label))
             }
             KimiMarkdown(text: text).environment(\.isConversationBodyText, true)
@@ -130,7 +130,7 @@ struct KimiActivityView: View {
                                 Text(verbatim: "·").fixedSize()
                                 Text(verbatim: rowSummary.text)
                                     .lineLimit(1).truncationMode(.tail)
-                                    .foregroundStyle(rowSummary.isError ? Color.red : WorkbenchTheme.quiet)
+                                    .foregroundStyle(rowSummary.isError ? WorkbenchTheme.Status.danger : WorkbenchTheme.quiet)
                                     .layoutPriority(-1)
                             }
                         }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(WorkbenchTheme.quiet)
@@ -443,16 +443,16 @@ struct KimiToolCard: View {
                     } else if tool.status == .failed {
                         Text(verbatim: exitReport.map { L("退码 \($0) · 失败") } ?? L("失败"))
                             .font(.system(size: ReplyStyle.captionSize))
-                            .foregroundStyle(Color(nsColor: .systemRed))
+                            .foregroundStyle(WorkbenchTheme.Status.danger)
                             .padding(.horizontal, 6).padding(.vertical, 1)
-                            .background(Color(nsColor: .systemRed).opacity(0.12), in: Capsule())
+                            .background(WorkbenchTheme.Status.danger.opacity(0.12), in: Capsule())
                             .fixedSize()
                             .help(Text("展开查看失败记录"))
                     } else if tool.status == .succeeded || tool.status == .returned {
                         ProcessStatusDot(status: tool.status).fixedSize()
                     }
                     Spacer(minLength: 0)
-                }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(showsAttention ? Color.orange : WorkbenchTheme.quiet)
+                }.font(.system(size: ReplyStyle.Process.labelSize)).foregroundStyle(showsAttention ? WorkbenchTheme.Status.attention : WorkbenchTheme.quiet)
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel(Text(verbatim: "\(tool.name) · \(summary) · \(statusLabel)"))
                     .help(Text(verbatim: [tool.input?["command"].string ?? filePath, statusLabel].compactMap { $0 }.joined(separator: "\n")))
@@ -557,16 +557,16 @@ struct ToolInlineDiffCard: View {
     }
     private func foreground(for kind: ToolInlineDiff.LineKind) -> Color {
         switch kind {
-        case .added: return Color.green.opacity(0.92)
-        case .removed: return Color.red.opacity(0.92)
+        case .added: return WorkbenchTheme.Status.success.opacity(0.92)
+        case .removed: return WorkbenchTheme.Status.danger.opacity(0.92)
         case .header: return WorkbenchTheme.quiet
         case .context: return Color.primary.opacity(0.75)
         }
     }
     private func background(for kind: ToolInlineDiff.LineKind) -> Color {
         switch kind {
-        case .added: return Color.green.opacity(0.09)
-        case .removed: return Color.red.opacity(0.09)
+        case .added: return WorkbenchTheme.Status.success.opacity(0.09)
+        case .removed: return WorkbenchTheme.Status.danger.opacity(0.09)
         case .header, .context: return .clear
         }
     }

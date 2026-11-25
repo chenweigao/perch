@@ -25,7 +25,7 @@ struct EditStepRow: View {
             if tool.status != .succeeded && tool.status != .running {
                 Text(ConversationActivity.status(of: tool, exitCode: tool.exitCodeReport))
                     .font(.system(size: ReplyStyle.captionSize))
-                    .foregroundStyle(tool.status == .awaitingApproval ? Color.orange : WorkbenchTheme.quiet)
+                    .foregroundStyle(tool.status == .awaitingApproval ? WorkbenchTheme.Status.attention : WorkbenchTheme.quiet)
                     .fixedSize()
             }
             Button { context?.post(.showEdit(tool, messageID: messageID)) } label: {

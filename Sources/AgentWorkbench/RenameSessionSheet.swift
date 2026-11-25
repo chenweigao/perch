@@ -30,7 +30,7 @@ struct RenameSessionSheet: View {
             }
             if let suggestionError {
                 HStack(alignment: .top) {
-                    Text(suggestionError).font(.subheadline).foregroundStyle(.orange).textSelection(.enabled)
+                    Text(suggestionError).font(.subheadline).foregroundStyle(WorkbenchTheme.Status.attention).textSelection(.enabled)
                     Button("重试") { loadSuggestion() }.disabled(suggesting)
                 }
             }

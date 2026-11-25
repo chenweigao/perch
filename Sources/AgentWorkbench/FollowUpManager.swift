@@ -46,7 +46,7 @@ struct FollowUpManager: View {
                             }
                             Text("\(rule.trigger.title) · \(rule.status.title)").foregroundStyle(.secondary)
                             if rule.status == .needsReview {
-                                Text("发送时发生中断。请先检查来源会话的发送队列和回复，确认后再手动添加托管。").font(.subheadline).foregroundStyle(.orange)
+                                Text("发送时发生中断。请先检查来源会话的发送队列和回复，确认后再手动添加托管。").font(.subheadline).foregroundStyle(WorkbenchTheme.Status.attention)
                             }
                             if rule.trigger == .time { Text(Date(timeIntervalSince1970: rule.dueAt).formatted()).font(.subheadline) }
                             if !rule.prompt.isEmpty { Text(rule.prompt).lineLimit(3).textSelection(.enabled) }

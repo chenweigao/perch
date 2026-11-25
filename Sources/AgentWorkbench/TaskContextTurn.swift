@@ -130,7 +130,7 @@ struct TaskSessionOverviewSection: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Label("会话概述生成失败", systemImage: "exclamationmark.triangle")
                             .font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(WorkbenchTheme.Status.attention)
                         Text(failureMessage)
                             .font(.system(size: WorkbenchTheme.Typography.caption))
                             .foregroundStyle(WorkbenchTheme.quiet)
@@ -173,7 +173,7 @@ struct TaskSessionOverviewSection: View {
             HStack(spacing: 6) {
                 Image(systemName: "leaf")
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Color.green.opacity(0.85))
+                    .foregroundStyle(WorkbenchTheme.Status.success.opacity(0.85))
                     .accessibilityHidden(true)
                 Text("会话概述")
                     .font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
@@ -254,10 +254,10 @@ struct TaskSessionOverviewSection: View {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text("阻塞")
                     .font(.system(size: WorkbenchTheme.Typography.caption, weight: .semibold))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(WorkbenchTheme.Status.attention)
                 Text(verbatim: overview.blockers.joined(separator: "；"))
                     .font(.system(size: WorkbenchTheme.Typography.caption))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(WorkbenchTheme.Status.attention)
                     .lineLimit(1)
                     .truncationMode(.tail)
             }
@@ -296,7 +296,7 @@ struct TaskSessionOverviewSection: View {
     @ViewBuilder private func expandedBody(_ overview: SessionOverview) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             if !overview.blockers.isEmpty {
-                expandedSection("阻塞", items: overview.blockers, tint: .orange)
+                expandedSection("阻塞", items: overview.blockers, tint: WorkbenchTheme.Status.attention)
             }
             VStack(alignment: .leading, spacing: 4) {
                 Text("目标")
@@ -348,10 +348,10 @@ struct TaskSessionOverviewSection: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.system(size: WorkbenchTheme.Typography.caption, weight: .semibold))
-                .foregroundStyle(tint == .orange ? .orange : WorkbenchTheme.quiet)
+                .foregroundStyle(tint == WorkbenchTheme.Status.attention ? WorkbenchTheme.Status.attention : WorkbenchTheme.quiet)
             ForEach(Array(items.enumerated()), id: \.offset) { _, line in
                 HStack(alignment: .top, spacing: 6) {
-                    Text(verbatim: "•").foregroundStyle(tint == .orange ? .orange : WorkbenchTheme.quiet)
+                    Text(verbatim: "•").foregroundStyle(tint == WorkbenchTheme.Status.attention ? WorkbenchTheme.Status.attention : WorkbenchTheme.quiet)
                     Text(verbatim: line)
                         .font(.system(size: WorkbenchTheme.Typography.caption))
                         .foregroundStyle(tint)
@@ -365,7 +365,7 @@ struct TaskSessionOverviewSection: View {
     private func failureBanner(_ message: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Image(systemName: "exclamationmark.triangle")
-                .foregroundStyle(.orange)
+                .foregroundStyle(WorkbenchTheme.Status.attention)
                 .accessibilityHidden(true)
             Text(verbatim: message)
                 .foregroundStyle(WorkbenchTheme.quiet)
@@ -625,7 +625,7 @@ struct TaskTurnSection: View {
     private func externalFailure(_ message: String, key: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Image(systemName: "exclamationmark.triangle")
-                .foregroundStyle(.orange)
+                .foregroundStyle(WorkbenchTheme.Status.attention)
                 .accessibilityHidden(true)
             Text("外部摘要更新失败：\(message)")
                 .foregroundStyle(WorkbenchTheme.quiet)

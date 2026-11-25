@@ -106,7 +106,7 @@ struct SessionDirectoryTable: NSViewRepresentable {
             icon.isHidden = running
             let symbol = !item.online ? "wifi.slash" : item.section == .attention ? "exclamationmark.circle.fill" : item.section == .review ? "circle.fill" : item.reference.kind.symbol
             icon.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
-            icon.contentTintColor = !item.online ? .secondaryLabelColor : item.section == .attention ? .systemOrange : item.section == .review ? .systemBlue : .secondaryLabelColor
+            icon.contentTintColor = !item.online ? .secondaryLabelColor : item.section == .attention ? WorkbenchTheme.Status.attentionNS : item.section == .review ? WorkbenchTheme.Status.unreadNS : .secondaryLabelColor
             // Capture the session value: reuse must not route to a former row.
             onOpen = { parent.onOpen(item) }
             makeMenu = { parent.menu(item) }

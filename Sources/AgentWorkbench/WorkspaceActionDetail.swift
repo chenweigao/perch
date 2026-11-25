@@ -55,10 +55,10 @@ private struct NativeActionDetail: View {
     private var pending: [String] { snapshot?.interactions.map(\.display) ?? [] }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            if !connection.online { Text("已断开连接，请求状态尚未同步。").foregroundStyle(.orange) }
-            if let error = connection.actionError { Text(error).foregroundStyle(.orange).textSelection(.enabled) }
+            if !connection.online { Text("已断开连接，请求状态尚未同步。").foregroundStyle(WorkbenchTheme.Status.attention) }
+            if let error = connection.actionError { Text(error).foregroundStyle(WorkbenchTheme.Status.attention).textSelection(.enabled) }
             if let s = snapshot {
-                if let error = s.error { Text(error).foregroundStyle(.orange).textSelection(.enabled) }
+                if let error = s.error { Text(error).foregroundStyle(WorkbenchTheme.Status.attention).textSelection(.enabled) }
                 ForEach(s.interactions, id: \.display) { request in
                     NativeInteractionView(connection: connection, request: request, sessionID: item.reference.terminalID)
                 }
@@ -89,10 +89,10 @@ private struct KimiActionDetail: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            if !connection.online { Text("已断开连接，请求状态尚未同步。").foregroundStyle(.orange) }
-            if let error = connection.actionError { Text(error).foregroundStyle(.orange).textSelection(.enabled) }
+            if !connection.online { Text("已断开连接，请求状态尚未同步。").foregroundStyle(WorkbenchTheme.Status.attention) }
+            if let error = connection.actionError { Text(error).foregroundStyle(WorkbenchTheme.Status.attention).textSelection(.enabled) }
             if let c = current {
-                if let error = c.error { Text(error).foregroundStyle(.orange).textSelection(.enabled) }
+                if let error = c.error { Text(error).foregroundStyle(WorkbenchTheme.Status.attention).textSelection(.enabled) }
                 ForEach(c.snapshot.pendingApprovals) { approval in
                     VStack(alignment: .leading, spacing: 12) {
                         Text(approval.action).fontWeight(.medium).textSelection(.enabled)

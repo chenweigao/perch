@@ -72,7 +72,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
                     if projection.attention.isEmpty {
                         VStack(spacing: 10) {
                             Image(systemName: "checkmark.circle").font(.system(size: 34, weight: .light))
-                                .foregroundStyle(.green)
+                                .foregroundStyle(WorkbenchTheme.Status.success)
                             Text("全部处理完了").font(.system(size: 15, weight: .medium))
                             Text("没有等待确认、回答或处理的事项；查看结果请到工作台。")
                                 .font(.system(size: 12)).foregroundStyle(.secondary)
@@ -196,13 +196,13 @@ struct WorkbenchDashboard<RowActions: View>: View {
 
     @ViewBuilder private func overviewStats(_ proxy: ScrollViewProxy) -> some View {
         overviewStat("需要你处理", count: projection.attention.items.count,
-                     symbol: "tray", tint: .orange, action: onShowInbox)
+                     symbol: "tray", tint: WorkbenchTheme.Status.attention, action: onShowInbox)
         overviewStat("运行中", count: projection.running.items.count,
                      symbol: "circle.dotted", tint: WorkbenchTheme.accent) {
             proxy.scrollTo(WorkQueueSection.running, anchor: .top)
         }.disabled(projection.running.isEmpty)
         overviewStat("结果待查看", count: projection.review.items.count,
-                     symbol: "checkmark.circle", tint: .blue) {
+                     symbol: "checkmark.circle", tint: WorkbenchTheme.Status.unread) {
             proxy.scrollTo(WorkQueueSection.review, anchor: .top)
         }.disabled(projection.review.isEmpty)
     }
@@ -316,17 +316,17 @@ struct WorkbenchDashboard<RowActions: View>: View {
             }
         } else if projection.attention.isEmpty {
             HStack(spacing: 5) {
-                Image(systemName: "checkmark.circle").foregroundStyle(.green)
+                Image(systemName: "checkmark.circle").foregroundStyle(WorkbenchTheme.Status.success)
                 Text("当前没有待处理事项")
             }
         } else {
             Button(action: onShowInbox) {
-                summaryChip("exclamationmark.circle.fill", tint: .orange,
+                summaryChip("exclamationmark.circle.fill", tint: WorkbenchTheme.Status.attention,
                             text: "\(projection.attention.items.count) 项等你处理", active: true)
             }.buttonStyle(SummaryStatStyle())
         }
         if !projection.review.isEmpty {
-            summaryChip("circlebadge.fill", tint: .blue,
+            summaryChip("circlebadge.fill", tint: WorkbenchTheme.Status.unread,
                         text: "\(projection.review.items.count) 项结果待查看", active: false)
         }
         if !projection.running.isEmpty {
@@ -416,7 +416,7 @@ struct WorkbenchDashboard<RowActions: View>: View {
                         Text(entry.hostName).font(.subheadline).foregroundStyle(.tertiary)
                         Spacer()
                         Label(entry.outcome.label, systemImage: entry.outcome.symbol)
-                            .foregroundStyle(entry.outcome.needsAttention ? Color.orange : Color.secondary)
+                            .foregroundStyle(entry.outcome.needsAttention ? WorkbenchTheme.Status.attention : Color.secondary)
                     }
                 }
                 HStack {
@@ -449,10 +449,10 @@ struct WorkbenchDashboard<RowActions: View>: View {
 
     private func storageBanner(_ message: String) -> some View {
         Label(message, systemImage: "exclamationmark.triangle")
-            .font(.system(size: 12)).foregroundStyle(.orange).textSelection(.enabled)
+            .font(.system(size: 12)).foregroundStyle(WorkbenchTheme.Status.attention).textSelection(.enabled)
             .fixedSize(horizontal: false, vertical: true)
             .padding(14).frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
+            .background(WorkbenchTheme.Status.attention.opacity(0.08), in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
     }
 
     private func row(_ item: WorkspaceSession, in section: WorkQueueSection) -> some View {
@@ -515,7 +515,7 @@ struct QueueRow<Actions: View>: View {
             }.frame(maxWidth: .infinity, alignment: .leading)
             if let time {
                 Text(time).font(.system(size: 11)).monospacedDigit()
-                    .foregroundStyle(waiting ? AnyShapeStyle(.orange) : AnyShapeStyle(.tertiary))
+                    .foregroundStyle(waiting ? AnyShapeStyle(WorkbenchTheme.Status.attention) : AnyShapeStyle(.tertiary))
                     .fixedSize()
                     .padding(.top, 2)
                     .opacity(showActions && showsHoverAction ? 0 : 1)
@@ -648,9 +648,9 @@ private struct QueueSectionMark: View {
     var body: some View {
         switch section {
         case .attention:
-            Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.orange)
+            Image(systemName: "exclamationmark.circle.fill").foregroundStyle(WorkbenchTheme.Status.attention)
         case .review:
-            Image(systemName: "circlebadge.fill").foregroundStyle(.blue)
+            Image(systemName: "circlebadge.fill").foregroundStyle(WorkbenchTheme.Status.unread)
         case .running:
             Image(systemName: "circle.dotted").foregroundStyle(.tertiary)
         case .other:

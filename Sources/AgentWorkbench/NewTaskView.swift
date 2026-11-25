@@ -215,7 +215,7 @@ struct NewTaskView: View {
                 contextBar
                 if let directoryWarning {
                     Label(directoryWarning, systemImage: "exclamationmark.triangle")
-                        .font(.subheadline).foregroundStyle(.orange)
+                        .font(.subheadline).foregroundStyle(WorkbenchTheme.Status.attention)
                 }
                 if !supportsAttachments {
                     Text("当前 Agent 不支持附件；可在消息中提供运行环境中的文件路径。")
@@ -223,13 +223,13 @@ struct NewTaskView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if supportsModelCatalog, let modelsError = native.modelsError {
-                    Text(modelsError).font(.subheadline).foregroundStyle(.orange)
+                    Text(modelsError).font(.subheadline).foregroundStyle(WorkbenchTheme.Status.attention)
                 }
                 connectionStatus
                 if availableProviders.contains(provider) && isConnected, let sendHint {
                     Text(sendHint).font(.subheadline).foregroundStyle(.secondary).padding(.horizontal, 6)
                 }
-                if let error { Text(error).font(.subheadline).foregroundStyle(.orange).textSelection(.enabled) }
+                if let error { Text(error).font(.subheadline).foregroundStyle(WorkbenchTheme.Status.attention).textSelection(.enabled) }
             }.padding(.horizontal, 32).frame(maxWidth: 784)
                 .frame(maxWidth: .infinity)
                 .padding(.top, max(48, geometry.size.height * 0.25))
@@ -380,7 +380,7 @@ struct NewTaskView: View {
                     if connectionError != nil {
                         Button { showConnectionDetails.toggle() } label: {
                             Label("连接失败", systemImage: showConnectionDetails ? "chevron.down" : "chevron.right")
-                        }.buttonStyle(.plain).foregroundStyle(.orange)
+                        }.buttonStyle(.plain).foregroundStyle(WorkbenchTheme.Status.attention)
                         Spacer(minLength: 0)
                         Button("检查与修复连接") { showSetup = true }
                     } else if !availableProviders.contains(provider) {

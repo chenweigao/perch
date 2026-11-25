@@ -46,11 +46,11 @@ private struct SidebarStatusBadge: View {
         Group {
             switch kind {
             case .waiting:
-                Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.orange)
+                Image(systemName: "exclamationmark.circle.fill").foregroundStyle(WorkbenchTheme.Status.attention)
             case .failed:
-                Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.red)
+                Image(systemName: "exclamationmark.circle.fill").foregroundStyle(WorkbenchTheme.Status.danger)
             case .review:
-                Circle().fill(.blue).frame(width: SidebarMetrics.badgeDotSize, height: SidebarMetrics.badgeDotSize)
+                Circle().fill(WorkbenchTheme.Status.unread).frame(width: SidebarMetrics.badgeDotSize, height: SidebarMetrics.badgeDotSize)
             }
         }.font(.system(size: SidebarMetrics.badgeSize, weight: .bold))
     }
@@ -74,12 +74,12 @@ struct SessionStatusIndicator: View {
                 ConversationBusyIndicator()
             case .attention:
                 if item.turn.state == .failed {
-                    Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.red)
+                    Image(systemName: "exclamationmark.circle.fill").foregroundStyle(WorkbenchTheme.Status.danger)
                 } else {
-                    Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.orange)
+                    Image(systemName: "exclamationmark.circle.fill").foregroundStyle(WorkbenchTheme.Status.attention)
                 }
             case .review:
-                Circle().fill(.blue).frame(width: 6, height: 6)
+                Circle().fill(WorkbenchTheme.Status.unread).frame(width: 6, height: 6)
             case .other:
                 EmptyView()
             }

@@ -279,7 +279,7 @@ struct TaskContextView: View {
                 ForEach(value.requests.prefix(3)) { request in
                     Button { model.inspect(item); openMain() } label: {
                         HStack(alignment: .top, spacing: 10) {
-                            Image(systemName: "bubble.left").foregroundStyle(Color.orange).frame(width: 16).padding(.top, 2)
+                            Image(systemName: "bubble.left").foregroundStyle(WorkbenchTheme.Status.attention).frame(width: 16).padding(.top, 2)
                             Text(verbatim: request.title).lineLimit(3).frame(maxWidth: .infinity, alignment: .leading)
                         }.padding(.vertical, 6).frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
                     }.buttonStyle(TaskContextRowStyle(tinted: true)).disabled(!online)
@@ -290,7 +290,7 @@ struct TaskContextView: View {
                         HStack(alignment: .top, spacing: 10) {
                             Image(systemName: "exclamationmark.circle").frame(width: 16).padding(.top, 2)
                             Text(verbatim: error).lineLimit(3).frame(maxWidth: .infinity, alignment: .leading)
-                        }.foregroundStyle(Color.red).padding(.vertical, 6)
+                        }.foregroundStyle(WorkbenchTheme.Status.danger).padding(.vertical, 6)
                             .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
                     }.buttonStyle(TaskContextRowStyle(tinted: true)).disabled(!online).help("查看并处理")
                 }
@@ -430,7 +430,7 @@ struct TaskContextView: View {
     }
     private func syncError(_ error: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label("状态未同步", systemImage: "wifi.exclamationmark").foregroundStyle(Color.orange)
+            Label("状态未同步", systemImage: "wifi.exclamationmark").foregroundStyle(WorkbenchTheme.Status.attention)
             Text(error).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet)
                 .textSelection(.enabled)
             Button("重试") { state.refresh += 1 }.disabled(item?.online != true)
@@ -529,8 +529,8 @@ private struct TaskContextToolRow: View {
     private var ink: Color {
         switch tone {
         case .quiet: return WorkbenchTheme.quiet
-        case .attention: return Color.orange
-        case .failure: return Color.red
+        case .attention: return WorkbenchTheme.Status.attention
+        case .failure: return WorkbenchTheme.Status.danger
         }
     }
     var body: some View {

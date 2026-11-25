@@ -159,15 +159,15 @@ struct SessionRowChrome<Indicator: View>: View {
         } else if failed {
             Image(systemName: "exclamationmark.circle.fill")
                 .font(.system(size: 11))
-                .foregroundStyle(.red)
+                .foregroundStyle(WorkbenchTheme.Status.danger)
                 .help(detail ?? L("运行出错"))
                 .accessibilityHidden(true)
         } else if waiting {
-            Circle().fill(Color.orange).frame(width: 6, height: 6)
+            Circle().fill(WorkbenchTheme.Status.attention).frame(width: 6, height: 6)
                 .help(detail ?? L("等你处理"))
                 .accessibilityHidden(true)
         } else if unread {
-            Circle().fill(Color.blue).frame(width: 6, height: 6)
+            Circle().fill(WorkbenchTheme.Status.unread).frame(width: 6, height: 6)
                 .help("有未读结果")
                 .accessibilityHidden(true)
         }

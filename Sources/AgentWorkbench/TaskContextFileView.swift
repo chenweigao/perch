@@ -43,7 +43,7 @@ struct TaskContextFileView: View {
                 .textSelection(.enabled).padding(.horizontal, 16).padding(.bottom, 10)
             if !item.online {
                 Label("状态未同步", systemImage: "wifi.exclamationmark")
-                    .foregroundStyle(.orange).padding(.horizontal, 16).padding(.bottom, 10)
+                    .foregroundStyle(WorkbenchTheme.Status.attention).padding(.horizontal, 16).padding(.bottom, 10)
             }
             RemoteFilePanel(browser: browser, showsCloseButton: false, compact: true,
                             onClose: { model.taskContextWindow.fileDetail = nil })

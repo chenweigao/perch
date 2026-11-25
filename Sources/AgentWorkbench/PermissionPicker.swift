@@ -153,8 +153,8 @@ struct PermissionPicker: View {
     private var riskColor: Color {
         switch risk {
         case .standard: return .secondary
-        case .elevated: return .orange
-        case .dangerous: return .red
+        case .elevated: return WorkbenchTheme.Status.attention
+        case .dangerous: return WorkbenchTheme.Status.danger
         }
     }
 

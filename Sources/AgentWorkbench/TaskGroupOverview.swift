@@ -71,13 +71,13 @@ struct TaskGroupOverview: View {
     @ViewBuilder private func activity(_ value: TaskGroupSummary) -> some View {
         if value.attentionCount > 0 {
             HStack(spacing: 4) {
-                Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.orange)
+                Image(systemName: "exclamationmark.circle.fill").foregroundStyle(WorkbenchTheme.Status.attention)
                 Text("\(value.attentionCount) 项等你处理")
             }
         }
         if value.reviewCount > 0 {
             HStack(spacing: 4) {
-                Image(systemName: "circlebadge.fill").foregroundStyle(.blue)
+                Image(systemName: "circlebadge.fill").foregroundStyle(WorkbenchTheme.Status.unread)
                 Text("\(value.reviewCount) 项结果待查看").foregroundStyle(.secondary)
             }
         }

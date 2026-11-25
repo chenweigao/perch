@@ -474,18 +474,18 @@ private struct KimiTimeline<Bar: View>: View {
                         }
                     }
                     KimiQueuedMessages(connection: connection, sessionID: c.snapshot.session.id)
-                    if let notice = c.notice { Text(notice).font(.system(size: ReplyStyle.labelSize)).foregroundStyle(.orange).textSelection(.enabled) }
+                    if let notice = c.notice { Text(notice).font(.system(size: ReplyStyle.labelSize)).foregroundStyle(WorkbenchTheme.Status.attention).textSelection(.enabled) }
                     Color.clear.frame(height: 1).id("pending-interactions")
                     ForEach(c.snapshot.pendingApprovals) { approval in
                         VStack(alignment: .leading, spacing: 12) {
-                            Label("需要你的确认", systemImage: "hand.raised").font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold)).foregroundStyle(.orange)
+                            Label("需要你的确认", systemImage: "hand.raised").font(.system(size: WorkbenchTheme.Typography.title, weight: .semibold)).foregroundStyle(WorkbenchTheme.Status.attention)
                             Text(approval.action).font(.system(size: ReplyStyle.labelSize))
                             KimiToolCard(tool: VisibleTool(id: approval.id, name: approval.toolName, input: approval.toolInputDisplay, status: .awaitingApproval))
                             HStack {
                                 Button("仅允许本次") { connection.resolve(approval, decision: "approved") }.buttonStyle(.borderedProminent)
                                 Button("拒绝") { connection.resolve(approval, decision: "rejected") }
                             }.disabled(!connection.online || !connection.snapshotReady || connection.resolving.contains(approval.id))
-                        }.padding(16).background(.orange.opacity(0.05), in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
+                        }.padding(16).background(WorkbenchTheme.Status.attention.opacity(0.05), in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card))
                     }
                     ForEach(c.snapshot.pendingQuestions) { question in KimiQuestionView(question: question, connection: connection) }.id(c.snapshot.session.id)
                 }
@@ -576,7 +576,7 @@ struct KimiQuestionView: View {
                         Text(q.question).font(.system(size: ReplyStyle.secondarySize, weight: .medium))
                             .foregroundStyle(isDone ? .secondary : .primary)
                         if isDone {
-                            Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).font(.system(size: ReplyStyle.captionSize))
+                            Image(systemName: "checkmark.circle.fill").foregroundStyle(WorkbenchTheme.Status.success).font(.system(size: ReplyStyle.captionSize))
                             Spacer()
                             Button("修改回答") {
                                 confirmed.remove(q.id)
@@ -668,7 +668,7 @@ struct KimiNewSession: View {
                 .foregroundStyle(.secondary)
             TextField("会话名称（可选）", text: $title).textFieldStyle(.roundedBorder)
             TextField("远端项目绝对路径", text: $cwd).textFieldStyle(.roundedBorder)
-            if let error { Text(error).foregroundStyle(.orange).textSelection(.enabled) }
+            if let error { Text(error).foregroundStyle(WorkbenchTheme.Status.attention).textSelection(.enabled) }
             HStack {
                 Button("取消") { dismiss() }.keyboardShortcut(.cancelAction)
                 Spacer()

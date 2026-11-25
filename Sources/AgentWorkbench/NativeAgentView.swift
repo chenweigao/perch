@@ -206,7 +206,7 @@ struct NativeAgentView: View {
                 HStack(spacing: 6) {
                     if command.status == "running" { ProgressView().controlSize(.small) }
                     Text(command.status == "running" ? L("正在压缩上下文…") : command.error ?? L("上下文压缩完成"))
-                        .font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(command.error == nil ? Color.secondary : Color.orange).textSelection(.enabled)
+                        .font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(command.error == nil ? Color.secondary : WorkbenchTheme.Status.attention).textSelection(.enabled)
                 }.padding(6)
             }
             let tail = s.messages.last?.content.last
@@ -459,7 +459,7 @@ struct NativeRunControls: View {
                     HStack(spacing: 10) {
                         if !phase.isSettled { ProgressView().controlSize(.small) }
                         Text(phase.label).font(.system(size: WorkbenchTheme.Typography.secondary))
-                            .foregroundStyle(phase.canRetry ? .orange : .secondary).textSelection(.enabled)
+                            .foregroundStyle(phase.canRetry ? WorkbenchTheme.Status.attention : .secondary).textSelection(.enabled)
                         if phase.canRetry {
                             Button("Retry stop") {
                                 guard connection.selectedID == sessionID, connection.snapshot?.id == sessionID else { return }
@@ -585,6 +585,6 @@ struct NativeInteractionView: View {
                 TextField("填写回答", text: $text).textFieldStyle(.roundedBorder)
                 HStack { Button("提交回答") { submit(["value": .string(text)]) }; Button("取消") { submit(["cancelled": .bool(true)]) } }
             }
-        }.padding(16).frame(maxWidth: .infinity, alignment: .leading).background(.orange.opacity(0.06), in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card)).disabled(!connection.online || submitting)
+        }.padding(16).frame(maxWidth: .infinity, alignment: .leading).background(WorkbenchTheme.Status.attention.opacity(0.06), in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.card)).disabled(!connection.online || submitting)
     }
 }

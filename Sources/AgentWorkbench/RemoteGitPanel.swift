@@ -80,7 +80,7 @@ struct RemoteGitControls: View {
                 if browser.gitWriting { ProgressView().controlSize(.mini) }
             }
             if let writeError = browser.gitWriteError {
-                Text(writeError).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.orange)
+                Text(writeError).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.Status.attention)
                     .fixedSize(horizontal: false, vertical: true)
             }
             if case .changes(_, _, let entries) = browser.gitStatus,
@@ -172,7 +172,7 @@ struct RemoteGitContent: View {
 
     @ViewBuilder var body: some View {
         if let error = browser.error {
-            notice(error, symbol: "exclamationmark.triangle", tint: .orange)
+            notice(error, symbol: "exclamationmark.triangle", tint: WorkbenchTheme.Status.attention)
         } else if browser.loading {
             VStack(spacing: 10) {
                 ProgressView()
@@ -223,7 +223,7 @@ struct RemoteGitContent: View {
                                         Text(browser.gitRange == .branch ? L(key: entry.changeLabel) : entry.label)
                                         if browser.gitRange == .branch {
                                             if browser.reviewProgress.isReviewed(entry.path) { Label("已读", systemImage: "checkmark.circle.fill") }
-                                            else if browser.reviewProgress.changed.contains(entry.path) { Text("有新改动").foregroundStyle(.orange) }
+                                            else if browser.reviewProgress.changed.contains(entry.path) { Text("有新改动").foregroundStyle(WorkbenchTheme.Status.attention) }
                                         }
                                     }.font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary)
                                 }.frame(maxWidth: .infinity, alignment: .leading)
@@ -253,7 +253,7 @@ struct RemoteGitContent: View {
             VStack(alignment: .leading, spacing: 0) {
                 if truncated {
                     Label("差异过大，已截断", systemImage: "scissors")
-                        .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.orange)
+                        .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.Status.attention)
                         .padding(.horizontal, 14).padding(.vertical, 6)
                     Divider()
                 }
