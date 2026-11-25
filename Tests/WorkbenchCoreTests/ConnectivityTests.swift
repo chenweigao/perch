@@ -20,7 +20,8 @@ func checkConnectivity() throws {
     let restored = try JSONDecoder().decode(SSHHost.self, from: JSONEncoder().encode(localHost))
     precondition(restored.isLocal && restored.localAgentPaths == localHost.localAgentPaths)
     precondition(!SSHHost(name: "Remote", destination: "host").isLocal)
-    precondition(LocalAgentDiscovery.supported == [.kimi, .codex])
+    precondition(LocalAgentDiscovery.supported == [.kimi, .codex, .agy])
+    precondition(LocalAgentDiscovery.executableName(.agy) == "agy")
     precondition(LocalAgentDiscovery.executableName(.qoder) == "qoderclicn")
 
     // A GUI app does not inherit the shell PATH, so absolute defaults come first.

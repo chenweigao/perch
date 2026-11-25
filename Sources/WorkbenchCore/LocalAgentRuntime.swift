@@ -26,6 +26,7 @@ public enum LocalAgentRuntime {
         var arguments = [script.path]
         if let kimi = binaries[.kimi] { arguments += ["--kimi-binary", kimi] }
         if let codex = binaries[.codex] { arguments += ["--codex-binary", codex] }
+        if let agy = binaries[.agy] { arguments += ["--agy-binary", agy] }
         return try await SetupCommandRunner.run("/usr/bin/python3", arguments,
             timeout: 20, environment: LocalAgentDiscovery.environment)
     }

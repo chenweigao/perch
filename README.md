@@ -2,7 +2,7 @@
 <p align="center"><strong>A home for your coding agents.</strong><br>A native Mac workspace for local and remote agent workflows.</p>
 <p align="center">English · <a href="README.zh-CN.md">简体中文</a> · <a href="docs/GETTING-STARTED.md">Get started</a> · <a href="#status">Project status</a></p>
 
-Run Kimi or Codex on your Mac, or connect to supported agents over SSH. Perch brings
+Run Kimi, Codex or Antigravity on your Mac, or connect to supported agents over SSH. Perch brings
 conversations, tasks, tool output and approvals into one native workspace, so you
 can read the result, inspect the work and decide what happens next.
 
@@ -43,17 +43,18 @@ and system Liquid Glass on macOS 26.
 | Qoder CN | Official Agent SDK through the remote bridge | Native conversation |
 | Qoder | Official Agent SDK through the remote bridge | Native conversation |
 | Claude Code | Official Agent SDK through the remote bridge | Native conversation |
+| Antigravity (`agy`) | ACP through the remote bridge | Native conversation |
 | DeepSeek Harness (dsh) | ACP through the remote bridge | Native conversation |
 | Codex | `codex app-server` JSON-RPC over stdio through the remote bridge | Native conversation |
 | Other CLI agents | Herdr + SSH | Terminal |
 
 Native integrations share the same conversation UI. Additional RPC, SDK or ACP
 adapters are welcome; arbitrary protocol compatibility is not automatic.
-See [Kimi setup](docs/KIMI.md) and [OMP / Qoder CN / Qoder / dsh / Codex / Claude Code setup](docs/NATIVE-AGENTS.md)
+See [Kimi setup](docs/KIMI.md) and [OMP / Qoder CN / Qoder / dsh / Codex / Claude Code / Antigravity setup](docs/NATIVE-AGENTS.md)
 for tested versions and recovery limits. Agent credentials and model configuration
 stay with the CLI; Perch does not connect directly to model providers.
 
-Local Kimi and Codex conversations are available; other local agents remain
+Local Kimi, Codex and Antigravity conversations are available; other local agents remain
 discovery-only. See [local agents](docs/LOCAL-AGENTS.md). Kimi, remote OMP and Codex support steering during a running task, with an
 explicit next-turn option. Codex keeps its native thread ID and history, takes model
 and reasoning-effort choices from `model/list`, and surfaces every app-server approval
@@ -77,7 +78,7 @@ corresponding agent runtime are required for remote sessions.
 open build/Perch.app
 ```
 
-For local work, start with [local Kimi or Codex setup](docs/LOCAL-AGENTS.md).
+For local work, start with [local Kimi, Codex or Antigravity setup](docs/LOCAL-AGENTS.md).
 For remote work, choose **Connect a remote machine** on the home screen, or **Environment → +**.
 The setup wizard verifies SSH, checks your chosen agent, offers installation and
 login actions, then lets you browse a remote directory and start your first task.

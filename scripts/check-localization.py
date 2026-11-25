@@ -55,7 +55,7 @@ UI_LITERAL = re.compile(
     r'|\bL\(\s*(?:key:\s*)?)"((?:[^"\\]|\\.)*)"')
 ENGLISH_WORD = re.compile(r"[A-Za-z]{2,}")
 SAME_IN_BOTH = {
-    "Agent", "Claude", "Claude Code", "Codex", "DeepSeek", "DSH", "Git", "GitHub", "HEAD", "Herdr", "Kimi",
+    "Agent", "Antigravity", "Claude", "Claude Code", "Codex", "DeepSeek", "DSH", "Git", "GitHub", "HEAD", "Herdr", "Kimi",
     "Markdown", "OMP", "OpenAI", "Perch", "Qoder", "Recap", "SSH", "Shell", "macOS", "Mac", "URL", "API", "TeX",
 }
 

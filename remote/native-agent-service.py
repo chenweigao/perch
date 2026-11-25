@@ -7,7 +7,7 @@ ROOT = pathlib.Path(os.environ.get('AWB_NATIVE_ROOT', '~/.local/share/agent-work
 ROOT.mkdir(parents=True, exist_ok=True, mode=0o700)
 ROOT.chmod(0o700)
 os.umask(0o077)
-SERVICE_VERSION = 14
+SERVICE_VERSION = 15
 # Subagent text and thinking are forwarded into each subagent's own transcript.
 # Probe 2026-10-18 (SDK 0.3.280, CLI 2.1.302): every subagent assistant/user
 # message carried parent_tool_use_id, and no unparented stream delta held
@@ -85,16 +85,17 @@ PERMISSION_MODES = {
     'codex': ('read-only', 'workspace-ask', 'workspace-auto', 'full-access'),
     'claude': ('default', 'acceptEdits', 'plan', 'bypassPermissions'),
     'kimi': ('default', 'plan', 'yolo', 'auto'),
+    'agy': ('runtime-managed',),
 }
-PERMISSION_DEFAULTS = {'omp':'always-ask', 'qoder':'default', 'qoderintl':'default', 'dsh':'runtime-managed', 'codex':'workspace-ask', 'claude':'default', 'kimi':'default'}
-PERMISSION_SCOPES = {'omp':'new-session', 'qoder':'next-turn', 'qoderintl':'next-turn', 'dsh':'runtime-managed', 'codex':'new-session', 'claude':'next-turn', 'kimi':'next-turn'}
+PERMISSION_DEFAULTS = {'omp':'always-ask', 'qoder':'default', 'qoderintl':'default', 'dsh':'runtime-managed', 'codex':'workspace-ask', 'claude':'default', 'kimi':'default', 'agy':'runtime-managed'}
+PERMISSION_SCOPES = {'omp':'new-session', 'qoder':'next-turn', 'qoderintl':'next-turn', 'dsh':'runtime-managed', 'codex':'new-session', 'claude':'next-turn', 'kimi':'next-turn', 'agy':'runtime-managed'}
 QODER_SDK = {'qoder':'@qodercn-ai/qodercn-agent-sdk', 'qoderintl':'@qoder-ai/qoder-agent-sdk'}
 QODER_CLI = {'qoder':'qoderclicn', 'qoderintl':'qodercli'}
 # Providers spoken to over the Agent Client Protocol (stdio). dsh uses grouped
-# config options with JSON [provider, model] values; kimi-code uses flat options
-# with 'provider/model' (or bare model) strings and a 'thinking' effort id.
-ACP_PROVIDERS = {'dsh', 'kimi'}
-ACP_LABELS = {'dsh': 'dsh', 'kimi': 'Kimi'}
+# config options with JSON [provider, model] values; kimi-code and agy use flat
+# options, with agy model values kept opaque for a lossless round trip.
+ACP_PROVIDERS = {'dsh', 'kimi', 'agy'}
+ACP_LABELS = {'dsh': 'dsh', 'kimi': 'Kimi', 'agy': 'Antigravity'}
 ACP_CANONICAL_TOOLS = ('Bash', 'Terminal', 'Read', 'Write', 'Edit', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'Think', 'Agent', 'Task')
 
 def acp_option_items(option):
@@ -133,7 +134,7 @@ def restore_permission_mode(provider, value=None):
 def permission_capability(state):
     provider = state['provider']
     return {'selected':state['permissionMode'],
-            'options':[] if provider == 'dsh' else list(PERMISSION_MODES[provider]),
+            'options':[] if provider in ('dsh', 'agy') else list(PERMISSION_MODES[provider]),
             'scope':PERMISSION_SCOPES[provider]}
 
 def model_catalog():
@@ -356,6 +357,36 @@ def kimi_catalog():
         if path.exists(): KIMI_MODELS = json.loads(path.read_text())
     return KIMI_MODELS or []
 
+AGY_MODELS = None
+
+def agy_binary():
+    local = os.environ.get('PERCH_LOCAL_AGY')
+    if local:
+        if os.path.isabs(local) and os.access(local, os.X_OK): return local
+        raise ValueError('未找到本机 agy')
+    found = shutil.which('agy')
+    if found: return found
+    raise ValueError('未找到 agy：请安装 Antigravity CLI 或确认其在 PATH 中')
+
+def agy_catalog_update(config_options):
+    global AGY_MODELS
+    model_option = next((o for o in config_options if o.get('id') == 'model'), None)
+    if not model_option: return
+    entries = []
+    for item in acp_option_items(model_option):
+        value = str(item.get('value') or '')
+        if not value: continue
+        entries.append({'id': value, 'provider': 'agy', 'name': item.get('name') or value, 'thinking': []})
+    AGY_MODELS = entries
+    save(ROOT / 'agy-catalog.json', entries)
+
+def agy_catalog():
+    global AGY_MODELS
+    if AGY_MODELS is None:
+        path = ROOT / 'agy-catalog.json'
+        if path.exists(): AGY_MODELS = json.loads(path.read_text())
+    return AGY_MODELS or []
+
 def codex_home(legacy=False):
     value = os.environ.get('CODEX_HOME') or str(pathlib.Path.home()/'.codex')
     marker = ROOT/'codex-home'
@@ -382,11 +413,12 @@ def setup_status(provider):
     This runs outside LOCK, so CLI discovery cannot block active conversations.
     Return names/IDs and booleans only, never CLI configuration or credentials.
     """
-    if provider not in ('omp', 'qoder', 'qoderintl', 'dsh', 'codex', 'claude', 'kimi'):
+    if provider not in ('omp', 'qoder', 'qoderintl', 'dsh', 'codex', 'claude', 'kimi', 'agy'):
         raise ValueError('Unknown setup provider')
     try:
         if provider == 'dsh': binary = dsh_binary()
         elif provider == 'kimi': binary = kimi_binary()
+        elif provider == 'agy': binary = agy_binary()
         elif provider == 'codex' and os.environ.get('PERCH_LOCAL_CODEX'): binary = os.environ['PERCH_LOCAL_CODEX']
         else: binary = shutil.which({'omp':'omp', 'qoder':'qoderclicn', 'qoderintl':'qodercli', 'codex':'codex', 'claude':'claude'}[provider])
     except ValueError:
@@ -447,6 +479,10 @@ def setup_status(provider):
         result['credentialCheck'] = 'present' if os.environ.get('DEEPSEEK_API_KEY') else 'missing'
         result['models'] = [{'id': m['id'], 'name': m.get('name', m['id']), 'provider': m.get('provider', '')}
                             for m in dsh_catalog() if m.get('id')]
+        result['modelCheck'] = 'session-handshake'
+    elif provider == 'agy':
+        result['models'] = [{'id': m['id'], 'name': m.get('name', m['id']), 'provider': m.get('provider', '')}
+                            for m in agy_catalog() if m.get('id')]
         result['modelCheck'] = 'session-handshake'
     else:
         try:
@@ -634,6 +670,7 @@ def catalog_entries(value, agent):
 def combined_catalog():
     entries = catalog_entries(dsh_catalog(), 'dsh'); errors = []
     sources = (('omp', model_catalog), ('kimi', kimi_catalog), ('qoder', lambda:qoder_catalog('qoder', timeout=10)),
+               ('agy', agy_catalog),
                ('qoderintl', lambda:qoder_catalog('qoderintl', timeout=10)), ('codex', codex_catalog),
                ('claude', lambda:claude_catalog(timeout=10)))
     for agent, discover in sources:
@@ -1582,7 +1619,7 @@ class ACPSessionAdapter:
         prompt_text = text
         images = []
         for a in stored or []:
-            if s['provider'] == 'kimi' and a['mediaType'].startswith('image/'):
+            if s['provider'] in ('kimi', 'agy') and a['mediaType'].startswith('image/'):
                 raw = pathlib.Path(a['path']).read_bytes()
                 images.append({'type':'image','mimeType':a['mediaType'],'data':base64.b64encode(raw).decode('ascii')})
             else:
@@ -1595,6 +1632,7 @@ class ACPSessionAdapter:
             if s.get('turnState') == 'submitting': s['turnState'] = 'submitted'
     def current_model(self, raw):
         if self.session.state['provider'] == 'kimi': return kimi_model_value(raw)
+        if self.session.state['provider'] == 'agy': return 'agy', str(raw or '')
         try:
             parsed = json.loads(raw)
             if isinstance(parsed, list) and len(parsed) == 2: return parsed[0], parsed[1]
@@ -1606,6 +1644,7 @@ class ACPSessionAdapter:
         s['acpOptions'] = options
         if s['provider'] == 'dsh': dsh_catalog_update(options)
         elif s['provider'] == 'kimi': kimi_catalog_update(options)
+        elif s['provider'] == 'agy': agy_catalog_update(options)
         model_option = next((o for o in options if o.get('id') == 'model'), None)
         if model_option and model_option.get('currentValue') and not (preserve_desired and s.get('model')):
             provider, model = self.current_model(model_option['currentValue'])
@@ -2190,7 +2229,7 @@ class Session:
             receipt['error']=self.state.get('error')
     def decode_attachments(self, value):
         if not value: return []
-        if self.state['provider'] not in ('claude','codex','kimi'): raise ValueError('当前 Agent 不支持发送附件')
+        if self.state['provider'] not in ('claude','codex','kimi','agy'): raise ValueError('当前 Agent 不支持发送附件')
         if not isinstance(value, list) or len(value) > 5: raise ValueError('附件一次最多 5 个')
         result = []
         for item in value:
@@ -2241,7 +2280,7 @@ class Session:
             if display is not None: content=display
             else: self.codex_adapter.clear_async_questions()
         if not s['messages']: s['title']=content[:60]
-        if s['provider'] in ('qoder','qoderintl','dsh','codex','claude','kimi'): self.upsert({'role':'user','content':content},request_id)
+        if s['provider'] in ('qoder','qoderintl','dsh','codex','claude','kimi','agy'): self.upsert({'role':'user','content':content},request_id)
         if s['provider'] in ACP_PROVIDERS:
             self.acp_adapter.pending_prompt=(request_id,text,stored)
             try:
@@ -2301,6 +2340,9 @@ class Session:
             env = dict(os.environ, DSH_HOME=str(ROOT/'dsh-home'), DSH_TELEMETRY_MODE='DISABLED')
         elif s['provider'] == 'kimi':
             args = [kimi_binary(),'acp']
+            env = proxy_aware_spawn_env()
+        elif s['provider'] == 'agy':
+            args = [agy_binary(),'acp']
             env = proxy_aware_spawn_env()
         else:
             cli = QODER_CLI.get(s['provider'], 'claude')
@@ -2603,7 +2645,9 @@ class Session:
                 durable=True
             else:
                 if s.get('resume'):
-                    self.acp_adapter.request('session/resume', {'sessionId':s['resume'],'cwd':s['cwd']}, 'session_open')
+                    params = {'sessionId':s['resume'],'cwd':s['cwd']}
+                    if provider == 'agy': params['mcpServers'] = []
+                    self.acp_adapter.request('session/resume', params, 'session_open')
                 else:
                     self.acp_adapter.request('session/new', {'cwd':s['cwd'],'mcpServers':[]}, 'session_open')
             return
@@ -2838,6 +2882,8 @@ class Handler(BaseHTTPRequestHandler):
                         result['localCodexBinary']=str(pathlib.Path(os.environ['PERCH_LOCAL_CODEX']).resolve())
                     if os.environ.get('PERCH_LOCAL_KIMI'):
                         result['localKimiBinary']=os.path.abspath(os.environ['PERCH_LOCAL_KIMI'])
+                    if os.environ.get('PERCH_LOCAL_AGY'):
+                        result['localAgyBinary']=os.path.abspath(os.environ['PERCH_LOCAL_AGY'])
                 elif self.path=='/sessions' and not post: result={'sessions':[s.summary() for s in SESSIONS.values()]}
                 elif self.path=='/sessions' and post:
                     provider=body.get('provider')
@@ -2894,7 +2940,7 @@ class Handler(BaseHTTPRequestHandler):
                         elif action=='steer':
                             result=s.steer(body)
                         elif action=='model':
-                            if s.state['provider'] not in ('omp','qoder','qoderintl','dsh','codex','kimi'): raise ValueError('当前 Agent 不支持切换模型')
+                            if s.state['provider'] not in ('omp','qoder','qoderintl','dsh','codex','kimi','agy'): raise ValueError('当前 Agent 不支持切换模型')
                             if s.state['busy']: raise ValueError('请先停止或完成当前任务')
                             provider,model=body.get('provider',''),body.get('model','')
                             if s.state['provider'] in QODER_SDK:
@@ -2944,7 +2990,7 @@ class Handler(BaseHTTPRequestHandler):
                             s.state['permissionMode']=mode; s.touch(True)
                             result={'ok':True,'permission':permission_capability(s.state)}
                         elif action=='thinking':
-                            if s.state['provider'] not in ('omp','qoder','qoderintl','dsh','codex','kimi'): raise ValueError('当前 Agent 不支持设置思考强度')
+                            if s.state['provider'] not in ('omp','qoder','qoderintl','dsh','codex','kimi','agy'): raise ValueError('当前 Agent 不支持设置思考强度')
                             level=body.get('level','')
                             if not level: raise ValueError('请指定思考强度')
                             if s.state['provider'] in QODER_SDK:
@@ -3097,6 +3143,8 @@ def serves_current_code(health):
     if local_binary and health.get('localCodexBinary')!=str(pathlib.Path(local_binary).resolve()): return False
     local_kimi=os.environ.get('PERCH_LOCAL_KIMI')
     if local_kimi and health.get('localKimiBinary')!=os.path.abspath(local_kimi): return False
+    local_agy=os.environ.get('PERCH_LOCAL_AGY')
+    if local_agy and health.get('localAgyBinary')!=os.path.abspath(local_agy): return False
     if not SOURCE_FINGERPRINT: return True
     return health.get('implementation')==SOURCE_FINGERPRINT
 

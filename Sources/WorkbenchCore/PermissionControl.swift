@@ -84,6 +84,8 @@ public enum PermissionCatalog {
             ]
         case .dsh:
             return [PermissionOption(id: runtimeManaged, titleKey: "运行时逐次确认", detailKey: "DeepSeek 在每次需要权限时通过运行时审批卡片询问。")]
+        case .agy:
+            return [PermissionOption(id: runtimeManaged, titleKey: "运行时逐次确认", detailKey: "Antigravity 在每次需要权限时通过运行时审批卡片询问。")]
         case .codex:
             return [
                 PermissionOption(id: "read-only", titleKey: "只读", detailKey: "仅允许读取；写入和其他额外权限需要批准。"),
@@ -107,7 +109,7 @@ public enum PermissionCatalog {
         switch provider {
         case .kimi, .qoder, .qoderintl, .claude: return "default"
         case .omp: return "always-ask"
-        case .dsh: return runtimeManaged
+        case .dsh, .agy: return runtimeManaged
         case .codex: return "workspace-ask"
         case .terminal: return nil
         }
@@ -117,7 +119,7 @@ public enum PermissionCatalog {
         switch provider {
         case .kimi, .qoder, .qoderintl, .claude: return .nextTurn
         case .omp, .codex: return .newSession
-        case .dsh, .terminal: return .runtimeManaged
+        case .dsh, .agy, .terminal: return .runtimeManaged
         }
     }
 
@@ -133,7 +135,7 @@ public enum PermissionCatalog {
     public static func capability(for provider: SessionKind, selected: String? = nil) -> PermissionCapability {
         let available = options(for: provider)
         let scope = scope(for: provider)
-        if provider == .dsh {
+        if provider == .dsh || provider == .agy {
             return PermissionCapability(selected: runtimeManaged, options: [], scope: scope)
         }
         if provider == .terminal {
@@ -167,7 +169,7 @@ public enum PermissionDefaults {
     }
 
     public static func set(_ mode: String, for provider: SessionKind, defaults: UserDefaults = .standard) {
-        guard PermissionCatalog.isValid(mode, for: provider), provider != .dsh, provider != .terminal else { return }
+        guard PermissionCatalog.isValid(mode, for: provider), provider != .dsh, provider != .agy, provider != .terminal else { return }
         defaults.set(mode, forKey: prefix + provider.rawValue)
     }
 

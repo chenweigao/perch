@@ -192,6 +192,7 @@ func checkRemoteSetup() async throws {
     precondition(RemoteSetup.bridgeTransitionCompatible(serving: 12, expected: 14))
     precondition(RemoteSetup.bridgeTransitionCompatible(serving: 13, expected: 14))
     precondition(!RemoteSetup.bridgeTransitionCompatible(serving: 11, expected: 14))
+    precondition(RemoteSetup.bridgeTransitionCompatible(serving: 14, expected: 15))
     precondition(!RemoteSetup.bridgeTransitionCompatible(serving: 13, expected: 15))
     precondition(!RemoteSetup.bridgeTransitionCompatible(serving: 15, expected: 14))
 

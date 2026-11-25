@@ -255,7 +255,7 @@ private struct NativeComposerView: View {
     @State private var palette = CommandPaletteState()
     @State private var recall = ComposerRecall()
     @State private var chooseFiles = false
-    private var supportsAttachments: Bool { [.kimi, .claude, .codex].contains(s.provider) }
+    private var supportsAttachments: Bool { [.kimi, .claude, .codex, .agy].contains(s.provider) }
     var body: some View {
         VStack(spacing: 8) {
             if let completion = palette.completion(for: connection.drafts[s.id] ?? "", in: s.commands) {
@@ -407,7 +407,7 @@ struct NativeModelControls: View {
     let snapshot: NativeAgentSnapshot
     let active: Bool
     private var session: NativeAgentSession? { connection.sessions.first { $0.id == snapshot.id } }
-    private var editable: Bool { [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex].contains(snapshot.provider) }
+    private var editable: Bool { [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex, .agy].contains(snapshot.provider) }
     private var currentModel: String {
         session?.qoderRequestedModel ?? snapshot.qoderRequestedModel ?? session?.model ?? snapshot.model
     }

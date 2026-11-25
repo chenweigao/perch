@@ -921,7 +921,7 @@ final class NativeAgentConnection {
         let files = attachments[id] ?? []
         guard !draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !files.isEmpty else { return }
         if !files.isEmpty {
-            guard [.kimi, .claude, .codex].contains(sessions.first(where: { $0.id == id })?.provider) else {
+            guard [.kimi, .claude, .codex, .agy].contains(sessions.first(where: { $0.id == id })?.provider) else {
                 actionError = L("当前 Agent 不支持发送附件")
                 return
             }

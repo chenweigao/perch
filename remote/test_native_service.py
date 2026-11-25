@@ -1533,7 +1533,7 @@ class DshHandlerContractTests(unittest.TestCase):
         process_guard.start(); self.addCleanup(process_guard.stop)
         catalog_guard=patch.object(broker,'claude_catalog',return_value=[])
         catalog_guard.start(); self.addCleanup(catalog_guard.stop)
-        broker.TOKEN='test-token'; broker.SESSIONS.clear(); broker.MODELS=None; broker.DSH_MODELS=None
+        broker.TOKEN='test-token'; broker.SESSIONS.clear(); broker.MODELS=None; broker.DSH_MODELS=None; broker.AGY_MODELS=[]
         self.s=broker.Session(dict(id='dsh-contract',provider='dsh',cwd=folder.name,title='Test',model='',
             busy=False,archived=False,updated=0,revision=0,completed=0,messages=[],interactions=[],error=None))
         self.s.process=type('Process',(),{'poll':lambda self:None})()
@@ -1637,7 +1637,7 @@ class HandlerContractTests(unittest.TestCase):
         process_guard.start(); self.addCleanup(process_guard.stop)
         catalog_guard=patch.object(broker,'claude_catalog',return_value=[])
         catalog_guard.start(); self.addCleanup(catalog_guard.stop)
-        broker.TOKEN='test-token'; broker.SESSIONS.clear(); broker.MODELS=None
+        broker.TOKEN='test-token'; broker.SESSIONS.clear(); broker.MODELS=None; broker.AGY_MODELS=[]
         self.s=broker.Session(dict(id='contract',provider='omp',cwd=folder.name,title='Test',model='',
             busy=False,archived=False,updated=0,revision=0,completed=0,messages=[],interactions=[],error=None))
         self.s.process=type('Process',(),{'poll':lambda self:None})()
@@ -3398,6 +3398,89 @@ class KimiAcpProtocolTests(unittest.TestCase):
             {'type':'thinking','thinking':'先确认'},
             {'type':'text','text':'是的，你现在是在 **Kimi Code CLI** 里和我交互。'},
         ])
+
+
+class AgyAcpProtocolTests(unittest.TestCase):
+    OPTIONS = [
+        {'id':'model','name':'Model','category':'model','type':'select','currentValue':'gemini-3-pro-high',
+         'options':[{'value':'gemini-3-pro-high','name':'Gemini 3 Pro High'},
+                    {'value':'gemini-3-flash','name':'Gemini 3 Flash'}]},
+    ]
+
+    def make_session(self):
+        broker.AGY_MODELS = None
+        s = broker.Session({
+            'id':'agy-acp-test','provider':'agy','cwd':folder.name,'title':'新对话',
+            'model':'','thinking':None,'permissionMode':'runtime-managed','busy':False,'archived':False,
+            'updated':0,'revision':0,'completed':0,'messages':[],'interactions':[],'error':None,
+        })
+        self.sent = []
+        s.send = lambda value: self.sent.append(value)
+        s.process = type('Process',(),{'poll':lambda self:None})()
+        return s
+
+    def test_catalog_and_prompt_keep_antigravity_model_values(self):
+        s = self.make_session()
+        s.event({'type':'acp_response','kind':'session_open','result':{'sessionId':'agy-1','configOptions':self.OPTIONS},'error':None})
+        self.assertEqual(s.state['resume'], 'agy-1')
+        self.assertEqual(s.state['provider_id'], 'agy')
+        self.assertEqual(s.state['model'], 'gemini-3-pro-high')
+        self.assertEqual(s.summary()['permission'], {'selected':'runtime-managed','options':[],'scope':'runtime-managed'})
+        self.assertEqual(broker.agy_catalog(), [
+            {'id':'gemini-3-pro-high','provider':'agy','name':'Gemini 3 Pro High','thinking':[]},
+            {'id':'gemini-3-flash','provider':'agy','name':'Gemini 3 Flash','thinking':[]},
+        ])
+        s.prompt({'requestId':'agy-request','text':'hello','attachments':[{'name':'pixel.png','mediaType':'image/png','data':'aGVsbG8='}]})
+        frame = self.sent[-1]
+        self.assertEqual(frame['method'], 'session/prompt')
+        self.assertEqual(frame['params']['sessionId'], 'agy-1')
+        self.assertEqual(frame['params']['prompt'], [
+            {'type':'text','text':'hello'},
+            {'type':'image','mimeType':'image/png','data':'aGVsbG8='},
+        ])
+
+    def test_runtime_owns_permissions_and_resume_includes_mcp_servers(self):
+        s = self.make_session()
+        s.state['resume'] = 'agy-existing'
+        s.event({'type':'acp_response','kind':'initialize','result':{'protocolVersion':1},'error':None})
+        self.assertEqual(self.sent[-1]['method'], 'session/resume')
+        self.assertEqual(self.sent[-1]['params'], {'sessionId':'agy-existing','cwd':folder.name,'mcpServers':[]})
+        s.event({'type':'acp_request','wireId':9,'method':'session/request_permission','params':{'sessionId':'agy-existing','toolCall':{'toolCallId':'c1','title':'Bash'},'options':[{'optionId':'allow-once','name':'Allow once','kind':'allow_once'}]}})
+        interaction = s.state['interactions'][0]
+        self.assertEqual(interaction['method'], 'select')
+        self.assertEqual(interaction['options'], ['Allow once'])
+        s.event({'type':'acp_response','kind':'prompt:agy-request','result':{'stopReason':'end_turn'},'error':None})
+        self.assertEqual(s.state['interactions'], [])
+
+    def test_setup_and_local_health_expose_agy_without_prompting(self):
+        with tempfile.TemporaryDirectory() as root:
+            binary = pathlib.Path(root) / 'agy'
+            binary.write_text('#!/bin/sh\necho 1.5.16\n')
+            binary.chmod(0o755)
+            with patch.dict(os.environ, {'PERCH_LOCAL_AGY':str(binary)}):
+                status = broker.setup_status('agy')
+                self.assertTrue(status['installed'])
+                self.assertEqual(status['version'], '1.5.16')
+                self.assertEqual(status['modelCheck'], 'session-handshake')
+                self.assertFalse(broker.serves_current_code({'version':broker.SERVICE_VERSION,'implementation':broker.SOURCE_FINGERPRINT,'localAgyBinary':'/old/agy'}))
+                self.assertTrue(broker.serves_current_code({'version':broker.SERVICE_VERSION,'implementation':broker.SOURCE_FINGERPRINT,'localAgyBinary':str(binary)}))
+
+    def test_model_switch_uses_the_opaque_acp_value(self):
+        s = self.make_session()
+        s.event({'type':'acp_response','kind':'session_open','result':{'sessionId':'agy-1','configOptions':self.OPTIONS},'error':None})
+        handler = object.__new__(broker.Handler)
+        raw = json.dumps({'provider':'agy','model':'gemini-3-flash'}).encode()
+        handler.path = '/sessions/agy-acp-test/model'
+        handler.headers = {'Authorization':'Bearer fixture-token','Content-Length':str(len(raw))}
+        handler.rfile = io.BytesIO(raw); result = []
+        handler.respond = lambda code,payload: result.append((code,payload))
+        with patch.object(broker, 'SESSIONS', {'agy-acp-test':s}), patch.object(broker, 'TOKEN', 'fixture-token', create=True):
+            handler.handle_request(True)
+        self.assertEqual(result[0][0], 200)
+        self.assertEqual(self.sent[-1]['params'], {'sessionId':'agy-1','configId':'model','value':'gemini-3-flash'})
+
+    def tearDown(self):
+        broker.AGY_MODELS = None
 
 
 if __name__=='__main__': unittest.main()

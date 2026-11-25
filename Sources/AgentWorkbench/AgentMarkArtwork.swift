@@ -4,7 +4,7 @@ import Foundation
 /// Agents with a designed brand mark. `SessionKind.terminal` intentionally has
 /// none: the system terminal glyph already says it.
 enum AgentMarkKind: String, CaseIterable {
-    case kimi, omp, qoder, qoderintl, dsh, codex, claude
+    case kimi, omp, qoder, qoderintl, dsh, codex, claude, agy
 }
 
 /// Pure CoreGraphics geometry shared by the SwiftUI mark and the NSImage used
@@ -55,6 +55,7 @@ enum AgentMarkArtwork {
         case .qoderintl: return dark ? rgb(0x9C8CFF) : rgb(0x5B45E0)
         case .dsh: return dark ? rgb(0x7194FF) : rgb(0x3461E6)
         case .omp: return dark ? rgb(0xF2BA52) : rgb(0xB7740F)
+        case .agy: return dark ? rgb(0x8AB4F8) : rgb(0x376BC0)
         }
     }
 
@@ -67,8 +68,16 @@ enum AgentMarkArtwork {
         case .qoder, .qoderintl: return qPath
         case .dsh: return whalePath
         case .omp: return piPath
+        case .agy: return antigravityPath
         }
     }
+
+    private static let antigravityPath: CGPath = {
+        let path = CGMutablePath()
+        path.addEllipse(in: CGRect(x: 4, y: 4, width: 16, height: 16))
+        path.move(to: CGPoint(x: 8, y: 15)); path.addLine(to: CGPoint(x: 12, y: 9)); path.addLine(to: CGPoint(x: 16, y: 15))
+        return path
+    }()
 
     /// Waning moon outline; the star is filled into its bite in `draw`.
     private static let moonPath = crescent(CGPoint(x: 11.25, y: 12.75), 7.75, minus: CGPoint(x: 16.25, y: 8.0), 6.0)

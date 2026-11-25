@@ -36,7 +36,7 @@ def validate_binary(binary):
     return os.path.abspath(binary)
 
 
-def build_bridge_environment(kimi_binary=None, codex_binary=None, base_env=None, home=None):
+def build_bridge_environment(kimi_binary=None, codex_binary=None, agy_binary=None, base_env=None, home=None):
     env = dict(os.environ if base_env is None else base_env)
     prefixes = []
     if kimi_binary:
@@ -51,6 +51,12 @@ def build_bridge_environment(kimi_binary=None, codex_binary=None, base_env=None,
         prefixes.append(str(pathlib.Path(codex_path).parent))
     else:
         env.pop('PERCH_LOCAL_CODEX', None)
+    if agy_binary:
+        agy_path = validate_binary(agy_binary)
+        env['PERCH_LOCAL_AGY'] = agy_path
+        prefixes.append(str(pathlib.Path(agy_path).parent))
+    else:
+        env.pop('PERCH_LOCAL_AGY', None)
     if not prefixes:
         raise RuntimeError('Select at least one local agent executable.')
     seen = []
@@ -65,19 +71,23 @@ def build_bridge_environment(kimi_binary=None, codex_binary=None, base_env=None,
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--agent', choices=['kimi', 'codex'])
+    parser.add_argument('--agent', choices=['kimi', 'codex', 'agy'])
     parser.add_argument('--binary')
     parser.add_argument('--kimi-binary')
     parser.add_argument('--codex-binary')
+    parser.add_argument('--agy-binary')
     args = parser.parse_args()
     os.umask(0o077)
     kimi_binary = args.kimi_binary
     codex_binary = args.codex_binary
+    agy_binary = args.agy_binary
     if args.agent == 'kimi':
         kimi_binary = args.binary or kimi_binary or resolve_kimi()
     elif args.agent == 'codex':
         codex_binary = args.binary or codex_binary
-    env = build_bridge_environment(kimi_binary=kimi_binary, codex_binary=codex_binary)
+    elif args.agent == 'agy':
+        agy_binary = args.binary or agy_binary
+    env = build_bridge_environment(kimi_binary=kimi_binary, codex_binary=codex_binary, agy_binary=agy_binary)
     os.environ.clear()
     os.environ.update(env)
     service = pathlib.Path(__file__).with_name('native-agent-service.py')

@@ -63,7 +63,7 @@ final class RemoteSetupController: ObservableObject {
         result.kimiEnvironment = original?.kimiEnvironment ?? [:]
         return result
     }
-    var needsBridge: Bool { [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains(provider) }
+    var needsBridge: Bool { [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex, .claude, .agy].contains(provider) }
     var canContinue: Bool { ready && !busy }
     var canFinish: Bool { projectVerified && ready && !busy }
     var checkAgentTitle: String {
@@ -80,6 +80,7 @@ final class RemoteSetupController: ObservableObject {
         case .dsh: return URL(string: "https://github.com/deepseek-ai/deepseek-harness")!
         case .codex: return URL(string: "https://github.com/openai/codex#installation")!
         case .claude: return URL(string: "https://code.claude.com/docs/en/setup")!
+        case .agy: return URL(string: "https://antigravity.google/docs/cli")!
         case .terminal: return URL(string: "https://github.com/herdrdev/herdr")!
         }
     }
@@ -91,7 +92,7 @@ final class RemoteSetupController: ObservableObject {
         case .qoderintl: return "curl -fsSL https://qoder.com/install | bash"
         case .codex: return "npm install -g @openai/codex"
         case .claude: return "npm install -g @anthropic-ai/claude-code@2.1.302"
-        case .dsh, .terminal: return nil
+        case .dsh, .agy, .terminal: return nil
         }
     }
     var loginCommand: String {
@@ -103,6 +104,7 @@ final class RemoteSetupController: ObservableObject {
         case .codex: return "codex login"
         case .claude: return "claude"
         case .dsh: return "" // The user's shell/profile owns DEEPSEEK_API_KEY.
+        case .agy: return "agy acp --login"
         case .terminal: return "herdr"
         }
     }
@@ -248,7 +250,7 @@ final class RemoteSetupController: ObservableObject {
         mark("runtime", .passed, status["version"].string ?? "")
         if let message = status["error"].string { throw WorkbenchError(message) }
         switch provider {
-        case .kimi:
+        case .kimi, .agy:
             let entries = ModelSelectionCatalog.parseOMP(status["models"])
             models = entries.map { ModelOption(id: $0.id, provider: $0.provider, name: $0.name) }
             if !models.isEmpty {

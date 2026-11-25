@@ -20,7 +20,7 @@ class LocalAgentServiceTests(unittest.TestCase):
         binary.chmod(0o755)
         return str(binary)
 
-    def test_kimi_and_codex_delegate_to_the_local_native_bridge(self):
+    def test_agents_delegate_to_the_local_native_bridge(self):
         with tempfile.TemporaryDirectory() as root:
             kimi_dir = pathlib.Path(root) / 'kimi bin'
             codex_dir = pathlib.Path(root) / 'codex bin'
@@ -28,21 +28,24 @@ class LocalAgentServiceTests(unittest.TestCase):
             codex_dir.mkdir()
             kimi = self.make_binary(kimi_dir, 'kimi')
             codex = self.make_binary(codex_dir, 'codex')
+            agy = self.make_binary(root, 'agy')
             env = service.build_bridge_environment(
                 kimi_binary=kimi,
                 codex_binary=codex,
+                agy_binary=agy,
                 base_env={'PATH': '/usr/bin:/bin'},
                 home=root,
             )
             self.assertEqual(env['PERCH_LOCAL_KIMI'], kimi)
             self.assertEqual(env['PERCH_LOCAL_CODEX'], codex)
+            self.assertEqual(env['PERCH_LOCAL_AGY'], agy)
             self.assertEqual(
                 env['AWB_NATIVE_ROOT'],
                 str(pathlib.Path(root) / '.local/share/perch/local-native'),
             )
             self.assertEqual(
-                env['PATH'].split(os.pathsep)[:3],
-                [str(kimi_dir), str(codex_dir), '/usr/bin'],
+                env['PATH'].split(os.pathsep)[:4],
+                [str(kimi_dir), str(codex_dir), str(pathlib.Path(agy).parent), '/usr/bin'],
             )
 
     def test_single_agent_clears_unselected_local_override(self):
@@ -50,11 +53,12 @@ class LocalAgentServiceTests(unittest.TestCase):
             kimi = self.make_binary(root, 'kimi')
             env = service.build_bridge_environment(
                 kimi_binary=kimi,
-                base_env={'PATH': '/usr/bin', 'PERCH_LOCAL_CODEX': '/stale/codex'},
+                base_env={'PATH': '/usr/bin', 'PERCH_LOCAL_CODEX': '/stale/codex', 'PERCH_LOCAL_AGY': '/stale/agy'},
                 home=root,
             )
             self.assertEqual(env['PERCH_LOCAL_KIMI'], kimi)
             self.assertNotIn('PERCH_LOCAL_CODEX', env)
+            self.assertNotIn('PERCH_LOCAL_AGY', env)
 
     def test_missing_or_relative_executable_is_rejected(self):
         for invalid in ('', 'kimi', '/nonexistent/kimi'):

@@ -757,7 +757,7 @@ private struct ConnectionControls: View {
                     }
                     if model.selectedHostID == connection.id {
                         if connection.host.hasNativeAgents {
-                            let providers = connection.host.enabledAgents.filter { [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex, .claude].contains($0) }
+                            let providers = connection.host.enabledAgents.filter { [.kimi, .omp, .qoder, .qoderintl, .dsh, .codex, .claude, .agy].contains($0) }
                             let expanded = expandedNativeAgents.contains(connection.id)
                             VStack(alignment: .leading, spacing: 6) {
                                 HStack(spacing: 0) {
