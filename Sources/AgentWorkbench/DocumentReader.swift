@@ -104,8 +104,8 @@ struct DocumentReader: View {
                 Text(matches.isEmpty ? L("未找到匹配段落") : L("\(matches.count) 个匹配段落"))
                     .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary).padding(.vertical, 4)
             }
-            if let notice = state.notice { Text(notice).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.orange) }
-            if missingAnchor { Text("未找到链接中的章节").font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.orange) }
+            if let notice = state.notice { Text(notice).font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.Status.attention) }
+            if missingAnchor { Text("未找到链接中的章节").font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.Status.attention) }
             if added {
                 HStack {
                     Text("反馈已加入原会话草稿")

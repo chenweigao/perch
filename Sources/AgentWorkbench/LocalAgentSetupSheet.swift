@@ -32,7 +32,7 @@ struct LocalAgentSetupSheet: View {
                                 Text("已安装，尚未接入本机会话").font(.subheadline).foregroundStyle(.secondary)
                             }
                         case .unusable(_, let reason):
-                            Text(reason).font(.subheadline).foregroundStyle(.orange).lineLimit(3)
+                            Text(reason).font(.subheadline).foregroundStyle(WorkbenchTheme.Status.attention).lineLimit(3)
                         case .missing:
                             Text("未找到可执行文件").font(.subheadline).foregroundStyle(.secondary)
                         case nil:
@@ -46,7 +46,7 @@ struct LocalAgentSetupSheet: View {
             }
             Text("连接会复用或启动本机服务；关闭 Perch 不会停止正在执行的任务。")
                 .font(.subheadline).foregroundStyle(.secondary)
-            if let error { Text(error).font(.subheadline).foregroundStyle(.orange) }
+            if let error { Text(error).font(.subheadline).foregroundStyle(WorkbenchTheme.Status.attention) }
             HStack {
                 Button("重新检测") { model.discoverLocalAgents() }.disabled(model.probingLocal)
                 Spacer()

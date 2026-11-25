@@ -92,7 +92,7 @@ struct PendingMessageEditor: View {
         VStack(alignment: .leading, spacing: 14) {
             Text("编辑待发消息").font(.headline)
             TextEditor(text: $text).frame(minHeight: 140)
-            if let messageError { Text(messageError).font(.subheadline).foregroundStyle(.orange) }
+            if let messageError { Text(messageError).font(.subheadline).foregroundStyle(WorkbenchTheme.Status.attention) }
             HStack {
                 Spacer()
                 Button("取消") { dismiss() }.keyboardShortcut(.cancelAction)

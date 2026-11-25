@@ -69,9 +69,9 @@ struct SessionDirectoryTable: NSViewRepresentable {
             more.title = ""; more.isBordered = false
             more.image = NSImage(systemSymbolName: "ellipsis", accessibilityDescription: nil)
             more.target = self; more.action = #selector(showMenu)
-            titleLabel.font = .systemFont(ofSize: 14)
-            detail.font = .systemFont(ofSize: 12); detail.textColor = .secondaryLabelColor
-            time.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular); time.textColor = .tertiaryLabelColor
+            titleLabel.font = .systemFont(ofSize: WorkbenchTheme.Typography.body)
+            detail.font = .systemFont(ofSize: WorkbenchTheme.Typography.caption); detail.textColor = .secondaryLabelColor
+            time.font = .monospacedDigitSystemFont(ofSize: WorkbenchTheme.Typography.caption, weight: .regular); time.textColor = .tertiaryLabelColor
             titleLabel.lineBreakMode = .byTruncatingTail
             detail.lineBreakMode = .byTruncatingMiddle
             for label in [titleLabel, detail, time] {
@@ -106,7 +106,7 @@ struct SessionDirectoryTable: NSViewRepresentable {
             icon.isHidden = running
             let symbol = !item.online ? "wifi.slash" : item.section == .attention ? "exclamationmark.circle.fill" : item.section == .review ? "circle.fill" : item.reference.kind.symbol
             icon.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
-            icon.contentTintColor = !item.online ? .secondaryLabelColor : item.section == .attention ? .systemOrange : item.section == .review ? .systemBlue : .secondaryLabelColor
+            icon.contentTintColor = !item.online ? .secondaryLabelColor : item.section == .attention ? WorkbenchTheme.Status.attentionNS : item.section == .review ? WorkbenchTheme.Status.unreadNS : .secondaryLabelColor
             // Capture the session value: reuse must not route to a former row.
             onOpen = { parent.onOpen(item) }
             makeMenu = { parent.menu(item) }

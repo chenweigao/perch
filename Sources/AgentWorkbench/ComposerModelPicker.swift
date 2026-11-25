@@ -253,7 +253,7 @@ private struct ComposerModelPanel: View {
             } else {
                 searchHeader
                 if let catalogError {
-                    Text(catalogError).font(.system(size: WorkbenchTheme.Composer.metadata)).foregroundStyle(.orange)
+                    Text(catalogError).font(.system(size: WorkbenchTheme.Composer.metadata)).foregroundStyle(WorkbenchTheme.Status.attention)
                         .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 14).padding(.bottom, 6)
                 }
                 HStack(alignment: .top, spacing: 0) {

@@ -72,7 +72,7 @@ struct ProjectMessageComposer: View {
                         Button("关闭") { dismiss() }
                     }.font(.system(size: WorkbenchTheme.Typography.caption))
                     if files.loading { ProgressView().controlSize(.small) }
-                    else if let error = files.error { Text(error).font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(.orange) }
+                    else if let error = files.error { Text(error).font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(WorkbenchTheme.Status.attention) }
                     else if matches.isEmpty { Text("没有匹配文件").font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(.secondary) }
                     else {
                         ScrollViewReader { proxy in

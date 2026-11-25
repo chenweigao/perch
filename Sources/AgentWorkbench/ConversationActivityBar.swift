@@ -34,13 +34,13 @@ struct ConversationLiveStatus: View, Equatable {
                 ConversationWorkIndicator(phase: phase, animated: !reduceMotion) { clockVisible = $0 }
                     .frame(width: 13, height: 13).accessibilityHidden(true)
                 Text(verbatim: title)
-                    .font(.system(size: 13, weight: phase.needsInput ? .medium : .regular))
-                    .foregroundStyle(phase.needsInput ? Color.orange : WorkbenchTheme.quiet)
+                    .font(.system(size: WorkbenchTheme.Typography.label, weight: phase.needsInput ? .medium : .regular))
+                    .foregroundStyle(phase.needsInput ? WorkbenchTheme.Status.attention : WorkbenchTheme.quiet)
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .help(Text(verbatim: title))
                 if let timing {
-                    Text(verbatim: "·").font(.system(size: 12)).foregroundStyle(WorkbenchTheme.quiet.opacity(0.45))
+                    Text(verbatim: "·").font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.quiet.opacity(0.45))
                     ConversationWorkClock(timing: timing, visible: clockVisible)
                         .fixedSize(horizontal: true, vertical: false).accessibilityHidden(true)
                 }
@@ -68,7 +68,7 @@ private struct ConversationWorkClock: View {
             let isZh = locale.language.languageCode?.identifier.hasPrefix("zh") ?? true
             let duration = ConversationTiming.duration(timing.elapsed(at: context.date), chinese: isZh)
             Text(verbatim: duration)
-                .font(.system(size: 12)).monospacedDigit().foregroundStyle(WorkbenchTheme.quiet.opacity(0.75))
+                .font(.system(size: WorkbenchTheme.Typography.caption)).monospacedDigit().foregroundStyle(WorkbenchTheme.quiet.opacity(0.75))
                 .help(timing.observedOnly
                       ? Text("从客户端首次观察到本轮开始计时，包含等待；此前用时未知。")
                       : Text("从提交本轮请求到现在的经过时间，包含通信、工具调用和等待。"))
@@ -277,7 +277,7 @@ struct ConversationActivityBar: View {
             }.layoutPriority(1).allowsHitTesting(false)
             if status.state == .running && status.attention > 0 {
                 // A running agent may still recover: a count, not a new color for the action.
-                Text("\(status.attention) 项需关注").foregroundStyle(Color.orange).fixedSize().allowsHitTesting(false)
+                Text("\(status.attention) 项需关注").foregroundStyle(WorkbenchTheme.Status.attention).fixedSize().allowsHitTesting(false)
             }
             Spacer(minLength: 6).layoutPriority(-2)
             trailing(status)
@@ -316,7 +316,7 @@ struct ConversationActivityBar: View {
     /// over it, shown through a moving band (`ShimmerGlint`).
     private func title(_ status: TurnStatus) -> some View {
         Text(verbatim: status.headline).fontWeight(status.needsReader ? .medium : .regular)
-            .foregroundStyle(status.needsReader ? Color.orange : highlight ? Color.primary : WorkbenchTheme.quiet)
+            .foregroundStyle(status.needsReader ? WorkbenchTheme.Status.attention : highlight ? Color.primary : WorkbenchTheme.quiet)
             .lineLimit(1).truncationMode(.tail)
             .contentTransition(.opacity)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: status.headline)
@@ -396,16 +396,16 @@ struct ConversationActivityBar: View {
     @ViewBuilder private func actions(_ status: TurnStatus) -> some View {
         switch status.state {
         case .offline:
-            Button("重新连接", action: onReconnect).buttonStyle(.bordered).controlSize(.small).tint(.orange)
+            Button("重新连接", action: onReconnect).buttonStyle(.bordered).controlSize(.small).tint(WorkbenchTheme.Status.attention)
                 .help(offlineDetail.map { Text(verbatim: $0) } ?? Text("重新连接"))
         case .waiting:
-            Button("查看") { onReview() }.buttonStyle(.borderedProminent).controlSize(.small).tint(.orange)
+            Button("查看") { onReview() }.buttonStyle(.borderedProminent).controlSize(.small).tint(WorkbenchTheme.Status.attention)
                 .help("查看等待你确认的事项").accessibilityHint(Text("查看等待你确认的事项"))
         case .review:
-            Button("查看", action: onDetails).buttonStyle(.bordered).controlSize(.small).tint(.orange)
+            Button("查看", action: onDetails).buttonStyle(.bordered).controlSize(.small).tint(WorkbenchTheme.Status.attention)
                 .help("在任务面板查看需要关注的工具结果").accessibilityHint(Text("在任务面板查看需要关注的工具结果"))
         case .failed:
-            Button("查看", action: onDetails).buttonStyle(.bordered).controlSize(.small).tint(.orange)
+            Button("查看", action: onDetails).buttonStyle(.bordered).controlSize(.small).tint(WorkbenchTheme.Status.attention)
                 .help("在任务面板查看失败原因").accessibilityHint(Text("在任务面板查看失败原因"))
         case .done:
             if let recapKey {
@@ -686,8 +686,8 @@ struct EditStatText: View {
     let stat: SessionEditStat
     var body: some View {
         HStack(spacing: 4) {
-            Text("+\(stat.additions)").foregroundStyle(Color.green.opacity(0.9))
-            Text("−\(stat.deletions)").foregroundStyle(Color.red.opacity(0.9))
+            Text("+\(stat.additions)").foregroundStyle(WorkbenchTheme.Status.success.opacity(0.9))
+            Text("−\(stat.deletions)").foregroundStyle(WorkbenchTheme.Status.danger.opacity(0.9))
         }.monospacedDigit()
     }
 }
@@ -722,7 +722,7 @@ struct TaskRecapPopover: View {
             }
             content
             if let warning {
-                Text(warning).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(.orange).textSelection(.enabled)
+                Text(warning).font(.system(size: WorkbenchTheme.Reading.captionSize)).foregroundStyle(WorkbenchTheme.Status.attention).textSelection(.enabled)
             }
         }.font(.system(size: WorkbenchTheme.Reading.labelSize)).padding(16).frame(width: 420)
             .task(id: key) {
@@ -746,7 +746,7 @@ struct TaskRecapPopover: View {
         case .failed(let error):
             if configured {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text(error).foregroundStyle(.orange).textSelection(.enabled)
+                    Text(error).foregroundStyle(WorkbenchTheme.Status.attention).textSelection(.enabled)
                     Button("重试") { generate(force: true) }.buttonStyle(.bordered)
                 }
             } else { configurationPrompt }

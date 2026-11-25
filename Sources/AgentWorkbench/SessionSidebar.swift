@@ -145,7 +145,7 @@ struct WorkbenchSidebar: View {
                 view = AnyView(sessionRow(item, groups: index[item.id]))
             }
             return .init(id: entry.id, session: session, height: height,
-                         content: AnyView(view.id(entry.id).font(.system(size: 13)).environment(\.locale, locale)))
+                         content: AnyView(view.id(entry.id).font(.system(size: WorkbenchTheme.Typography.label)).environment(\.locale, locale)))
         }
         return AcceptanceSidebarTable(items: items)
     }
@@ -361,7 +361,7 @@ struct WorkbenchSidebar: View {
                             .frame(width: SidebarMetrics.iconWidth)
                         Text(group.name).lineLimit(1); Spacer(minLength: 4)
                         if summary.attentionCount > 0 {
-                            Text("\(summary.attentionCount)").font(.system(size: SidebarMetrics.detailSize)).foregroundStyle(.orange)
+                            Text("\(summary.attentionCount)").font(.system(size: SidebarMetrics.detailSize)).foregroundStyle(WorkbenchTheme.Status.attention)
                         }
                     }.padding(.horizontal, SidebarMetrics.rowInset).frame(height: SidebarMetrics.rowHeight).contentShape(Rectangle())
                 }.buttonStyle(SidebarNavigationStyle(selected: model.showDashboard && model.selectedGroupID == group.id))
@@ -509,7 +509,7 @@ private struct SidebarPinPicker: View {
                             HStack(spacing: 8) {
                                 SidebarAgentIndicator(item: item)
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(item.title).font(.system(size: 12)).lineLimit(1)
+                                    Text(item.title).font(.system(size: WorkbenchTheme.Typography.caption)).lineLimit(1)
                                     Text(item.hostName + " · " + item.directory).font(.system(size: SidebarMetrics.detailSize))
                                         .foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                                 }
@@ -821,8 +821,8 @@ private struct ConnectionControls: View {
             HStack {
                 // Offline uses the one offline symbol; a column keeps the names aligned.
                 Group {
-                    if online { Circle().fill(.green).frame(width: 5, height: 5) }
-                    else { Image(systemName: "wifi.slash").foregroundStyle(.orange) }
+                    if online { Circle().fill(WorkbenchTheme.Status.success).frame(width: 5, height: 5) }
+                    else { Image(systemName: "wifi.slash").foregroundStyle(WorkbenchTheme.Status.attention) }
                 }.frame(width: SidebarMetrics.iconWidth)
                 Text(name); Spacer()
                 Text(LocalizedStringKey(online ? "已连接" : error == nil ? "未连接" : "需要处理"))
@@ -838,7 +838,7 @@ private struct ConnectionControls: View {
                     .buttonStyle(.plain).help("重新连接").accessibilityLabel("重新连接")
             }
             if let error, !online {
-                Text(error).font(.system(size: SidebarMetrics.detailSize)).foregroundStyle(.orange).lineLimit(3).textSelection(.enabled)
+                Text(error).font(.system(size: SidebarMetrics.detailSize)).foregroundStyle(WorkbenchTheme.Status.attention).lineLimit(3).textSelection(.enabled)
             } else if let transition {
                 // A staged bridge update waiting for its safe window. The old
                 // process keeps serving, so the catalog stays live; this line

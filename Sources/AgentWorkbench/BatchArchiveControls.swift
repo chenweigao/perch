@@ -52,13 +52,13 @@ struct BatchArchiveControls: View {
                 if !result.failures.isEmpty {
                     VStack(alignment: .leading, spacing: 3) {
                         ForEach(result.failures.prefix(4), id: \.candidate.id) { item in
-                            Text("失败：\(item.message)").font(.subheadline).foregroundStyle(.orange)
+                            Text("失败：\(item.message)").font(.subheadline).foregroundStyle(WorkbenchTheme.Status.attention)
                                 .textSelection(.enabled)
                         }
                     }
                 }
                 ForEach(result.undoFailures, id: \.candidate.id) { item in
-                    Text("恢复失败：\(item.message)").font(.subheadline).foregroundStyle(.orange).textSelection(.enabled)
+                    Text("恢复失败：\(item.message)").font(.subheadline).foregroundStyle(WorkbenchTheme.Status.attention).textSelection(.enabled)
                 }
             }
         }

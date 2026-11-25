@@ -31,6 +31,11 @@
 ## 正文刻度
 
 - **14pt 主字号 + 12pt 辅助字号**。稳定界面取 `WorkbenchTheme.Typography`：导航、会话名、文件名、模型选择为 14pt；标题也是 14pt，以 semibold 和留白区分；次要说明仍为 14pt，以次级颜色、分组、折叠区分。只有时间、计数、快捷键等辅助信息用 12pt。SF Symbol 保留独立的光学尺寸。
+- **界面字阶只有这几档（2026-11-25）**：`Typography.body/title/secondary` 14、`label` 13（紧凑控件、实时状态行、侧栏分区头）、
+  `caption` 12（时间、计数、快捷键）、`meta` 11（名称下的路径、筛选条计数等密集元信息，文字下限）；页面级另有
+  `Typography.Display`：空状态标题 15、页面标题 26（工作台、任务组、空会话统一）、新建会话问候语与大号计数 28。
+  原 13pt medium 小标题统一升到 14pt `title`。视图里出现数字字号由 `scripts/check-font-tokens.py`（portable 检查）拦下；
+  紧跟 `Image` 的 SF Symbol 尺寸不受限。经审计，8–10pt 的用法全部是 SF Symbol，没有低于 11pt 的文字。
 - **阅读文字默认与界面同号**。`ReadingScale` 的正文、输入框、思考、代码、表格、过程标签均为 14pt，正文和思考行高 22pt。H1 / H2 为 18 / 16pt，H3 以下同正文，以字重和间距分层。文档阅读器默认也为 14pt，保留独立阅读偏好和文章标题层级。
 - **保留阅读缩放**。设置 › 界面或「显示」菜单可选择 14–18pt；⌘0 回到 14pt。保留已有显式偏好。缩放时正文、思考、代码、输入框、过程标签共同变化，辅助字号为 max(12, 正文 − 2)；行高为 正文 × 22/14，段距按 正文 / 14 缩放。侧栏、工具栏和面板标题固定取界面字号，680pt 阅读栏和水平内边距不变。
 - **视图里不写本地文字字号**：文章与对话取 `ReplyStyle`，稳定界面取 `WorkbenchTheme.Typography`；同号角色仍分别命名，避免未来各组件自行新增字号。
@@ -58,6 +63,17 @@
   复制 Markdown、导出 CSV、放大。复制与导出共用同一份 `TableData`，经 `TableSerialization`
   （`Sources/WorkbenchCore/TableSerialization.swift`）序列化；CSV 导出文件带 BOM 以保住 Excel 里的中文。
   放大打开独立预览（Esc 或关闭返回，预览内保留复制与导出），正文列宽不为宽表让路。
+
+## 颜色
+
+- **一种颜色只说一件事**（`WorkbenchTheme.Status`）：运行中只靠动效（日弧、呼吸点），`statusRunningNS` 为中性色；
+  `attention` 是唯一的暖色状态，表示需要你出场（待确认、待回答、可恢复错误、离线或未同步）；`danger` 表示失败或删除，
+  `success` 表示完成或新增，`unread` 表示新结果（链接蓝）。品牌珊瑚 `#E36D55` 只用于图标、首页品牌位和空状态，不表示状态。
+- **浅色状态色要能读**：`attention` 在白底约 4.6:1（`systemOrange` 仅 2.2:1），`danger`、`success` 均 ≥ 4.5:1；深色值按蓝灰画布提亮。
+- **视图不写原始色相**：`.orange/.red/.green/.blue/.yellow` 与 `NSColor.systemX` 由 `scripts/check-color-tokens.py` 拦下；
+  主机识别色、设置分栏图标、Markdown 提示块种类和查找高亮这类非状态色登记在 `scripts/color-exceptions.json` 并写明理由。
+- **深色表面同一色相**：代码卡（比画布深一级）、代码卡横幅、行内代码、提问气泡、提及标签、输入框菜单都取画布的 226° 蓝灰，
+  不再混用中性灰。
 
 ## 思考与过程
 
@@ -164,9 +180,9 @@
 
 ## 正文原位状态与右栏联动
 
-- **输入框外保留独立状态行**：`KimiWorkspaceView` 与 `NativeAgentView` 在输入框上方 8pt 处使用 `ConversationLiveStatus`（`Sources/AgentWorkbench/ConversationActivityBar.swift`）显示真实动作摘要与耗时，与输入文字共用阅读左轨，固定 26pt 高，完成后隐藏。运行时前导标识（`ConversationWorkIndicatorView`，`Sources/AgentWorkbench/PerchBusyIndicator.swift`）采用 Core Animation 绘制的 Perch 追逐日弧配合暖琥珀呼吸圆心；等待你确认／回答时切换为静止橙色圆环信标，正在停止时切换为静止圆环与方格，Reduce Motion 或窗口不可见时自动停动画与计时。文案优先展示正在执行的工具可读摘要（`ConversationWorkSummary`）或公开思考摘要，否则按真实阶段显示「正在思考 / 正在执行 / 正在回复 / 正在处理」，不再回退笼统的「运行中」；右侧仅显示干净的等宽数字耗时，观测起点说明移至悬停提示。
+- **输入框外保留独立状态行**：`KimiWorkspaceView` 与 `NativeAgentView` 在输入框上方 8pt 处使用 `ConversationLiveStatus`（`Sources/AgentWorkbench/ConversationActivityBar.swift`）显示真实动作摘要与耗时，与输入文字共用阅读左轨，固定 26pt 高，完成后隐藏。运行时前导标识（`ConversationWorkIndicatorView`，`Sources/AgentWorkbench/PerchBusyIndicator.swift`）采用 Core Animation 绘制的 Perch 追逐日弧配合中性色呼吸圆心（运行靠动效表达，见「颜色」）；等待你确认／回答时切换为静止橙色圆环信标，正在停止时切换为静止圆环与方格，Reduce Motion 或窗口不可见时自动停动画与计时。文案优先展示正在执行的工具可读摘要（`ConversationWorkSummary`）或公开思考摘要，否则按真实阶段显示「正在思考 / 正在执行 / 正在回复 / 正在处理」，不再回退笼统的「运行中」；右侧仅显示干净的等宽数字耗时，观测起点说明移至悬停提示。
 - **停止控制保持独立语义**：`ComposerActionButton` 在运行中提供停止任务，等待确认与停止请求保留现有禁用和确认反馈；具体运行信息由独立状态行承载。
-- **过程折叠与单步状态克制统一**：轮次过程入口（`ProcessFoldRow`）统一称为「工作过程」（尾段仅思考时显示「思考中」），运行中仅亮起暖琥珀状态点（`WorkbenchTheme.statusRunningNS`，带柔和呼吸光晕），不重复跳秒，避免与底部状态行双计时器竞争；完成后收束为「工作过程 · N 个工具 · 耗时」，展开左侧竖向导轨对齐头部图标中心。单步工具行（`KimiToolCard`、`EditStepRow`）使用调校后的暖琥珀／翡翠绿状态点（`statusRunningNS` / `statusSuccessNS`），成功行不再逐行重复「已完成」文字，运行中编辑不再重复「运行中」文字；失败、待授权、缺失结果与断线入口保留。代码卡、Mermaid 卡与工具详情卡统一带 1pt `WorkbenchTheme.Stroke.hairline` 细边与横幅底部分隔线，回复操作按钮共用轻触悬停底色与复制成功绿钩反馈。
+- **过程折叠与单步状态克制统一**：轮次过程入口（`ProcessFoldRow`）统一称为「工作过程」（尾段仅思考时显示「思考中」），运行中仅亮起中性色状态点（`WorkbenchTheme.statusRunningNS`，带柔和呼吸光晕），不重复跳秒，避免与底部状态行双计时器竞争；完成后收束为「工作过程 · N 个工具 · 耗时」，展开左侧竖向导轨对齐头部图标中心。单步工具行（`KimiToolCard`、`EditStepRow`）使用中性呼吸点／翡翠绿状态点（`statusRunningNS` / `Status.success`），等待授权时为 `Status.attention`，成功行不再逐行重复「已完成」文字，运行中编辑不再重复「运行中」文字；失败、待授权、缺失结果与断线入口保留。代码卡、Mermaid 卡与工具详情卡统一带 1pt `WorkbenchTheme.Stroke.hairline` 细边与横幅底部分隔线，回复操作按钮共用轻触悬停底色与复制成功绿钩反馈。
 - **历史记录和当前差异分开**：点击步骤数字在集成右栏打开「本步编辑记录」，可切换「本轮编辑记录」，后者按成功调用累加，并明确说明不等于 Git 净差异。重复编辑不覆盖前一步记录；记录缺失时显示原始调用或缺失说明，不读取当前文件冒充历史。写入调用缺少旧内容时明确标注。
 - **当前工作区净差异**：独立按钮切换到原有 Git 改动页；编辑记录绑定来源会话，切换会话不显示上一会话的记录。记录是点击时的不可变快照，待执行和失败状态不写成已应用。
 - **回复操作栏**：最新完成回复保留 `Recap` 入口。正文保持 14pt / 22pt 与 680pt 阅读宽度，输入框保留系统玻璃和发送语义，忙碌时提示「补充要求或调整方向…」。

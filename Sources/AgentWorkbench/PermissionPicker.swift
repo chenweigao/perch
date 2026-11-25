@@ -135,7 +135,7 @@ struct PermissionPicker: View {
             if layout == .form || showsTitle || risk != .standard { Text(title) }
         }
         // Compact: the composer's 13 pt control glyphs, beside the context ring.
-        .font(.system(size: 13))
+        .font(.system(size: WorkbenchTheme.Typography.label))
         .foregroundStyle(riskColor)
         .frame(minWidth: 28, minHeight: 28)
         .contentShape(Rectangle())
@@ -153,8 +153,8 @@ struct PermissionPicker: View {
     private var riskColor: Color {
         switch risk {
         case .standard: return .secondary
-        case .elevated: return .orange
-        case .dangerous: return .red
+        case .elevated: return WorkbenchTheme.Status.attention
+        case .dangerous: return WorkbenchTheme.Status.danger
         }
     }
 

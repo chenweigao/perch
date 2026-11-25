@@ -27,10 +27,10 @@ struct ConversationFindBar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             controls
-            if let error = result.queryError { Text(error).font(.system(size: 11)).foregroundStyle(.orange) }
+            if let error = result.queryError { Text(error).font(.system(size: WorkbenchTheme.Typography.meta)).foregroundStyle(WorkbenchTheme.Status.attention) }
             if hits.indices.contains(index) { Text(hits[index].excerpt).lineLimit(2).textSelection(.enabled).foregroundStyle(.secondary) }
             if hasOlder { Text("Matches cover loaded messages. Load full history to search older replies.").foregroundStyle(.secondary) }
-        }.font(.system(size: 12)).padding(10).background(.regularMaterial)
+        }.font(.system(size: WorkbenchTheme.Typography.caption)).padding(10).background(.regularMaterial)
             .onAppear { focused = true; consumeWorkspaceSearch(); updateSearch(); locateWorkspaceResult() }
             .onChange(of: model.selectedReference) { old, _ in if let old { sessionChanged(from: old) } }
             .onChange(of: model.workspaceSearchEntryID) { _, entry in if entry != nil { consumeWorkspaceSearch(); updateSearch(); locateWorkspaceResult() } }
@@ -153,7 +153,7 @@ private struct FindOptionToggle: View {
     let onChange: () -> Void
     var body: some View {
         Button { on.toggle(); onChange() } label: {
-            Text(label).font(.system(size: 11, weight: .medium, design: .monospaced))
+            Text(label).font(.system(size: WorkbenchTheme.Typography.meta, weight: .medium, design: .monospaced))
                 .frame(width: 22, height: 20)
                 .background(on ? WorkbenchTheme.Fill.selected : Color.clear,
                             in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.chip))

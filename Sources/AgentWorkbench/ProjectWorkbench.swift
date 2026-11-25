@@ -8,13 +8,13 @@ struct ProjectWorkbenchOverview: View {
             let projects = model.workbenchProjects.filter { model.scopeHost == nil || $0.location?.hostID == model.scopeHost?.id }
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Text("项目工作台").font(.system(size: 13, weight: .medium))
+                    Text("项目工作台").font(.system(size: WorkbenchTheme.Typography.title, weight: .medium))
                     Spacer()
                     Button("长任务托管") { model.showFollowUps = true }.buttonStyle(QuietLinkStyle())
                 }
                 if !model.followUpNotices.isEmpty {
                     Label("有 \(model.followUpNotices.count) 个任务长时间没有更新", systemImage: "clock.badge.exclamationmark")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(WorkbenchTheme.Status.attention)
                 }
                 if projects.isEmpty {
                     Text("项目会随会话自动出现。").foregroundStyle(.secondary)
@@ -41,7 +41,7 @@ struct ProjectWorkbenchOverview: View {
                         Divider()
                     }
                 }
-            }.font(.system(size: 12))
+            }.font(.system(size: WorkbenchTheme.Typography.caption))
         }
     }
 }
@@ -119,7 +119,7 @@ struct ProjectWorkbenchSheet: View {
                     DisclosureGroup("项目会话（\(sessions.count)）") {
                         ForEach(sessions) { item in sessionRow(item) }
                     }
-                }.font(.system(size: 13)).padding(.bottom, 12)
+                }.font(.system(size: WorkbenchTheme.Typography.label)).padding(.bottom, 12)
             }
         }.padding(24).frame(width: 720, height: 700)
             .onAppear { brief = model.workspace.projectBriefs[location.id] ?? ProjectBrief() }

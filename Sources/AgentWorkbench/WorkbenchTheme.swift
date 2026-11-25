@@ -71,11 +71,12 @@ enum WorkbenchTheme {
     static let diffAdded = nsColor(light: (0.12, 0.45, 0.29), dark: (0.357, 0.749, 0.529))
     static let diffRemoved = nsColor(light: (0.64, 0.22, 0.24), dark: (0.898, 0.518, 0.541))
 
-    /// Inline process & live-work indicators: tuned amber and emerald that stay
-    /// crisp on white paper (where systemYellow washes out) and calm on graphite.
+    /// Inline process & live-work indicators. Running is told by motion (the
+    /// sun arc, a breathing dot), not by hue, so it is a calm neutral; the one
+    /// warm status color is reserved for `Status.attention`. See `Status`.
     static let statusMarkNS = nsColor(light: (0.25, 0.28, 0.35), dark: (0.730, 0.755, 0.815))
-    static let statusRunningNS = nsColor(light: (0.85, 0.56, 0.05), dark: (0.950, 0.720, 0.220))
-    static let statusSuccessNS = nsColor(light: (0.14, 0.62, 0.36), dark: (0.300, 0.780, 0.500))
+    static let statusRunningNS = nsColor(light: (0.42, 0.44, 0.50), dark: (0.600, 0.630, 0.700))
+    static var statusSuccessNS: NSColor { Status.successNS }
     static let codeHeaderDividerNS = washNS(light: 0.055, dark: 0.09)
 
     private static func isDark(_ appearance: NSAppearance) -> Bool {
@@ -104,19 +105,21 @@ enum WorkbenchTheme {
     /// Inline-code chip fill in prose: an opaque neutral a step darker than the
     /// sheet, so `main` and hashes read as chips (Qoder). Opaque, because an alpha
     /// wash over the glass backdrop reads as a border-only bubble. Self-drawn (ReplyTextView).
-    static let inlineCodeTintNS = nsColor(light: (240/255, 240/255, 241/255), dark: (41/255, 41/255, 41/255))
+    /// Dark values share the canvas's blue-graphite hue (~226°), one step lighter.
+    static let inlineCodeTintNS = nsColor(light: (240/255, 240/255, 241/255), dark: (45/255, 49/255, 59/255))
 
     /// Code/mermaid/tool card surface (DSH `--dsw-alias-markdown-code-block`:
-    /// neutral-bluish-50 / neutral-bluish-900).
-    static let replySurfaceNS = nsColor(light: (249/255, 250/255, 251/255), dark: (27/255, 27/255, 28/255))
+    /// neutral-bluish-50). Dark is a recessed step below the canvas in its own
+    /// blue-graphite hue, so code reads as set into the page, not a gray patch.
+    static let replySurfaceNS = nsColor(light: (249/255, 250/255, 251/255), dark: (26/255, 29/255, 35/255))
 
     /// Code card banner strip (DSH `--dsw-alias-markdown-code-block-banner`):
     /// identical to the surface in light, a lighter strip in dark.
-    static let replyBannerNS = nsColor(light: (249/255, 250/255, 251/255), dark: (44/255, 44/255, 46/255))
+    static let replyBannerNS = nsColor(light: (249/255, 250/255, 251/255), dark: (37/255, 40/255, 48/255))
 
     /// User message bubble: Qoder's flat neutral gray on the white sheet; the
     /// dark graphite stays a step above the dark canvas.
-    static let userBubbleNS = nsColor(light: (243/255, 243/255, 244/255), dark: (44/255, 44/255, 46/255))
+    static let userBubbleNS = nsColor(light: (243/255, 243/255, 244/255), dark: (42/255, 46/255, 55/255))
 
     /// A primary-ink wash with independent light/dark alphas. labelColor resolves
     /// inside the requested appearance; applying alpha outside it can freeze the
@@ -139,11 +142,30 @@ enum WorkbenchTheme {
 extension WorkbenchTheme {
     /// Stable interface roles. Reading zoom changes prose, not navigation or controls.
     /// Titles and secondary labels share the body size; weight and color give hierarchy.
+    /// Views never write a literal text size: `scripts/check-font-tokens.py` fails on
+    /// one. SF Symbols keep their own optical sizes and may use literals.
     enum Typography {
         static let body: CGFloat = 14
         static let title: CGFloat = body
         static let secondary: CGFloat = body
+        /// Compact controls and the live status line (pickers, sidebar sections).
+        static let label: CGFloat = 13
+        /// Time, counts, shortcuts and other auxiliary notes.
         static let caption: CGFloat = 12
+        /// The floor for text: dense metadata under a name (paths, hints, counts
+        /// in a filter strip). Nothing is set below it.
+        static let meta: CGFloat = 11
+        /// Page-level display sizes, outside the 14 / 12 interface ramp.
+        enum Display {
+            /// The title of an empty or all-done state.
+            static let emptyTitle: CGFloat = 15
+            /// Page titles: Workbench, a task group, an empty conversation.
+            static let page: CGFloat = 26
+            /// The new-session greeting.
+            static let hero: CGFloat = 28
+            /// Large dashboard counts.
+            static let metric: CGFloat = 28
+        }
     }
     /// PI composer-menus.css: compact rows, source rail and reasoning track.
     enum Composer {
@@ -154,7 +176,7 @@ extension WorkbenchTheme {
         static let paneMaximum: CGFloat = 264
         static let sliderHeight: CGFloat = 24
         static let motion = 0.2
-        static let raised = WorkbenchTheme.color(light: (1, 1, 1), dark: (40/255, 40/255, 40/255))
+        static let raised = WorkbenchTheme.color(light: (1, 1, 1), dark: (38/255, 41/255, 50/255))
         /// PI composer.css .composer-chip and tokens.css radius-md/text-xs-plus.
         enum Citation {
             static let cornerRadius: CGFloat = 12
@@ -213,6 +235,29 @@ extension WorkbenchTheme {
     enum Dialog { static let padding: CGFloat = 24 }
 
 
+}
+
+extension WorkbenchTheme {
+    /// Semantic status colors. One color says one thing:
+    /// - running is told by motion (sun arc, breathing dot) in `statusRunningNS`;
+    /// - `attention` (the only warm status) means the reader is needed: approvals,
+    ///   questions, recoverable errors, offline or unsynced state;
+    /// - `danger` is a hard failure or a deletion; `success` a finished result or
+    ///   an addition; `unread` a new result (the link blue).
+    /// The brand coral (#E36D55) never acts as a status. Light values hold
+    /// ≥ 4.5:1 on white for text (systemOrange is 2.2:1); dark values are lifted
+    /// for the blue-graphite canvas. Views use these instead of `.orange`,
+    /// `.red`, `.green` or `.blue`; `scripts/check-color-tokens.py` pins the rest.
+    enum Status {
+        static let attentionNS = nsColor(light: (0.69, 0.35, 0.0), dark: (0.960, 0.640, 0.300))
+        static let attention = Color(nsColor: attentionNS)
+        static let dangerNS = nsColor(light: (0.76, 0.20, 0.20), dark: (0.960, 0.500, 0.500))
+        static let danger = Color(nsColor: dangerNS)
+        static let successNS = nsColor(light: (0.08, 0.52, 0.30), dark: (0.360, 0.780, 0.530))
+        static let success = Color(nsColor: successNS)
+        static let unreadNS = WorkbenchTheme.link
+        static let unread = Color(nsColor: unreadNS)
+    }
 }
 
 extension WorkbenchTheme {

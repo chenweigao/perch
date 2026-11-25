@@ -309,7 +309,7 @@ struct ChangesInspectorView: View {
                         .padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 12)
                     if truncated {
                         Label("差异过大，已截断", systemImage: "scissors")
-                            .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.orange)
+                            .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.Status.attention)
                             .padding(.horizontal, 20).padding(.bottom, 8)
                     }
                     // File metadata is already in the list and title. Keep the

@@ -1,0 +1,16 @@
+{
+  "comment": "Pinned raw hue literals that are not statuses. Each entry must match exactly one live line (file + stripped line text). Status meaning uses WorkbenchTheme.Status; stale entries and unpinned literals both fail scripts/check-color-tokens.py.",
+  "exceptions": [
+    { "file": "Sources/AgentWorkbench/CodeHighlighting.swift", "line": "if NSLocationInRange(index, match) { result[.backgroundColor] = NSColor.systemYellow.withAlphaComponent(0.25) }", "reason": "Find-match highlight wash in code, not a status" },
+    { "file": "Sources/AgentWorkbench/ReplyMarkdownView.swift", "line": "private static let findHighlightColor = NSColor.systemYellow.withAlphaComponent(0.35)", "reason": "Find-match highlight wash in prose, not a status" },
+    { "file": "Sources/AgentWorkbench/HostIdentityIcon.swift", "line": "return [.systemOrange, .systemPurple, .systemBlue, .systemTeal, .systemPink][index]", "reason": "Host identity palette, picked by hash" },
+    { "file": "Sources/AgentWorkbench/ReplyAlertBlock.swift", "line": "? .systemYellow : NSColor(srgbRed: 0.60, green: 0.40, blue: 0.00, alpha: 1)", "reason": "GitHub-style Markdown alert kind (warning), authored content" },
+    { "file": "Sources/AgentWorkbench/ReplyAlertBlock.swift", "line": "case .note: return .blue", "reason": "GitHub-style Markdown alert kind" },
+    { "file": "Sources/AgentWorkbench/ReplyAlertBlock.swift", "line": "case .tip: return .green", "reason": "GitHub-style Markdown alert kind" },
+    { "file": "Sources/AgentWorkbench/ReplyAlertBlock.swift", "line": "case .warning: return .yellow", "reason": "GitHub-style Markdown alert kind" },
+    { "file": "Sources/AgentWorkbench/ReplyAlertBlock.swift", "line": "case .caution: return .red", "reason": "GitHub-style Markdown alert kind" },
+    { "file": "Sources/AgentWorkbench/WorkbenchSettings.swift", "line": "case .language: .blue", "reason": "Settings pane icon tile, identity color like System Settings" },
+    { "file": "Sources/AgentWorkbench/WorkbenchSettings.swift", "line": "case .permissions: .orange", "reason": "Settings pane icon tile, identity color like System Settings" },
+    { "file": "Sources/AgentWorkbench/WorkbenchSettings.swift", "line": "case .notifications: .red", "reason": "Settings pane icon tile, identity color like System Settings" }
+  ]
+}

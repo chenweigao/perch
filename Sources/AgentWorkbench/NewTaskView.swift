@@ -115,6 +115,22 @@ struct NewTaskView: View {
         }
     }
 
+    /// Where the task runs reads before what it is: machine, project and Agent sit
+    /// as quiet filled tokens above the composer, so the composer row keeps only
+    /// attachments, model, permission and send.
+    private struct ContextToken: ViewModifier {
+        func body(content: Content) -> some View {
+            content.foregroundStyle(.primary)
+                .padding(.horizontal, 10).frame(height: 28)
+                .background(WorkbenchTheme.Fill.surface,
+                            in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row, style: .continuous))
+        }
+    }
+    /// Up to four other recent projects on this machine, one click away.
+    private var recentShortcuts: [String] {
+        Array(recent.filter { $0 != cwd && $0 != "/" }.prefix(4))
+    }
+
     private var agentMenu: some View {
         Menu {
             Picker("选择 Agent", selection: Binding(get: { provider }, set: { selectProvider($0) })) {
@@ -166,11 +182,12 @@ struct NewTaskView: View {
             ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 VStack(spacing: 10) {
-                    Text("想做点什么？").font(.system(size: 28, weight: .medium))
+                    Text("想做点什么？").font(.system(size: WorkbenchTheme.Typography.Display.hero, weight: .medium))
                     if let group = model.selectedGroup {
                         Text(group.name).font(.callout).foregroundStyle(.secondary)
                     }
                 }.frame(maxWidth: .infinity).padding(.bottom, 18)
+                contextBar
                 VStack(alignment: .leading, spacing: 8) {
                     ProjectMessageComposer(text: $prompt, host: native.host, cwd: cwd, placeholder: L("描述你的任务，输入 @ 引用项目文件"),
                                     accessibilityLabel: L("任务描述"),
@@ -192,7 +209,6 @@ struct NewTaskView: View {
                     }
                     HStack(spacing: 12) {
                         ComposerAddButton(supportsFiles: supportsAttachments, disabled: creating) { chooseFiles = true }
-                        agentMenu
                         modelControl
                         // The session composer's control: elevated and dangerous
                         // defaults show their color and name before the task starts.
@@ -212,10 +228,10 @@ struct NewTaskView: View {
                         }
                     }
                     .workbenchComposerSurface().disabled(creating)
-                contextBar
+                footerBar
                 if let directoryWarning {
                     Label(directoryWarning, systemImage: "exclamationmark.triangle")
-                        .font(.subheadline).foregroundStyle(.orange)
+                        .font(.subheadline).foregroundStyle(WorkbenchTheme.Status.attention)
                 }
                 if !supportsAttachments {
                     Text("当前 Agent 不支持附件；可在消息中提供运行环境中的文件路径。")
@@ -223,13 +239,13 @@ struct NewTaskView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if supportsModelCatalog, let modelsError = native.modelsError {
-                    Text(modelsError).font(.subheadline).foregroundStyle(.orange)
+                    Text(modelsError).font(.subheadline).foregroundStyle(WorkbenchTheme.Status.attention)
                 }
                 connectionStatus
                 if availableProviders.contains(provider) && isConnected, let sendHint {
                     Text(sendHint).font(.subheadline).foregroundStyle(.secondary).padding(.horizontal, 6)
                 }
-                if let error { Text(error).font(.subheadline).foregroundStyle(.orange).textSelection(.enabled) }
+                if let error { Text(error).font(.subheadline).foregroundStyle(WorkbenchTheme.Status.attention).textSelection(.enabled) }
             }.padding(.horizontal, 32).frame(maxWidth: 784)
                 .frame(maxWidth: .infinity)
                 .padding(.top, max(48, geometry.size.height * 0.25))
@@ -334,7 +350,7 @@ struct NewTaskView: View {
         model.newTaskProject = nil
     }
     private var contextBar: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 8) {
             Menu {
                 ForEach(model.connections) { connection in
                     Button {
@@ -354,7 +370,7 @@ struct NewTaskView: View {
                 }
             }.menuStyle(.borderlessButton).menuIndicator(.hidden)
                 .fixedSize(horizontal: false, vertical: true).accessibilityLabel("机器")
-            Rectangle().fill(.quaternary).frame(width: 1, height: 14)
+                .modifier(ContextToken())
             Button { showDirectory.toggle() } label: {
                 DraftMenuLabel {
                     Label(cwd.isEmpty ? L("选择项目目录") : (cwd == "/" ? "/" : (cwd as NSString).lastPathComponent),
@@ -362,15 +378,35 @@ struct NewTaskView: View {
                         .lineLimit(1).truncationMode(.middle)
                 }
             }.buttonStyle(.plain).help(cwd).accessibilityLabel("项目目录")
+                .modifier(ContextToken())
                 .popover(isPresented: $showDirectory) {
                     NewTaskDirectoryPicker(host: native.host, cwd: $cwd, recent: recent) { showDirectory = false }
                 }
+            agentMenu.modifier(ContextToken())
+            Spacer(minLength: 0)
+        }.disabled(creating)
+    }
+
+    private var footerBar: some View {
+        HStack(spacing: 6) {
+            if !recentShortcuts.isEmpty {
+                Text("最近项目").foregroundStyle(.secondary).padding(.trailing, 2)
+                ForEach(recentShortcuts, id: \.self) { path in
+                    Button { cwd = path } label: {
+                        Text((path as NSString).lastPathComponent).lineLimit(1).truncationMode(.middle)
+                            .padding(.horizontal, 8).frame(height: 24)
+                            .background(WorkbenchTheme.Fill.surface,
+                                        in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.row, style: .continuous))
+                            .contentShape(Rectangle())
+                    }.buttonStyle(.plain).help(path)
+                }
+            }
             Spacer(minLength: 0)
             if !hasInitialContent && attachments.isEmpty {
                 Button(creating ? L("正在创建…") : L("仅创建空会话")) { create(sendInitialPrompt: false) }
-                    .buttonStyle(.plain).font(.system(size: 12)).disabled(!canCreateEmpty)
+                    .buttonStyle(.plain).foregroundStyle(.secondary).disabled(!canCreateEmpty)
             }
-        }.foregroundStyle(.secondary).padding(.horizontal, 6).disabled(creating)
+        }.font(.system(size: WorkbenchTheme.Typography.caption)).padding(.horizontal, 6).disabled(creating)
     }
 
     @ViewBuilder private var connectionStatus: some View {
@@ -380,7 +416,7 @@ struct NewTaskView: View {
                     if connectionError != nil {
                         Button { showConnectionDetails.toggle() } label: {
                             Label("连接失败", systemImage: showConnectionDetails ? "chevron.down" : "chevron.right")
-                        }.buttonStyle(.plain).foregroundStyle(.orange)
+                        }.buttonStyle(.plain).foregroundStyle(WorkbenchTheme.Status.attention)
                         Spacer(minLength: 0)
                         Button("检查与修复连接") { showSetup = true }
                     } else if !availableProviders.contains(provider) {
@@ -395,7 +431,7 @@ struct NewTaskView: View {
                         Spacer(minLength: 0)
                         Button("连接") { native.connect() }
                     }
-                }.font(.system(size: 12)).foregroundStyle(.secondary).buttonStyle(.plain)
+                }.font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.secondary).buttonStyle(.plain)
                 if showConnectionDetails, let connectionError {
                     Text(connectionError).font(.subheadline).foregroundStyle(.secondary).textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)

@@ -120,16 +120,16 @@ struct CommandLineIslandView: View {
     private var header: some View {
         HStack(spacing: 8) {
             Image(systemName: "terminal").font(.system(size: 11)).foregroundStyle(.secondary)
-            Text("命令行").font(.system(size: 12, weight: .medium))
+            Text("命令行").font(.system(size: WorkbenchTheme.Typography.caption, weight: .medium))
             if let target = state.target {
                 Text("\(target.hostName) · \(target.directory.isEmpty ? "~" : target.directory)")
-                    .font(.system(size: 11)).foregroundStyle(.secondary)
+                    .font(.system(size: WorkbenchTheme.Typography.meta)).foregroundStyle(.secondary)
                     .lineLimit(1).truncationMode(.middle)
             }
             Spacer(minLength: 8)
             if let currentTarget, currentTarget != state.target {
                 Button { onRetarget() } label: {
-                    Text("在当前会话目录重开").font(.system(size: 11))
+                    Text("在当前会话目录重开").font(.system(size: WorkbenchTheme.Typography.meta))
                 }
                 .buttonStyle(.plain).foregroundStyle(WorkbenchTheme.accent)
                 .help("结束这里的 Shell，在当前会话的目录重新打开").accessibilityLabel("在当前会话目录重开")
@@ -164,7 +164,7 @@ private struct CommandLineIslandConnectionView: View {
                     .id(ObjectIdentifier(context))
                 if state.ended {
                     HStack {
-                        Text("命令行已结束；可重新打开一个。").font(.system(size: 12))
+                        Text("命令行已结束；可重新打开一个。").font(.system(size: WorkbenchTheme.Typography.caption))
                         Spacer()
                         Button("重新打开") { onRestart() }
                     }.padding(14).background(Color.primary.opacity(0.035))

@@ -41,9 +41,9 @@ struct SubagentTranscriptList: View {
             } icon: {
                 Image(systemName: "exclamationmark.circle")
             }.font(.system(size: WorkbenchTheme.Reading.labelSize))
-                .foregroundStyle(level == "error" ? Color.orange : Color.secondary)
+                .foregroundStyle(level == "error" ? WorkbenchTheme.Status.attention : Color.secondary)
         case .error(let text):
-            Text(text).font(.system(size: WorkbenchTheme.Reading.labelSize)).foregroundStyle(.orange).textSelection(.enabled)
+            Text(text).font(.system(size: WorkbenchTheme.Reading.labelSize)).foregroundStyle(WorkbenchTheme.Status.attention).textSelection(.enabled)
         }
     }
 
@@ -52,7 +52,7 @@ struct SubagentTranscriptList: View {
             HStack(spacing: 8) {
                 Image(systemName: turnSymbol(state))
                     .font(.system(size: WorkbenchTheme.Reading.captionSize))
-                    .foregroundStyle(state == "failed" ? Color.orange : Color.secondary)
+                    .foregroundStyle(state == "failed" ? WorkbenchTheme.Status.attention : Color.secondary)
                     .accessibilityHidden(true)
                 Text("第 \(ordinal ?? 0) 轮").font(.system(size: WorkbenchTheme.Reading.labelSize, weight: .medium))
                 if let state, state != "completed" {

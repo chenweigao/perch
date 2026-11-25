@@ -158,7 +158,7 @@ struct RemoteFilePanel: View {
                     case .text(let diff, let truncated):
                         if truncated {
                             Label("差异过大，已截断", systemImage: "scissors")
-                                .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(.orange)
+                                .font(.system(size: WorkbenchTheme.Typography.caption)).foregroundStyle(WorkbenchTheme.Status.attention)
                         }
                         RemoteSourceText(text: diff, line: nil, diff: true)
                     case .some(.binary): Text("二进制文件差异，不做预览。").foregroundStyle(.secondary)
@@ -309,7 +309,7 @@ struct RemoteFilePanel: View {
 
     @ViewBuilder private var fileContent: some View {
         if let error = browser.error {
-            notice(error, symbol: "exclamationmark.triangle", tint: .orange)
+            notice(error, symbol: "exclamationmark.triangle", tint: WorkbenchTheme.Status.attention)
         } else if browser.loading {
             VStack(spacing: 10) {
                 ProgressView()
@@ -356,7 +356,7 @@ struct RemoteFilePanel: View {
                 VStack(alignment: .leading, spacing: 0) {
                     if truncated {
                         Label(browser.readingTail ? "正在查看文件尾部" : "仅显示已读取部分", systemImage: "scissors")
-                            .font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(.orange).padding(.horizontal, 12).padding(.vertical, 5)
+                            .font(.system(size: WorkbenchTheme.Typography.secondary)).foregroundStyle(WorkbenchTheme.Status.attention).padding(.horizontal, 12).padding(.vertical, 5)
                     }
                     if browser.previewKind.isBinary {
                         binaryPreview(size: size)
@@ -380,9 +380,9 @@ struct RemoteFilePanel: View {
             case .binary(let size):
                 binaryPreview(size: size)
             case .denied:
-                notice(L("没有读取权限。"), symbol: "lock", tint: .orange)
+                notice(L("没有读取权限。"), symbol: "lock", tint: WorkbenchTheme.Status.attention)
             case .missing:
-                notice(L("路径不存在。"), symbol: "questionmark.folder", tint: .orange)
+                notice(L("路径不存在。"), symbol: "questionmark.folder", tint: WorkbenchTheme.Status.attention)
             case nil:
                 VStack(spacing: 12) {
                     ContentUnavailableView("打开文件阅读", systemImage: "doc.text")

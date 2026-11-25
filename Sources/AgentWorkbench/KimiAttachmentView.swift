@@ -27,7 +27,7 @@ struct KimiAttachmentView: View {
                     .help("点击预览大图")
             }
             HStack {
-                Label(part.name ?? (part.type == "image" ? L("图片附件") : L("文件附件")), systemImage: part.type == "image" ? "photo" : "doc").font(.system(size: 12))
+                Label(part.name ?? (part.type == "image" ? L("图片附件") : L("文件附件")), systemImage: part.type == "image" ? "photo" : "doc").font(.system(size: WorkbenchTheme.Typography.caption))
                 if let fileId, let api {
                     Button("存储附件") {
                         let panel = NSSavePanel(); panel.nameFieldStringValue = part.name ?? fileId
@@ -40,7 +40,7 @@ struct KimiAttachmentView: View {
                     }.controlSize(.small)
                 }
             }.foregroundStyle(.secondary)
-            if let error { Text(error).font(.system(size: 11)).foregroundStyle(.orange) }
+            if let error { Text(error).font(.system(size: WorkbenchTheme.Typography.meta)).foregroundStyle(WorkbenchTheme.Status.attention) }
         }.task(id: ImageRequest(fileId: fileId, scale: displayScale)) {
             guard part.type == "image" else { return }
             do {

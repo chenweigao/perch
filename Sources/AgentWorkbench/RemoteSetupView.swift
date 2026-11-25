@@ -133,8 +133,8 @@ struct AddHostSheet: View {
             Group {
                 switch check.status {
                 case .checking: ProgressView().controlSize(.small)
-                case .passed: Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                case .needsAction: Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.orange)
+                case .passed: Image(systemName: "checkmark.circle.fill").foregroundStyle(WorkbenchTheme.Status.success)
+                case .needsAction: Image(systemName: "exclamationmark.circle.fill").foregroundStyle(WorkbenchTheme.Status.attention)
                 case .information: Image(systemName: "info.circle").foregroundStyle(.secondary)
                 case .waiting: Image(systemName: "circle").foregroundStyle(.tertiary)
                 }
@@ -230,7 +230,7 @@ struct AddHostSheet: View {
                     }
                 }
             }.frame(height: 220)
-            if let error = setup.error { Text(error).font(.subheadline).foregroundStyle(.orange).textSelection(.enabled) }
+            if let error = setup.error { Text(error).font(.subheadline).foregroundStyle(WorkbenchTheme.Status.attention).textSelection(.enabled) }
             Button("使用此目录") {
                 setup.directory = setup.browsingDirectory
                 showFolders = false
@@ -240,7 +240,7 @@ struct AddHostSheet: View {
     }
     @ViewBuilder private var feedback: some View {
         if let error = setup.error ?? saveError {
-            Label(error, systemImage: "exclamationmark.circle").font(.callout).foregroundStyle(.orange).textSelection(.enabled)
+            Label(error, systemImage: "exclamationmark.circle").font(.callout).foregroundStyle(WorkbenchTheme.Status.attention).textSelection(.enabled)
         }
         if !setup.hint.isEmpty { Text(setup.hint).font(.callout).foregroundStyle(.secondary).textSelection(.enabled) }
         if setup.step == .machine && setup.error != nil {

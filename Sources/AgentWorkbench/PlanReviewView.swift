@@ -94,9 +94,9 @@ struct PlanReviewPanel: View {
                     Button("查看完整计划") { showPlan = true }.disabled(plan.content.isEmpty)
                     ReplyCopyButton(text: plan.content, label: "复制计划").disabled(plan.content.isEmpty)
                 }
-                if plan.changed { Text("计划文件已变化，请重新审阅。").font(.callout).foregroundStyle(.orange) }
+                if plan.changed { Text("计划文件已变化，请重新审阅。").font(.callout).foregroundStyle(WorkbenchTheme.Status.attention) }
                 if let notice = state.notice {
-                    Text(notice).font(.callout).foregroundStyle(.orange).textSelection(.enabled)
+                    Text(notice).font(.callout).foregroundStyle(WorkbenchTheme.Status.attention).textSelection(.enabled)
                     if !state.canDecide { Button("关闭提示") { state.dismissNotice() } }
                 }
                 if plan.deferred {

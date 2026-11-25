@@ -457,8 +457,10 @@ private struct ActivityBarCheckFixture: View {
             try bitmap.representation(using: .png, properties: [:])!.write(
                 to: URL(fileURLWithPath: "/private/tmp/perch-tool-state-\(suffix)-\(state).png"))
             let yellow = coloredPixels(bitmap, green: false), green = coloredPixels(bitmap, green: true)
-            precondition(state == "running" ? yellow >= 8 : green >= 8 && yellow == 0,
-                         "The same tool paints yellow while executing and green after completion in \(suffix): \(yellow) yellow, \(green) green")
+            // Running is told by the breathing dot's motion in a neutral color; the one
+            // warm status is reserved for "needs you" (ui-spec 颜色). Completion turns green.
+            precondition(state == "running" ? yellow == 0 && green == 0 : green >= 8 && yellow == 0,
+                         "The same tool stays neutral while executing and paints green after completion in \(suffix): \(yellow) warm, \(green) green")
         }
     }
     print("PASS: activity bar state transitions, pending/reconnect actions, composer turn feedback, factual tool activity and Recap target")

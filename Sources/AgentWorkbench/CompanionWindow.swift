@@ -112,7 +112,7 @@ struct CompanionView: View {
                                     if !item.detail.isEmpty && (item.section == .attention || target == item.reference) {
                                         Text(item.detail).lineLimit(2).foregroundStyle(.secondary)
                                     }
-                                }.font(.system(size: 12)).frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 8).contentShape(Rectangle())
+                                }.font(.system(size: WorkbenchTheme.Typography.caption)).frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 8).contentShape(Rectangle())
                             }.buttonStyle(.plain).help("\(item.hostName) · \(item.directory)")
                             Divider()
                         }

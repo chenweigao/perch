@@ -68,7 +68,7 @@ final class ConversationWorkIndicatorView: NSView {
         guard bounds.width > 0, bounds.height > 0 else { return }
         var markInk = WorkbenchTheme.statusMarkNS
         var runningDot = WorkbenchTheme.statusRunningNS
-        var orange = NSColor.systemOrange
+        var orange = WorkbenchTheme.Status.attentionNS
         effectiveAppearance.performAsCurrentDrawingAppearance {
             markInk = markInk.usingColorSpace(.sRGB) ?? markInk
             runningDot = runningDot.usingColorSpace(.sRGB) ?? runningDot

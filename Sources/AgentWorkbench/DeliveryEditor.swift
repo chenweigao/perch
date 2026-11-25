@@ -60,13 +60,13 @@ struct DeliveryEditor: View {
                     Text("HEAD \(snapshot.head)").font(.subheadline.monospaced()).textSelection(.enabled)
                     Text("读取于 \(Date(timeIntervalSince1970: snapshot.fetchedAt).formatted())").font(.subheadline).foregroundStyle(.secondary)
                     if !record.evidenceMatchesHead {
-                        Label("验证记录尚未对应当前 PR HEAD", systemImage: "exclamationmark.circle").foregroundStyle(.orange)
+                        Label("验证记录尚未对应当前 PR HEAD", systemImage: "exclamationmark.circle").foregroundStyle(WorkbenchTheme.Status.attention)
                     }
                     ForEach(Array(snapshot.checks.enumerated()), id: \.offset) { _, check in
                         LabeledContent(check.name, value: check.state).font(.subheadline)
                     }
                 }
-                if let error = refresh.error { Text(error).foregroundStyle(.orange).textSelection(.enabled) }
+                if let error = refresh.error { Text(error).foregroundStyle(WorkbenchTheme.Status.attention).textSelection(.enabled) }
                 Toggle("我已完成验收", isOn: Binding(get: { record.acceptanceCurrent }, set: {
                     record.accepted = $0; record.acceptedRevision = $0 ? record.revision : nil
                 })).disabled(record.revision.isEmpty || (record.snapshot != nil && !record.evidenceMatchesHead))

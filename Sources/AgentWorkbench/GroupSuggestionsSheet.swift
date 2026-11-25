@@ -21,7 +21,7 @@ struct GroupSuggestionsSheet: View {
             Text("按任务目标建议关联，可同时属于多个组。已有归组保留，信息不足时不强行归类。")
                 .font(.callout).foregroundStyle(.secondary)
             if state.loading { ProgressView("正在生成归组建议…") }
-            if let error = state.error { Text(error).foregroundStyle(.orange).textSelection(.enabled) }
+            if let error = state.error { Text(error).foregroundStyle(WorkbenchTheme.Status.attention).textSelection(.enabled) }
             if state.applied { Label("已应用归组建议", systemImage: "checkmark.circle") }
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
@@ -34,7 +34,7 @@ struct GroupSuggestionsSheet: View {
                                 Text(model.allSessions.first { $0.id == suggestion.sessionID }?.title ?? suggestion.sessionID).fontWeight(.medium)
                                 Text("→ \(model.workspace.groups.first { $0.id == suggestion.groupID }?.name ?? "")")
                                 Text(suggestion.reason).foregroundStyle(.secondary).textSelection(.enabled)
-                            }.font(.system(size: 12))
+                            }.font(.system(size: WorkbenchTheme.Typography.caption))
                         }.toggleStyle(.checkbox).disabled(state.applied)
                     }
                     if !state.generated {
@@ -42,7 +42,7 @@ struct GroupSuggestionsSheet: View {
                         Text("本批最多 40 个未归档会话、24 个进行中的任务组。")
                         Text("点击生成后，将以下标题、目录末三级、已有归属、组名、目标与示例标题发送到你配置的摘要服务；不发送对话正文或工具输出。")
                             .foregroundStyle(.secondary)
-                        if preview.groups.isEmpty { Text("请先新建一个任务组并填写目标。").foregroundStyle(.orange) }
+                        if preview.groups.isEmpty { Text("请先新建一个任务组并填写目标。").foregroundStyle(WorkbenchTheme.Status.attention) }
                         DisclosureGroup("查看本批内容 · \(preview.sessions.count) 个会话 · \(preview.groups.count) 个任务组") {
                             ForEach(preview.groups, id: \.id) { group in
                                 VStack(alignment: .leading, spacing: 4) {

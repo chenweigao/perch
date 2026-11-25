@@ -120,10 +120,10 @@ struct WorkbenchSettings: View {
     @ViewBuilder private var notificationsPane: some View {
         Section {
             Toggle("关闭主窗口后继续在菜单栏运行", isOn: $background)
-            if let error = model.companionShortcutError { Text(error).font(.subheadline).foregroundStyle(.orange) }
+            if let error = model.companionShortcutError { Text(error).font(.subheadline).foregroundStyle(WorkbenchTheme.Status.attention) }
             Toggle("Notify when Perch is in the background", isOn: $model.notificationsEnabled)
             Toggle("在 Dock 图标上显示待处理", isOn: $model.showsDockBadge)
-            if let error = model.notificationError { Text(error).font(.subheadline).foregroundStyle(.orange) }
+            if let error = model.notificationError { Text(error).font(.subheadline).foregroundStyle(WorkbenchTheme.Status.attention) }
         } footer: {
             Text("Dock 图标上的数字是等你处理的会话数；只有圆点时表示有新结果待查看。")
         }
@@ -172,7 +172,7 @@ struct WorkbenchSettings: View {
             } trailing: {
                 (summarySettings.configuration.enabled ? Text("已开启") : Text("默认关闭"))
                     .font(.subheadline)
-                    .foregroundStyle(summarySettings.configuration.enabled ? Color.green : Color.secondary)
+                    .foregroundStyle(summarySettings.configuration.enabled ? WorkbenchTheme.Status.success : Color.secondary)
             }
             if summarySettings.configuration.enabled {
                 Button("关闭活动叙事") { summarySettings.disable() }
@@ -263,7 +263,7 @@ struct WorkbenchSettings: View {
             case .upToDate:
                 Label("已是最新版本", systemImage: "checkmark.circle").foregroundStyle(.secondary)
             case .available(let latest):
-                Label("有新版本 \(latest)", systemImage: "arrow.down.circle").foregroundStyle(.orange)
+                Label("有新版本 \(latest)", systemImage: "arrow.down.circle").foregroundStyle(WorkbenchTheme.Status.attention)
                 Link("查看发布", destination: URL(string: "https://github.com/chenweigao/perch/releases")!)
             case .failed(let reason):
                 Text(reason).foregroundStyle(.secondary)
@@ -357,7 +357,7 @@ private struct HostConnectionControls: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text(verbatim: title).fontWeight(.medium)
-                Circle().fill(online ? Color.green : requested ? Color.orange : Color.secondary.opacity(0.35))
+                Circle().fill(online ? WorkbenchTheme.Status.success : requested ? WorkbenchTheme.Status.attention : Color.secondary.opacity(0.35))
                     .frame(width: 6, height: 6)
                 if online { Text("已连接").foregroundStyle(.secondary) }
                 else if requested { Text("连接中").foregroundStyle(.secondary) }
