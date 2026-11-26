@@ -39,6 +39,7 @@ struct WorkbenchSidebar: View {
         WorkspaceSidebarShell(page: page, attentionCount: projection.attentionCount,
                               environmentSummary: L("\(model.connections.count) 个环境"),
                               environmentNeedsAttention: environmentNeedsAttention,
+                              environmentHost: environmentHost,
                               onSearch: { model.showSessionSearch = true },
                               onNew: { model.startNewTask() },
                               onHome: { model.clearScope(); model.showHome() }, onInbox: { model.clearScope(); model.showInbox() },
@@ -106,6 +107,12 @@ struct WorkbenchSidebar: View {
         if model.connections.contains(where: { !$0.online && $0.error != nil }) { return true }
         guard let host = model.selectedHost else { return false }
         return host.hasNativeAgents && !model.native.online && model.native.error != nil
+    }
+    /// The footer card's machine: the selected session's, else the first configured.
+    private var environmentHost: SidebarEnvironmentHost? {
+        guard let first = model.connections.first else { return nil }
+        let host = model.selectedHost ?? first.host
+        return SidebarEnvironmentHost(name: host.name, isLocal: host.isLocal, count: model.connections.count)
     }
     private var usesTable: Bool {
         #if PERCH_ACCEPTANCE

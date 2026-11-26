@@ -10,12 +10,19 @@ to light.
   `.regular` glass over a non-opaque window, shaped like the window corner), shared
   by navigation and the toolbar. The glass floats on `WorkbenchTheme.glassUnderlay`,
   whose strength is the reader's setting (Settings › 界面 › 窗口玻璃, four levels,
-  default 标准): a white underlay in light, the canvas's blue-graphite in dark, so
-  chrome stays calm instead of echoing the wallpaper (user direction of 2026-10-30).
+  default 标准) and whose tone follows Settings › 界面 › 界面质感
+  (`WorkbenchSurfaceStyle`, default 厚重 since 2026-11-26, kept as a switch while
+  both are compared on real windows). 厚重 (grounded) sets the frame a tone below
+  the sheet (warm stone in light, deep graphite in dark), so tone rather than
+  hairlines and soft shadows separates regions; 轻盈 (airy) keeps the white /
+  blue-graphite underlay. Either way chrome stays calm instead of echoing the
+  wallpaper (user direction of 2026-10-30).
   Fills, strokes and elevation are independent light/dark tokens
   (`WorkbenchTheme.Fill` / `Stroke` / `Elevation`), never one alpha shared by both
   appearances. The sidebar has no separate glass card, outline, or shadow in the
   wide layout; its selection is a flat neutral wash (Qoder alignment, 2026-11-11).
+  In the grounded style its two ends are anchor cards (`SidebarAnchorCard`):
+  新建会话 at the top, the machine card at the foot.
 - The opaque workspace sheet floats below the toolbar. The full-height inspector
   is an internal auxiliary lane separated by whitespace, without its own rounded
   card, vertical divider or shadow; opening it resizes the reader and composer together. Keep the

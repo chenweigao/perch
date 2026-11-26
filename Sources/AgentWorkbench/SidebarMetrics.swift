@@ -74,6 +74,9 @@ enum SidebarMetrics {
 
     /// Hover fades: row highlights and the actions they reveal.
     static let highlightDuration: Double = 0.1
+    /// Room between a grounded anchor card (新建会话, the machine card) and the
+    /// neighbouring row, so that row's wash never touches the card's edge.
+    static let anchorSpacing: CGFloat = 6
 
     /// Strength of the row wash: the selection is a full wash, hover a fainter
     /// one. A press additionally shades the row.
@@ -97,6 +100,30 @@ struct SidebarHighlight: View {
         let animation: Animation? = reduceMotion ? nil : .easeOut(duration: SidebarMetrics.highlightDuration)
         shape.fill(WorkbenchTheme.Fill.selected.opacity(wash))
             .overlay(shape.fill(pressed ? WorkbenchTheme.Fill.hover : .clear))
+            .animation(animation, value: wash)
+            .animation(animation, value: pressed)
+    }
+}
+
+/// The sidebar's two anchors in the grounded surface style: 新建会话 at the top
+/// and the machine card at the foot. A card of the sheet's own surface on the
+/// frame, edged like the sheet, so the column has weight at both ends (agy's
+/// New Conversation and SSH cards). Hover, press and an open menu wash it like
+/// a row.
+struct SidebarAnchorCard: View {
+    var selected = false
+    var hovered = false
+    var pressed = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius, style: .continuous)
+        let wash = SidebarMetrics.cardOpacity(selected: selected, hovered: hovered, pressed: pressed)
+        let animation: Animation? = reduceMotion ? nil : .easeOut(duration: SidebarMetrics.highlightDuration)
+        shape.fill(WorkbenchTheme.contentBackground)
+            .overlay(shape.fill(WorkbenchTheme.Fill.selected.opacity(wash)))
+            .overlay(shape.fill(pressed ? WorkbenchTheme.Fill.hover : .clear))
+            .overlay(shape.strokeBorder(WorkbenchTheme.Stroke.panelEdge(.grounded), lineWidth: 1))
             .animation(animation, value: wash)
             .animation(animation, value: pressed)
     }

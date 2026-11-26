@@ -46,15 +46,28 @@ enum WorkbenchTheme {
     static let overviewCard = color(
         light: (1.0, 1.0, 1.0), dark: (0.180, 0.196, 0.235))
     /// The base beneath the window glass, at the reader's chosen intensity
-    /// (Settings › 界面 › 窗口玻璃). Day and night share one setting: a white
-    /// underlay in light, the canvas's blue-graphite in dark. `standard` keeps
-    /// just over half the desktop's contribution; `clear` is closer to pure
-    /// desktop glass, `muted` almost matte.
-    static func glassUnderlay(_ intensity: WorkbenchGlassIntensity) -> Color {
-        Color(nsColor: nsColor(
-            light: NSColor(white: 1, alpha: intensity.lightAlpha),
-            dark: NSColor(srgbRed: 0.122, green: 0.133, blue: 0.161, alpha: intensity.darkAlpha)))
+    /// (Settings › 界面 › 窗口玻璃). Day and night share one setting.
+    /// `airy`: a white underlay in light, the canvas's blue-graphite in dark, so
+    /// the frame converges on the sheet; `standard` keeps just over half the
+    /// desktop's contribution. `grounded`: the `groundedFrame` tone at higher strength,
+    /// so the frame sits a step below the sheet whatever the wallpaper.
+    static func glassUnderlay(_ intensity: WorkbenchGlassIntensity, style: WorkbenchSurfaceStyle) -> Color {
+        switch style {
+        case .airy:
+            return Color(nsColor: nsColor(
+                light: NSColor(white: 1, alpha: intensity.lightAlpha),
+                dark: NSColor(srgbRed: 0.122, green: 0.133, blue: 0.161, alpha: intensity.darkAlpha)))
+        case .grounded:
+            return Color(nsColor: nsColor(
+                light: NSColor(srgbRed: 0.910, green: 0.902, blue: 0.886, alpha: intensity.groundedLightAlpha),
+                dark: NSColor(srgbRed: 0.071, green: 0.078, blue: 0.098, alpha: intensity.groundedDarkAlpha)))
+        }
     }
+    /// The grounded window frame, opaque: a warm stone in light (Qoder's frame
+    /// measures #E7E5E4, about 9 L* below its white sheet) and a graphite one
+    /// step below the canvas in dark, in the canvas's 226° hue. Reduce
+    /// Transparency shows it in place of the glass.
+    static let groundedFrame = color(light: (0.910, 0.902, 0.886), dark: (0.071, 0.078, 0.098))
 
     /// Glyph color atop the accent-colored primary action circle; dark echoes the
     /// canvas hue so the circle reads as a single molded piece.
@@ -285,10 +298,33 @@ extension WorkbenchTheme {
         static let hairline = wash(light: 0.12, dark: 0.18)
         /// AppKit layers (CALayer borders) resolve the same token as an NSColor.
         static let hairlineNS = washNS(light: 0.12, dark: 0.18)
+        /// The edge of the frame's own surfaces: the reading sheet, the command
+        /// line island, the composer and the sidebar's anchor cards. Grounded
+        /// surfaces are told apart by tone, so the dark edge drops to half
+        /// strength instead of drawing a bright outline (L* 31 on a 13 sheet);
+        /// light keeps the Qoder-weight hairline.
+        static func panelEdge(_ style: WorkbenchSurfaceStyle) -> Color {
+            style == .grounded ? groundedPanelEdge : hairline
+        }
+        static func panelEdgeNS(_ style: WorkbenchSurfaceStyle) -> NSColor {
+            style == .grounded ? groundedPanelEdgeNS : hairlineNS
+        }
+        private static let groundedPanelEdgeNS = washNS(light: 0.12, dark: 0.09)
+        private static let groundedPanelEdge = Color(nsColor: groundedPanelEdgeNS)
     }
     enum Elevation {
         /// The reading sheet's contact shadow in the window's glass band.
         static func sheetShadowAlpha(dark: Bool) -> CGFloat { dark ? 0.36 : 0.13 }
+        /// The reading sheet's shadow per surface style. Airy floats the sheet on
+        /// a soft 16 pt blur; grounded rests it on the frame with a short contact
+        /// shadow, the way a heavy slab sits on a desk.
+        struct SheetShadow { let alpha: CGFloat; let blur: CGFloat; let drop: CGFloat }
+        static func sheetShadow(dark: Bool, style: WorkbenchSurfaceStyle) -> SheetShadow {
+            switch style {
+            case .airy: return SheetShadow(alpha: sheetShadowAlpha(dark: dark), blur: 16, drop: 4)
+            case .grounded: return SheetShadow(alpha: dark ? 0.32 : 0.09, blur: 4, drop: 1)
+            }
+        }
         /// Under the composer glass, so the input reads as the page's solid block.
         static let composerShadow = Color(nsColor: NSColor(name: nil) { appearance in
             NSColor.black.withAlphaComponent(
@@ -353,12 +389,56 @@ enum WorkbenchGlassIntensity: String, CaseIterable, Identifiable {
         case .muted: return 0.95
         }
     }
+    /// Grounded strengths: the frame tone has to hold the frame a step below
+    /// the sheet, so less of the desktop shows through at every level.
+    var groundedLightAlpha: Double {
+        switch self {
+        case .clear: return 0.35
+        case .light: return 0.55
+        case .standard: return 0.75
+        case .muted: return 0.90
+        }
+    }
+    var groundedDarkAlpha: Double {
+        switch self {
+        case .clear: return 0.75
+        case .light: return 0.85
+        case .standard: return 0.92
+        case .muted: return 0.97
+        }
+    }
     var title: LocalizedStringKey {
         switch self {
         case .clear: return "通透"
         case .light: return "轻透"
         case .standard: return "标准"
         case .muted: return "克制"
+        }
+    }
+}
+
+/// Surface treatment from Settings › 界面 › 界面质感 (2026-11-26, kept as a
+/// switch while the two are compared on real windows). `grounded` sets the
+/// window frame a tone below the sheet and lets tone, not hairlines and soft
+/// shadows, separate regions: contact shadows, a quiet dark edge, a raised dark
+/// composer, a solid stop action and anchor cards at the sidebar's ends.
+/// `airy` is the earlier glass-white frame with floating shadows.
+enum WorkbenchSurfaceStyle: String, CaseIterable, Identifiable {
+    case grounded
+    case airy
+
+    static let defaultsKey = "perch.surfaceStyle"
+    var id: String { rawValue }
+
+    /// AppKit layers read the preference while drawing; SwiftUI views use @AppStorage.
+    static var current: WorkbenchSurfaceStyle {
+        UserDefaults.standard.string(forKey: defaultsKey).flatMap(WorkbenchSurfaceStyle.init(rawValue:)) ?? .grounded
+    }
+
+    var title: LocalizedStringKey {
+        switch self {
+        case .grounded: return "厚重"
+        case .airy: return "轻盈"
         }
     }
 }

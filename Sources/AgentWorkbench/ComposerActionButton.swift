@@ -16,11 +16,16 @@ struct ComposerActionButton: View {
     let onSend: () -> Void
     let onStop: () -> Void
     var onQueue: (() -> Void)? = nil
+    @AppStorage(WorkbenchSurfaceStyle.defaultsKey) private var surfaceStyle: WorkbenchSurfaceStyle = .grounded
 
     private var showsStop: Bool { isRunning && !hasDraft }
     private var stopping: Bool { isRunning && isStopping }
     private var active: Bool { showsStop && canStop && showsActivity && !stopping }
     private var enabled: Bool { !stopping && (showsStop ? canStop : canSend) }
+    /// Grounded: an available stop is the same solid disc as an available send,
+    /// so the page's primary action keeps its weight for the whole run (Qoder's
+    /// stop is a solid block). Airy keeps the quiet tinted disc.
+    private var solidStop: Bool { showsStop && enabled && surfaceStyle == .grounded }
     private var title: String { stopping ? L("Stopping…") : showsStop ? L("Stop task") : L("Send") }
     /// The hint does what Return does; its tooltip names that key and ⌘Return.
     private var queuedSendHelp: String {
@@ -49,11 +54,13 @@ struct ComposerActionButton: View {
                 if showsStop { onStop() } else { onSend() }
             } label: {
                 ZStack {
-                    Circle().fill(showsStop ? WorkbenchTheme.ink.opacity(0.16)
+                    Circle().fill(solidStop ? WorkbenchTheme.accent
+                                  : showsStop ? WorkbenchTheme.ink.opacity(0.16)
                                   : enabled ? WorkbenchTheme.accent : WorkbenchTheme.ink.opacity(0.10))
                     Image(systemName: showsStop ? "stop.fill" : "arrow.up")
-                        .font(.system(size: showsStop ? 14 : 15, weight: .semibold))
-                        .foregroundStyle(showsStop ? WorkbenchTheme.ink
+                        .font(.system(size: solidStop ? 12 : showsStop ? 14 : 15, weight: .semibold))
+                        .foregroundStyle(solidStop ? WorkbenchTheme.actionGlyph
+                                         : showsStop ? WorkbenchTheme.ink
                                          : enabled ? WorkbenchTheme.actionGlyph : WorkbenchTheme.quiet)
                         .opacity(showsStop && !enabled ? 0.5 : 1)
                 }.frame(width: 28, height: 28)

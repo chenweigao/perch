@@ -3,12 +3,22 @@ import WorkbenchCore
 
 enum SidebarPage { case home, inbox, archive, sessions, other }
 
+/// The machine the sidebar's footer card names (grounded style): the selected
+/// session's, else the first configured, with how many machines there are.
+struct SidebarEnvironmentHost: Equatable {
+    var name: String
+    var isLocal: Bool
+    var count: Int
+}
+
 /// Only the middle scrolls. The workspace overlay owns the floating glass.
 struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
     let page: SidebarPage
     let attentionCount: Int
     let environmentSummary: String
     var environmentNeedsAttention = false
+    /// Named on the footer card; nil until a machine is configured.
+    var environmentHost: SidebarEnvironmentHost? = nil
     let onSearch: () -> Void
     let onNew: () -> Void
     let onHome: () -> Void
@@ -24,6 +34,9 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
     @State private var showSettings = false
     @State private var showEnvironments = false
     @Environment(\.openSettings) private var openSettings
+    @AppStorage(WorkbenchSurfaceStyle.defaultsKey) private var surfaceStyle: WorkbenchSurfaceStyle = .grounded
+    /// Grounded: 新建会话 and the machine card are anchor cards at the column's ends.
+    private var grounded: Bool { surfaceStyle == .grounded }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -31,9 +44,10 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
             // sessions. Content-hosted controls stay below the native toolbar,
             // where both mouse clicks and accessibility can reach them.
             VStack(alignment: .leading, spacing: SidebarMetrics.rowSpacing) {
-                navigation("新建会话", symbol: "square.and.pencil", action: onNew)
+                navigation("新建会话", symbol: "square.and.pencil", anchor: grounded, action: onNew)
                     .help("新建会话 · ⌘N")
                     .accessibilityLabel("新建会话").accessibilityIdentifier("sidebar.new")
+                    .padding(.bottom, grounded ? SidebarMetrics.anchorSpacing : 0)
                 navigation("工作台", symbol: "square.grid.2x2", selected: page == .home, action: onHome)
                     .help("工作台").accessibilityIdentifier("sidebar.home")
                 navigation("待处理", symbol: "tray", selected: page == .inbox, count: attentionCount, action: onInbox)
@@ -80,6 +94,7 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
                         .help("全部会话").accessibilityIdentifier("sidebar.allSessions")
                 }
                 settingsRow
+                    .padding(.top, grounded ? SidebarMetrics.anchorSpacing : 0)
             }.padding(.horizontal, SidebarMetrics.listInset).padding(.top, 4).padding(.bottom, 8)
         }.font(.system(size: WorkbenchTheme.Typography.body)).frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -89,21 +104,11 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
             showEnvironments = false
             showSettings.toggle()
         } label: {
-            HStack(spacing: SidebarMetrics.labelSpacing) {
-                Image(systemName: "gearshape").font(.system(size: SidebarMetrics.iconSize, weight: .regular)).imageScale(.medium)
-                    .frame(width: SidebarMetrics.iconWidth)
-                Text("设置与环境").lineLimit(1)
-                Spacer(minLength: 4)
-                if environmentNeedsAttention {
-                    Circle().fill(WorkbenchTheme.Status.attention).frame(width: 6, height: 6)
-                }
-            }.font(.system(size: SidebarMetrics.navigationSize)).foregroundStyle(WorkbenchTheme.ink)
-                .padding(.horizontal, SidebarMetrics.rowInset).frame(height: SidebarMetrics.navigationHeight)
-                .contentShape(Rectangle())
-        }.buttonStyle(SidebarNavigationStyle(selected: showSettings))
+            if grounded { machineLabel } else { settingsLabel }
+        }.buttonStyle(SidebarNavigationStyle(selected: showSettings, anchor: grounded))
             .help("设置与环境 · ⌘,").accessibilityLabel("设置与环境")
             .accessibilityIdentifier("sidebar.settings")
-            .accessibilityValue(environmentNeedsAttention ? Text("环境需要处理") : Text(""))
+            .accessibilityValue(environmentNeedsAttention ? Text("环境需要处理") : Text(verbatim: environmentHost?.name ?? ""))
             .popover(isPresented: $showSettings, arrowEdge: .trailing) {
                 if showEnvironments {
                     // The environments page replaces the menu in place, so it
@@ -136,10 +141,55 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
             }
     }
 
+    /// Airy footer: a plain row like the page entries above it.
+    private var settingsLabel: some View {
+        HStack(spacing: SidebarMetrics.labelSpacing) {
+            Image(systemName: "gearshape").font(.system(size: SidebarMetrics.iconSize, weight: .regular)).imageScale(.medium)
+                .frame(width: SidebarMetrics.iconWidth)
+            Text("设置与环境").lineLimit(1)
+            Spacer(minLength: 4)
+            if environmentNeedsAttention {
+                Circle().fill(WorkbenchTheme.Status.attention).frame(width: 6, height: 6)
+            }
+        }.font(.system(size: SidebarMetrics.navigationSize)).foregroundStyle(WorkbenchTheme.ink)
+            .padding(.horizontal, SidebarMetrics.rowInset).frame(height: SidebarMetrics.navigationHeight)
+            .contentShape(Rectangle())
+    }
+
+    /// Grounded footer: the card names the machine the current session runs on
+    /// (agy's SSH card), counts the others, and its gear says it opens settings.
+    /// It opens the same menu as the airy row; attention keeps its orange dot.
+    private var machineLabel: some View {
+        HStack(spacing: SidebarMetrics.labelSpacing) {
+            Image(systemName: environmentHost?.isLocal == true ? "desktopcomputer" : "server.rack")
+                .font(.system(size: SidebarMetrics.iconSize, weight: .regular)).imageScale(.medium)
+                .frame(width: SidebarMetrics.iconWidth)
+            if let host = environmentHost {
+                Text(verbatim: host.name).lineLimit(1).truncationMode(.middle)
+                if host.count > 1 {
+                    Text(verbatim: "+\(host.count - 1)").font(.system(size: SidebarMetrics.detailSize)).monospacedDigit()
+                        .foregroundStyle(WorkbenchTheme.quiet).fixedSize()
+                }
+            } else {
+                Text("设置与环境").lineLimit(1)
+            }
+            Spacer(minLength: 4)
+            if environmentNeedsAttention {
+                Circle().fill(WorkbenchTheme.Status.attention).frame(width: 6, height: 6)
+            }
+            Image(systemName: "gearshape")
+                .font(.system(size: SidebarMetrics.actionGlyphSize, weight: .medium)).foregroundStyle(.secondary)
+        }.font(.system(size: SidebarMetrics.navigationSize)).foregroundStyle(WorkbenchTheme.ink)
+            .padding(.horizontal, SidebarMetrics.rowInset).frame(height: SidebarMetrics.navigationHeight)
+            .contentShape(Rectangle())
+    }
+
     /// One page entry: icon and title in ink, the orange attention count trailing.
-    /// The selected page carries the row wash, like a selected session.
+    /// The selected page carries the row wash, like a selected session. An
+    /// anchor entry is drawn as a card (grounded 新建会话).
     private func navigation(_ title: LocalizedStringKey, symbol: String, selected: Bool = false,
-                            count: Int = 0, shortcut: String? = nil, action: @escaping () -> Void) -> some View {
+                            count: Int = 0, shortcut: String? = nil, anchor: Bool = false,
+                            action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: SidebarMetrics.labelSpacing) {
                 Image(systemName: symbol).font(.system(size: SidebarMetrics.iconSize, weight: .regular)).imageScale(.medium)
@@ -154,7 +204,7 @@ struct WorkspaceSidebarShell<Rows: View, Environments: View>: View {
             }.font(.system(size: SidebarMetrics.navigationSize))
                 .foregroundStyle(WorkbenchTheme.ink)
                 .padding(.horizontal, SidebarMetrics.rowInset).frame(height: SidebarMetrics.navigationHeight).contentShape(Rectangle())
-        }.buttonStyle(SidebarNavigationStyle(selected: selected)).accessibilityAddTraits(selected ? .isSelected : [])
+        }.buttonStyle(SidebarNavigationStyle(selected: selected, anchor: anchor)).accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     /// ⌘K, ⌘, and the like: verbatim, one size and tone in every row.
@@ -296,18 +346,27 @@ struct SidebarSection<Content: View, Actions: View>: View {
 /// Animate the navigation background alone; labels and page changes stay immediate.
 struct SidebarNavigationStyle: ButtonStyle {
     var selected = false
+    /// Drawn as an anchor card instead of a row wash (grounded 新建会话 and machine card).
+    var anchor = false
     func makeBody(configuration: Configuration) -> some View {
-        SidebarNavigationBody(configuration: configuration, selected: selected)
+        SidebarNavigationBody(configuration: configuration, selected: selected, anchor: anchor)
     }
 }
 
 private struct SidebarNavigationBody: View {
     let configuration: ButtonStyleConfiguration
     let selected: Bool
+    let anchor: Bool
     @State private var hovered = false
     var body: some View {
         configuration.label.contentShape(Rectangle())
-            .background { SidebarHighlight(selected: selected, hovered: hovered, pressed: configuration.isPressed) }
+            .background {
+                if anchor {
+                    SidebarAnchorCard(selected: selected, hovered: hovered, pressed: configuration.isPressed)
+                } else {
+                    SidebarHighlight(selected: selected, hovered: hovered, pressed: configuration.isPressed)
+                }
+            }
             .onHover { hovered = $0 }
     }
 }

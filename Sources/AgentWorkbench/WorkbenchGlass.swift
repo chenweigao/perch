@@ -17,14 +17,18 @@ extension View {
 
 private struct WorkbenchGlassSurface: ViewModifier {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @AppStorage(WorkbenchSurfaceStyle.defaultsKey) private var surfaceStyle: WorkbenchSurfaceStyle = .grounded
     let cornerRadius: CGFloat
-    /// The composer keeps its glass but gains an edge and a soft shadow: on the
-    /// white sheet bare glass has no boundary, and the input should read as the
-    /// page's one solid block (Qoder).
+    /// The composer keeps its glass but gains an edge: on the white sheet bare
+    /// glass has no boundary, and the input should read as the page's one solid
+    /// block (Qoder). Airy floats it on a soft shadow; grounded sets it into the
+    /// page with only the edge, and at night raises its fill a step above the
+    /// sheet (`Composer.raised`) so tone, not an outline, marks it.
     var outlined = false
 
     @ViewBuilder func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        let grounded = surfaceStyle == .grounded
         Group {
             if reduceTransparency {
                 content.background(Color(nsColor: .controlBackgroundColor), in: shape)
@@ -32,11 +36,15 @@ private struct WorkbenchGlassSurface: ViewModifier {
                 content.glassEffect(.regular, in: shape)
             }
         }
-        .overlay { if outlined { shape.strokeBorder(WorkbenchTheme.Stroke.hairline, lineWidth: 1).allowsHitTesting(false) } }
+        .overlay {
+            if outlined {
+                shape.strokeBorder(WorkbenchTheme.Stroke.panelEdge(surfaceStyle), lineWidth: 1).allowsHitTesting(false)
+            }
+        }
         .background {
             if outlined {
-                shape.fill(WorkbenchTheme.contentBackground)
-                    .shadow(color: WorkbenchTheme.Elevation.composerShadow, radius: 10, y: 3)
+                shape.fill(grounded ? WorkbenchTheme.Composer.raised : WorkbenchTheme.contentBackground)
+                    .shadow(color: grounded ? .clear : WorkbenchTheme.Elevation.composerShadow, radius: 10, y: 3)
                     .allowsHitTesting(false)
             }
         }
