@@ -433,16 +433,11 @@ private struct KimiTimeline<Bar: View>: View {
             }) {
                 if let c = connection.conversation {
                     if c.hasOlder {
-                        HStack(spacing: 6) {
-                            if connection.loadingOlder {
-                                ProgressView().controlSize(.small)
-                                Text("正在加载更早消息…")
-                            } else {
-                                // Approaching the top already loads; this stays for keyboard and VoiceOver.
-                                Button("加载更早消息") { follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadOlder() }
-                                    .buttonStyle(.borderless).disabled(!connection.online || !connection.snapshotReady)
-                            }
-                        }.font(.system(size: ReplyStyle.captionSize)).foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.vertical, 2)
+                        // Approaching the top already loads; this stays for keyboard and VoiceOver.
+                        ConversationOlderHistoryControl(loading: connection.loadingOlder,
+                                                        enabled: connection.online && connection.snapshotReady) {
+                            follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadOlder()
+                        }
                     }
                     let sessionID = c.snapshot.session.id
                     let isTurnRunning = c.snapshot.session.isTurnRunning

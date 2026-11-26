@@ -76,12 +76,9 @@ struct NativeSubagentSheet: View {
         }
         if let transcript {
             if transcript.hasOlder {
-                Button {
+                ConversationOlderHistoryControl(loading: state.loadingOlder, enabled: connection.online) {
                     connection.loadOlderSubagent()
-                } label: {
-                    if state.loadingOlder { Text("正在加载更早消息…") } else { Text("加载更早消息") }
-                }.disabled(state.loadingOlder || !connection.online)
-                    .frame(maxWidth: .infinity).padding(.bottom, 12)
+                }.padding(.bottom, 12)
             }
             if rows.isEmpty && !state.loading {
                 Text("这个子 Agent 还没有可见的过程。").foregroundStyle(.secondary)

@@ -118,7 +118,9 @@
   色调随界面质感：「厚重」为浅色石灰 #E8E6E2、深色同 226° 色相的深石墨 #121419（`WorkbenchTheme.groundedFrame`），
   通透 / 轻透 / 标准 / 克制的浅色 alpha 0.35 / 0.55 / 0.75 / 0.90、深色 0.75 / 0.85 / 0.92 / 0.97，让外框在任何壁纸上都稳定低于正文页一档；
   「轻盈」为浅色白、深色画布蓝灰，浅色 alpha 0 / 0.30 / 0.45 / 0.70，深色 0.55 / 0.70 / 0.85 / 0.95。默认标准。
-  开启“减少透明度”时换成不透明底色：厚重用 `groundedFrame`，轻盈用 window-background 色。
+  开启“减少透明度”时换成不透明底色：厚重用 `groundedFrame`，轻盈用 window-background 色；厚重的输入框同时改用 `Composer.raised`，
+  不再落到系统的中性 control-background（深色 #1E1E1E）。CI 的 `native-design` 合成截图就是在这条路径下渲染的（侧栏浮层整块恰为
+  `groundedFrame`、透不出下方正文），真实液态玻璃与壁纸的混合只能在本机看。
   侧栏和工具栏共用底板；侧栏不再单独加玻璃外框、描边或阴影。
   视图缓存截图（`cacheDisplay`）不含玻璃；`native-design` 阶段另存 `*-composited-*.png` 系统截图用于检查实际效果。
 - **内容浮在底板上，圆角与窗口同心**：主内容卡片和窄窗侧栏覆盖层离窗口边缘 6pt（`WorkspaceLayoutMetrics.frameInset`，
@@ -231,6 +233,16 @@
 - 当会话处于等待确认或回答（`waitingRequest` / `pendingCount > 0`）且读者滚离底部时，胶囊切换为橙色描边与橙色文字（「需要你确认：<事项>」或「需要你回答：<问题>」），点击直达底部待处理卡片。
 - 有底部栏时，返回最新与收藏菜单贴在栏的上沿 8pt 处，而不是压在输入框上；`reading-canvas` 阶段用 120pt 的替身栏
   检查正文仍为满高、点击可达，且返回后最后一行落在栏上方。
+
+## 加载更早
+
+`ConversationOlderHistoryControl`（`Sources/AgentWorkbench/ConversationActivityBar.swift`）。
+
+- 分页会话（原生、Kimi）与子 Agent 表单的顶部共用一枚控件：横贯阅读栏的发丝线中间一枚 26pt 安静胶囊——`Fill.surface` 底、
+  `Stroke.hairline` 边，`quiet` 色向上箭头加「加载更早消息」（子 Agent 轮次为「加载更早轮次」），字号取随阅读缩放的辅助字号，悬停加深一级。
+  取代原来居中的一行无边框小字加系统转圈（会话）和系统推按钮（子 Agent 表单），2026-11-26。
+- 滚动接近顶部本来就会加载，胶囊留给键盘和读屏，并标出已载入历史的起点；加载时换成 Perch 日弧加「正在加载…」，
+  断线时留在原位、降到 50% 不可点。
 
 ## 提醒
 

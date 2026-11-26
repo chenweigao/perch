@@ -120,17 +120,10 @@ struct NativeAgentView: View {
                        proxy.scrollTo("bottom", anchor: .bottom)
                    }) {
                     if s.hasOlder {
-                        HStack(spacing: 6) {
-                            if connection.loadingOlder {
-                                ProgressView().controlSize(.small)
-                                Text("正在加载更早消息…")
-                            } else {
-                                // Approaching the top already loads; this stays for keyboard and VoiceOver.
-                                Button("加载更早消息") {
-                                    follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadOlder()
-                                }.buttonStyle(.borderless).disabled(!connection.online)
-                            }
-                        }.font(.system(size: ReplyStyle.captionSize)).foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.vertical, 2)
+                        // Approaching the top already loads; this stays for keyboard and VoiceOver.
+                        ConversationOlderHistoryControl(loading: connection.loadingOlder, enabled: connection.online) {
+                            follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadOlder()
+                        }
                     }
                     let recapKey: String? = (isCurrent(s) && !s.busy ? s.taskRecapRevision : nil).map { "\(readingKey):\($0)" }
                     let recapMessageID = ConversationActionContext.recapTargetID(in: s.messages, recapKey: recapKey)
