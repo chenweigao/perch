@@ -24,7 +24,10 @@ swiftc -Onone -swift-version 5 -parse-as-library -target "$(uname -m)-apple-maco
     "$bin_dir"/GhosttyTerminal.build/*.o "$bin_dir"/GhosttyKit.build/*.o "$bin_dir"/MSDisplayLink.build/*.o \
     "$ghostty/libghostty.a" -lc++ -framework Carbon -framework Metal -framework QuartzCore \
     -o "$app_dir/Contents/MacOS/NewTaskPreview"
+rm -rf "$app_dir/Contents/Resources/SwiftMath_SwiftMath.bundle"
 cp -R "$bin_dir/SwiftMath_SwiftMath.bundle" "$app_dir/Contents/Resources/"
+# PerchMark reads Bundle.main outside SwiftPM; the greeting shows the brand mark.
+cp Sources/AgentWorkbench/Resources/Perch-mark.png "$app_dir/Contents/Resources/"
 cat > "$app_dir/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
