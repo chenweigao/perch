@@ -1,6 +1,6 @@
 # Visual refresh: reading scale and sidebar geometry
 
-> Current scale (2026-10-28): every size follows the reader's body size through `ReadingScale`; the default and the rules live in [ui-spec 正文刻度](ui-spec.md#正文刻度). Figures below that differ are history.
+> **History (2026-10 refresh).** This file records why the `ReplyStyle` and `SidebarMetrics` token sets were introduced. The "2026-10" columns below are the values of that refresh, not today's; the verification notes describe the checks at that time. Current values live in the code (`ReadingScale`, `ReplyStyle`, `SidebarMetrics`) and in [ui-spec](ui-spec.md) (正文刻度, 侧栏) — for example, today the body is 14 / 24 pt in a 680 pt column, and sidebar section headers are 13 pt regular at 40 % ink.
 
 Two token sets now own the look of the conversation and the sidebar. Views read
 them instead of local numbers, so the SwiftUI and native renderers, and every kind
@@ -11,7 +11,7 @@ of sidebar row, cannot drift apart. Tune the look here, not in individual views.
 The body moved from a web-sized 16/27 pt to the native macOS reading size. The
 measure narrows with it, so lines keep a comfortable length.
 
-| Token | Before | Now |
+| Token | Before | 2026-10 |
 | --- | --- | --- |
 | Body / line height | 16 / 27 pt | 14 / 22 pt |
 | Paragraph gap (compact: lists, quotes, alerts) | 14 (8) pt | 10 (6) pt |
@@ -54,7 +54,7 @@ the project title:
 | inset 8 | indent 16 | icon 16 | 8 | session title          |  session inside a project
 ```
 
-| Token | Before | Now |
+| Token | Before | 2026-10 |
 | --- | --- | --- |
 | Row height (navigation, sessions, groups) | 34 pt | 32 pt |
 | Session row with a status line; disambiguated project | 48; 46 pt | 44 pt |

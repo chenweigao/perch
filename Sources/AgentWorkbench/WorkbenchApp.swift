@@ -100,7 +100,7 @@ struct WorkbenchApp: App {
             Divider()
             Button(L("退出 Perch")) { NSApp.terminate(nil) }
         } label: {
-            PerchMark().frame(width: 18, height: 18)
+            PerchMark(tint: WorkbenchTheme.ink).frame(width: 18, height: 18)
         }
         Settings { WorkbenchSettings(model: model).environment(\.locale, appLanguage.resolvedLocale) }
     }

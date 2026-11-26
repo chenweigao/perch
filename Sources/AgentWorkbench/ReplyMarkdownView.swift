@@ -13,10 +13,12 @@ import WorkbenchCore
 /// Type sizes and vertical rhythm follow the reader's body size through
 /// `ReadingScale`'s DSH-aligned ladder (14 pt on a 24 pt line by default; H1–H3
 /// step up through a real ramp, H4+ separate by weight). Horizontal geometry —
-/// the 748 pt column, insets — stays fixed at every size.
+/// the 680 pt column, insets — stays fixed at every size.
 enum ReplyStyle {
-    /// Qoder's measure: about 57 em of 14 pt body in the centered column.
-    static let readingWidth: CGFloat = 800
+    /// About 48 CJK characters of the 14 pt body per line (2026-11-26). The
+    /// 800 pt Qoder measure (≈ 57 CJK, 100+ Latin characters) was too long for
+    /// sustained reading; wide windows add margin, not line length.
+    static let readingWidth: CGFloat = 680
     static let horizontalPadding = WorkbenchTheme.Reading.inset
     static let composerInset: CGFloat = 12
     /// The editor text and transcript share the same centered reading column.
@@ -221,7 +223,7 @@ enum UserMessageStyle {
     static var collapsedHeight: CGFloat { lineHeight * 9 }
     static var foldThreshold: CGFloat { lineHeight * 11 }
     static let horizontalPadding: CGFloat = 16
-    /// A one-line prompt is a 46 pt neutral pill: 22 pt of text plus 12 pt above and below.
+    /// A one-line prompt is a 46 pt neutral card: 22 pt of text plus 12 pt above and below.
     static let verticalPadding: CGFloat = 12
     /// TextKit puts a line's extra leading above its glyphs, so text at the
     /// reading line height sits low in its line box. A bubble raises its text
@@ -237,7 +239,7 @@ enum UserMessageStyle {
     static var bottomPadding: CGFloat { verticalPadding + textLift }
     /// Qoder's prompt bubble: a card-radius neutral surface, not a pill.
     static let cornerRadius = WorkbenchTheme.Radius.card
-    /// DSH caps the bubble at 0.702 of the column (525/748).
+    /// The prompt bubble spans at most 72 % of the reading column.
     static let maxWidthRatio: CGFloat = 0.72
     /// A new turn opens with air above its prompt, apart from the previous reply.
     static let topSpacing: CGFloat = 24

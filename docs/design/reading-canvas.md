@@ -1,31 +1,32 @@
 # Reading canvas
 
-> Current metrics (2026-11-12): 800 pt column, 14 pt default body on a 24 pt line,
+> Current metrics (2026-11-26): 680 pt column, 14 pt default body on a 24 pt line,
 > 16 pt entry rhythm; the rules live in [ui-spec 正文刻度](ui-spec.md#正文刻度).
-> Figures below that differ are history.
 
 The conversation keeps a centered reading column and the existing native
-sidebar/composer glass. All metrics live in `ReplyStyle` (`ReplyMarkdownView.swift`);
-see [the visual refresh](visual-refresh.md) for the complete scale and rationale.
+sidebar/composer glass. All metrics live in `ReplyStyle` (`ReplyMarkdownView.swift`)
+on the `ReadingScale` ladder; [the visual refresh](visual-refresh.md) records the
+history of the scale.
 
-- Body text follows the reader's setting (14–18 pt, default 16 on a 26 pt line,
-  12 pt paragraph separation) in a fixed 680-point column — about 42 CJK characters
+- Body text follows the reader's setting (14–18 pt, default 14 on a 24 pt line,
+  16 pt paragraph separation) in a fixed 680-point column — about 48 CJK characters
   per line at the default. See [ui-spec 正文刻度](ui-spec.md#正文刻度) for the ramp.
-- H1 and H2 step up 4 and 2 pt; H3 and below keep the body size. Heading spacing
-  (20 pt above, 6 pt below at the default), rather than a large type-size ladder,
-  signals hierarchy.
-- Lists, quotes and alerts use compact paragraph gaps. Code and tables use the
-  secondary size (14 pt at the default). User messages share the body size and line.
-- Thoughts: secondary size (14 on 22 at the default), regular, upright, in secondary
+- H1, H2 and H3 step up 7, 5 and 4 pt (bold); H4 and below keep the body size
+  (semibold). Heading spacing (32 pt above H1–H3, 16 pt above H4–H6, 16 pt below at
+  the default) signals hierarchy alongside the ramp.
+- Lists, quotes and alerts use compact paragraph gaps. Tables use the secondary
+  size (13 pt at the default); code blocks 11 pt on a 19 pt pitch. User messages
+  share the body size on a 22 pt line.
+- Thoughts: secondary size (13 on 20 at the default), regular, upright, in secondary
   ink; no italic, because PingFang has none and only the Latin glyphs would slant.
-  A thought that is still streaming has no row of its own; once settled its
-  header reads 已思考 N秒 when this app watched it.
+  A thought that is still streaming has no row of its own; settled thought headers
+  show no elapsed seconds.
 - SwiftUI and native cached rows share the same text attributes, block rhythm
   (`ReplyStyle.blockSpacing`), code card, quote and list metrics. A code card's
   horizontal scroller never takes height: the native card overlays it, and the
   SwiftUI card hides it, so a long line does not make a streamed card taller than
   its settled native row when macOS shows legacy scrollers.
-- List markers form one right-aligned column per list (at least 16 pt, as wide as the
+- List markers form one right-aligned column per list (at least 10 pt, as wide as the
   widest marker), computed by `ReplyListMetrics` for both renderers. Items of a ten-item
   ordered list start at one x, and a streamed reply does not shift when it settles into
   the native row. Strong text never lightens a semibold heading.

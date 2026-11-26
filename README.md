@@ -11,16 +11,17 @@ and system Liquid Glass on macOS 26.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/perch-overview-dark.png">
-  <img alt="Perch workspace illustration: conversation and integrated task inspector with demo content" src="docs/images/perch-overview.png">
+  <img alt="Perch workspace, native view render: sidebar, conversation and integrated changes inspector with demo content" src="docs/images/perch-overview.png">
 </picture>
 
 | Start with context | Keep the work in view |
 | --- | --- |
-| [![Choose a project, model and reasoning effort before starting](docs/images/perch-new-session.png)](docs/images/perch-new-session.png) | [![Read task details and output alongside the conversation](docs/images/perch-tool-details.png)](docs/images/perch-tool-details.png) |
-| Pick a project, model and reasoning effort. Keep permissions close at hand. | Read the answer first; inspect task details in the integrated right panel. |
+| [![Choose a project, model and reasoning effort before starting](docs/images/perch-new-session.png)](docs/images/perch-new-session.png) | [![Session overview, plan and environment in the integrated right panel](docs/images/perch-tool-details.png)](docs/images/perch-tool-details.png) |
+| Pick a machine, project and agent above the composer; model and permissions sit in it. | Read the answer first; the right panel keeps the session overview, plan and environment. |
 
-*Rendered UI illustrations with synthetic demo data; these are not native screenshots or live command results.
-[Light appearance](docs/images/perch-overview.png) · [Dark appearance](docs/images/perch-overview-dark.png) · [Work in progress](docs/images/perch-progress.png) · [Asset sources](docs/showcase/README.md)*
+*Native view renders of the production workspace (2026-11-26) with synthetic demo data, not live sessions. The capture
+omits the system Liquid Glass blur, so the backdrop is approximated by a smooth gradient.
+[Light appearance](docs/images/perch-overview.png) · [Dark appearance](docs/images/perch-overview-dark.png) · [Focused reading](docs/images/perch-progress.png) · [Asset sources](docs/showcase/README.md)*
 
 ## Why Perch
 

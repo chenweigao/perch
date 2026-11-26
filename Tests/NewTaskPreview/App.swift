@@ -27,7 +27,7 @@ import WorkbenchCore
     var body: some Scene {
         WindowGroup("新建任务预览", id: ProcessInfo.processInfo.environment["PERCH_PREVIEW_NARROW"] == "1" ? "narrow-workflow" : "regular-workflow") {
             NewTaskView(model: model, native: model.native, kimi: model.kimi)
-                .preferredColorScheme(.light)
+                .preferredColorScheme(ProcessInfo.processInfo.environment["PERCH_PREVIEW_APPEARANCE"] == "dark" ? .dark : .light)
                 .toolbar {
                     if showPreviewControls {
                     Button("项目选择预览") { openWindow(id: "project-picker") }
@@ -62,6 +62,19 @@ final class NewTaskPreviewDelegate: NSObject, NSApplicationDelegate {
             if let window = NSApp.windows.first {
                 print("WINDOW_ID=\(window.windowNumber)")
                 fflush(stdout)
+            }
+        }
+        // Headless review: PERCH_PREVIEW_CAPTURE=<file.png> writes the window's view
+        // cache (no composited glass) and quits; PERCH_PREVIEW_APPEARANCE=dark
+        // selects the dark appearance. Works without screen recording (SSH).
+        if let path = ProcessInfo.processInfo.environment["PERCH_PREVIEW_CAPTURE"] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                if let view = NSApp.windows.first(where: { $0.isVisible })?.contentView,
+                   let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
+                    view.cacheDisplay(in: view.bounds, to: bitmap)
+                    try? bitmap.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: path))
+                }
+                NSApp.terminate(nil)
             }
         }
     }

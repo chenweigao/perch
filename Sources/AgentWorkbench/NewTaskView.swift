@@ -182,6 +182,8 @@ struct NewTaskView: View {
             ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 VStack(spacing: 10) {
+                    // The one standing brand moment: the woodcut mark greets a new session.
+                    PerchMark().frame(width: 40, height: 40).padding(.bottom, 4).accessibilityHidden(true)
                     Text("想做点什么？").font(.system(size: WorkbenchTheme.Typography.Display.hero, weight: .medium))
                     if let group = model.selectedGroup {
                         Text(group.name).font(.callout).foregroundStyle(.secondary)

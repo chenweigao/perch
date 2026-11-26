@@ -61,6 +61,12 @@ enum WorkbenchTheme {
     static let actionGlyphNS = nsColor(light: (1, 1, 1), dark: (0.106, 0.114, 0.141))
     static let actionGlyph = Color(nsColor: actionGlyphNS)
 
+    /// The woodcut identity's own ink (Resources/Brand): warm umber on paper in
+    /// light, paper cream on the canvas in dark — the app icon, inverted at
+    /// night. Only the Perch mark wears it (new-session greeting, first-run
+    /// empty state); it never carries status, and text stays on `ink`.
+    static let brandInk = color(light: (0.188, 0.137, 0.102), dark: (0.980, 0.965, 0.937))
+
     /// Links in reply text; NSTextView resolves dynamic colors while drawing.
     /// DSH anchor blue (deepseek-500 light / deepseek-400 dark).
     static let link = nsColor(light: (65/255, 118/255, 230/255), dark: (122/255, 170/255, 255/255))
@@ -244,7 +250,7 @@ extension WorkbenchTheme {
     ///   questions, recoverable errors, offline or unsynced state;
     /// - `danger` is a hard failure or a deletion; `success` a finished result or
     ///   an addition; `unread` a new result (the link blue).
-    /// The brand coral (#E36D55) never acts as a status. Light values hold
+    /// The brand ink (`brandInk`) never acts as a status. Light values hold
     /// ≥ 4.5:1 on white for text (systemOrange is 2.2:1); dark values are lifted
     /// for the blue-graphite canvas. Views use these instead of `.orange`,
     /// `.red`, `.green` or `.blue`; `scripts/check-color-tokens.py` pins the rest.

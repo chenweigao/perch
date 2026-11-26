@@ -5,22 +5,29 @@ parses CommonMark/GFM into `ReplyDocument`; SwiftUI renders the document without
 HTML execution or a WebView. Remote image references inside Markdown show their
 alt text; dedicated conversation attachments keep their existing renderer.
 
-The reading column (680 pt) and composer share one centered rail. Short replies stay
+> Current reading metrics come from `ReadingScale` / `ReplyStyle` and are
+> specified in [ui-spec 正文刻度](design/ui-spec.md#正文刻度). The sections after
+> this introduction are dated feature records; sizes they quote may be historical.
+
+The reading column (680 pt) and composer (704 pt shell, 12 pt inner inset) share
+one centered rail. Short replies stay
 left-aligned within that column. Body text uses the macOS system font at the
-reader's size (14–18 pt, default 16) with a 1.625 minimum line-height ratio; H1 and
-H2 step up 4 and 2 pt and H3–H6 stay at the body size (see
-[ui-spec 正文刻度](design/ui-spec.md#正文刻度)). Headings, strong text and table headers use medium
-weight, including strong text nested inside a heading or inline code. Headings
-have 22 pt of leading space (14 pt in compact lists/quotes) and 7 pt before their
+reader's size (14–18 pt, default 14) on a constant-leading line (size + 10, so
+14/24); H1, H2 and H3 step up 7, 5 and 4 pt and H4–H6 stay at the body size (see
+[ui-spec 正文刻度](design/ui-spec.md#正文刻度)). H1–H3 are bold and H4–H6 semibold
+(the document reader keeps medium headings); strong text is at least semibold,
+including strong text nested inside a heading or inline code, and table headers
+are medium. H1–H3 have 32 pt of leading space and H4–H6 16 pt (16 / 8 pt in
+compact lists/quotes), and 16 pt (compact 8 pt) before their
 following content; the first block has no leading space. Section spacing carries
 the hierarchy without large, heavy titles. List markers use regular weight.
-Inline code stays 1 pt smaller than its surrounding text and uses monospace with
-no background fill, so tall line fragments do not create gray tiles in prose.
-Fenced code retains its separate container; table separators use 6% opacity. Body paragraphs have 12 pt
+Inline code is set at 0.875 em in monospace on an opaque neutral chip
+(`WorkbenchTheme.inlineCodeTintNS`), so paths and hashes read as chips in prose.
+Fenced code retains its separate container; table rules use 12% (header) and
+10% (rows) opacity. Body paragraphs have 16 pt
 between them; paragraphs within a list item or quote have 8 pt. Compact block
-transitions, such as a paragraph followed by a nested list, have 6 pt of space.
-List rows are measured at the available width: adjacent single-line items have
-a 2 pt gap, increasing to 6 pt when either item spans multiple lines. Nested list
+transitions, such as a paragraph followed by a nested list, have 4 pt of space.
+List items sit a uniform 6 pt apart (`ReplyStyle.ListLayout.itemSpacing`). Nested list
 continuations align with the text, ordered lists preserve their starting number,
 and task markers are read-only. Quotes use a fine left rule. Code uses the system
 monospace font, a quiet header, horizontal scrolling, and a right-aligned line-number
@@ -30,8 +37,8 @@ inserting characters into selectable text. Text and link colors are unchanged.
 Tables render as native grids sized to their viewport. Column widths follow
 content: an ordinary column keeps a 124 pt total, a column whose every cell is
 narrow shrinks toward 44 pt, and the leftover width goes to the columns whose
-content still needs room, capped at 420 pt of content so one long cell cannot
-eat the table. Cells wrap within their column and keep 12 pt horizontal padding;
+content still needs room, capped at 320 pt of content so one long cell cannot
+eat the table. Cells wrap within their column and keep 16 pt horizontal padding;
 only tables whose minimum column widths exceed the viewport scroll horizontally.
 Widths are arithmetic over estimated content widths, so cells are measured for
 row height only, no width probe reaches TextKit, and no geometry feedback enters
@@ -180,7 +187,7 @@ appears only while away from the bottom; clicking it resumes following. AppKit's
 distinguishes user scrolling from programmatic stream updates.
 
 The sidebar is independently hosted above the full detail canvas with persisted
-visibility and a saved width between 220 and 480 pt. It and the floating controls
+visibility and a saved width between 220 and 400 pt. It and the floating controls
 use the public macOS 26
 [Liquid Glass modifier](https://developer.apple.com/documentation/SwiftUI/Applying-Liquid-Glass-to-custom-views),
 available on every supported macOS version (26+). Reduce Transparency keeps its
@@ -210,9 +217,10 @@ readable fallback and never invent a final summary.
 
 The composer reuses the shared native macOS 26 regular glass surface (system material
 on older macOS; opaque system background with Reduce Transparency). No extra white
-card, custom border or shadow is layered underneath. Keyboard shortcuts stay in the
-send-button tooltip rather than occupying a permanent footer. Sidebar primary text
-uses the system font at 13pt, secondary text at 11pt; the app title remains 16pt.
+card is layered underneath; a 1 pt hairline and `Elevation.composerShadow` set it on
+the page (ui-spec 画面分量). Keyboard shortcuts stay in the
+send-button tooltip rather than occupying a permanent footer. Sidebar row titles
+use 14 pt and details 12 pt (`SidebarMetrics`, `WorkbenchTheme.Typography`).
 AppKit's spinning progress indicator supplies visible motion in the activity bar and
 running sidebar rows without a SwiftUI animation timer. Reduce Motion shows a static
 hourglass; sidebar attention/review/idle states also have distinct visual indicators.
