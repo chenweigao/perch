@@ -37,8 +37,9 @@
   `Typography.Display`：空状态标题 15、页面标题 26（工作台、任务组、空会话统一）、新建会话问候语与大号计数 28。
   原 13pt medium 小标题统一升到 14pt `title`。视图里出现数字字号由 `scripts/check-font-tokens.py`（portable 检查）拦下；
   紧跟 `Image` 的 SF Symbol 尺寸不受限。经审计，8–10pt 的用法全部是 SF Symbol，没有低于 11pt 的文字。
-- **阅读文字默认与界面同号**。`ReadingScale` 的正文、输入框、思考、代码、表格、过程标签均为 14pt，正文和思考行高 22pt。H1 / H2 为 18 / 16pt，H3 以下同正文，以字重和间距分层。文档阅读器默认也为 14pt，保留独立阅读偏好和文章标题层级。
-- **保留阅读缩放**。设置 › 界面或「显示」菜单可选择 14–18pt；⌘0 回到 14pt。保留已有显式偏好。缩放时正文、思考、代码、输入框、过程标签共同变化，辅助字号为 max(12, 正文 − 2)；行高为 正文 × 22/14，段距按 正文 / 14 缩放。侧栏、工具栏和面板标题固定取界面字号，680pt 阅读栏和水平内边距不变。
+- **阅读文字默认与界面同号**。`ReadingScale`（`WorkbenchTheme.swift`）的正文、输入框与过程标签（`ReplyStyle.Process.labelSize`）均为 14pt，正文行高 24pt（`bodyLine` = 正文 + 10）。H1 / H2 / H3 为 21 / 19 / 18pt（正文 +7 / +5 / +4，行高 30 / 28 / 26），H4 以下同正文；H1–H3 粗体、H4–H6 半粗，以字重和间距分层。思考、表格与安静说明取低一级的 `secondary` 13pt（思考行高 20pt），代码块 11pt、行距 19pt。文档阅读器默认也为 14pt，保留独立阅读偏好和文章标题层级。
+- **保留阅读缩放**。设置 › 界面或「显示」菜单可选择 14–18pt；⌘0 回到 14pt。保留已有显式偏好。缩放时正文、思考、代码、输入框、过程标签共同变化：次级字号为 min(正文 − 1, max(13, 正文 − 2))，辅助字号为 max(12, 正文 − 2)，代码为 max(11, 正文 − 3)；行高为字号加固定行距（正文 +10、H1/H2/H3 按正文 +16/+14/+12、次级 +7、代码 +8），不按比例缩放；段距按 正文 / 14 缩放。侧栏、工具栏和面板标题固定取界面字号，680pt 阅读栏和水平内边距不变。
+- **阅读栏 680pt（2026-11-26）**：`ReplyStyle.readingWidth` 从 2026-11-11 对齐 Qoder 时的 800pt 收回 680pt，输入框外壳 `ReplyStyle.composerWidth` = 680 + 2 × 12 = 704pt。14pt 正文下 800pt 约每行 57 个汉字、100 个以上拉丁字符，长时间阅读过长；680pt 约 48 个汉字，回到 Qoder 对齐之前使用的行长。
 - **视图里不写本地文字字号**：文章与对话取 `ReplyStyle`，稳定界面取 `WorkbenchTheme.Typography`；同号角色仍分别命名，避免未来各组件自行新增字号。
 - **字号变化立即生效**：`ReadingBodySize` 是 `@Observable`，读取字阶的 SwiftUI 视图自动重绘；
   `ConversationEntryAppearance` 带上正文字号，变化时所有已挂载行重新排版、重新测量；原生行的预处理缓存以字号为键，
@@ -47,7 +48,7 @@
   用户气泡（原生行、SwiftUI 回退、待发消息）共用 `UserMessageStyle.textLift`：按首行基线和大写字母高度算出上移量（取整点），
   上内边距为 `verticalPadding − textLift`、下内边距为 `verticalPadding + textLift`，气泡总高度不变。
   导航检查 `user-rows` 要求单行气泡里大写字母的中线与气泡中线相差不超过 0.6pt。
-- **说明与过程形成段落组**：普通进展正文和公开摘要使用同一间距规则；说明到所属过程为 4pt，过程到下一段说明为 28pt，连续过程入口保持 6pt。只调整条目之间的距离，正文 14pt / 22pt、680pt 行宽及段内刻度不变。
+- **说明与过程形成段落组**：普通进展正文和公开摘要使用同一间距规则；说明到所属过程为 4pt，过程到下一段说明为 28pt，连续过程入口保持 4pt（`ReplyStyle.progressToolSpacing` / `progressStageSpacing` / `processEntrySpacing`）。只调整条目之间的距离，正文 14pt / 24pt、680pt 行宽及段内刻度不变。
 - **Qoder 正文节奏（2026-11-11）**：条目间距 16pt，用户提问后到回复首行 20pt；提问气泡为中性灰
   （`userBubbleNS`，浅色 #F3F3F4）、`Radius.card` 圆角、上下 12pt 内边距、上方多留 24pt 作为轮次间隔；行内代码底色加深到 #F0F0F1。
   过程行（工作过程、阶段、运行上下文、编辑回执）统一以 20pt 描边小方框里的箭头开头（`WorkbenchDisclosureBox`），
@@ -69,7 +70,8 @@
 
 - **一种颜色只说一件事**（`WorkbenchTheme.Status`）：运行中只靠动效（日弧、呼吸点），`statusRunningNS` 为中性色；
   `attention` 是唯一的暖色状态，表示需要你出场（待确认、待回答、可恢复错误、离线或未同步）；`danger` 表示失败或删除，
-  `success` 表示完成或新增，`unread` 表示新结果（链接蓝）。品牌珊瑚 `#E36D55` 只用于图标、首页品牌位和空状态，不表示状态。
+  `success` 表示完成或新增，`unread` 表示新结果（链接蓝）。品牌色是木刻地形标识的墨色 `WorkbenchTheme.brandInk`（浅色暖褐 #30231A、深色纸白 #FAF6EF），
+  只用于 App 图标和品牌位 `PerchMark`（新建会话问候语上方、首次使用空状态），不表示状态；菜单栏图标保持中性墨色。
 - **浅色状态色要能读**：`attention` 在白底约 4.6:1（`systemOrange` 仅 2.2:1），`danger`、`success` 均 ≥ 4.5:1；深色值按蓝灰画布提亮。
 - **视图不写原始色相**：`.orange/.red/.green/.blue/.yellow` 与 `NSColor.systemX` 由 `scripts/check-color-tokens.py` 拦下；
   主机识别色、设置分栏图标、Markdown 提示块种类和查找高亮这类非状态色登记在 `scripts/color-exceptions.json` 并写明理由。
@@ -100,9 +102,11 @@
 
 `WorkbenchSplitController` / `WorkbenchDetailController`（`Sources/AgentWorkbench/WorkspaceSplitView.swift`）。
 
-- **一整块液态玻璃底板。** `WorkbenchWindowBackdropView` 是铺满窗口的系统 Liquid Glass（`.regular`），
-  窗口不透明度关闭，玻璃直接采样窗口后方的桌面，颜色随壁纸和后方窗口变化；圆角读取窗口自身圆角，玻璃边缘高光与窗口边缘重合。
-  不叠加固定色、不降低玻璃 alpha（降低 alpha 会透出未模糊的桌面）；开启“减少透明度”时换成不透明的 window-background 色。
+- **一整块液态玻璃底板。** `WorkbenchWindowBackdropView`（`Sources/AgentWorkbench/WorkbenchWindowBackdrop.swift`）是铺满窗口的系统 Liquid Glass（`.regular`），
+  窗口不透明度关闭，玻璃采样窗口后方的桌面；圆角读取窗口自身圆角，玻璃边缘高光与窗口边缘重合。
+  **玻璃下垫一层底色**（`WorkbenchTheme.glassUnderlay`，2026-10-30）：浅色为白、深色为画布的蓝灰，外框亮度留在画布色系里，不随壁纸起伏。
+  底色在玻璃之下、由玻璃一起模糊，不在玻璃上方叠色。强度是读者设置（设置 › 界面 › 窗口玻璃，`WorkbenchGlassIntensity`）：
+  通透 / 轻透 / 标准 / 克制，浅色 alpha 0 / 0.30 / 0.45 / 0.70，深色 0.55 / 0.70 / 0.85 / 0.95，默认标准。开启“减少透明度”时换成不透明的 window-background 色。
   侧栏和工具栏共用底板；侧栏不再单独加玻璃外框、描边或阴影。
   视图缓存截图（`cacheDisplay`）不含玻璃；`native-design` 阶段另存 `*-composited-*.png` 系统截图用于检查实际效果。
 - **内容浮在底板上，圆角与窗口同心**：主内容卡片和窄窗侧栏覆盖层离窗口边缘 6pt（`WorkspaceLayoutMetrics.frameInset`，
@@ -119,7 +123,7 @@
   （`WorkbenchDetailController.setTitlebarCenter`），落在主容器上沿下方约 20pt，不再贴着圆角；侧栏内容从 52pt 开始。
 - **统一标题栏收入主容器顶部，阅读栏居中**：Agent 图标、会话标题与会话菜单（`WorkbenchHeader`）组成左侧标题组，页面操作、右栏开关（`WorkbenchHeaderActions`）组成右侧操作组，收入 `WorkbenchContentCardView` 顶部统一标题栏（`WorkbenchDetailController.headerBar`，40pt 高，不另加底部分隔线）；窗口顶栏保留系统交通灯与左侧栏开关，标题和按钮与原生工具栏垂直居中。标题距主容器左缘 24pt，单行尾部截断，悬停显示完整标题、Agent、机器和目录。标题下方正文与右栏上下对齐，正文与输入区在剩余可用宽度内居中。
 - **输入内容、操作与环境详情分层**：第一层为输入内容区（文本、附件、引用）；第二层为输入框操作栏（添加附件、双栏模型与思考选择器 `ComposerModelPicker`、权限 `PermissionPicker`、发送／停止 `ComposerActionButton`），主机、目录或项目、分支在 `ComposerEnvironmentMenu` 按需展开，上下文用量 `ContextMeter` 也在同一操作栏中，不再设置底部常驻环境条。步骤进度等简短详情使用紧贴入口的 `PlanStepsPopover` 浮层，不推动正文重新排版，支持点击外部或 Escape 关闭。
-- **输入文字与正文对齐**：正文最大 800pt（`ReplyStyle.readingWidth`），输入框外壳最大 824pt，内部 12pt 留白；
+- **输入文字与正文对齐**：正文最大 680pt（`ReplyStyle.readingWidth`），输入框外壳最大 704pt（`ReplyStyle.composerWidth`），内部 12pt 留白；
   两者共用中心线与文字左缘；窄窗下正文最少保留两侧 24pt，输入框两侧 12pt。外层继续使用系统 Liquid Glass，
   浮在正文之上（见「状态条」），输入文字与正文同为当前正文字号。
 - **阅读上沿**：正文滚动视口上方固定留 12pt；滚动到中间时文字仍与卡片上沿保持间距。顶部没有覆盖正文的悬浮控件，不额外叠加渐隐。
@@ -186,14 +190,16 @@
 - **过程折叠与单步状态克制统一**：轮次过程入口（`ProcessFoldRow`）统一称为「工作过程」（尾段仅思考时显示「思考中」），运行中仅亮起中性色状态点（`WorkbenchTheme.statusRunningNS`，带柔和呼吸光晕），不重复跳秒，避免与底部状态行双计时器竞争；完成后收束为「工作过程 · N 个工具 · 耗时」，展开左侧竖向导轨对齐头部图标中心。单步工具行（`KimiToolCard`、`EditStepRow`）使用中性呼吸点／翡翠绿状态点（`statusRunningNS` / `Status.success`），等待授权时为 `Status.attention`，成功行不再逐行重复「已完成」文字，运行中编辑不再重复「运行中」文字；失败、待授权、缺失结果与断线入口保留。代码卡、Mermaid 卡与工具详情卡统一带 1pt `WorkbenchTheme.Stroke.hairline` 细边与横幅底部分隔线，回复操作按钮共用轻触悬停底色与复制成功绿钩反馈。
 - **历史记录和当前差异分开**：点击步骤数字在集成右栏打开「本步编辑记录」，可切换「本轮编辑记录」，后者按成功调用累加，并明确说明不等于 Git 净差异。重复编辑不覆盖前一步记录；记录缺失时显示原始调用或缺失说明，不读取当前文件冒充历史。写入调用缺少旧内容时明确标注。
 - **当前工作区净差异**：独立按钮切换到原有 Git 改动页；编辑记录绑定来源会话，切换会话不显示上一会话的记录。记录是点击时的不可变快照，待执行和失败状态不写成已应用。
-- **回复操作栏**：最新完成回复保留 `Recap` 入口。正文保持 14pt / 22pt 与 680pt 阅读宽度，输入框保留系统玻璃和发送语义，忙碌时提示「补充要求或调整方向…」。
+- **回复操作栏**：最新完成回复保留 `Recap` 入口。正文保持 14pt / 24pt 与 680pt 阅读宽度，输入框保留系统玻璃和发送语义，忙碌时提示「补充要求或调整方向…」。
 - **疑似卡住监测**（`TurnStallMonitor`）：在后台按 15 秒周期检查 `TurnProgressClock`，超过阈值触发 `turnStalled` 提醒路由。
 - **改动页标出本轮。** 右栏改动页列的是 Git 工作区（含你自己和之前几轮的改动）；本轮编辑过的文件排在前面并带「本轮」标签，
   标题旁写「N 个文件 · 本轮 M」（`TurnEditPaths.relative` 把工具给出的绝对或相对路径换成仓库内路径；`~` 开头的路径无法解析，不标）。
   标签在每次读取 Git 状态时按当前对话刷新，运行中不随每个流式片段重算。
 - **“运行中”在列表里仍是日弧。** 侧栏与会话列表的运行中（`ConversationBusyIndicator`）和 Goal 头部的“当前一轮正在执行”
   是同一个追逐日弧（`PerchBusyIndicator`，几何在 `PerchLineMark`）：`quiet`、24 格尺寸、2 秒一圈，减少动态效果时停在 270° 的静止弧。
-  品牌标识采用 D1 小鸟：App 图标为深珊瑚 `#E36D55` 底白线，首页品牌位（`PerchMark`）为随外观适配的单色小鸟。
+  品牌标识是木刻地形印章（2026-11-06，`Resources/Brand`）：App 图标为纸白 #FAF6EF 底上的暖褐墨色；`PerchMark` 默认取 `brandInk`，
+  出现在新建会话问候语「想做点什么？」上方（约 40pt，`NewTaskView`）和首次使用空状态，菜单栏图标保持中性墨色。
+  标识是散装 PNG（不在 asset catalog 里），`PerchMark` 经 `Bundle.image(forResource:)` 读取；SwiftUI 的 `Image(_:bundle:)` 只认 catalog 名，会画出空白（2026-11-26 修复）。
 - **Goal 保留执行反馈，断连提示不重复。** Goal 头部保留实际执行的追逐日弧和目标自身状态，状态行高度固定，
   不随一轮开始或结束变化（`GoalHeaderBar.status`）。日弧只在 `SessionTurn` 为运行中时转；目标进行中而本轮等你处理或失败时，
   标签换成橙色「等你处理」「本轮失败」，不再显示「待续跑」。
