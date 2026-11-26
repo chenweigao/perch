@@ -631,12 +631,14 @@ final class WorkbenchDetailController: NSViewController {
 
 /// An opaque content surface inside the window frame. It clips its page to the
 /// panel radius so scrolling content and terminals keep the rounded edge; the
-/// hairline is drawn above the page. The reader and internal inspector share it.
+/// edge is drawn above the page. The reader and internal inspector share it.
 private final class WorkbenchContentCardView: NSView {
     var cornerRadius: CGFloat = WorkbenchTheme.Radius.framePanel(
         windowCorner: 0, inset: WorkspaceLayoutMetrics.frameInset) {
         didSet { if cornerRadius != oldValue { layer?.cornerRadius = cornerRadius } }
     }
+    private var surfaceStyle = WorkbenchSurfaceStyle.current
+    private var surfaceObserver: NSObjectProtocol?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -646,9 +648,24 @@ private final class WorkbenchContentCardView: NSView {
         layer?.cornerRadius = cornerRadius
         layer?.cornerCurve = .continuous
         layer?.masksToBounds = true
+        // Settings › 界面 › 界面质感 restyles the edge while the window stays open.
+        surfaceObserver = NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification, object: nil, queue: .main
+        ) { [weak self] _ in self?.syncSurfaceStyle() }
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    deinit {
+        if let surfaceObserver { NotificationCenter.default.removeObserver(surfaceObserver) }
+    }
+
+    private func syncSurfaceStyle() {
+        let style = WorkbenchSurfaceStyle.current
+        guard style != surfaceStyle else { return }
+        surfaceStyle = style
+        needsDisplay = true
+    }
 
     override var wantsUpdateLayer: Bool { true }
 
@@ -656,7 +673,7 @@ private final class WorkbenchContentCardView: NSView {
         layer?.borderWidth = 1 / max(1, window?.backingScaleFactor ?? 2)
         effectiveAppearance.performAsCurrentDrawingAppearance {
             layer?.backgroundColor = WorkbenchTheme.contentBackgroundNS.cgColor
-            layer?.borderColor = WorkbenchTheme.Stroke.hairlineNS.cgColor
+            layer?.borderColor = WorkbenchTheme.Stroke.panelEdgeNS(surfaceStyle).cgColor
         }
     }
 
@@ -689,6 +706,28 @@ private final class WorkbenchPanelShadowView: NSView {
             needsLayout = true
         }
     }
+    private var surfaceStyle = WorkbenchSurfaceStyle.current
+    private var surfaceObserver: NSObjectProtocol?
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        surfaceObserver = NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification, object: nil, queue: .main
+        ) { [weak self] _ in self?.syncSurfaceStyle() }
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    deinit {
+        if let surfaceObserver { NotificationCenter.default.removeObserver(surfaceObserver) }
+    }
+
+    private func syncSurfaceStyle() {
+        let style = WorkbenchSurfaceStyle.current
+        guard style != surfaceStyle else { return }
+        surfaceStyle = style
+        needsDisplay = true
+    }
 
     @discardableResult static func install(behind panel: NSView, in parent: NSView) -> WorkbenchPanelShadowView {
         let shadow = WorkbenchPanelShadowView()
@@ -712,13 +751,15 @@ private final class WorkbenchPanelShadowView: NSView {
     override func updateLayer() {
         effectiveAppearance.performAsCurrentDrawingAppearance {
             layer?.backgroundColor = WorkbenchTheme.contentBackgroundNS.cgColor
+            let metrics = WorkbenchTheme.Elevation.sheetShadow(
+                dark: effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua, style: surfaceStyle)
             let elevation = NSShadow()
-            elevation.shadowColor = NSColor.black.withAlphaComponent(WorkbenchTheme.Elevation.sheetShadowAlpha(
-                dark: effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua))
-            // The sheet carries the page's weight: a real contact shadow in the
-            // thin glass band, a step lighter than a floating panel's.
-            elevation.shadowBlurRadius = 16
-            elevation.shadowOffset = NSSize(width: 0, height: -4)
+            elevation.shadowColor = NSColor.black.withAlphaComponent(metrics.alpha)
+            // The sheet carries the page's weight. Airy: a soft shadow in the thin
+            // glass band, a step lighter than a floating panel's. Grounded: a
+            // short contact shadow, so the sheet rests on the frame.
+            elevation.shadowBlurRadius = metrics.blur
+            elevation.shadowOffset = NSSize(width: 0, height: -metrics.drop)
             shadow = elevation
         }
     }

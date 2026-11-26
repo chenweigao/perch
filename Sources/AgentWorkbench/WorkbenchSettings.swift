@@ -14,6 +14,7 @@ struct WorkbenchSettings: View {
     @AppStorage(AppLanguage.defaultsKey) private var appLanguage: AppLanguage = .system
     @AppStorage(AppAppearance.defaultsKey) private var appAppearance: AppAppearance = .system
     @AppStorage(WorkbenchGlassIntensity.defaultsKey) private var glassIntensity: WorkbenchGlassIntensity = .standard
+    @AppStorage(WorkbenchSurfaceStyle.defaultsKey) private var surfaceStyle: WorkbenchSurfaceStyle = .grounded
     @UILocalization private var L
     private let readingSize = ReadingBodySize.shared
     private let permissionProviders: [SessionKind] = [.kimi, .omp, .qoder, .qoderintl, .codex, .claude]
@@ -153,6 +154,11 @@ struct WorkbenchSettings: View {
             Picker("外观", selection: $appAppearance) {
                 ForEach(AppAppearance.allCases) { appearance in
                     Text(appearance.title).tag(appearance)
+                }
+            }
+            Picker("界面质感", selection: $surfaceStyle) {
+                ForEach(WorkbenchSurfaceStyle.allCases) { style in
+                    Text(style.title).tag(style)
                 }
             }
             Picker("窗口玻璃", selection: $glassIntensity) {
