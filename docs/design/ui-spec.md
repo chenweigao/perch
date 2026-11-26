@@ -118,7 +118,9 @@
   色调随界面质感：「厚重」为浅色石灰 #E8E6E2、深色同 226° 色相的深石墨 #121419（`WorkbenchTheme.groundedFrame`），
   通透 / 轻透 / 标准 / 克制的浅色 alpha 0.35 / 0.55 / 0.75 / 0.90、深色 0.75 / 0.85 / 0.92 / 0.97，让外框在任何壁纸上都稳定低于正文页一档；
   「轻盈」为浅色白、深色画布蓝灰，浅色 alpha 0 / 0.30 / 0.45 / 0.70，深色 0.55 / 0.70 / 0.85 / 0.95。默认标准。
-  开启“减少透明度”时换成不透明底色：厚重用 `groundedFrame`，轻盈用 window-background 色。
+  开启“减少透明度”时换成不透明底色：厚重用 `groundedFrame`，轻盈用 window-background 色；厚重的输入框同时改用 `Composer.raised`，
+  不再落到系统的中性 control-background（深色 #1E1E1E）。CI 的 `native-design` 合成截图就是在这条路径下渲染的（侧栏浮层整块恰为
+  `groundedFrame`、透不出下方正文），真实液态玻璃与壁纸的混合只能在本机看。
   侧栏和工具栏共用底板；侧栏不再单独加玻璃外框、描边或阴影。
   视图缓存截图（`cacheDisplay`）不含玻璃；`native-design` 阶段另存 `*-composited-*.png` 系统截图用于检查实际效果。
 - **内容浮在底板上，圆角与窗口同心**：主内容卡片和窄窗侧栏覆盖层离窗口边缘 6pt（`WorkspaceLayoutMetrics.frameInset`，

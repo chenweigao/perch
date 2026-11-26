@@ -23,7 +23,9 @@ private struct WorkbenchGlassSurface: ViewModifier {
     /// glass has no boundary, and the input should read as the page's one solid
     /// block (Qoder). Airy floats it on a soft shadow; grounded sets it into the
     /// page with only the edge, and at night raises its fill a step above the
-    /// sheet (`Composer.raised`) so tone, not an outline, marks it.
+    /// sheet (`Composer.raised`) so tone, not an outline, marks it. With Reduce
+    /// Transparency the grounded composer shows that fill itself instead of the
+    /// system's neutral control background (#1E1E1E at night, outside the palette).
     var outlined = false
 
     @ViewBuilder func body(content: Content) -> some View {
@@ -31,7 +33,7 @@ private struct WorkbenchGlassSurface: ViewModifier {
         let grounded = surfaceStyle == .grounded
         Group {
             if reduceTransparency {
-                content.background(Color(nsColor: .controlBackgroundColor), in: shape)
+                content.background(outlined && grounded ? Color.clear : Color(nsColor: .controlBackgroundColor), in: shape)
             } else {
                 content.glassEffect(.regular, in: shape)
             }
