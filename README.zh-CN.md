@@ -10,16 +10,16 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/perch-overview-dark.png">
-  <img alt="Perch 工作台渲染示意：正文与一体任务右栏，使用演示数据" src="docs/images/perch-overview.png">
+  <img alt="Perch 工作台原生视图渲染：侧栏、正文与一体改动右栏，使用演示数据" src="docs/images/perch-overview.png">
 </picture>
 
 | 带着上下文开始 | 需要时查看细节 |
 | --- | --- |
-| [![新建任务时选择项目、模型与思考强度](docs/images/perch-new-session.png)](docs/images/perch-new-session.png) | [![在一体右栏中查看任务详情和输出](docs/images/perch-tool-details.png)](docs/images/perch-tool-details.png) |
-| 选好项目、模型与思考强度，权限设置也就在手边。 | 先读结果，再按需展开工具调用和输出。 |
+| [![新建任务时选择项目、模型与思考强度](docs/images/perch-new-session.png)](docs/images/perch-new-session.png) | [![一体右栏中的会话概述、计划与环境](docs/images/perch-tool-details.png)](docs/images/perch-tool-details.png) |
+| 在输入框上方选好机器、项目与 Agent，模型和权限就在输入框里。 | 先读结果；右栏保留会话概述、计划与环境。 |
 
-*图片为界面渲染示意，使用虚构演示数据，不是原生截图或真实命令执行结果。
-[浅色外观](docs/images/perch-overview.png) · [深色外观](docs/images/perch-overview-dark.png) · [进行中的任务](docs/images/perch-progress.png) · [素材来源](docs/showcase/README.md)*
+*图片为生产工作区的原生视图渲染（2026-11-26），使用虚构演示数据，不是真实会话。视图缓存不含系统 Liquid Glass 模糊，背景以平滑渐变近似。
+[浅色外观](docs/images/perch-overview.png) · [深色外观](docs/images/perch-overview-dark.png) · [专注阅读](docs/images/perch-progress.png) · [素材来源](docs/showcase/README.md)*
 
 项目工作台、任务浮窗、文件阅读、统一搜索、交付验收和长任务托管已加入源码预览。使用范围和后台运行条件见[工作台说明](docs/WORKSPACE.md)。
 
