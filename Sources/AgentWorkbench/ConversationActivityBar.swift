@@ -860,3 +860,55 @@ struct KimiTaskClock: View {
         }
     }
 }
+
+/// The top edge of a paged transcript (conversations and subagent sheets): a
+/// quiet capsule on a hairline rule that loads the previous page. Scrolling near
+/// the top already loads, so the capsule is there for keyboard and VoiceOver and
+/// to mark where loaded history begins. While a page loads it carries the Perch
+/// sun instead of the system spinner; offline it stays in place, dimmed.
+struct ConversationOlderHistoryControl: View {
+    let loading: Bool
+    var enabled = true
+    var title: LocalizedStringKey = "加载更早消息"
+    var loadingTitle: LocalizedStringKey = "正在加载更早消息…"
+    let action: () -> Void
+    @State private var hovered = false
+
+    var body: some View {
+        HStack(spacing: 12) {
+            rule
+            Button(action: action) {
+                HStack(spacing: 6) {
+                    if loading {
+                        PerchBusyIndicator(size: WorkbenchTheme.Reading.captionSize)
+                        Text(loadingTitle)
+                    } else {
+                        Image(systemName: "arrow.up")
+                            .font(.system(size: WorkbenchTheme.Reading.captionSize - 1, weight: .medium))
+                        Text(title)
+                    }
+                }
+                .font(.system(size: WorkbenchTheme.Reading.captionSize))
+                .foregroundStyle(WorkbenchTheme.quiet)
+                .lineLimit(1)
+                .padding(.horizontal, 12).frame(height: 26)
+                .background(Capsule().fill(hovered && enabled && !loading ? WorkbenchTheme.Fill.hover : WorkbenchTheme.Fill.surface))
+                .overlay(Capsule().strokeBorder(WorkbenchTheme.Stroke.hairline, lineWidth: 1))
+                .contentShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .disabled(loading || !enabled)
+            .opacity(enabled || loading ? 1 : 0.5)
+            .onHover { hovered = $0 }
+            .fixedSize()
+            rule
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 6)
+    }
+
+    private var rule: some View {
+        Rectangle().fill(WorkbenchTheme.Stroke.hairline).frame(height: 1).frame(maxWidth: .infinity)
+            .accessibilityHidden(true)
+    }
+}

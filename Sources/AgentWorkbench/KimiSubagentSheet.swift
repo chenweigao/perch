@@ -53,13 +53,10 @@ struct KimiSubagentTranscriptSheet: View {
         }
         if let transcript {
             if transcript.hasMoreOlder {
-                Button {
+                ConversationOlderHistoryControl(loading: connection.loadingOlderSubagentTurns, enabled: connection.online,
+                                                title: "加载更早轮次", loadingTitle: "正在加载更早轮次…") {
                     Task { await connection.loadOlderSubagentTurns() }
-                } label: {
-                    if connection.loadingOlderSubagentTurns { Text("正在加载更早轮次…") }
-                    else { Text("加载更早轮次") }
-                }.disabled(connection.loadingOlderSubagentTurns || !connection.online)
-                    .frame(maxWidth: .infinity).padding(.bottom, 12)
+                }.padding(.bottom, 12)
             }
             if transcript.turns.isEmpty && !connection.loadingSubagentTranscript {
                 Text("这个子 Agent 还没有可见的轮次。").foregroundStyle(.secondary)

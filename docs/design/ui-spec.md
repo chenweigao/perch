@@ -232,6 +232,16 @@
 - 有底部栏时，返回最新与收藏菜单贴在栏的上沿 8pt 处，而不是压在输入框上；`reading-canvas` 阶段用 120pt 的替身栏
   检查正文仍为满高、点击可达，且返回后最后一行落在栏上方。
 
+## 加载更早
+
+`ConversationOlderHistoryControl`（`Sources/AgentWorkbench/ConversationActivityBar.swift`）。
+
+- 分页会话（原生、Kimi）与子 Agent 表单的顶部共用一枚控件：横贯阅读栏的发丝线中间一枚 26pt 安静胶囊——`Fill.surface` 底、
+  `Stroke.hairline` 边，`quiet` 色向上箭头加「加载更早消息」（子 Agent 轮次为「加载更早轮次」），字号取随阅读缩放的辅助字号，悬停加深一级。
+  取代原来居中的一行无边框小字加系统转圈（会话）和系统推按钮（子 Agent 表单），2026-11-26。
+- 滚动接近顶部本来就会加载，胶囊留给键盘和读屏，并标出已载入历史的起点；加载时换成 Perch 日弧加「正在加载…」，
+  断线时留在原位、降到 50% 不可点。
+
 ## 提醒
 
 `AttentionRouter`（`Sources/WorkbenchCore/AttentionRouting.swift`）决定渠道，`WorkbenchNotificationState` 只负责投递。
