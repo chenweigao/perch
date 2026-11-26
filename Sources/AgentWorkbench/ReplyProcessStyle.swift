@@ -21,7 +21,7 @@ extension ReplyStyle {
         static var labelSize: CGFloat { ReplyStyle.bodySize }
         /// Between the rows of an expanded fold, and above its first row.
         static let rowSpacing: CGFloat = 12
-        /// Thought text: the same reading size and line height as the reply,
+        /// Thought text: one tier below the reply (`secondarySize` / `secondaryLine`),
         /// upright, in secondary ink. Secondary ink and disclosure grouping set it apart; italic
         /// would slant only the Latin glyphs, because PingFang has no italic.
         static var thoughtSize: CGFloat { ReplyStyle.secondarySize }

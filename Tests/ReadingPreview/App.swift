@@ -381,7 +381,7 @@ private final class PreviewDelegate: NSObject, NSApplicationDelegate {
     ]
     }
     for scene in scenes {
-        // Wrap the transcript like ConversationScrollControls does: the 748 pt
+        // Wrap the transcript like ConversationScrollControls does: the 680 pt
         // reading column plus 24 pt insets, centered in the window.
         let root = VStack(spacing: 0) {
             ConversationTranscript(messages: scene.messages, sessionId: "capture-" + scene.name, isRunning: scene.running)

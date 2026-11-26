@@ -125,7 +125,7 @@ import WorkbenchCore
     let hosting = NSHostingController(rootView: WorkbenchView(model: model).environment(\.locale, Locale(identifier: "zh-Hans")))
     hosting.sizingOptions = []
     window.contentViewController = hosting
-    // The window must fit the 748 pt reading column beside the default inspector:
+    // The window must fit the 680 pt reading column beside the default inspector:
     // 1536 leaves the space to center it; smaller windows let it clamp narrower.
     window.setContentSize(NSSize(width: 1536, height: 900))
     window.makeKeyAndOrderFront(nil)

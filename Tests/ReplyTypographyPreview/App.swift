@@ -7,7 +7,7 @@ import SwiftUI
             VStack(spacing: 0) {
                 Picker("阅读宽度", selection: $columnWidth) {
                     Text("窄栏 420").tag(CGFloat(420))
-                    Text("正文 748").tag(ReplyStyle.readingWidth)
+                    Text("正文 680").tag(ReplyStyle.readingWidth)
                     Text("原宽 760").tag(CGFloat(760))
                 }.pickerStyle(.segmented).frame(width: 320).padding(16)
                 Divider()
