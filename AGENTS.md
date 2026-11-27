@@ -42,7 +42,9 @@ to light.
 - Build with scripts/build.sh; run swift run WorkbenchChecks for protocol and command contracts.
 - The macOS functional `core` group includes synthetic math A/B measurements.
   `scripts/check-math-performance.sh <output>` uses the PR base (or `HEAD^` locally);
-  set `WORKBENCH_MATH_BASELINE_REF` for another fixed baseline. Keep real sessions
+  set `WORKBENCH_MATH_BASELINE_REF` for another fixed baseline. Its timing gates
+  fail only on a 2x blowout (3x for initial window layout); shared-runner noise
+  below that is recorded, not judged. Keep real sessions
   out of CI fixtures and distinguish window scheduling from measured FPS.
   Native math cache admission estimates source and 2x raster capacity; it is not
   an exact display-list allocation or process RSS limit.

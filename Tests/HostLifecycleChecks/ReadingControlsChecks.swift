@@ -123,13 +123,21 @@ import WorkbenchCore
         precondition(!controlViews(continuous).contains { $0.identifier?.rawValue.hasPrefix("process-entry:") == true },
                      "A completed process starts collapsed")
         controlClick(window, identifier: "completed-process:" + rows[0].entry.id)
-        try await Task.sleep(for: .milliseconds(350))
-        let identifiers = controlViews(continuous).compactMap(\.identifier?.rawValue)
+        // Wait for the records and their text rather than a fixed 350 ms: a
+        // loaded runner can take longer to mount 35 thoughts.
+        let expectedEntries = Set(rows.map { "process-entry:" + $0.entry.id })
+        var identifiers: [String] = [], texts: [String] = []
+        for _ in 0..<120 {
+            try await Task.sleep(for: .milliseconds(25))
+            identifiers = controlViews(continuous).compactMap(\.identifier?.rawValue)
+            texts = controlViews(continuous).compactMap { $0 as? NSTextView }.map(\.string)
+            if Set(identifiers.filter { $0.hasPrefix("process-entry:") }) == expectedEntries,
+               texts.contains("记录 0") && texts.contains("记录 34") { break }
+        }
         let mountedEntries = identifiers.filter { $0.hasPrefix("process-entry:") }
-        precondition(Set(mountedEntries) == Set(rows.map { "process-entry:" + $0.entry.id }),
+        precondition(Set(mountedEntries) == expectedEntries,
                      "Opening the process reveals every record across the former page boundaries")
         precondition(!identifiers.contains { $0.contains("previous-page") || $0.contains("next-page") }, "The process has no pagination controls")
-        let texts = controlViews(continuous).compactMap { $0 as? NSTextView }.map(\.string)
         precondition(texts.contains("记录 0") && texts.contains("记录 34"), "Thought contents default open across the entire process")
     }
     ReadingBodySize.shared.set(ReadingBodySize.standard)
