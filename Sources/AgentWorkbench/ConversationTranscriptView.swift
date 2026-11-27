@@ -535,7 +535,7 @@ private final class ConversationDocumentView: NSView {
     private var sessionId = ""
     private var readingIntent = 0
     private var restoreTarget: ConversationReadingMemory.Position?
-    private var firstDisplayAnchor: ConversationReadingMemory.Position?
+    private var displayAnchor: ConversationReadingMemory.Position?
     private var rowAppearance: ConversationEntryAppearance?
     private weak var viewport: ConversationViewport?
     private var foldParents = FoldParents()
@@ -970,7 +970,7 @@ private final class ConversationDocumentView: NSView {
             readingIntent += 1
             saveReadingPosition()
             saveReadingHeights()
-            firstDisplayAnchor = nil
+            displayAnchor = nil
             restoreTarget = ConversationReadingMemory.shared.following[sessionId] == false ? ConversationReadingMemory.shared.positions[sessionId] : nil
             for controller in controllers.values { controller.view.removeFromSuperview() }
             Self.retire(Array(controllers.values))
@@ -1142,6 +1142,12 @@ private final class ConversationDocumentView: NSView {
         }
         refreshing = true
         defer { refreshing = false; revealInitialViewportIfReady() }
+        // A layout transaction can adjust the clip before or after viewWillDraw.
+        // Keep the restored or expanding row mounted at its actual reading offset.
+        if source == .clipBounds, let anchor = restoreTarget ?? displayAnchor, let clip = observedClip,
+           ConversationReadingMemory.shared.following[sessionId] == false {
+            pinClip(clip, to: anchor)
+        }
         var visible = viewportRect
         if preparingInitialViewport, ConversationReadingMemory.shared.following[sessionId] != false {
             // Lay out the incoming tail directly, not the outgoing clip position
@@ -1355,6 +1361,8 @@ private final class ConversationDocumentView: NSView {
             saveReadingPosition()
             restoreTarget = ConversationReadingMemory.shared.positions[sessionId]
         }
+        displayAnchor = restoreTarget
+        needsDisplay = true
     }
     private func updateHeight(_ id: String, height: CGFloat) {
         guard let index = indices[id], heights[index] != height else { return }
@@ -1423,12 +1431,18 @@ private final class ConversationDocumentView: NSView {
         // AppKit may clamp the clip origin after a height change, before the
         // coalesced viewport callback runs. Populate that visible range before
         // drawing, so a cached reply cannot disappear for one display pass.
-        // AppKit can move the clip once more when the incoming composer's
-        // inset settles. Pin the saved row in that final pre-display geometry.
-        if !preparingInitialViewport, !suspended, let anchor = firstDisplayAnchor {
-            firstDisplayAnchor = nil
-            if restoreTarget == nil { restoreTarget = anchor }
-            restoreReadingPosition()
+        if !preparingInitialViewport, !suspended, let anchor = displayAnchor, let clip = observedClip {
+            pinClip(clip, to: restoreTarget ?? anchor)
+            // SwiftUI can commit an inset or document-height change just after
+            // this draw. Keep the pin through that transaction. New scroll
+            // intent clears it before the user's clip movement arrives.
+            let intent = readingIntent
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.readingIntent == intent, !self.suspended,
+                      let anchor = self.displayAnchor, let clip = self.observedClip else { return }
+                self.pinClip(clip, to: self.restoreTarget ?? anchor)
+                self.displayAnchor = nil
+            }
         }
         refreshVisibleRows(source: .willDraw)
         super.viewWillDraw()
@@ -1465,7 +1479,7 @@ private final class ConversationDocumentView: NSView {
         }.min() ?? geometry.readingRow(at: max(0, visible.minY))
     }
     private func saveReadingPosition() {
-        guard !suspended, !preparingInitialViewport, restoreTarget == nil, firstDisplayAnchor == nil, !sessionId.isEmpty, let clip = observedClip,
+        guard !suspended, !preparingInitialViewport, restoreTarget == nil, displayAnchor == nil, !sessionId.isEmpty, let clip = observedClip,
               let index = readingRowForAnchor(),
               contents.indices.contains(index) else { return }
         ConversationReadingMemory.shared.savePosition(.init(entry: contents[index].entry.id,
@@ -1480,26 +1494,32 @@ private final class ConversationDocumentView: NSView {
         preparingInitialViewport = false
         isHidden = false
         readingIntent += 1
-        firstDisplayAnchor = nil
+        displayAnchor = nil
         restoreTarget = nil
     }
     private func restoreReadingPosition() {
         guard !suspended else { return }
         // Return to latest can run before the queued height publication.
         if ConversationReadingMemory.shared.following[sessionId] == true {
+            displayAnchor = nil
             restoreTarget = nil
             return
         }
         guard let target = restoreTarget, let clip = observedClip, abs(bounds.height - totalHeight) < 1, !contents.isEmpty else { return }
         let restoreProbe = PerfDiagnostics.begin()
         defer { PerfDiagnostics.end("anchor_restore", restoreProbe, detail: "rows=\(contents.count)") }
-        let index = indices[target.entry] ?? min(target.index, contents.count - 1)
-        let y = max(0, offsets[index] + target.offset + contentOriginY)
-        clip.scroll(to: NSPoint(x: 0, y: y))
-        enclosingScrollView?.reflectScrolledClipView(clip)
-        if preparingInitialViewport { firstDisplayAnchor = target }
+        pinClip(clip, to: target)
+        if preparingInitialViewport { displayAnchor = target }
         restoreTarget = nil
         refreshVisibleRows(source: .restore)
+    }
+    private func pinClip(_ clip: NSClipView, to target: ConversationReadingMemory.Position) {
+        guard !contents.isEmpty else { return }
+        let index = indices[target.entry] ?? min(target.index, contents.count - 1)
+        let y = max(0, offsets[index] + target.offset + contentOriginY)
+        guard clip.bounds.minY != y else { return }
+        clip.scroll(to: NSPoint(x: 0, y: y))
+        enclosingScrollView?.reflectScrolledClipView(clip)
     }
     private func observeScroll() {
         let clip = enclosingScrollView?.contentView
