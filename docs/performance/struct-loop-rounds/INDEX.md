@@ -64,6 +64,9 @@ round31d 等）。
 5. **补丁重放须 tracked 还原 + untracked 清理双步**（round-1 门槛 v1 exit 1）：
    `git checkout -- <paths>` 不删未跟踪文件，遗留新文件使 `git apply` 报
    already exists；加 `git clean -fd <paths>`（gitignore 的 .local 不受影响）。
+6. **SSH 下 `open -n` 不可作冷启动存活门槛**（round-1 门槛 v2 5/5 假失败）：
+   LaunchServices 冷注册可在 12s 窗口内不拉起进程且 open 返回 0；直接 exec
+   app 二进制 + `$!` 精确 PID 确定性存活（隔离仍靠拷贝+独立 bundle ID+重签）。
 
 ## 候选队列
 
