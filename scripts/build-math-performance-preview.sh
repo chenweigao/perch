@@ -42,7 +42,6 @@ let package = Package(name: "MathPerformance", platforms: [.macOS("26.0")], depe
 metadata = {'variant': variant, 'revision': subprocess.check_output(['git', 'rev-parse', revision], text=True).strip(),
             'fixture': 'synthetic; no sessions or network',
             'dependencies': {pin['identity']: pin['state'] for pin in selected},
-            'suffix_search': 'private static func closingDelimiter' in (Path(snapshot) / 'Sources/WorkbenchCore/ReplyMath.swift').read_text(),
             'toolchain': subprocess.check_output(['swift', '--version'], text=True).strip()}
 # Fingerprint the exported inputs, not the commit or output paths. Unrelated
 # changes must not turn an A/A measurement into a source-regression claim.

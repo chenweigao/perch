@@ -56,8 +56,12 @@ import WorkbenchCore
                      "Expected overview offset \(offset), got \(scroll.contentView.bounds.origin.y)")
     }
     let first = try await mount(reading)
-    first.contentView.scroll(to: NSPoint(x: 0, y: 600)); first.reflectScrolledClipView(first.contentView)
-    for _ in 0..<80 where reading.overviewOffset < 590 { try await Task.sleep(for: .milliseconds(25)) }
+    // Repeat the scroll until it sticks: issued before the hosted rows are laid
+    // out, the clip view clamps it to zero (CI 2026-11-26).
+    for _ in 0..<80 where reading.overviewOffset < 590 {
+        first.contentView.scroll(to: NSPoint(x: 0, y: 600)); first.reflectScrolledClipView(first.contentView)
+        try await Task.sleep(for: .milliseconds(25))
+    }
     precondition(abs(reading.overviewOffset - 600) <= 2)
     window.contentView = NSView()
     try await expect(mount(reading), offset: 600)
