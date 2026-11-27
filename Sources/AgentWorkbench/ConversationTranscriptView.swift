@@ -1154,11 +1154,14 @@ private final class ConversationDocumentView: NSView {
             enclosingScrollView?.reflectScrolledClipView(clip)
             visible = viewportRect
         }
-        // Mount exactly the visible range; wider speculative ranges measured as
-        // pure overhead on whole-viewport steps and did not pay for themselves.
-        var index = min(geometry.firstIntersecting(max(0, visible.minY)), contents.count - 1)
+        // Lay out the next strip before it is exposed. Small wheel deltas then
+        // paint an already placed row instead of mounting a table and flushing
+        // its first pixels in the same scroll transaction.
+        let margin = min(96, visible.height / 4)
+        let mountRect = visible.insetBy(dx: 0, dy: -margin)
+        var index = min(geometry.firstIntersecting(max(0, mountRect.minY)), contents.count - 1)
         let first = index
-        let end = max(first, geometry.end(before: visible.maxY))
+        let end = max(first, geometry.end(before: mountRect.maxY))
         #if TRANSCRIPT_CHECKS
         let previousRange = laidOutRange
         #endif
@@ -1197,7 +1200,7 @@ private final class ConversationDocumentView: NSView {
         deferringGeometry = true
         var nextMounted: Set<String> = []
         var rowY = offsets[first]
-        while index < contents.count && rowY < visible.maxY {
+        while index < contents.count && rowY < mountRect.maxY {
             let content = contents[index]
             let id = content.entry.id
             let controller: ConversationEntryController

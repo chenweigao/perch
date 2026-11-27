@@ -476,6 +476,7 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
         }
         let codeText = self.codeText ?? {
             let view = SelectableReplyText.acquire(delegate: links)
+            view.isConversationBodyText = true
             view.textContainer?.widthTracksTextView = false
             view.textContainer?.containerSize = NSSize(width: CGFloat.greatestFiniteMagnitude,
                                                        height: CGFloat.greatestFiniteMagnitude)
