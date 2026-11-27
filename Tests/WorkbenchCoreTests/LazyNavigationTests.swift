@@ -113,7 +113,11 @@ func checkLazyNavigation() throws {
         let first = reflexive.update(.init(messages: messages, language: "zh")).navigation
         let second = reflexive.update(.init(messages: messages, language: "zh")).navigation
         precondition(zip(first, second).allSatisfy { $0 === $1 }, "input-equal update must keep instances")
-        precondition(first == second, "one navigation must equal itself")
+        // Reshape into a distinct buffer holding the same instances: Swift's
+        // array equality skips element work only when both sides share one
+        // buffer, so this is the comparison a viewport refresh actually makes.
+        let reshaped = second.flatMap { [$0] }
+        precondition(first == reshaped, "one navigation must equal a reshaped copy of itself")
         for summary in first.dropLast() {
             precondition(!summary.materialized, "reflexive equality must not extract earlier excerpts")
         }
@@ -144,6 +148,16 @@ func checkLazyNavigation() throws {
             precondition(!summary.materialized, "a tail delta must not extract earlier excerpts")
         }
         precondition(streamed.last !== cold.last, "the streamed turn must yield a new instance")
+        // A delta rebuilds the navigation array, so the viewport compares two
+        // DISTINCT arrays that share their history instances. That comparison
+        // must not extract either side (Swift's array equality only skips
+        // element work when both sides share one buffer).
+        precondition(Array(cold.dropLast()) == Array(streamed.dropLast()),
+                     "history navigation must compare equal across a tail delta")
+        for summary in streamed.dropLast() {
+            precondition(!summary.materialized,
+                         "comparing shared instances across distinct arrays must not extract")
+        }
     }
 
     // 9. Prepended page: the window grows at the front, the reused suffix keeps
