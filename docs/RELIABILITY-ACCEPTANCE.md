@@ -39,7 +39,7 @@ disjoint phase or mode groups. Native acceptance still builds independently beca
 it uses different compile flags. Every phase and mode executes exactly once; no
 test is skipped by these splits. Exact-source fixture caches can reuse a signed app
 without compilation, but never use a fallback key or a binary built from different
-sources. Cache hits verify the signature and publish a `cache_hit` group report.
+sources. A cache hit skips the build step; the job log names the restored key.
 A summary job named `Native build and interaction regression` fails if any group
 fails and publishes the combined `macos-results` evidence. Group reports retain
 individual and total durations.

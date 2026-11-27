@@ -209,20 +209,6 @@ jobs:
           key: ${{ runner.os }}-${{ runner.arch }}-xcode-27-host-fixture-v1-${{ hashFiles('Sources/**', 'Tests/HostLifecycleChecks/**', 'Package.swift', 'Package.resolved', 'patches/**', 'Resources/Highlight/**', 'Resources/Localization/**', 'scripts/build.sh', 'scripts/check-host-lifecycle.py', 'scripts/prepare-highlight.sh') }}
       - if: steps.host-fixture-cache.outputs.cache-hit != 'true'
         run: python3 scripts/check-functional.py macos --group host-build --output .local/functional-host-build
-      - name: Verify and record the cached host fixture
-        if: steps.host-fixture-cache.outputs.cache-hit == 'true'
-        run: |
-          codesign --verify --strict .local/host-fixture/HostLifecycleChecks.app
-          mkdir -p .local/functional-host-build
-          python3 - <<'PY'
-          import json, pathlib, subprocess
-          report = {
-              "suite": "macos", "group": "host-build", "status": "passed", "cache_hit": True,
-              "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
-              "checks": [{"name": "host-build", "command": ["actions/cache"], "passed": True, "seconds": 0}],
-          }
-          pathlib.Path(".local/functional-host-build/results.json").write_text(json.dumps(report, indent=2) + "\n")
-          PY
       - name: Package the host lifecycle fixture
         run: |
           mkdir -p .local/host-fixture
@@ -321,20 +307,6 @@ jobs:
             ${{ runner.os }}-${{ runner.arch }}-xcode-27-acceptance-${{ hashFiles('Package.resolved', 'patches/**') }}-
       - if: steps.acceptance-fixture-cache.outputs.cache-hit != 'true'
         run: python3 scripts/check-functional.py macos --group native-build --output .local/functional-native-build
-      - name: Verify and record the cached acceptance fixture
-        if: steps.acceptance-fixture-cache.outputs.cache-hit == 'true'
-        run: |
-          codesign --verify --deep --strict "build/Perch Acceptance.app"
-          mkdir -p .local/functional-native-build
-          python3 - <<'PY'
-          import json, pathlib, subprocess
-          report = {
-              "suite": "macos", "group": "native-build", "status": "passed", "cache_hit": True,
-              "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
-              "checks": [{"name": "native-build", "command": ["actions/cache"], "passed": True, "seconds": 0}],
-          }
-          pathlib.Path(".local/functional-native-build/results.json").write_text(json.dumps(report, indent=2) + "\n")
-          PY
       - name: Package the native acceptance fixture
         run: |
           mkdir -p .local/native-acceptance
@@ -427,20 +399,6 @@ jobs:
         env:
           PERCH_REUSE_PREBUILT: '1'
         run: python3 scripts/check-functional.py macos --group navigation-build --output .local/functional-navigation-build
-      - name: Verify and record the cached navigation fixture
-        if: steps.navigation-fixture-cache.outputs.cache-hit == 'true'
-        run: |
-          codesign --verify --strict "build/Navigation Preview.app"
-          mkdir -p .local/functional-navigation-build
-          python3 - <<'PY'
-          import json, pathlib, subprocess
-          report = {
-              "suite": "macos", "group": "navigation-build", "status": "passed", "cache_hit": True,
-              "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
-              "checks": [{"name": "navigation-build", "command": ["actions/cache"], "passed": True, "seconds": 0}],
-          }
-          pathlib.Path(".local/functional-navigation-build/results.json").write_text(json.dumps(report, indent=2) + "\n")
-          PY
       - name: Package the navigation fixture
         run: |
           mkdir -p .local/native-navigation
