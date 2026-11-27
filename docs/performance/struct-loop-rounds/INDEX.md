@@ -64,19 +64,20 @@ round31d 等）。
 5. **补丁重放须 tracked 还原 + untracked 清理双步**（round-1 门槛 v1 exit 1）：
    `git checkout -- <paths>` 不删未跟踪文件，遗留新文件使 `git apply` 报
    already exists；加 `git clean -fd <paths>`（gitignore 的 .local 不受影响）。
-6. **本机对新 bundle ID app ~11s 准时 SIGKILL**（round-1 门槛 v2/v3 5/5 假失败）：
-   异步首启评估，与启动方式（open/直接 exec）、重签深度、entitlements、执行
+6. **本机对新 bundle ID app ~11s 准时 SIGKILL**（round-1 门槛 v2/v3 5/5 假失败；
+   机制=异步首启评估/已知 ID 缓存为 **HYPOTHESIS**，与观测矩阵一致，未做
+   指令级取证）：与启动方式（open/直接 exec）、重签深度、entitlements、执行
    上下文（SSH/Aqua LaunchAgent）均无关；同新 ID 复启仍死；已知 ID（acceptance
-   fixture，20x 循环反复使用）有评估缓存、存活。GUI 存活门槛须复用已知
-   bundle ID（候选 acceptance fixture），新 ID 拷贝隔离设计不可行。启动任何
-   app 前核验其偏好域无 hosts/远程连接配置（红线）。
+   fixture，20x 循环反复使用）存活。GUI 存活门槛须复用已知 bundle ID；
+   生产入口门槛用原构建 + CFFIXED_USER_HOME/HOME 空目录隔离偏好域
+   （hosts=[] → 零连接）。启动任何 app 前核验其偏好域无 hosts/远程连接配置。
 
 ## 候选队列
 
 | # | 候选 | 状态 | 依据 |
 | --- | --- | --- | --- |
 | ① | 大会话冷首访懒/视口投影 | 待立项（Linux 筛选已确认前提；Mac 基线待测） | 20x 基线报告：16k 外推 ~580ms 模型层；100x 拉伸场景 |
-| ② | foldParents 整字典 COW 消除（split 表示，API 形态） | **round 1 正式 PASS 两档，采纳（门槛 5/5 通过；评审/CI 进行中）** | v2 探针翻盘：拷贝 44.4µs@16k / 308.7µs@64k，chain 份额 11.4%/17.4%；B 授权解锁；正式 16k chain -12.1%/64k -28.9%，presented -63.3%/-83.9% |
+| ② | foldParents 整字典 COW 消除（split 表示，API 形态） | **round 1 16k 正式 PASS，采纳（生产门槛 v5/64k 补对/评审闭环进行中）** | v2 探针翻盘：拷贝 44.4µs@16k / 308.7µs@64k，chain 份额 11.4%/17.4%；B 授权解锁；正式 16k chain -12.1%/presented -63.3%（6 对）；64k 三对缩放佐证 chain -28.9%/presented -83.9%（补 6 对进行中） |
 | ③ | displayMessages / Array.+ API 形态决策 | 待立项（round-1 附带代码走查） | round-38/42 遗留；Array.+ 8.58% inclusive；64k chain 残余嫌疑=`Snapshot.rows` getter :399 `history.rows+tail` 与 presented :453 `earlier.rows+rows` 每 delta 两次 O(窗口) 拼接（displayed() 空 activity 已有快路径）；②采纳后 64k chain 残余实测 1.09–1.20ms（formal cand，median 1.13）待归因探针定量 |
 | ④ | 验证族路径插桩（sameWindow 10.38% / canReuse 5.03% / input-compare 7.49%，重叠） | 待立项（先插桩出净收益下界） | 停止报告重启条件③ |
 | ⑤ | 冷首搜 cf-match 调度层（语义不动，改时机/范围） | 待立项（需设计评审） | round-31 归因 cf-match 79%，检测器输出语义红线 |
@@ -85,7 +86,7 @@ round31d 等）。
 
 | 轮 | 日期 | 场景 | 结论 | 报告 |
 | --- | --- | --- | --- | --- |
-| 1 | 2026-11-27 | ② foldParents COW：探针翻盘 + split 候选 | 候选 e40b7054；Linux 113 PASS+1 SKIP、portable、变异电池 4/4；粗筛 v2 通过；**正式 PASS 两档**（16k chain -12.1%/presented -63.3%，6/6 全负、中位数超带；64k chain -28.9%/presented -83.9%，全对超带）；**采纳**，产品门槛 5/5 通过（acceptance fixture，source_sha256 与 PR 同哈希）；评审/CI 进行中；PR [#378](https://github.com/chenweigao/perch/pull/378) | [round-1](2026-11-27-round-1.md) |
+| 1 | 2026-11-27 | ② foldParents COW：探针翻盘 + split 候选 | 候选 e40b7054；Linux 113 PASS+1 SKIP、portable、变异电池 4/4；粗筛 v2 通过；**16k 正式 PASS**（6 对 chain -12.1%/presented -63.3%，全负、中位数超带）；64k 三对缩放佐证（chain -28.9%/presented -83.9%，全对超带，补 6 对进行中）；**采纳**；评审 FINDINGS B1/B2 处置中（B2 已闭环，B1 生产门槛 v5 运行中）；fixture 门槛 v4 5/5 独立登记；PR [#378](https://github.com/chenweigao/perch/pull/378) | [round-1](2026-11-27-round-1.md) |
 
 ### round 1 侦察记录（base=1c0d52e0，drift=0）
 
