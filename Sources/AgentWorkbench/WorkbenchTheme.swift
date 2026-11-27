@@ -123,9 +123,10 @@ enum WorkbenchTheme {
 
     /// Inline-code chip fill in prose: an opaque neutral a step darker than the
     /// sheet, so `main` and hashes read as chips (Qoder). Opaque, because an alpha
-    /// wash over the glass backdrop reads as a border-only bubble. Self-drawn (ReplyTextView).
+    /// wash over the glass backdrop reads as a border-only bubble. Self-drawn (ReplyTextView),
+    /// fill only: the fill alone carries the edge, so light sits a touch deeper.
     /// Dark values share the canvas's blue-graphite hue (~226°), one step lighter.
-    static let inlineCodeTintNS = nsColor(light: (240/255, 240/255, 241/255), dark: (45/255, 49/255, 59/255))
+    static let inlineCodeTintNS = nsColor(light: (236/255, 237/255, 240/255), dark: (45/255, 49/255, 59/255))
 
     /// Code/mermaid/tool card surface (DSH `--dsw-alias-markdown-code-block`:
     /// neutral-bluish-50). Dark is a recessed step below the canvas in its own

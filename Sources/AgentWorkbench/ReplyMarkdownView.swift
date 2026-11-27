@@ -122,6 +122,15 @@ enum ReplyStyle {
         }
     }
 
+    /// Inline code and mention chips: a fill that hugs the glyphs, with real room
+    /// beside it (`ReplyTextAttributes.reserveChipSpace` kerns the neighbors).
+    enum Chip {
+        /// Fill beyond the glyphs on each side.
+        static let horizontalPadding: CGFloat = 4
+        static let verticalPadding: CGFloat = 1.5
+        /// Clear space between the fill and the neighboring glyph.
+        static let gap: CGFloat = 2
+    }
     /// Code card chrome; the native card and the SwiftUI card place text identically.
     /// Banner follows DSH: a fixed 11 pt label (not content-scaled), 14 pt side
     /// padding, 6 pt vertical padding (36 pt header), 16 pt text inset.
@@ -920,6 +929,7 @@ enum ReplyTextAttributes {
                 result.addAttribute(.font, value: NSFont.monospacedSystemFont(ofSize: max(11, size - 1), weight: .medium), range: ref.range)
             }
         }
+        reserveChipSpace(in: result)
         let characters = result.length
         if characters <= 512_000 {
             while !paragraphsCacheOrder.isEmpty,
@@ -936,7 +946,34 @@ enum ReplyTextAttributes {
         return result
     }
 
-    /// Matches `SelectableReplyText(_:font:lineSpacing:)` so native and SwiftUI code
+    /// A chip's fill reaches past its glyphs (`ReplyStyle.Chip`), but TextKit lays
+    /// the neighbors flush against them; Chinese has no spaces to absorb the
+    /// padding, so the fill ran into the next character. Kern the character before
+    /// each chip and the chip's last character so the fill plus a gap fits. A
+    /// space beside the chip already holds most of the padding. Kern is layout
+    /// only: selection and copy see the same text.
+    static func reserveChipSpace(in text: NSMutableAttributedString) {
+        let string = text.string as NSString
+        let full = ReplyStyle.Chip.horizontalPadding + ReplyStyle.Chip.gap
+        func room(beside index: Int) -> CGFloat? {
+            guard index >= 0, index < string.length else { return nil }
+            guard let scalar = Unicode.Scalar(string.character(at: index)) else { return full }
+            if CharacterSet.newlines.contains(scalar) { return nil }
+            return CharacterSet.whitespaces.contains(scalar) ? ReplyStyle.Chip.gap : full
+        }
+        var chips: [NSRange] = []
+        text.enumerateAttribute(.replyChip, in: NSRange(location: 0, length: text.length)) { value, range, _ in
+            if value != nil, range.length > 0 { chips.append(range) }
+        }
+        for chip in chips {
+            if let kern = room(beside: chip.location - 1) {
+                text.addAttribute(.kern, value: kern, range: string.rangeOfComposedCharacterSequence(at: chip.location - 1))
+            }
+            if let kern = room(beside: NSMaxRange(chip)) {
+                text.addAttribute(.kern, value: kern, range: string.rangeOfComposedCharacterSequence(at: NSMaxRange(chip) - 1))
+            }
+        }
+    }
     /// cards measure identical text.
     static func code(_ source: String) -> NSAttributedString {
         let paragraph = NSMutableParagraphStyle(); paragraph.lineSpacing = ReplyStyle.codeLineSpacing
@@ -1536,10 +1573,16 @@ final class ReplyTextView: NSTextView {
                       let end = content.location(start, offsetBy: run.range.length),
                       let range = NSTextRange(location: start, end: end),
                       let font = storage.attribute(.font, at: run.range.location, effectiveRange: nil) as? NSFont else { continue }
-                layout.enumerateTextSegments(in: range, type: .standard, options: [.rangeNotRequired]) { _, segment, baseline, _ in
+                // The chip's own trailing kern (reserveChipSpace) sits inside its
+                // last segment; the fill ends at the last glyph instead.
+                let trailingKern = (storage.attribute(.kern, at: NSMaxRange(run.range) - 1, effectiveRange: nil) as? NSNumber)
+                    .map { CGFloat($0.doubleValue) } ?? 0
+                layout.enumerateTextSegments(in: range, type: .standard, options: []) { segmentRange, segment, baseline, _ in
+                    let endsChip = segmentRange.map { $0.endLocation.compare(range.endLocation) == .orderedSame } ?? true
                     let rect = CGRect(x: segment.minX + self.textContainerOrigin.x,
                                       y: segment.minY + baseline - font.ascender + self.textContainerOrigin.y,
-                                      width: segment.width, height: font.ascender - font.descender)
+                                      width: max(0, segment.width - (endsChip ? trailingKern : 0)),
+                                      height: font.ascender - font.descender)
                     self.paintChip(rect, color: run.color)
                     return true
                 }
@@ -1552,26 +1595,37 @@ final class ReplyTextView: NSTextView {
             print("CHIP-PAINT view=\(Unmanaged.passUnretained(self).toOpaque()) runs=\(runs.count) bounds=\(NSStringFromRect(bounds)) text=«\(snippet)»")
         }
         manager.ensureLayout(for: container)
+        let text = storage.string as NSString
         for run in runs {
             if ProcessInfo.processInfo.environment["CHIP_RED"] != nil { NSColor.red.setFill() } else { run.color.setFill() }
             let glyphs = manager.glyphRange(forCharacterRange: run.range, actualCharacterRange: nil)
+            let trailingKern = (storage.attribute(.kern, at: NSMaxRange(run.range) - 1, effectiveRange: nil) as? NSNumber)
+                .map { CGFloat($0.doubleValue) } ?? 0
             manager.enumerateLineFragments(forGlyphRange: glyphs) { lineRect, _, _, lineGlyphs, _ in
                 let segment = NSIntersectionRange(glyphs, lineGlyphs)
                 guard segment.length > 0 else { return }
+                let charIndex = manager.characterIndexForGlyph(at: segment.location)
+                guard let runFont = storage.attribute(.font, at: charIndex, effectiveRange: nil) as? NSFont else { return }
                 // Horizontal: glyph locations, not boundingRect — the latter can
                 // extend past the last glyph and swallow following punctuation.
                 // location(forGlyphAt:) is line-fragment-relative: the fragment
                 // origin must be added back, or a wrapped chip's later segments
                 // paint over the first line.
-                let horizontal = manager.boundingRect(forGlyphRange: segment, in: container)
-                let charIndex = manager.characterIndexForGlyph(at: segment.location)
-                guard let runFont = storage.attribute(.font, at: charIndex, effectiveRange: nil) as? NSFont else { return }
                 let left = lineRect.origin.x + manager.location(forGlyphAt: segment.location).x
                 let right: CGFloat
                 if NSMaxRange(segment) < NSMaxRange(lineGlyphs) {
+                    // The next glyph's origin, less the chip's own trailing kern
+                    // (reserveChipSpace) when this segment ends the chip.
                     right = lineRect.origin.x + manager.location(forGlyphAt: NSMaxRange(segment)).x
+                        - (NSMaxRange(segment) == NSMaxRange(glyphs) ? trailingKern : 0)
                 } else {
-                    right = horizontal.maxX
+                    // At a line end there is no next glyph: measure the last
+                    // character itself, without its kern.
+                    let last = text.rangeOfComposedCharacterSequence(at: manager.characterIndexForGlyph(at: NSMaxRange(segment) - 1))
+                    var attributes = storage.attributes(at: last.location, effectiveRange: nil)
+                    attributes[.kern] = nil
+                    let width = NSAttributedString(string: text.substring(with: last), attributes: attributes).size().width
+                    right = lineRect.origin.x + manager.location(forGlyphAt: manager.glyphIndexForCharacter(at: last.location)).x + width
                 }
                 // Vertical: anchor to the run's own baseline. boundingRect's y
                 // tracks the line fragment, whose leading sits above the glyphs.
@@ -1587,14 +1641,14 @@ final class ReplyTextView: NSTextView {
             }
         }
     }
+    /// Fill only: an outline turned every chip into a box beside CJK text.
     private func paintChip(_ glyphBounds: CGRect, color: NSColor) {
-        let rect = backingAlignedRect(glyphBounds.insetBy(dx: -4, dy: -2.5), options: .alignAllEdgesNearest)
+        let rect = backingAlignedRect(glyphBounds.insetBy(dx: -ReplyStyle.Chip.horizontalPadding,
+                                                          dy: -ReplyStyle.Chip.verticalPadding),
+                                      options: .alignAllEdgesNearest)
         (ProcessInfo.processInfo.environment["CHIP_RED"] != nil ? NSColor.red : color).setFill()
-        let radius = min(7, rect.height / 2)
-        let path = NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
-        path.fill()
-        NSColor.separatorColor.withAlphaComponent(0.35).setStroke()
-        path.lineWidth = 0.5; path.stroke()
+        let radius = min(WorkbenchTheme.Radius.chip, rect.height / 2)
+        NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
     }
     var isConversationBodyText = false
     /// Extra context-menu items (message-level actions) supplied by the row.

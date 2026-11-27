@@ -2888,6 +2888,7 @@ private enum ThoughtTextStyle {
             }
             lastLineRange = NSRange(location: start, length: result.length - start)
         }
+        ReplyTextAttributes.reserveChipSpace(in: result)
         return result.length > 0 ? result : NSAttributedString(string: source, attributes: attributes)
     }
     private static func appendInline(_ line: String, into result: NSMutableAttributedString,

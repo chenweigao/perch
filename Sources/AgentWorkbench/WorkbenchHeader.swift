@@ -24,6 +24,7 @@ struct WorkbenchHeader: View {
                 Menu {
                     if model.showKimi { Button("同步会话") { kimi.reloadSelected() }.disabled(!kimi.online || kimi.loading) }
                     else if model.showNative { Button("重新连接") { native.connect() } }
+                    ConversationHistoryMenuItem(model: model, kimi: kimi, native: native)
                     if let item { Divider(); SessionActionsMenu(model: model, item: item) }
                 } label: { WorkbenchToolbarSymbol(name: "ellipsis") }
                     .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
@@ -33,6 +34,26 @@ struct WorkbenchHeader: View {
         }
         .frame(minWidth: 80, maxWidth: 440, alignment: .leading)
         .help(item.map { "\($0.title)\n\($0.reference.kind.label) · \($0.hostName)\n\($0.directory)" } ?? title)
+    }
+}
+
+/// "Load all turns" belongs to the session, not the reading area: scrolling
+/// toward the top already loads earlier pages, and the transcript's capsule
+/// covers the keyboard. A view of its own, so streamed snapshots re-evaluate
+/// this item and not the header.
+private struct ConversationHistoryMenuItem: View {
+    let model: WorkbenchModel
+    let kimi: KimiConnection
+    let native: NativeAgentConnection
+    var body: some View {
+        let hasOlder = model.showKimi ? kimi.conversation?.hasOlder == true
+            : model.showNative && native.snapshot?.hasOlder == true
+        if hasOlder {
+            let loading = model.showKimi ? kimi.loadingOlder : native.loadingOlder
+            Button(loading ? "Loading…" : "Load all turns") {
+                if model.showKimi { kimi.loadAllHistoryForSearch() } else { native.loadAllHistoryForSearch() }
+            }.disabled(loading || !(model.showKimi ? kimi.online : native.online))
+        }
     }
 }
 
