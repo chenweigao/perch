@@ -526,6 +526,8 @@ private final class ConversationDocumentView: NSView {
     private var controllers: [String: ConversationEntryController] = [:]
     private var mounted: Set<String> = []
     private var laidOutRange: Range<Int>?
+    private var lastScrollOrigin: CGFloat?
+    private var preloadsScrollEdges = false
     private static let retiredControllers = NSMutableArray()
     private static var drainingRetiredControllers = false
     private var sessionId = ""
@@ -958,6 +960,8 @@ private final class ConversationDocumentView: NSView {
             restoreTarget = ConversationReadingMemory.shared.positions[sessionId]
         }
         if changedSession {
+            lastScrollOrigin = nil
+            preloadsScrollEdges = false
             readingIntent += 1
             saveReadingPosition()
             saveReadingHeights()
@@ -1154,10 +1158,19 @@ private final class ConversationDocumentView: NSView {
             enclosingScrollView?.reflectScrolledClipView(clip)
             visible = viewportRect
         }
-        // Lay out the next strip before it is exposed. Small wheel deltas then
-        // paint an already placed row instead of mounting a table and flushing
-        // its first pixels in the same scroll transaction.
-        let margin = min(96, visible.height / 4)
+        // Give short wheel movements a strip of already placed rows. Jumps and
+        // restores measure only their destination: resolving an estimated row
+        // above a requested turn can otherwise displace its reading anchor.
+        if restoreTarget != nil || preparingInitialViewport || source == .reveal || source == .restore {
+            preloadsScrollEdges = false
+            lastScrollOrigin = visible.minY
+        } else if source == .clipBounds {
+            if let lastScrollOrigin, lastScrollOrigin != visible.minY {
+                preloadsScrollEdges = abs(visible.minY - lastScrollOrigin) < visible.height / 2
+            }
+            lastScrollOrigin = visible.minY
+        }
+        let margin = preloadsScrollEdges ? min(96, visible.height / 4) : 0
         let mountRect = visible.insetBy(dx: 0, dy: -margin)
         var index = min(geometry.firstIntersecting(max(0, mountRect.minY)), contents.count - 1)
         let first = index
