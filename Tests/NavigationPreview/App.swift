@@ -1689,10 +1689,15 @@ extension NavigationRunner {
                 var heights: [CGFloat] = [], gaps: [Double] = [], contentHeights: [CGFloat] = [], scrollOffsets: [CGFloat] = [], headerOffsets: [CGFloat] = []
                 var geometry: [[String: CGFloat]] = []
                 var previous = start, lastChange = start
+                // Sample through the 250 ms transition and until the height has held
+                // for 300 ms. A fixed half-second window failed on CI when the first
+                // expansion stalled the main thread past it: one sample, still at the
+                // collapsed height, read as a broken disclosure (2026-11-26).
+                var now = start
                 repeat {
                     try await Task.sleep(for: .milliseconds(8))
                     host.layoutSubtreeIfNeeded(); host.displayIfNeeded(); CATransaction.flush()
-                    let now = CACurrentMediaTime()
+                    now = CACurrentMediaTime()
                     gaps.append((now - previous) * 1_000); previous = now
                     let height = rows().first?.frame.height ?? 0
                     if heights.last != height { lastChange = now }
@@ -1706,7 +1711,7 @@ extension NavigationRunner {
                             "row_y": row.frame.minY,
                             "scroll_document_height": scroll.documentView?.bounds.height ?? 0])
                     }
-                } while CACurrentMediaTime() - start < 0.5
+                } while now - start < 0.5 || (now - lastChange < 0.3 && now - start < 3)
                 let expanded = iteration % 2 == 0
                 let finalHeight = heights.last ?? 0
                 let mismatches = zip(heights, contentHeights).filter { abs($0 - $1) > 1 }.count

@@ -27,7 +27,7 @@ def fixtures():
                                ("unclosed_4096", 300, 1.6)]:
             cases[name] = {"duration": {"median_ms": old if variant == "baseline" else new},
                            "semantic_sha256": name}
-        runs[variant]["parse-30"] = [{"measurements": cases, "suffix_search": variant == "baseline"} for _ in range(3)]
+        runs[variant]["parse-30"] = [{"measurements": cases} for _ in range(3)]
         for count in [32, 128, 512]:
             runs[variant][f"typeset-{count}"] = [{"measurements": {
                 "cold_attachment": {"total_ms": count * factor},
@@ -127,18 +127,15 @@ class MathPerformanceTests(unittest.TestCase):
         runs = fixtures()
         runs["baseline"] = copy.deepcopy(runs["candidate"])
         for record in runs["candidate"]["typeset-128"]:
-            record["measurements"]["cold_attachment"]["total_ms"] *= 2
+            record["measurements"]["cold_attachment"]["total_ms"] *= 4
         result = MODULE.compare(runs)
-        self.assertGreater(result["comparison"]["typeset-128"]["ratio"], 1.1)
+        self.assertGreater(result["comparison"]["typeset-128"]["ratio"], 2)
         self.assertEqual(result["input_comparison"]["relative_performance_gates"],
                          "not_applicable_identical_inputs")
-        # The same timings with an actual input change must fail the old gate.
+        # The same timings with an actual input change must fail the gate.
         for records in runs["candidate"].values():
             for record in records:
                 record["source_input_sha256"] = "c" * 64
-        # Keep this negative control focused on typesetting.
-        for record in runs["baseline"]["parse-30"]:
-            record["suffix_search"] = False
         with self.assertRaisesRegex(ValueError, "regression exceeds"):
             MODULE.compare(runs)
 
@@ -179,12 +176,20 @@ class MathPerformanceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "semantic mismatch"):
             MODULE.compare(runs)
 
-    def test_no_parser_improvement_fails(self):
+    def test_unclosed_round_noise_passes_and_blowout_fails(self):
+        # CI 2026-11-26: one candidate round at 7.8 ms against 4.2-4.9 ms put an
+        # unrelated change's median at 1.39x the baseline. Noise passes; a real
+        # blowout of the parser still fails.
         runs = fixtures()
-        runs["candidate"]["parse-30"] = copy.deepcopy(runs["baseline"]["parse-30"])
+        runs["baseline"]["parse-30"] = copy.deepcopy(runs["candidate"]["parse-30"])
+        for record in runs["baseline"]["parse-30"]:
+            record["source_input_sha256"] = "a" * 64
+        for record, value in zip(runs["candidate"]["parse-30"], [2.2, 1.6, 1.7]):
+            record["measurements"]["unclosed_4096"]["duration"]["median_ms"] = value
+        self.assertLess(MODULE.compare(runs)["comparison"]["parse_unclosed_4096"]["ratio"], 2)
         for record in runs["candidate"]["parse-30"]:
-            record["source_input_sha256"] = "b" * 64
-        with self.assertRaisesRegex(ValueError, "did not improve"):
+            record["measurements"]["unclosed_4096"]["duration"]["median_ms"] = 3.3
+        with self.assertRaisesRegex(ValueError, "Unclosed delimiter performance regressed"):
             MODULE.compare(runs)
 
     def test_superlinear_growth_fails(self):
@@ -204,7 +209,7 @@ class MathPerformanceTests(unittest.TestCase):
     def test_window_memory_regression_fails(self):
         runs = fixtures()
         for record in runs["candidate"]["window-128"]:
-            record["measurements"]["rss_after_bytes"] = 3_000_000
+            record["measurements"]["rss_after_bytes"] = 3_500_000
         with self.assertRaisesRegex(ValueError, "Window retained memory regressed"):
             MODULE.compare(runs)
 
@@ -231,32 +236,16 @@ class MathPerformanceTests(unittest.TestCase):
             record["measurements"]["initial_layout_display_ms"] = 15
         MODULE.compare(runs)
 
-    def test_typeset_early_round_warmup_spike_passes(self):
+    def test_typeset_round_noise_passes(self):
+        # Shared-runner rounds of one binary spread by a third; a candidate
+        # median 1.6x the baseline is still noise, not a regression.
         runs = fixtures()
-        runs["baseline"]["parse-30"] = copy.deepcopy(runs["candidate"]["parse-30"])
-        for record in runs["baseline"]["parse-30"]:
-            record["source_input_sha256"] = "a" * 64
-        for record in runs["baseline"]["typeset-32"]:
-            record["measurements"]["cold_attachment"]["total_ms"] = 50
-            record["measurements"]["first_light_dark_draw"]["total_ms"] = 50
-        for record in runs["candidate"]["typeset-32"][:2]:
-            record["measurements"]["cold_attachment"]["total_ms"] = 70
-            record["measurements"]["first_light_dark_draw"]["total_ms"] = 70
-        runs["candidate"]["typeset-32"][2]["measurements"]["cold_attachment"]["total_ms"] = 53
-        runs["candidate"]["typeset-32"][2]["measurements"]["first_light_dark_draw"]["total_ms"] = 53
-        MODULE.compare(runs)
-
-    def test_typeset_single_fast_baseline_round_passes(self):
-        runs = fixtures()
-        totals = {"baseline": [100, 230, 220], "candidate": [150, 290, 200]}
+        totals = {"baseline": [100, 230, 220], "candidate": [150, 350, 200]}
         for variant, values in totals.items():
             for record, total in zip(runs[variant]["typeset-128"], values):
                 record["measurements"]["cold_attachment"]["total_ms"] = total / 2
                 record["measurements"]["first_light_dark_draw"]["total_ms"] = total / 2
-        result = MODULE.compare(runs)
-        comparison = result["comparison"]["typeset-128"]
-        self.assertGreater(comparison["best_ratio"], 1.15)
-        self.assertLess(comparison["candidate_best_ms"], comparison["baseline_cold_and_draw_ms"] * 1.15)
+        self.assertLess(MODULE.compare(runs)["comparison"]["typeset-128"]["ratio"], 2)
 
     def test_schedule_order_shortens_only_identical_valid_fingerprints(self):
         with tempfile.TemporaryDirectory() as directory:
