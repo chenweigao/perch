@@ -427,7 +427,7 @@ private struct ConversationDocumentSizingHost: View {
     let sessionId: String
     let key: String
     let appearance: ConversationEntryAppearance
-    let foldParents: [String: String]
+    let foldParents: FoldParents
     let viewport: ConversationViewport?
     let layout: ConversationDocumentLayout
     let suspended: Bool
@@ -463,7 +463,7 @@ private struct ConversationDocumentHost: NSViewRepresentable {
     let sessionId: String
     let appearance: ConversationEntryAppearance
     /// Folded entry id -> its fold row id, so find results open the fold.
-    let foldParents: [String: String]
+    let foldParents: FoldParents
     let viewport: ConversationViewport?
     let layout: ConversationDocumentLayout
     // Changes invalidate SwiftUI's measurement without imposing a stale frame.
@@ -533,7 +533,7 @@ private final class ConversationDocumentView: NSView {
     private var restoreTarget: ConversationReadingMemory.Position?
     private var rowAppearance: ConversationEntryAppearance?
     private weak var viewport: ConversationViewport?
-    private var foldParents: [String: String] = [:]
+    private var foldParents = FoldParents()
     private var columnWidth: CGFloat = ReplyStyle.readingWidth
     private var refreshing = false
     private var contentOriginY: CGFloat = 0
@@ -878,7 +878,7 @@ private final class ConversationDocumentView: NSView {
     }
 
     func configure(_ next: [ConversationEntryView], contentIdentity: ConversationContentIdentity, navigation: [ConversationTurnSummary], sessionId: String,
-                   appearance: ConversationEntryAppearance, viewport: ConversationViewport?, foldParents: [String: String]? = nil,
+                   appearance: ConversationEntryAppearance, viewport: ConversationViewport?, foldParents: FoldParents? = nil,
                    contentOriginY: CGFloat, waitsForInitialPosition: Bool = false) {
         self.waitsForInitialPosition = waitsForInitialPosition
         if let foldParents { self.foldParents = foldParents }
