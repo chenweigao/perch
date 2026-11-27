@@ -75,12 +75,33 @@ round31d 等）。
    消费 job，派发后再 --check 会与 job 自身 apply 竞态→"patch does not
    apply" 假失败（树已被 job 打上补丁）。job 内 set -e 自保，无实害；
    核验顺序=scp 补丁→远端 --check→再 scp job。
+8. **Swift `Array ==` 只在两侧共享同一 buffer 时跳过元素比较**（round-2 shard A
+   变异电池 M4 首次存活）：`first == second` 若两个数组来自同一 Snapshot，元素级
+   `==` 根本不执行，"不得触发求值"的 pin 会假通过。懒/延迟求值类的反射 pin 必须
+   构造**不同 buffer 持有相同实例**的数组（`flatMap { [$0] }`、或 delta 前后的新旧
+   navigation），才等于生产里的比较形状。
+9. **懒化候选必须走查"值相等即求值"的消费点**（round-2 shard A BLOCKING 发现）：
+   `Equatable` 的 `@Published` 快照每次 viewport refresh 都比较一次，值相等语义会
+   把延迟成本搬到首次滚动。修法=元素级 `==` 加 `lhs === rhs` 反射短路（不改变
+   Equatable 语义），并用第 8 条的形状钉死。凡引入懒/引用类型，先 grep 所有
+   `Equatable`/`@Published`/`onChange`/`.task(id:)` 消费点。
+10. **非交替的 A/B 会把机器漂移记到候选头上**（round-2 shard A mounted 复测）：
+    base 全部跑完再跑 cand 时 `session_switch_ms` 出现 +38% 假差异；`switching`
+    4 轮交替时仍有 3 轮 cand 偏高 +18%，扩到 **10 轮交替**后配对差中位仅 +0.8%、
+    符号 5 正 5 负，且 4 个异常轮两侧都出现（cand 3 / base 1）并伴随
+    `main_actor_lateness.max` 563–765ms 系统尖峰。结论：GUI 侧指标一律交替，
+    轮数要到配对差中位远小于轮间带宽（本例 0.8% vs 21.6%）才可判定；
+    单看 2–4 轮的"一致偏高"可能是尖峰分布不均。
+11. **CI 的 acceptance 时长门槛在共享 runner 上会假失败**（round-2 shard A）：
+    `native-dashboard` 本机 41–46s，CI attempt 1 跑到 134.99s 撞 120s 上限失败，
+    未改一行代码 rerun 即 15/15 全绿。判 flake 的证据链=本机两侧同量级 +
+    base 同 job 历史 success + rerun 通过；不要据此改候选或放宽门槛。
 
 ## 候选队列
 
 | # | 候选 | 状态 | 依据 |
 | --- | --- | --- | --- |
-| ① | 大会话冷首访懒/视口投影 | 盘点+契约+**nav-split 裁决完成**；候选实现中（全 per-turn 懒物化 + tools/retained 配套） | Mac 63.73ms@16k；turns 83.8%；大会话每次重访 100% 冷（Linux+Mac 运行时证实），占切换成本 ~100%；**nav-split：Mac summary 54.6%/timeline 23%/rows 2%，Linux timeline 57.8%/summary 32.7%（主导跨平台翻转，全懒边界平台无关）**；契约 5 项钉死（查找扫源消息天然独立；几何纯值类型为估高接缝；跳转列表展开同步物化） |
+| ① | 大会话冷首访懒/视口投影 | **shard A（懒导航）已验证并采纳**（PR #380，16k 冷 −52.86%/2.11×，6/6 超带）；shard B（真 per-turn 懒物化 + tools/retained 配套）待立项 | Mac 63.73ms@16k；turns 83.8%；大会话每次重访 100% 冷（Linux+Mac 运行时证实），占切换成本 ~100%；**nav-split：Mac summary 54.6%/timeline 23%/rows 2%，Linux timeline 57.8%/summary 32.7%（主导跨平台翻转，全懒边界平台无关）**；契约 5 项钉死（查找扫源消息天然独立；几何纯值类型为估高接缝；跳转列表展开同步物化） |
 | ② | foldParents 整字典 COW 消除（split 表示，API 形态） | **已合并 60420b1a（2026-11-27）** | v2 探针翻盘：拷贝 44.4µs@16k / 308.7µs@64k，chain 份额 11.4%/17.4%；B 授权解锁；正式 16k chain -12.1%/presented -63.3%（6 对）；64k 三对缩放佐证 chain -28.9%/presented -83.9% + v2 独立重建佐证 3 对全负超带 median -30.4% |
 | ③ | displayMessages / Array.+ API 形态决策 | 待立项（round-1 附带代码走查） | round-38/42 遗留；Array.+ 8.58% inclusive；64k chain 残余嫌疑=`Snapshot.rows` getter :399 `history.rows+tail` 与 presented :453 `earlier.rows+rows` 每 delta 两次 O(窗口) 拼接（displayed() 空 activity 已有快路径）；②采纳后 64k chain 残余实测 1.09–1.20ms（formal cand，median 1.13）待归因探针定量 |
 | ④ | 验证族路径插桩（sameWindow 10.38% / canReuse 5.03% / input-compare 7.49%，重叠） | 待立项（先插桩出净收益下界） | 停止报告重启条件③ |
@@ -91,7 +112,7 @@ round31d 等）。
 | 轮 | 日期 | 场景 | 结论 | 报告 |
 | --- | --- | --- | --- | --- |
 | 1 | 2026-11-27 | ② foldParents COW：探针翻盘 + split 候选 | 候选 e40b7054；Linux 113 PASS+1 SKIP、portable、变异电池 4/4；粗筛 v2 通过；**16k 正式 PASS**（6 对 chain -12.1%/presented -63.3%，全负、中位数超带）；64k 三对缩放佐证（chain -28.9%/presented -83.9%，全对超带）+ v2 独立重建佐证 3 对（median -30.4%，全负超带）；**采纳**；评审两轮闭环（0 BLOCKING）；生产门槛 v5 5/5、fixture 门槛 v4 5/5 独立登记；PR [#378](https://github.com/chenweigao/perch/pull/378) **已合并 60420b1a**（复核 0 BLOCKING，CI 15/15，分支已删） | [round-1](2026-11-27-round-1.md) |
-| 2 | 2026-11-27 | ① 冷首访懒物化：盘点+契约+nav-split | 基线 63.73ms@16k、turns 83.8%、触发 100% 冷（三节见下）；契约钉死版立（5 项走查坐标+架构接缝）；**nav-split 翻盘：summary 主导 Mac 冷路径 54.6%（Linux timeline 主导 57.8%），rows 可略→全 per-turn 懒物化**；修订架构=壳+按需 timeline/rows/summary + tools/retained 配套（理论 30–60×）；分支 perf/struct-2-20261127；候选实现中 | [round-2](2026-11-27-round-2.md) |
+| 2 | 2026-11-27 | ① 冷首访懒物化：盘点+契约+nav-split+**shard A 验证采纳** | 基线 63.73ms@16k、turns 83.8%、触发 100% 冷；契约钉死版立；nav-split 裁决 summary 主导 Mac 冷路径（**同跑口径 53.1%**，旧 54.6% 混用分母已勘误）；**shard A 懒导航：审查发现 `Equatable` 快照每次 viewport refresh 值比较会全窗物化（BLOCKING），加 `==` 身份短路修复；Mac 6 对交替 16k 冷 67.480→31.916ms（−52.86%，2.11×，6/6 超带 2.87%），2k −61.74%；延期成本 34.03ms 全量物化（与 nav-split summary 相位 34.088ms 差 0.2%）、单条 hover +9µs、无一次性全量触发面；footprint −3.4%、进程峰值 RSS −1.9%；delta/prepend 无回归；Linux 114 PASS+1 SKIP、变异电池 6/6、UTF-8 字节 oracle；生产门槛 5/5、acceptance paging/switching/dashboard 全 passed（switching 10 轮交替配对差中位 +0.8%，符号 5/5）；CI 15/15（attempt 2）**；PR [#380](https://github.com/chenweigao/perch/pull/380) | [round-2](2026-11-27-round-2.md) |
 
 ### round 1 侦察记录（base=1c0d52e0，drift=0）
 
