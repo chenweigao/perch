@@ -49,6 +49,70 @@ extension NavigationRunner {
                 host.layoutSubtreeIfNeeded(); host.displayIfNeeded(); CATransaction.flush()
             }
         }
+        let mixed = """
+        StartMarker
+
+        | HeaderLeft | HeaderCenter | HeaderRight |
+        | :--- | :---: | ---: |
+        | 中文段落需要换行以检查表格在窄窗口中的高度和位置 | [LinkMarker](https://example.com/table) | RightMarker |
+        | Emoji 👩🏽‍💻 é | CenterMarker | EndCell |
+
+        ```swift
+        let codeMarker = 42
+        print(codeMarker)
+        ```
+
+        EndMarker
+        """
+        let cellMarkers = ["HeaderLeft", "HeaderCenter", "HeaderRight", "中文段落", "LinkMarker", "RightMarker",
+                           "Emoji", "CenterMarker", "EndCell", "let codeMarker", "EndMarker"]
+        for width in [CGFloat(680), 220] {
+            var reference: [CGPoint] = []
+            for transcript in [false, true] {
+                let root = KimiMarkdown(text: mixed).environment(\.isConversationBodyText, transcript)
+                    .frame(width: width, alignment: .leading)
+                let host = NSHostingView(rootView: root)
+                let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: width, height: 950),
+                                      styleMask: [.titled], backing: .buffered, defer: false)
+                window.isReleasedWhenClosed = false
+                window.contentView = host
+                window.orderFront(nil)
+                defer { window.close() }
+                try await settle(host)
+                let views = texts(host).filter { !$0.isHiddenOrHasHiddenAncestor }
+                func origin(_ marker: String) throws -> CGPoint {
+                    guard let view = views.first(where: { $0.string.contains(marker) }),
+                          let manager = view.layoutManager, let container = view.textContainer else {
+                        throw NavigationError("Missing mixed-row text: \(marker)")
+                    }
+                    let chars = (view.string as NSString).range(of: marker)
+                    let glyphs = manager.glyphRange(forCharacterRange: chars, actualCharacterRange: nil)
+                    return view.convert(manager.boundingRect(forGlyphRange: glyphs, in: container), to: host).origin
+                }
+                let anchor = try origin("StartMarker")
+                let points = try cellMarkers.map { marker in
+                    let point = try origin(marker)
+                    return CGPoint(x: point.x - anchor.x, y: point.y - anchor.y)
+                }
+                if transcript {
+                    for (index, point) in points.enumerated() {
+                        guard abs(point.x - reference[index].x) <= 1, abs(point.y - reference[index].y) <= 1 else {
+                            throw NavigationError("Mixed-row glyph shifted at \(width): \(cellMarkers[index]) \(reference[index]) -> \(point)")
+                        }
+                    }
+                    guard let cell = views.first(where: { $0.string == "LinkMarker" }), cell.isSelectable,
+                          (cell.textStorage?.attribute(.link, at: 0, effectiveRange: nil) as? URL)?.absoluteString == "https://example.com/table" else {
+                        throw NavigationError("Transcript table lost its selectable link")
+                    }
+                    if width == 220 {
+                        guard let scroll = cell.enclosingScrollView, let document = scroll.documentView,
+                              document.frame.width > scroll.contentView.bounds.width + 1 else {
+                            throw NavigationError("Narrow transcript table lost horizontal scrolling")
+                        }
+                    }
+                } else { reference = points }
+            }
+        }
         var samples: [[String: Any]] = []
         for width in [CGFloat(700), 340] {
             var positions: [[String: CGFloat]] = []
@@ -136,7 +200,7 @@ extension NavigationRunner {
                               "median_ms": elapsed[elapsed.count / 2], "p95_ms": elapsed[Int(Double(elapsed.count - 1) * 0.95)],
                               "render_stages": NavigationRenderMetrics.report, "identity_preserved": true])
         }
-        return ["streaming_samples": streaming, "paragraph_samples": samples, "streaming_identity": stableIdentity, "streaming_selection": stableSelection,
+        return ["mixed_reply_geometry": true, "streaming_samples": streaming, "paragraph_samples": samples, "streaming_identity": stableIdentity, "streaming_selection": stableSelection,
                 "replacement": true]
     }
 }

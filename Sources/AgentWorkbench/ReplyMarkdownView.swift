@@ -1138,24 +1138,24 @@ struct SelectableReplyText: NSViewRepresentable {
             #endif
         } else {
             view = ReplyTextView(usingTextLayoutManager: usesViewportLayout)
+            view.isEditable = false
+            view.enabledTextCheckingTypes = 0
+            // Read-only prose: the spell/grammar checker's dotted underlines read as
+            // rendering noise on mixed CJK/Latin agent output.
+            view.isContinuousSpellCheckingEnabled = false
+            view.isGrammarCheckingEnabled = false
+            view.isAutomaticSpellingCorrectionEnabled = false
+            view.drawsBackground = false
+            view.textContainerInset = .zero
+            view.textContainer?.lineFragmentPadding = 0
+            view.isHorizontallyResizable = false
+            view.isVerticallyResizable = false
+            view.linkTextAttributes = [.foregroundColor: WorkbenchTheme.link]
+            view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         }
-        view.isEditable = false
         view.delegate = delegate
-        view.enabledTextCheckingTypes = 0
-        // Read-only prose: the spell/grammar checker's dotted underlines read as
-        // rendering noise on mixed CJK/Latin agent output.
-        view.isContinuousSpellCheckingEnabled = false
-        view.isGrammarCheckingEnabled = false
-        view.isAutomaticSpellingCorrectionEnabled = false
         view.isSelectable = true
-        view.drawsBackground = false
-        view.textContainerInset = .zero
-        view.textContainer?.lineFragmentPadding = 0
         view.textContainer?.widthTracksTextView = true
-        view.isHorizontallyResizable = false
-        view.isVerticallyResizable = false
-        view.linkTextAttributes = [.foregroundColor: WorkbenchTheme.link]
-        view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         return view
     }
     func updateNSView(_ view: ReplyTextView, context: Context) {
@@ -1326,7 +1326,8 @@ final class NativeUserMessageView: NSView {
         if recycled.count < 16 { recycled.append(view) }
     }
     func update(_ content: [NSAttributedString], dark: Bool) {
-        appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+        let appearanceName: NSAppearance.Name = dark ? .darkAqua : .aqua
+        if appearance?.name != appearanceName { appearance = NSAppearance(named: appearanceName) }
         effectiveAppearance.performAsCurrentDrawingAppearance {
             bubbleBackground.layer?.backgroundColor = WorkbenchTheme.userBubbleNS.cgColor
         }
@@ -1412,7 +1413,8 @@ final class NativeUserMessageView: NSView {
             if text.frame != frame { text.frame = frame }
             y += size.height + UserMessageStyle.paragraphSpacing
         }
-        let height = measure(width: width).height - UserMessageStyle.topSpacing
+        let toggle = folds ? UserMessageStyle.toggleSpacing + UserMessageStyle.toggleHeight : 0
+        let height = UserMessageStyle.verticalPadding * 2 + visible + toggle
         let next = CGRect(x: x, y: UserMessageStyle.topSpacing, width: layout.bubbleWidth, height: height)
         if bubbleBackground.frame != next { bubbleBackground.frame = next }
     }
@@ -1463,6 +1465,7 @@ private struct NativeAssistantActions: View {
                 }
             }
         }
+        .id(configuration.messageID)
     }
 }
 
@@ -1494,6 +1497,12 @@ final class NativeAssistantMessageView: NSView {
         #endif
         return recycled.popLast() ?? NativeAssistantMessageView(frame: .zero)
     }
+    func prepareForNewMessage() {
+        for case .code in stack.blocks {
+            stack.teardown()
+            break
+        }
+    }
     static func recycle(_ view: NativeAssistantMessageView) {
         view.removeFromSuperview()
         view.actionModel.update(source: nil)
@@ -1508,7 +1517,8 @@ final class NativeAssistantMessageView: NSView {
     func update(_ blocks: [NativeAssistantBlock], source: String, dark: Bool, enabled: Bool = true,
                 actionContext: ConversationActionContext? = nil, messageID: String? = nil,
                 showsActions: Bool = true, unchangedPrefix: Int = 0) {
-        appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+        let appearanceName: NSAppearance.Name = dark ? .darkAqua : .aqua
+        if appearance?.name != appearanceName { appearance = NSAppearance(named: appearanceName) }
         stack.update(blocks, unchangedPrefix: unchangedPrefix)
         self.showsActions = showsActions
         actions.isHidden = !showsActions
@@ -1552,6 +1562,22 @@ final class NativeAssistantMessageView: NSView {
 }
 
 final class ReplyTextView: NSTextView {
+    private var resizing = false
+
+    override func setFrameSize(_ newSize: NSSize) {
+        let wasResizing = resizing
+        resizing = true
+        defer { resizing = wasResizing }
+        super.setFrameSize(newSize)
+    }
+
+    override func scrollToVisible(_ rect: NSRect) -> Bool {
+        // TextKit tries to reveal an insertion point when an inactive read-only
+        // cell gets its frame. Keep the reader's viewport during that layout.
+        if resizing, window?.firstResponder !== self, selectedRange().length == 0 { return false }
+        return super.scrollToVisible(rect)
+    }
+
     var codeHighlighting: CodeHighlightController?
     func highlightCode(language: String, debounce: Bool = false) {
         if codeHighlighting == nil { codeHighlighting = CodeHighlightController(view: self) }
@@ -1565,6 +1591,9 @@ final class ReplyTextView: NSTextView {
         paintChips()
         super.draw(dirtyRect)
     }
+    private static let traceChipPaint = ProcessInfo.processInfo.environment["CHIP_TRACE"] != nil
+    private static let markChipsRed = ProcessInfo.processInfo.environment["CHIP_RED"] != nil
+    private static let logChipBounds = ProcessInfo.processInfo.environment["CHIP_DEBUG"] != nil
     private func paintChips() {
         guard let storage = textStorage else { return }
         var runs: [(color: NSColor, range: NSRange)] = []
@@ -1597,14 +1626,14 @@ final class ReplyTextView: NSTextView {
             return
         }
         guard let manager = layoutManager, let container = textContainer else { return }
-        if ProcessInfo.processInfo.environment["CHIP_TRACE"] != nil {
+        if Self.traceChipPaint {
             let snippet = storage.string.count > 30 ? String(storage.string.prefix(30)) : storage.string
             print("CHIP-PAINT view=\(Unmanaged.passUnretained(self).toOpaque()) runs=\(runs.count) bounds=\(NSStringFromRect(bounds)) text=«\(snippet)»")
         }
         manager.ensureLayout(for: container)
         let text = storage.string as NSString
         for run in runs {
-            if ProcessInfo.processInfo.environment["CHIP_RED"] != nil { NSColor.red.setFill() } else { run.color.setFill() }
+            if Self.markChipsRed { NSColor.red.setFill() } else { run.color.setFill() }
             let glyphs = manager.glyphRange(forCharacterRange: run.range, actualCharacterRange: nil)
             let trailingKern = (storage.attribute(.kern, at: NSMaxRange(run.range) - 1, effectiveRange: nil) as? NSNumber)
                 .map { CGFloat($0.doubleValue) } ?? 0
@@ -1641,7 +1670,7 @@ final class ReplyTextView: NSTextView {
                                   width: right - left, height: runFont.ascender - runFont.descender)
                 rect.origin.x += self.textContainerInset.width
                 rect.origin.y += self.textContainerInset.height
-                if ProcessInfo.processInfo.environment["CHIP_DEBUG"] != nil {
+                if Self.logChipBounds {
                     print("CHIP-DRAW range=\(run.range) rect=\(rect) lineGlyphs=\(lineGlyphs) segment=\(segment)")
                 }
                 self.paintChip(rect, color: run.color)
@@ -1653,7 +1682,7 @@ final class ReplyTextView: NSTextView {
         let rect = backingAlignedRect(glyphBounds.insetBy(dx: -ReplyStyle.Chip.horizontalPadding,
                                                           dy: -ReplyStyle.Chip.verticalPadding),
                                       options: .alignAllEdgesNearest)
-        (ProcessInfo.processInfo.environment["CHIP_RED"] != nil ? NSColor.red : color).setFill()
+        (Self.markChipsRed ? NSColor.red : color).setFill()
         let radius = min(WorkbenchTheme.Radius.chip, rect.height / 2)
         NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
     }
@@ -2228,6 +2257,9 @@ private struct ReplyOverflowFade: View {
 }
 
 private struct ReplyTable: View {
+    @Environment(\.isConversationBodyText) private var conversationBody
+    @Environment(\.layoutDirection) private var direction
+    @Environment(\.replyTone) private var tone
     @Environment(\.documentReadingStyle) private var documentReadingStyle
     @Environment(\.documentFontScale) private var documentFontScale
     let headers: [[ReplyInline]]
@@ -2265,8 +2297,12 @@ private struct ReplyTable: View {
             }
             // Fit the viewport first; only the minimum column widths can cause overflow.
             ReplyHorizontalScroll {
-                ReplyTableLayout(contents: contents, geometry: geometry, columnCount: headers.count) {
-                    cells
+                Group {
+                    if conversationBody, !documentReadingStyle, documentFontScale == 1, direction == .leftToRight, tone == .body {
+                        TranscriptTableGrid(headers: headers, rows: rows, alignments: alignments, widths: contents, geometry: geometry)
+                    } else {
+                        ReplyTableLayout(contents: contents, geometry: geometry, columnCount: headers.count) { cells }
+                    }
                 }
                 .containerRelativeFrame(.horizontal, alignment: .leading) { width, _ in
                     max(width, minimumTotal)
@@ -2310,6 +2346,111 @@ private struct ReplyTable: View {
             .padding(.leading, column == 0 ? 0 : geometry.cellPadding)
             .padding(.trailing, column == headers.count - 1 ? 0 : geometry.cellPadding)
             .padding(.vertical, documentReadingStyle ? 11 : ReplyStyle.Table.cellVerticalPadding)
+    }
+}
+
+/// A transcript table owns one SwiftUI bridge. Its selectable cells share the
+/// same TextKit implementation and column-width calculation as the reader.
+private struct TranscriptTableGrid: NSViewRepresentable {
+    let headers: [[ReplyInline]]
+    let rows: [[[ReplyInline]]]
+    let alignments: [ReplyAlignment]
+    let widths: [CGFloat]
+    let geometry: ReplyTableGeometry
+
+    func makeNSView(context: Context) -> Grid { Grid() }
+    func updateNSView(_ grid: Grid, context: Context) {
+        grid.widths = widths
+        grid.geometry = geometry
+        grid.configure(headers: headers, rows: rows, alignments: alignments)
+    }
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: Grid, context: Context) -> CGSize? {
+        nsView.measure(width: proposal.width.flatMap { $0.isFinite ? $0 : nil }, place: false)
+    }
+    static func dismantleNSView(_ grid: Grid, coordinator: ()) { grid.trim(to: 0) }
+
+    final class Grid: NSView {
+        var widths: [CGFloat] = []
+        var geometry = ReplyTableGeometry()
+        private let links = SelectableReplyText.Coordinator()
+        private var cells: [ReplyTextView] = []
+        private var rules: [CGFloat] = []
+        private var alignments: [ReplyAlignment] = []
+        override var isFlipped: Bool { true }
+
+        func trim(to count: Int) {
+            while cells.count > count {
+                let cell = cells.removeLast()
+                cell.removeFromSuperview()
+                SelectableReplyText.recycle(cell)
+            }
+        }
+        func configure(headers: [[ReplyInline]], rows: [[[ReplyInline]]], alignments: [ReplyAlignment]) {
+            self.alignments = alignments
+            let count = headers.count * (1 + rows.count)
+            trim(to: count)
+            while cells.count < count {
+                let cell = SelectableReplyText.acquire(delegate: links)
+                cell.isConversationBodyText = true
+                cells.append(cell)
+                addSubview(cell)
+            }
+            for (index, cell) in cells.enumerated() {
+                let row = index / headers.count, col = index % headers.count
+                let runs = row == 0 ? headers[col] : (col < rows[row - 1].count ? rows[row - 1][col] : [])
+                let alignment = alignments[col]
+                cell.update(ReplyTextAttributes.paragraphs([runs], size: geometry.fontSize,
+                    weight: row == 0 ? .medium : .regular,
+                    alignment: alignment == .trailing ? .trailing : alignment == .center ? .center : .leading,
+                    lineHeight: ReplyStyle.Table.cellLineHeight))
+            }
+            needsLayout = true
+        }
+        func measure(width: CGFloat?, place: Bool) -> CGSize {
+            let columns = geometry.columnWidths(contentWidths: widths, available: width)
+            guard !columns.isEmpty else { return .zero }
+            var y: CGFloat = 0
+            if place { rules.removeAll(keepingCapacity: true) }
+            let padding = ReplyStyle.Table.cellVerticalPadding
+            for first in stride(from: 0, to: cells.count, by: columns.count) {
+                var x: CGFloat = 0, height: CGFloat = 0
+                for (col, columnWidth) in columns.enumerated() {
+                    let cell = cells[first + col]
+                    let left = col == 0 ? 0 : geometry.cellPadding
+                    let right = col == columns.count - 1 ? 0 : geometry.cellPadding
+                    let textWidth = max(1, columnWidth - left - right)
+                    let size = cell.measure(width: textWidth)
+                    height = max(height, size.height)
+                    if place {
+                        let slack = max(0, textWidth - size.width)
+                        let offset: CGFloat
+                        switch alignments[col] {
+                        case .center: offset = slack / 2
+                        case .trailing: offset = slack
+                        default: offset = 0
+                        }
+                        let frame = CGRect(origin: CGPoint(x: x + left + offset, y: y + padding), size: size)
+                        if cell.frame != frame { cell.frame = frame }
+                    }
+                    x += columnWidth
+                }
+                y += height + 2 * padding
+                if place { rules.append(y) }
+                y += 1
+            }
+            return CGSize(width: width ?? columns.reduce(0, +), height: y)
+        }
+        override func layout() {
+            super.layout()
+            _ = measure(width: bounds.width, place: true)
+            needsDisplay = true
+        }
+        override func draw(_ dirtyRect: NSRect) {
+            for (row, y) in rules.enumerated() {
+                NSColor.labelColor.withAlphaComponent(row == 0 ? ReplyStyle.Table.headerRuleOpacity : ReplyStyle.Table.rowRuleOpacity).setFill()
+                CGRect(x: 0, y: y, width: bounds.width, height: 1).fill()
+            }
+        }
     }
 }
 

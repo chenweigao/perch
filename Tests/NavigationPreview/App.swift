@@ -140,6 +140,8 @@ struct NavigationRoot: View {
 }
 
 private struct NavigationConversation: View {
+    static let foldsProcess = ProcessInfo.processInfo.environment["NAVIGATION_AUTORUN"] == "process-fold"
+        || ProcessInfo.processInfo.environment["NAVIGATION_FOLDS_PROCESS"] == "1"
     @ObservedObject var model: NavigationModel
     var body: some View {
             ScrollViewReader { proxy in
@@ -149,7 +151,7 @@ private struct NavigationConversation: View {
                     if let conversation = model.conversation {
                         ConversationTranscript(messages: conversation.displayMessages,
                                                sessionId: model.selected, isRunning: conversation.snapshot.session.busy,
-                                               foldsProcess: ProcessInfo.processInfo.environment["NAVIGATION_AUTORUN"] == "process-fold")
+                                               foldsProcess: Self.foldsProcess)
                     }
                     Color.clear.frame(height: 1).id("bottom")
                 }.overlay(alignment: .topLeading) {
@@ -400,7 +402,7 @@ final class NavigationRunner {
                 "final_document_height": scroll.documentView?.bounds.height ?? 0,
                 "retained_hosts": ConversationTranscript.retainedHosts(in: scroll)?.retained ?? 0])
         }
-        return ["cadence_hz": hz, "budget_ms": budget, "phases": phases,
+        return ["cadence_hz": hz, "budget_ms": budget, "phases": phases, "folds_process": NavigationConversation.foldsProcess,
                 "boundary": "paced programmatic main-actor scroll work; excludes hardware input and compositor presentation"]
     }
 
@@ -523,6 +525,7 @@ final class NavigationRunner {
             var nativeRows: [[String: Any]] = []
             var frameTurns: [Int] = []
             while let view = views.popLast() {
+                if view.isHidden { continue }
                 if let text = view as? NSTextView {
                     let value = text.string as NSString
                     for match in expression.matches(in: text.string, range: NSRange(location: 0, length: value.length)) {
