@@ -92,6 +92,7 @@ round31d 等）。
     `main_actor_lateness.max` 563–765ms 系统尖峰。结论：GUI 侧指标一律交替，
     轮数要到配对差中位远小于轮间带宽（本例 0.8% vs 21.6%）才可判定；
     单看 2–4 轮的"一致偏高"可能是尖峰分布不均。
+12. **mounted 冷首访验收必须自证"冷"，夹具规模就是验收口径的一部分**（round-2 shard A 评审 B2）：200-turn + 8-model LRU 的 acceptance 切换里 80 次有 72 次是暖恢复（`preparations=8`/`restorations=72`），不能当冷首访。做法=把会话放大到超过缓存准入上限（1000 条/1MiB）使每次挂载结构性冷，并把 `restorations==0` 作为运行时自证写进 harness；**mount 与 rail 发布拆成两个计时边界**；settle 条件不要依赖可能不等的标识字符串（v1 因等 `navigator.snapshot.session` 两侧同样 5s 超时，白跑一轮）。
 11. **CI 的 acceptance 时长门槛在共享 runner 上会假失败**（round-2 shard A）：
     `native-dashboard` 本机 41–46s，CI attempt 1 跑到 134.99s 撞 120s 上限失败，
     未改一行代码 rerun 即 15/15 全绿。判 flake 的证据链=本机两侧同量级 +
@@ -101,7 +102,7 @@ round31d 等）。
 
 | # | 候选 | 状态 | 依据 |
 | --- | --- | --- | --- |
-| ① | 大会话冷首访懒/视口投影 | **shard A（懒导航）模型层主收益已确认**（PR #380，16k 冷 −52.86%/2.11×，6/6 超带）；**产品采纳待独立评审 B1 修复复核 + B2 大会话 mounted 冷首访验收补齐**；shard B（真 per-turn 懒物化 + tools/retained 配套）待立项 | Mac 63.73ms@16k；turns 83.8%；大会话每次重访 100% 冷（Linux+Mac 运行时证实），占切换成本 ~100%；**nav-split（同跑口径）：Mac summary 53.07%（34.088/64.23）/timeline 22.4%/rows 2.0%，Linux timeline 57.8%/summary 32.7%（主导跨平台翻转，全懒边界平台无关）；旧 54.6% 混用跨 job 分母已勘误**；契约 5 项钉死（查找扫源消息天然独立；几何纯值类型为估高接缝；跳转列表展开同步物化） |
+| ① | 大会话冷首访懒/视口投影 | **shard A（懒导航）已验证**（PR #380；最终 head 模型层 16k 冷 −52.90%/2.117× 6/6 超带、mounted 冷首访 −11.14% 3/3 同向；评审 B1 已修、B2 已补；生产门槛 5/5）；**待第二轮评审复核 + CI 全绿后合并**；shard B（真 per-turn 懒物化 + tools/retained 配套）待立项，其"结构/内容相拆分"支线按否定清单反查缓议 | Mac 63.73ms@16k；turns 83.8%；大会话每次重访 100% 冷（Linux+Mac 运行时证实），占切换成本 ~100%；**nav-split（同跑口径）：Mac summary 53.07%（34.088/64.23）/timeline 22.4%/rows 2.0%，Linux timeline 57.8%/summary 32.7%（主导跨平台翻转，全懒边界平台无关）；旧 54.6% 混用跨 job 分母已勘误**；契约 5 项钉死（查找扫源消息天然独立；几何纯值类型为估高接缝；跳转列表展开同步物化） |
 | ② | foldParents 整字典 COW 消除（split 表示，API 形态） | **已合并 60420b1a（2026-11-27）** | v2 探针翻盘：拷贝 44.4µs@16k / 308.7µs@64k，chain 份额 11.4%/17.4%；B 授权解锁；正式 16k chain -12.1%/presented -63.3%（6 对）；64k 三对缩放佐证 chain -28.9%/presented -83.9% + v2 独立重建佐证 3 对全负超带 median -30.4% |
 | ③ | displayMessages / Array.+ API 形态决策 | 待立项（round-1 附带代码走查） | round-38/42 遗留；Array.+ 8.58% inclusive；64k chain 残余嫌疑=`Snapshot.rows` getter :399 `history.rows+tail` 与 presented :453 `earlier.rows+rows` 每 delta 两次 O(窗口) 拼接（displayed() 空 activity 已有快路径）；②采纳后 64k chain 残余实测 1.09–1.20ms（formal cand，median 1.13）待归因探针定量 |
 | ④ | 验证族路径插桩（sameWindow 10.38% / canReuse 5.03% / input-compare 7.49%，重叠） | 待立项（先插桩出净收益下界） | 停止报告重启条件③ |
@@ -112,7 +113,7 @@ round31d 等）。
 | 轮 | 日期 | 场景 | 结论 | 报告 |
 | --- | --- | --- | --- | --- |
 | 1 | 2026-11-27 | ② foldParents COW：探针翻盘 + split 候选 | 候选 e40b7054；Linux 113 PASS+1 SKIP、portable、变异电池 4/4；粗筛 v2 通过；**16k 正式 PASS**（6 对 chain -12.1%/presented -63.3%，全负、中位数超带）；64k 三对缩放佐证（chain -28.9%/presented -83.9%，全对超带）+ v2 独立重建佐证 3 对（median -30.4%，全负超带）；**采纳**；评审两轮闭环（0 BLOCKING）；生产门槛 v5 5/5、fixture 门槛 v4 5/5 独立登记；PR [#378](https://github.com/chenweigao/perch/pull/378) **已合并 60420b1a**（复核 0 BLOCKING，CI 15/15，分支已删） | [round-1](2026-11-27-round-1.md) |
-| 2 | 2026-11-27 | ① 冷首访懒物化：盘点+契约+nav-split+**shard A 验证采纳** | 基线 63.73ms@16k、turns 83.8%、触发 100% 冷；契约钉死版立；nav-split 裁决 summary 主导 Mac 冷路径（**同跑口径 53.1%**，旧 54.6% 混用分母已勘误）；**shard A 懒导航：审查发现 `Equatable` 快照每次 viewport refresh 值比较会全窗物化（BLOCKING），加 `==` 身份短路修复；Mac 6 对交替 16k 冷 67.480→31.916ms（−52.86%，2.11×，6/6 超带 2.87%），2k −61.74%；延期成本 34.03ms 全量物化（与 nav-split summary 相位 34.088ms 差 0.2%）、单条 hover +9µs、无一次性全量触发面；footprint −3.4%、进程峰值 RSS −1.9%；delta/prepend 无回归；Linux 114 PASS+1 SKIP、变异电池 6/6、UTF-8 字节 oracle；生产门槛 5/5、acceptance paging/switching/dashboard 全 passed（switching 10 轮交替配对差中位 +0.8%，符号 5/5）；CI 15/15（attempt 2）**；PR [#380](https://github.com/chenweigao/perch/pull/380) | [round-2](2026-11-27-round-2.md) |
+| 2 | 2026-11-27 | ① 冷首访懒物化：盘点+契约+nav-split+**shard A 验证采纳** | 基线 63.73ms@16k、turns 83.8%、触发 100% 冷；契约钉死版立；nav-split 裁决 summary 主导 Mac 冷路径（**同跑口径 53.1%**，旧 54.6% 混用分母已勘误）；**shard A 懒导航：审查发现 `Equatable` 快照每次 viewport refresh 值比较会全窗物化（BLOCKING），加 `==` 身份短路修复；Mac 6 对交替 16k 冷 67.480→31.916ms（−52.86%，2.11×，6/6 超带 2.87%），2k −61.74%；延期成本 34.03ms 全量物化（与 nav-split summary 相位 34.088ms 差 0.2%）、单条 hover +9µs、无一次性全量触发面；footprint −3.4%、进程峰值 RSS −1.9%；delta/prepend 无回归；Linux 114 PASS+1 SKIP、变异电池 6/6、UTF-8 字节 oracle；生产门槛 5/5、acceptance paging/switching/dashboard 全 passed（switching 10 轮交替配对差中位 +0.8%，符号 5/5）；CI 15/15；独立评审第一轮 FINDINGS 2 BLOCKING → **B1 已修**（等值重建仍全窗求值：language/epoch 重置与 online 翻转重建全部实例、值比较两侧各物化一次；改为 Core `sameNavigation` 单一判变策略，电池 8/8）、**B2 已补**（tests-only `struct-cold` 模式：8000 turn 超缓存准入 → `restorations=[0,0,0]` 自证结构性冷；mounted 冷首访 197.470→175.475ms、首次滚动 −3.28%、全量导航读取延期 +24ms、RSS −2.29%）；**采纳集改为最终 head `21bd9597`：模型层 6 对 16k cold 65.611→30.995ms（−52.90%，6/6 超带 5.29%）、2k −62.07%、materialization 32.480ms、footprint −4.16%、RSS −2.08%，生产门槛 5/5**；前序两批（5958eb23 −52.86%、af42ec4c −52.28%）为独立佐证不合并统计；**待第二轮复核**；PR [#380](https://github.com/chenweigao/perch/pull/380) | [round-2](2026-11-27-round-2.md) |
 
 ### round 1 侦察记录（base=1c0d52e0，drift=0）
 
