@@ -633,6 +633,8 @@ private struct SessionSidebarRow: View {
                          unread: item.online && !item.archived && item.section == .review,
                          offline: compact && !item.online && !item.archived,
                          actions: AnyView(SessionActionsMenu(model: model, item: item)),
+                         onArchive: item.online && !item.archived && item.section != .running
+                            ? { model.setArchived(item, archived: true) } : nil,
                          selected: selected,
                          canOpen: item.online && !item.archived, onOpen: onOpen) {
             SessionStatusIndicator(item: item)

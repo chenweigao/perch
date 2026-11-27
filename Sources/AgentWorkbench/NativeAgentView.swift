@@ -151,14 +151,6 @@ struct NativeAgentView: View {
                 } bar: {
                     bottomBar(s, readingKey: readingKey)
                 }
-                    .overlay(alignment: .topTrailing) {
-                        if s.hasOlder {
-                            Button(connection.loadingOlder ? "Loading…" : "Load all turns") {
-                                follow = false; ConversationReadingMemory.shared.following[readingKey] = false; connection.loadAllHistoryForSearch()
-                            }.font(.system(size: WorkbenchTheme.Typography.secondary)).buttonStyle(.bordered)
-                                .disabled(connection.loadingOlder || !connection.online).padding(8)
-                        }
-                    }
                     .onReceive(NotificationCenter.default.publisher(for: .init("PerchRevealConversationHit"))) { notice in
                         if isCurrent(s), (notice.object as? ConversationFindTarget)?.session == readingKey { follow = false }
                     }

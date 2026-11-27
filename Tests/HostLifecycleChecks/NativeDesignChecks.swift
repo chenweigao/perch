@@ -85,7 +85,7 @@ import WorkbenchCore
         data["revision"] = revision
         data["messages"] = [
             ["id": "question", "role": "user", "created_at": "", "content": [["type": "text", "text": "检查快速切换会话时的状态隔离，给出最小修改。"]]],
-            ["id": "answer", "role": "assistant", "created_at": "", "content": [["type": "text", "text": "已检查会话加载与草稿恢复逻辑。\n\n### 初步发现\n\n- 加载状态应随会话独立保存。\n- 草稿与滚动位置需要分别恢复。\n\n接下来会核对快速切换时的请求取消与状态恢复。"]]]
+            ["id": "answer", "role": "assistant", "created_at": "", "content": [["type": "text", "text": "已检查会话加载与草稿恢复逻辑。\n\n### 初步发现\n\n- 加载状态应随会话独立保存（`sessionStates[id]`）。\n- 草稿与滚动位置需要分别恢复：`restoreDraft(for:)`、`restoreMessages(for:)`。\n\n接下来会核对快速切换时的请求取消与状态恢复。"]]]
         ]
         data["interactions"] = []
         if index == 0 {

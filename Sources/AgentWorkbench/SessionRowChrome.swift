@@ -19,6 +19,8 @@ struct SessionRowChrome<Indicator: View>: View {
     var unread = false
     var offline = false
     var actions: AnyView? = nil
+    /// One-click archive, offered on hover beside ⋯ for rows that can be archived.
+    var onArchive: (() -> Void)? = nil
     let selected: Bool
     let canOpen: Bool
     let onOpen: () -> Void
@@ -105,6 +107,9 @@ struct SessionRowChrome<Indicator: View>: View {
         // takes the trailing slot; their reserve is fixed, so the title never reflows.
         let keepsStatus = actions != nil && (running || failed)
         let actionsShown = actions != nil && (hovered || showActionsMenu)
+        // Archive overlays the title's end rather than taking a reserved slot,
+        // so the title never reflows; the title fades out beneath it.
+        let archiveShown = onArchive != nil && actionsShown
         return HStack(spacing: 0) {
             Button {
                 dismissPreview()
@@ -116,6 +121,18 @@ struct SessionRowChrome<Indicator: View>: View {
                     .lineLimit(1).truncationMode(.tail)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { titleWidth = $0 }
+                    .mask {
+                        HStack(spacing: 0) {
+                            Rectangle()
+                            if archiveShown {
+                                LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                                    .frame(width: SidebarMetrics.archiveFadeWidth)
+                                // The button is actionSize wide and ends at the label's
+                                // 4 pt trailing padding.
+                                Color.clear.frame(width: SidebarMetrics.actionSize - 4)
+                            }
+                        }
+                    }
                     .padding(.leading, SidebarMetrics.rowInset).padding(.trailing, 4)
                     .frame(maxWidth: .infinity, minHeight: SidebarMetrics.rowHeight, maxHeight: SidebarMetrics.rowHeight, alignment: .leading)
                     .contentShape(Rectangle())
@@ -124,6 +141,15 @@ struct SessionRowChrome<Indicator: View>: View {
                 .accessibilityLabel(title)
                 .accessibilityValue(([offline ? L("离线 · 状态未同步") : nil, hostName, directory, detail,
                                       updatedAt > 0 ? SessionTime.label(since: updatedAt, waiting: false) : nil].compactMap { $0 } + groups).joined(separator: " · "))
+                .overlay(alignment: .trailing) {
+                    if archiveShown, let onArchive {
+                        SessionQuickArchiveButton(label: L("归档会话")) {
+                            dismissPreview()
+                            onArchive()
+                        }
+                        .onHover { inside in if inside { dismissPreview() } }
+                    }
+                }
             if keepsStatus {
                 ZStack { if actionsShown { statusMark } }
                     .frame(width: SidebarMetrics.statusReserveWidth, height: SidebarMetrics.actionSize)
@@ -423,6 +449,33 @@ private struct SessionActionsButton: View {
         .allowsHitTesting(visible)
         .accessibilityLabel(Text(verbatim: label))
         .accessibilityIdentifier("sidebar.row.actions")
+    }
+}
+
+/// One-click archive beside ⋯ while the row is hovered (Codex, Qoder). It
+/// draws like ⋯ — a bare glyph, a faint fill only under the pointer — and sits
+/// over the title's faded end. The hover buttons removed on 2026-11-02 covered
+/// the title on a `.regularMaterial` chip that let the wallpaper through.
+private struct SessionQuickArchiveButton: View {
+    let label: String
+    let action: () -> Void
+    @State private var pointing = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "archivebox")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(pointing ? WorkbenchTheme.ink : WorkbenchTheme.quiet)
+                .frame(width: SidebarMetrics.actionSize, height: SidebarMetrics.actionSize)
+                .background(WorkbenchTheme.Fill.hover.opacity(pointing ? 1 : 0),
+                            in: RoundedRectangle(cornerRadius: WorkbenchTheme.Radius.chip, style: .continuous))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { pointing = $0 }
+        .help(Text(verbatim: label))
+        .accessibilityLabel(Text(verbatim: label))
+        .accessibilityIdentifier("sidebar.row.archive")
     }
 }
 
