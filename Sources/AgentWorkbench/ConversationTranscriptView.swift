@@ -877,13 +877,6 @@ private final class ConversationDocumentView: NSView {
         for controller in controllers.values { controller.suspendTextReveal() }
     }
 
-    /// Round 2 shard A: navigation change detection by reference identity.
-    /// A reused turn keeps its summary instance; a rebuilt turn yields a new
-    /// one. Value equality would materialize every lazy excerpt per configure.
-    private static func sameNavigation(_ a: [ConversationTurnSummary], _ b: [ConversationTurnSummary]) -> Bool {
-        a.count == b.count && zip(a, b).allSatisfy { $0 === $1 }
-    }
-
     func configure(_ next: [ConversationEntryView], contentIdentity: ConversationContentIdentity, navigation: [ConversationTurnSummary], sessionId: String,
                    appearance: ConversationEntryAppearance, viewport: ConversationViewport?, foldParents: FoldParents? = nil,
                    contentOriginY: CGFloat, waitsForInitialPosition: Bool = false) {
@@ -914,7 +907,7 @@ private final class ConversationDocumentView: NSView {
             reconciled = true
             restructured = structureChanged
         }
-        if structureChanged || !Self.sameNavigation(self.navigation, navigation) {
+        if structureChanged || !ConversationTurnSummary.sameNavigation(self.navigation, navigation) {
             self.navigation = navigation
             turnRows = navigation.compactMap { indices[$0.id] }
         }

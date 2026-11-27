@@ -248,5 +248,59 @@ func checkLazyNavigation() throws {
         }
     }
 
-    print("PASS: lazy navigation — cold deferral (anti-blind), byte-equality, identity tracking, reflexive/stream/prepend/language/edit deferral, UTF-8 oracle")
+    // 13. sameNavigation — the only comparison a viewport refresh may run.
+    //     A rebuild that leaves every excerpt untouched (language, epoch or
+    //     connection reset) must report "changed" rather than materialize a
+    //     whole window to discover the texts are equal.
+    do {
+        let policy = ConversationPresentationModel(key: "lazy-nav-policy")
+        let nav = policy.update(.init(messages: messages, language: "zh")).navigation
+        let reference = eagerReference(messages)
+        precondition(zip(nav, reference).allSatisfy { $0 !== $1 }, "the reference must be distinct instances")
+
+        // (a) Identical instances inside a distinct buffer: equal, nothing extracted.
+        precondition(ConversationTurnSummary.sameNavigation(nav, nav.flatMap { [$0] }),
+                     "same instances must compare equal")
+        for summary in nav.dropLast() {
+            precondition(!summary.materialized, "identity comparison must not extract")
+        }
+
+        // (b) The reset shape: two independently projected navigations, distinct
+        //     instances, both sides unmaterialized, equal content. Reporting
+        //     "changed" costs the caller one republish; value equality would
+        //     cost a full-window walk on both sides.
+        let reset = ConversationPresentationModel(key: "lazy-nav-reset")
+        let rebuilt = reset.update(.init(messages: messages, language: "zh")).navigation
+        precondition(zip(nav, rebuilt).allSatisfy { $0 !== $1 }, "a rebuild must yield distinct instances")
+        precondition(!ConversationTurnSummary.sameNavigation(nav, rebuilt),
+                     "unmaterialized distinct instances must report changed")
+        for summary in Array(nav.dropLast()) + Array(rebuilt.dropLast()) {
+            precondition(!summary.materialized, "the rebuild comparison must not extract either side")
+        }
+
+        // (c) Once both sides are materialized the answer is by value, so a
+        //     rebuilt tail carrying unchanged text still skips the refresh
+        //     (the pre-lazy behaviour the streaming path depends on).
+        precondition(zip(nav, reference).allSatisfy { $0 == $1 }, "fixtures must hold equal content")
+        precondition(ConversationTurnSummary.sameNavigation(nav, reference),
+                     "materialized equal content must compare equal")
+
+        // (d) Count, id and content mismatches are never equal.
+        precondition(!ConversationTurnSummary.sameNavigation(nav, Array(nav.dropFirst())),
+                     "a count mismatch must report changed")
+        var swapped = reference
+        swapped[0] = ConversationTurnSummary.make(turns[1], entries: ConversationTimelineEntry.make(turns[1]))!
+        precondition(!ConversationTurnSummary.sameNavigation(nav, swapped),
+                     "an id mismatch must report changed")
+        var editedMessages = messages
+        if let index = editedMessages.firstIndex(where: { $0.id == "a11" }) {
+            let replacement = try decode([["id": "a11", "role": "assistant", "created_at": "a11",
+                                           "content": [["type": "text", "text": "完全不同的回答文本。"]]]])
+            editedMessages[index] = replacement[0]
+        }
+        precondition(!ConversationTurnSummary.sameNavigation(nav, eagerReference(editedMessages)),
+                     "a content mismatch must report changed")
+    }
+
+    print("PASS: lazy navigation — cold deferral (anti-blind), byte-equality, identity tracking, reflexive/stream/prepend/language/edit deferral, UTF-8 oracle, non-materializing change detection")
 }

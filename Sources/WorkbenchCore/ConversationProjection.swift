@@ -322,4 +322,22 @@ public final class ConversationTurnSummary: Identifiable, Equatable {
         if lhs === rhs { return true }
         return lhs.id == rhs.id && lhs.prompt == rhs.prompt && lhs.reply == rhs.reply
     }
+
+    /// Change detection for a whole navigation, and the only comparison callers
+    /// may run per viewport refresh. It never forces the deferred excerpt walk:
+    /// identical instances are equal, two turns whose excerpts are already
+    /// materialized compare by value — which keeps the pre-lazy behaviour of
+    /// skipping a refresh when a rebuilt tail carries the same text — and
+    /// anything else reports "changed" so the caller republishes instead of
+    /// materializing a whole window just to answer the question. That last case
+    /// is not rare: a language, epoch or connection reset rebuilds every summary
+    /// while leaving its text untouched.
+    public static func sameNavigation(_ lhs: [ConversationTurnSummary], _ rhs: [ConversationTurnSummary]) -> Bool {
+        guard lhs.count == rhs.count else { return false }
+        for (a, b) in zip(lhs, rhs) {
+            if a === b { continue }
+            guard a.materialized, b.materialized, a == b else { return false }
+        }
+        return true
+    }
 }
