@@ -80,7 +80,7 @@ round31d 等）。
 
 | # | 候选 | 状态 | 依据 |
 | --- | --- | --- | --- |
-| ① | 大会话冷首访懒/视口投影 | 盘点中（方向已定：按 turn 懒物化为主 + tools/retained 配套；待 acceptance 触发占比 + 契约钉死→立候选） | Mac 实测 63.73ms@16k；相位归因 turns 83.8%/tools 10.9%/retained 5.2%（round 2）；大会话结构性不入缓存→每次重访均冷 |
+| ① | 大会话冷首访懒/视口投影 | 盘点完成（基线+归因+触发机制/成本钉死；待契约钉死→立候选） | Mac 63.73ms@16k；turns 83.8%；大会话每次重访 100% 冷（Linux+Mac 运行时证实），占切换成本 ~100%；方向=按 turn 懒物化 + tools/retained 配套 |
 | ② | foldParents 整字典 COW 消除（split 表示，API 形态） | **已合并 60420b1a（2026-11-27）** | v2 探针翻盘：拷贝 44.4µs@16k / 308.7µs@64k，chain 份额 11.4%/17.4%；B 授权解锁；正式 16k chain -12.1%/presented -63.3%（6 对）；64k 三对缩放佐证 chain -28.9%/presented -83.9% + v2 独立重建佐证 3 对全负超带 median -30.4% |
 | ③ | displayMessages / Array.+ API 形态决策 | 待立项（round-1 附带代码走查） | round-38/42 遗留；Array.+ 8.58% inclusive；64k chain 残余嫌疑=`Snapshot.rows` getter :399 `history.rows+tail` 与 presented :453 `earlier.rows+rows` 每 delta 两次 O(窗口) 拼接（displayed() 空 activity 已有快路径）；②采纳后 64k chain 残余实测 1.09–1.20ms（formal cand，median 1.13）待归因探针定量 |
 | ④ | 验证族路径插桩（sameWindow 10.38% / canReuse 5.03% / input-compare 7.49%，重叠） | 待立项（先插桩出净收益下界） | 停止报告重启条件③ |
@@ -270,8 +270,41 @@ summariesEnabled=false，导航摘要在 turns 相位内建，非无成本。）
      替代精确 cost， retain 守卫语义不变）。
   3. narrative/rows 已尾窗受限，无需动；导航摘要在 turns 内→懒边界须
      覆盖（契约项 3）；②split 为 foldParents 子集基础设施（契约项 4）。
-- 立项门槛余项：acceptance 触发占比探针（真实使用视图重建频率；结构
-  走查已证大会话每次重访 100% 冷，频率未测）；契约草案→候选阶段钉死。
-- 下一步：设计 acceptance 触发占比探针（无真实用户数据，fixture 模拟
-  会话切换/恢复）→ 立①候选（分片：turns 懒物化先行，tools/retained 配套
+- 立项门槛余项：~~acceptance 触发占比探针~~（已以 cache-trigger 机制探针替代，见下节）；
+  契约草案→候选阶段钉死。
+- 下一步：立①候选（分片：turns 懒物化先行，tools/retained 配套
   同 PR 或分轮，按 A/B 证据定）。
+
+### round 2 ① 触发面机制探针（cache-trigger，2026-11-27，base=fda922fa）
+
+补丁=.local/struct-round1/cache-trigger-probe.patch（sha256 e21c8f97…，
+tests-only：新增 WORKBENCH_BENCH=cache-trigger，零产品改动；Linux release
+编译过）。job `struct-r2-cache-trigger-20261127`（Mac，exit=0，build 37.28s，
+跑后 porcelain 空；派发前远端 apply --check 通过，教训 #7 已践行）。
+原始 log=.local/struct-round1/struct-r2-cache-trigger-20261127.log。
+
+设计：产品默认 `ConversationPresentationCache()`（8/1000/1MiB）+ 7 小会话
+（200 slots）+ 1 大会话（16k slots/18667 条）；80 次切换循环 8 会话（仿
+acceptance switching 节奏），每次开新 `ConversationPresentationHandle()`
+（=视图重建，产品真实入口）。以 restorationCount 增量判 warm-restore vs
+cold-fresh。合成夹具，无真实会话数据。
+
+| 口径 | Linux（筛选） | Mac（产品代表） |
+| --- | --- | --- |
+| big 重访冷占比 | 10/10 = **100%** | 10/10 = **100%** |
+| cache 留存 model | 7（仅小） | 7（仅小） |
+| warm restores | 63 | 63 |
+| big 冷均耗时 | 439.32ms | **70.00ms** |
+| 冷成本/切换总墙钟 | 4430.79/4432.87 ≈ **100%** | 707.46/707.71 ≈ **100%** |
+
+- **运行时证实结构走查**：大会话每次重访必冷（100%），缓存仅留 7 小会话；
+  warm restore 走 input-equal 快路径≈0ms，故切换墙钟几乎全部是冷重投影。
+  Mac big 冷均 70.00ms vs 基线 63.73ms（+9.9%）=handle 路径+跨 job 二进制
+  布局变异家族，披露；份额/机制为 within-run，不受影响。
+- **门槛精化（诚实口径）**：原"acceptance 触发占比"要求真实使用中视图
+  重建频率——受 no-user-data 红线限制**不可测**。可达成替代=结构走查
+  +运行时机制证明（Linux+Mac 100%）+代表模式成本定量（Mac 70ms/重访，
+  ~100% 切换成本）。真实频率列为**假设**（代表模式：8 会话循环含 1 大），
+  不作证据。据此触发面门槛视为满足（替代口径），立项余契约钉死。
+- 节奏教训：设计+机制证明类工作回合内直接做（Linux 可跑模型层探针），
+  仅产品绝对值需 mini；短 job 回合内有界收数，不空排唤醒。
