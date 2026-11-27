@@ -950,14 +950,17 @@ enum ReplyTextAttributes {
     /// the neighbors flush against them; Chinese has no spaces to absorb the
     /// padding, so the fill ran into the next character. Kern the character before
     /// each chip and the chip's last character so the fill plus a gap fits. A
-    /// space beside the chip already holds most of the padding. Kern is layout
+    /// space beside the chip already holds most of the padding, and full-width
+    /// punctuation whose blank half faces the chip holds all of it. Kern is layout
     /// only: selection and copy see the same text.
     static func reserveChipSpace(in text: NSMutableAttributedString) {
         let string = text.string as NSString
         let full = ReplyStyle.Chip.horizontalPadding + ReplyStyle.Chip.gap
-        func room(beside index: Int) -> CGFloat? {
+        func room(beside index: Int, chipFollows: Bool) -> CGFloat? {
             guard index >= 0, index < string.length else { return nil }
-            guard let scalar = Unicode.Scalar(string.character(at: index)) else { return full }
+            let unit = string.character(at: index)
+            if (chipFollows ? blankRightHalf : blankLeftHalf).contains(unit) { return nil }
+            guard let scalar = Unicode.Scalar(unit) else { return full }
             if CharacterSet.newlines.contains(scalar) { return nil }
             return CharacterSet.whitespaces.contains(scalar) ? ReplyStyle.Chip.gap : full
         }
@@ -966,14 +969,18 @@ enum ReplyTextAttributes {
             if value != nil, range.length > 0 { chips.append(range) }
         }
         for chip in chips {
-            if let kern = room(beside: chip.location - 1) {
+            if let kern = room(beside: chip.location - 1, chipFollows: true) {
                 text.addAttribute(.kern, value: kern, range: string.rangeOfComposedCharacterSequence(at: chip.location - 1))
             }
-            if let kern = room(beside: NSMaxRange(chip)) {
+            if let kern = room(beside: NSMaxRange(chip), chipFollows: false) {
                 text.addAttribute(.kern, value: kern, range: string.rangeOfComposedCharacterSequence(at: NSMaxRange(chip) - 1))
             }
         }
     }
+    /// Simplified-Chinese pausing and closing marks sit at the left of their em
+    /// box; opening brackets sit at the right. Their empty half already spaces a chip.
+    private static let blankRightHalf = Set("，。、；：）】」』〉》".utf16)
+    private static let blankLeftHalf = Set("（【「『〈《".utf16)
     /// cards measure identical text.
     static func code(_ source: String) -> NSAttributedString {
         let paragraph = NSMutableParagraphStyle(); paragraph.lineSpacing = ReplyStyle.codeLineSpacing
