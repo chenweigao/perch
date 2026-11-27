@@ -53,7 +53,7 @@ round31d 等）。
 | # | 候选 | 状态 | 依据 |
 | --- | --- | --- | --- |
 | ① | 大会话冷首访懒/视口投影 | 待立项（Linux 筛选已确认前提；Mac 基线待测） | 20x 基线报告：16k 外推 ~580ms 模型层；100x 拉伸场景 |
-| ② | foldParents 整字典 COW 消除（split 表示，API 形态） | **round 1 进行中** | round-46 探针定量；B 授权解锁 |
+| ② | foldParents 整字典 COW 消除（split 表示，API 形态） | **round 1 候选已实现，粗筛 v2 运行中** | v2 探针翻盘：拷贝 44.4µs@16k / 308.7µs@64k，chain 份额 11.4%/17.4%；B 授权解锁 |
 | ③ | displayMessages / Array.+ API 形态决策 | 待立项 | round-38/42 遗留；Array.+ 8.58% inclusive |
 | ④ | 验证族路径插桩（sameWindow 10.38% / canReuse 5.03% / input-compare 7.49%，重叠） | 待立项（先插桩出净收益下界） | 停止报告重启条件③ |
 | ⑤ | 冷首搜 cf-match 调度层（语义不动，改时机/范围） | 待立项（需设计评审） | round-31 归因 cf-match 79%，检测器输出语义红线 |
@@ -62,7 +62,7 @@ round31d 等）。
 
 | 轮 | 日期 | 场景 | 结论 | 报告 |
 | --- | --- | --- | --- | --- |
-| 1 | 2026-11-27 | ② foldParents COW：侦察 + 耗时探针 + 候选 | 进行中 | 本行 |
+| 1 | 2026-11-27 | ② foldParents COW：探针翻盘 + split 候选 | 候选 e40b7054；Linux 113 PASS+1 SKIP、portable 通过、变异电池 4/4 击杀；Mac 粗筛 v2 运行中，正式六对待派发 | [round-1](2026-11-27-round-1.md) |
 
 ### round 1 侦察记录（base=1c0d52e0，drift=0）
 
