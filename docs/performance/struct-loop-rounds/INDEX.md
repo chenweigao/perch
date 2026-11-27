@@ -48,6 +48,20 @@ Mac 工作树 `~/_worktrees/20x-loop-20261112/perch`（当前停在 0e2758ec，
 scratch 包。历史 A/B harness 在该工作树 `.local/`（ab-mine-all、base-all、
 round31d 等）。
 
+## 否定清单 / 方法学教训（本循环新增）
+
+1. **计数器探针必须按调用相分类**（round-1 勘误）：共享 map 与空 map 调用
+   混合平均可把超噪声机制稀释成亚噪声假象（44.4µs 拷贝被摊成 2.17µs，
+   0.56% vs 真实 11.4%）。与 round-20 F3 归因同构家族同型，新维度=调用相
+   分布。命名帧 inclusive 归因亦可能低估（memcpy 叶入 ARC/bridge 桶，
+   HYPOTHESIS）——机制裁决靠隔离计时探针，不靠单一口径。
+2. **PerfRunner 作业在所有工作树预建输出目录**（round-1 粗筛 v1 exit 1）；
+   同名 job 不得在消费窗口内重发（round-31 教训继承）。
+3. **release precondition 无消息**：钉死 trap 定位用 debug 构建（round-1
+   两处 fixture/语义缺陷经 debug 消息定位）。
+4. 20x 循环否定清单全部继承（见 ../20x-loop-rounds/INDEX.md「否定清单」），
+   选题前反查。
+
 ## 候选队列
 
 | # | 候选 | 状态 | 依据 |
