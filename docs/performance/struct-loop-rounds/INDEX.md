@@ -68,7 +68,7 @@ round31d 等）。
 | --- | --- | --- | --- |
 | ① | 大会话冷首访懒/视口投影 | 待立项（Linux 筛选已确认前提；Mac 基线待测） | 20x 基线报告：16k 外推 ~580ms 模型层；100x 拉伸场景 |
 | ② | foldParents 整字典 COW 消除（split 表示，API 形态） | **round 1 候选已实现，粗筛 v2 运行中** | v2 探针翻盘：拷贝 44.4µs@16k / 308.7µs@64k，chain 份额 11.4%/17.4%；B 授权解锁 |
-| ③ | displayMessages / Array.+ API 形态决策 | 待立项 | round-38/42 遗留；Array.+ 8.58% inclusive |
+| ③ | displayMessages / Array.+ API 形态决策 | 待立项（round-1 附带代码走查） | round-38/42 遗留；Array.+ 8.58% inclusive；64k chain 残余嫌疑=`Snapshot.rows` getter :399 `history.rows+tail` 与 presented :453 `earlier.rows+rows` 每 delta 两次 O(窗口) 拼接（displayed() 空 activity 已有快路径）；②采纳后 64k chain 残余 ~1.4ms 待归因探针定量 |
 | ④ | 验证族路径插桩（sameWindow 10.38% / canReuse 5.03% / input-compare 7.49%，重叠） | 待立项（先插桩出净收益下界） | 停止报告重启条件③ |
 | ⑤ | 冷首搜 cf-match 调度层（语义不动，改时机/范围） | 待立项（需设计评审） | round-31 归因 cf-match 79%，检测器输出语义红线 |
 
