@@ -561,8 +561,11 @@ extension NavigationRunner {
         let updateBefore = counter("native_assistant_block_update")
         let appended = streamingSource + " appended"
         host.rootView = root([try message(appended)], running: true)
-        try await settle()
-        guard nativeRows().first === initial, initial.superview === row,
+        // The display clock releases the tail asynchronously. Verify identity
+        // and selection after the appended text has actually reached the view.
+        let appendDeadline = CACurrentMediaTime() + 1
+        repeat { try await settle() } while !tail.string.hasSuffix(" appended") && CACurrentMediaTime() < appendDeadline
+        guard tail.string.hasSuffix(" appended"), nativeRows().first === initial, initial.superview === row,
               textViews().count == 2, textViews()[0] === prefix, textViews()[1] === tail,
               prefix.selectedRange() == selection, liveActions.isHidden,
               counter("native_assistant_block_stable") > stableBefore,

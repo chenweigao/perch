@@ -1278,7 +1278,11 @@ private final class ConversationDocumentView: NSView {
         #endif
         let leaving = mounted.subtracting(nextMounted)
         exited = leaving.count
-        for id in leaving { controllers[id]?.view.isHidden = true }
+        for id in leaving {
+            guard let controller = controllers[id] else { continue }
+            if controller.keepsViewForReuse { controller.view.isHidden = true }
+            else { controller.view.removeFromSuperview() }
+        }
         mounted = nextMounted
         laidOutRange = nextRange
         if highlight != nil { applyFindHighlights() }
@@ -1592,7 +1596,7 @@ private struct HostedConversationEntry: View {
     var sizeChanged: (CGSize) -> Void = { _ in }
     var body: some View {
         content.equatable()
-            .id(content.memoryKey)
+            .id(content.isReusableHeader ? content.memoryKey : nil)
             .environment(\.conversationMemoryKey, content.memoryKey)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1746,8 +1750,14 @@ private final class ConversationEntryController: NSViewController {
     }
     var isHosted: Bool { host != nil }
 
+    // Rebuilding a rich SwiftUI graph on an existing host costs more than a
+    // fresh mount. Only native rows and compact history headers rebind in place.
+    var keepsViewForReuse: Bool {
+        !isHosted || content.isReusableHeader && !content.hasExpandedProcess
+    }
+
     func canReuse(for next: ConversationEntryView, hosted: Bool?) -> Bool {
-        guard !content.isLive, !next.isLive, !content.liveProcessFold, !next.liveProcessFold,
+        guard keepsViewForReuse, !next.hasExpandedProcess, !content.isLive, !next.isLive, !content.liveProcessFold, !next.liveProcessFold,
               content.streamingMessageID == nil, next.streamingMessageID == nil,
               textReveal == nil, settleFlipObserver == nil,
               hosted == nil || isHosted == hosted,
@@ -2516,6 +2526,10 @@ private struct ConversationEntryView: View, Equatable {
     var liveStartedAt: Date? = nil
     var streamingMessageID: String? = nil
     var displayTextOverride: String? = nil
+    var isReusableHeader: Bool { entry.presentation == .processFold || entry.presentation == .emptyOutput }
+    var hasExpandedProcess: Bool {
+        entry.presentation == .processFold && ConversationReadingMemory.shared.expansions[memoryKey + ":process-fold"] == true
+    }
     @RememberedExpansion("commentary", initial: true) private var commentaryExpanded
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.entry == rhs.entry && sameConfiguration(lhs, rhs)
