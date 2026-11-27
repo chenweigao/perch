@@ -43,7 +43,7 @@ model: "aone/gpt-6.1-sol"}`，只读共享检出；复核是新 delegate_task）
 `PATH=$HOME/.local/swift/6.3.3/usr/bin`。Mac=`ssh -o BatchMode=yes mac-mini`
 （arm64，2026-11-27 验证可达）；GUI 作业走 PerfRunner：写
 `~/Library/PerfRunner/jobs/<名>.job`，结果在 `~/Library/PerfRunner/results/`。
-Mac 工作树 `~/_worktrees/20x-loop-20261112/perch`（当前停在 0e2758ec，
+Mac 工作树 `~/_worktrees/20x-loop-20261112/perch`（round 2 停在 fda922fa，
 用前 fetch+checkout 到本轮 base）；裸 swiftc 二进制被 SIGKILL，一律 SwiftPM
 scratch 包。历史 A/B harness 在该工作树 `.local/`（ab-mine-all、base-all、
 round31d 等）。
@@ -76,7 +76,7 @@ round31d 等）。
 
 | # | 候选 | 状态 | 依据 |
 | --- | --- | --- | --- |
-| ① | 大会话冷首访懒/视口投影 | 待立项（Linux 筛选已确认前提；Mac 基线待测） | 20x 基线报告：16k 外推 ~580ms 模型层；100x 拉伸场景 |
+| ① | 大会话冷首访懒/视口投影 | 盘点中（Mac 冷基线 63.73ms@16k 已出；触发面走查完成；待相位归因 + acceptance 触发占比） | 20x 基线报告：16k 外推 ~580ms 模型层；100x 拉伸场景；Mac 实测 63.73ms@16k（round 2），大会话结构性不入缓存→每次重访均冷 |
 | ② | foldParents 整字典 COW 消除（split 表示，API 形态） | **已合并 60420b1a（2026-11-27）** | v2 探针翻盘：拷贝 44.4µs@16k / 308.7µs@64k，chain 份额 11.4%/17.4%；B 授权解锁；正式 16k chain -12.1%/presented -63.3%（6 对）；64k 三对缩放佐证 chain -28.9%/presented -83.9% + v2 独立重建佐证 3 对全负超带 median -30.4% |
 | ③ | displayMessages / Array.+ API 形态决策 | 待立项（round-1 附带代码走查） | round-38/42 遗留；Array.+ 8.58% inclusive；64k chain 残余嫌疑=`Snapshot.rows` getter :399 `history.rows+tail` 与 presented :453 `earlier.rows+rows` 每 delta 两次 O(窗口) 拼接（displayed() 空 activity 已有快路径）；②采纳后 64k chain 残余实测 1.09–1.20ms（formal cand，median 1.13）待归因探针定量 |
 | ④ | 验证族路径插桩（sameWindow 10.38% / canReuse 5.03% / input-compare 7.49%，重叠） | 待立项（先插桩出净收益下界） | 停止报告重启条件③ |
@@ -167,3 +167,62 @@ round31d 等）。
 （presentation cache 保留最近 8 会话）；分页流式路径不受影响。
 立项前须钉：Mac 16k 冷基线 + 首访场景在产品中的触发占比（acceptance 探针），
 以及正确性面（阅读锚点/查找/导航摘要/折叠/滚动高度）的懒物化契约。
+
+### round 2 ① Mac 冷基线 + 触发面走查（2026-11-27，base=fda922fa + 冷基线补丁）
+
+job `struct-r2-cold-baseline-20261127`（PerfRunner，exit=0，build 64.16s，
+跑后 porcelain 空=树已还原）。补丁与 Linux 筛选同一份
+（.local/struct-round1/cold-bench-16k.patch，sha256 c85537e0…，派发前
+mini 侧 git apply --check 通过且哈希一致）。原始 log=
+.local/struct-round1/struct-r2-cold-baseline-20261127.log。base 含 round-1
+②采纳；冷路径走 joined（flat），②对流式热路径的收益不计入本基线。
+main 其后推进到 0c41b4ef（PR #379，仅 CI workflow + docs，Sources 零改动），
+基线对新 main 源级有效。
+
+| slots | messages | cold_median_ms | cold_max_ms | append_median_ms | text_bytes |
+| --- | --- | --- | --- | --- | --- |
+| 100 | 117 | 0.94 | 7.08 | 0.06 | 43,079 |
+| 500 | 583 | 2.90 | 3.40 | 0.05 | 216,839 |
+| 1000 | 1167 | 3.67 | 4.25 | 0.04 | 433,229 |
+| 2000 | 2333 | 6.83 | 7.53 | 0.07 | 867,923 |
+| 8000 | 9333 | 27.64 | 32.09 | 0.22 | 3,473,923 |
+| 16000 | 18667 | **63.73** | 64.60 | 0.49 | 6,953,229 |
+
+口径：全新 model 单次 update() 全窗投影，5 次取中位（模型层，不含传输/
+布局/FPS）。100 档 cold_max 7.08 为首跑预热伪影，以中位数为准。
+
+- **Mac@16k = 63.73ms**，Linux 筛选 419.51ms 的 1/6.58；单条 3.41µs
+  （Linux 22.5µs）。round-11 外推预估 120–150ms **偏保守，如实修正**：
+  @2333 实测 6.83ms 与 round-11 的 6.73ms 几乎逐值吻合（+1.5%），偏差来自
+  缩放假设——实测轻度超线性（2.93→3.41µs/条，2333→18667；8k→16k 2.30×）。
+- ①余量重估：视口受限冷投影（首访只物化可见尾窗）在 16k 理论 20–60×；
+  64k 按轻度超线性外推 ~250–280ms（未测，不作证据）。63.73ms 低于 100ms
+  感知阈但仍是数帧级停顿，且触发面走查（下）显示大会话**每次重访必冷**。
+- **触发面走查（代码级，B 授权范围内只读）**：`WorkbenchModel.swift:13`
+  用默认 `ConversationPresentationCache()`；`ConversationPresentation.swift:716`
+  默认 capacity=8、**maximumMessages=1_000、maximumPayloadCost=1MiB**，
+  :727 retain 守卫超限即弃。16k 夹具 18,667 条 / ~6.95MB 文本，超限 18.7× /
+  6.6× → **大会话结构性不入缓存**，"最近 8 会话" LRU 只覆盖小会话；
+  大会话每次视图重建（切走再切回 / 恢复 / 重开窗）= 全窗冷重投影。
+  视图存活期 handle 保持当前 model（:736 注释）→ 流式 delta 走暖路径，
+  不受影响。触发占比的 acceptance 探针（真实使用中视图重建频率）仍待做，
+  此为立项门槛余项。
+- 竞争方案备忘：抬缓存上限可让大会话重访转暖，但内存代价（8× 大会话
+  model，源 + 投影行）未量化；懒投影同时攻冷成本与驻留足迹。裁决留待
+  相位归因后，不预决。
+- **懒物化正确性契约（草案，候选阶段钉死）**：
+  1. 阅读锚点：按 entry id + entry 内偏移锚定，不按行下标；未物化前缀
+     用稳定估高，物化修正不得移动已锚定视口（scroll anchoring）。
+  2. 查找：全历史查找语义不得缩到已物化子集；契约=查找扫源消息（或
+     触发有界全量物化），结果与今日全窗投影逐值一致。
+  3. 导航摘要：跳转列表覆盖全部 turn，数量/顺序与 eager 投影相等；
+     保留 O(n) eager 或懒建 + 稳定占位，取决于归因中 summary 份额。
+  4. 折叠：foldParents 对任意已物化子集正确；②的 split（base+overlay）
+     为前置基础设施；折叠态变化不得强制全量物化。
+  5. 滚动高度：未物化行估高须单调/稳定到滚动条与锚点恢复可用，
+     容差钉进 acceptance 夹具。
+- 下一步：(a) **冷相位归因**——update() 已有
+  `ConversationPresentationUpdateMetrics` 相位分解（tool/turn/narrative/
+  row/summary/retainedCost/compare），cold bench 挂 metricsHandler 打印即可，
+  tests-only 补丁、零产品改动，16k 档先出；(b) acceptance 触发占比探针；
+  (c) 据 (a)(b) 立候选（懒边界按主导相位定）。
