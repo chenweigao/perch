@@ -46,8 +46,15 @@ func checkTurnExcerpt() throws {
             let prompt = expectedPrompt.isEmpty
                 ? String(messages[0].content.compactMap(\.name).joined(separator: ", ").prefix(320)) : expectedPrompt
             let answer = messages.last { $0.role == "assistant" && $0.content.contains { $0.type == "text" && !$0.isRuntimeContext && !($0.text ?? "").isEmpty } }
-            precondition(summaries[0].prompt == prompt && summaries[0].reply == answer.map(reference) ?? "",
+            let expectedReply = answer.map(reference) ?? ""
+            precondition(summaries[0].prompt == prompt && summaries[0].reply == expectedReply,
                          "single/multi-part excerpts must equal the original Character-budget algorithm")
+            // Bytes, not just canonical equivalence: a mutant that normalizes
+            // both the product and this frozen oracle's input would still pass
+            // String ==, and the lazy path is chained to the product through it.
+            precondition(Array(summaries[0].prompt.utf8) == Array(prompt.utf8)
+                         && Array(summaries[0].reply.utf8) == Array(expectedReply.utf8),
+                         "excerpts must equal the frozen algorithm byte for byte")
         }
     }
     print("PASS: single-part excerpt fast path equals original Character budgets across Unicode boundaries and mixed parts")

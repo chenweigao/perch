@@ -562,7 +562,7 @@ public final class ConversationPresentationModel {
                     } else {
                         let timeline = ConversationTimelineEntry.make(chunk.messages, isRunning: false)
                         turn = HistoryTurn(chunk: chunk, rows: timeline.map { Self.row($0, tools: chunk.tools, activity: nil) },
-                                           navigation: ConversationTurnSummary.make(chunk.messages, entries: timeline).map { [$0] } ?? [])
+                                           navigation: ConversationTurnSummary.lazy(chunk.messages, entries: timeline).map { [$0] } ?? [])
                         rebuiltTurnCount += 1
                     }
                     next[id] = turn; built.append(turn)
