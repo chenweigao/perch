@@ -20,6 +20,32 @@ public struct ConversationPresentationUpdateMetrics: Equatable {
 
 /// Pure, synchronous presentation work. No provider, view, task or network owner is
 /// retained here. The caller's complete inputs remain the source of truth.
+/// Folded entry id -> its fold row id, split into a shared earlier base and a
+/// small per-update overlay. A streaming delta appends only the latest turn's
+/// folds to the overlay instead of copy-on-writing the whole earlier dictionary.
+/// Lookup and equality range over the effective mapping; the overlay wins a key
+/// collision, exactly the last-write-wins order of the flat merge it replaces.
+public struct FoldParents: Equatable {
+    public let base: [String: String]
+    public let overlay: [String: String]
+
+    public init() { base = [:]; overlay = [:] }
+    public init(base: [String: String], overlay: [String: String] = [:]) {
+        self.base = base; self.overlay = overlay
+    }
+
+    public subscript(key: String) -> String? { overlay[key] ?? base[key] }
+    public var isEmpty: Bool { base.isEmpty && overlay.isEmpty }
+    public var keys: [String] { overlay.isEmpty ? Array(base.keys) : Array(base.keys) + Array(overlay.keys) }
+    public var flattened: [String: String] {
+        overlay.isEmpty ? base : base.merging(overlay) { _, new in new }
+    }
+
+    public static func == (lhs: Self, rhs: Self) -> Bool { lhs.flattened == rhs.flattened }
+    public static func == (lhs: Self, rhs: [String: String]) -> Bool { lhs.flattened == rhs }
+    public static func == (lhs: [String: String], rhs: Self) -> Bool { lhs == rhs.flattened }
+}
+
 public final class ConversationPresentationModel {
     public struct Input: Equatable {
         public let messages: [KimiMessage]
@@ -129,7 +155,7 @@ public final class ConversationPresentationModel {
         /// captured memo must carry no summary overlays and the requesting
         /// call must ask for the same fold shape with no overlays either —
         /// overlay shapes take the existing full path.
-        private let joinedAdoption: (rows: [Row], foldParents: [String: String], foldsProcess: Bool,
+        private let joinedAdoption: (rows: [Row], foldParents: FoldParents, foldsProcess: Bool,
                                      consumedRowCount: Int, consumedFoldKeys: [String], leadingNew: Int)?
 
         init(turns: [HistoryTurn] = [], turnCount: Int = 0, source: ToolVisibilityProjection.Prefix? = nil,
@@ -208,7 +234,7 @@ public final class ConversationPresentationModel {
                         if let consumedValue = prior.turns[0].presented(activity: [:],
                                                                         foldsProcess: priorMemo.foldsProcess) {
                             consumedRowCount = consumedValue.rows.count
-                            consumedFoldKeys = Array(consumedValue.foldParents.keys)
+                            consumedFoldKeys = consumedValue.foldParents.keys
                         } else {
                             adopt = false
                         }
@@ -272,9 +298,9 @@ public final class ConversationPresentationModel {
             for (index, turn) in turns.enumerated() {
                 guard let value = turn.presented(activity: activity[index] ?? [:], foldsProcess: foldsProcess) else { return nil }
                 rows.append(contentsOf: value.rows)
-                parents.merge(value.foldParents) { current, _ in current }
+                parents.merge(value.foldParents.flattened) { current, _ in current }
             }
-            return Presentation(rows: rows, foldParents: parents)
+            return Presentation(rows: rows, foldParents: FoldParents(base: parents))
         }
 
         /// Round 36: joined's output for a prepending update, derived from the
@@ -292,7 +318,7 @@ public final class ConversationPresentationModel {
         /// - rows are the leading turns' presented rows followed by the
         ///   adopted rows minus the consumed turn's presented row count,
         ///   matching the full concatenation order turn-for-turn.
-        private func joinedIncremental(_ adoption: (rows: [Row], foldParents: [String: String], foldsProcess: Bool,
+        private func joinedIncremental(_ adoption: (rows: [Row], foldParents: FoldParents, foldsProcess: Bool,
                                                     consumedRowCount: Int, consumedFoldKeys: [String], leadingNew: Int),
                                        foldsProcess: Bool) -> Presentation? {
             var leadingRows: [Row] = []
@@ -300,15 +326,15 @@ public final class ConversationPresentationModel {
             for index in 0..<adoption.leadingNew {
                 guard let value = turns[index].presented(activity: [:], foldsProcess: foldsProcess) else { return nil }
                 leadingRows.append(contentsOf: value.rows)
-                leadingParents.merge(value.foldParents) { current, _ in current }
+                leadingParents.merge(value.foldParents.flattened) { current, _ in current }
             }
-            var parents = adoption.foldParents  // COW copy on first mutation; no rehash
+            var parents = adoption.foldParents.flattened  // COW copy on first mutation; no rehash
             for key in adoption.consumedFoldKeys { parents.removeValue(forKey: key) }
             for (key, parent) in leadingParents { parents[key] = parent }
             var rows = leadingRows
             rows.reserveCapacity(leadingRows.count + adoption.rows.count - adoption.consumedRowCount)
             rows.append(contentsOf: adoption.rows.dropFirst(adoption.consumedRowCount))
-            return Presentation(rows: rows, foldParents: parents)
+            return Presentation(rows: rows, foldParents: FoldParents(base: parents))
         }
 
         static func displayed(_ rows: [Row], activity: [String: ActivityNarrativeRow]) -> [Row] {
@@ -326,13 +352,13 @@ public final class ConversationPresentationModel {
     public struct Presentation: Equatable {
         public let rows: [Row]
         /// Folded entry id -> its fold row id, so find results open the fold.
-        public let foldParents: [String: String]
+        public let foldParents: FoldParents
 
         init(displayed: [Row], foldsProcess: Bool, isRunning: Bool) {
             rows = foldsProcess ? ConversationProcessFold.fold(rows: displayed, isRunning: isRunning) : displayed
-            foldParents = Self.parents(of: rows)
+            foldParents = FoldParents(base: Self.parents(of: rows))
         }
-        init(rows: [Row], foldParents: [String: String]) { self.rows = rows; self.foldParents = foldParents }
+        init(rows: [Row], foldParents: FoldParents) { self.rows = rows; self.foldParents = foldParents }
 
         /// Keep the rows the reader explicitly opened while work was running in
         /// their original hosts. Other completed process still folds in source order.
@@ -357,11 +383,11 @@ public final class ConversationPresentationModel {
                 }
                 flush()
             }
-            return Self(rows: result, foldParents: Self.parents(of: result))
+            return Self(rows: result, foldParents: FoldParents(base: Self.parents(of: result)))
         }
 
-        static func parents(of rows: [Row], into map: [String: String] = [:]) -> [String: String] {
-            rows.reduce(into: map) { map, row in
+        static func parents(of rows: [Row]) -> [String: String] {
+            rows.reduce(into: [String: String]()) { map, row in
                 for folded in row.foldedRows ?? [] { map[folded.entry.id] = row.entry.id }
             }
         }
@@ -423,7 +449,9 @@ public final class ConversationPresentationModel {
             if foldsProcess, latest.isEmpty { return whole() }
             let earlier = history.presented(activity: activity, foldsProcess: foldsProcess)
             let rows = foldsProcess ? ConversationProcessFold.fold(rows: latest, isRunning: isRunning) : latest
-            return Presentation(rows: earlier.rows + rows, foldParents: Presentation.parents(of: rows, into: earlier.foldParents))
+            return Presentation(rows: earlier.rows + rows,
+                                foldParents: FoldParents(base: earlier.foldParents.flattened,
+                                                         overlay: Presentation.parents(of: rows)))
         }
 
         // Keep the current reply visible. Its locally derived commentary
