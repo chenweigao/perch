@@ -76,7 +76,7 @@ round31d 等）。
 
 | 轮 | 日期 | 场景 | 结论 | 报告 |
 | --- | --- | --- | --- | --- |
-| 1 | 2026-11-27 | ② foldParents COW：探针翻盘 + split 候选 | 候选 e40b7054；Linux 113 PASS+1 SKIP、portable 通过、变异电池 4/4 击杀；Mac 粗筛 v2 运行中，正式六对待派发 | [round-1](2026-11-27-round-1.md) |
+| 1 | 2026-11-27 | ② foldParents COW：探针翻盘 + split 候选 | 候选 e40b7054；Linux 113 PASS+1 SKIP、portable、变异电池 4/4；**粗筛 v2 通过**（presented -60~67%、chain -8.6~-13.5%，三对分离）；正式 6 对 16k+3 对 64k 运行中；PR [#378](https://github.com/chenweigao/perch/pull/378) CI 运行中 | [round-1](2026-11-27-round-1.md) |
 
 ### round 1 侦察记录（base=1c0d52e0，drift=0）
 
