@@ -3,16 +3,31 @@ import SwiftUI
 import WorkbenchCore
 
 /// Bounded native blocks for assistant snapshots: paragraphs, headings, code cards,
-/// rules, paragraph-only quotes and paragraph/list items. Tables,
+/// tables, rules, paragraph-only quotes and paragraph/list items. Images,
 /// attachments and nested content outside this set keep the SwiftUI renderer.
 enum NativeAssistantBlock: Equatable {
     case paragraphs(NSAttributedString)
     /// Attributed text plus the Markdown level, which sets the spacing above it.
     case heading(level: Int, NSAttributedString)
     case code(language: String, source: String, text: NSAttributedString)
+    case table(headers: [[ReplyInline]], rows: [[[ReplyInline]]], alignments: [ReplyAlignment], fontSize: CGFloat)
     case rule
     case quote([NSAttributedString])
     case list([NativeAssistantListItem])
+}
+
+extension NativeAssistantBlock {
+    var viewTypeID: ObjectIdentifier { ObjectIdentifier(viewType) }
+    fileprivate var viewType: NativeAssistantBlockView.Type {
+        switch self {
+        case .paragraphs, .heading: return NativeTextBlockView.self
+        case .table: return NativeTableBlockView.self
+        case .code: return NativeCodeCardView.self
+        case .rule: return NativeRuleBlockView.self
+        case .quote: return NativeQuoteBlockView.self
+        case .list: return NativeListBlockView.self
+        }
+    }
 }
 
 struct NativeAssistantListItem: Equatable {
@@ -60,11 +75,11 @@ enum NativeAssistantContent {
         #else
         let blocks = ReplyDocument.parse(source)
         #endif
-        return prepare(blocks: blocks, allowsRichBlocks: allowsRichBlocks)
+        return prepare(blocks: blocks, allowsRichBlocks: allowsRichBlocks, allowsTables: true)
     }
 
-    static func prepare(blocks: [ReplyBlock], allowsRichBlocks: Bool = true) -> Preparation {
-        let built = build(blocks, allowsRichBlocks: allowsRichBlocks)
+    static func prepare(blocks: [ReplyBlock], allowsRichBlocks: Bool = true, allowsTables: Bool = false) -> Preparation {
+        let built = build(blocks, allowsRichBlocks: allowsRichBlocks, allowsTables: allowsTables)
         #if TRANSCRIPT_CHECKS
         if built == nil { NavigationRenderMetrics.count("row_parse_rejected") }
         #endif
@@ -102,9 +117,15 @@ enum NativeAssistantContent {
         let reusePoints: [ReusePoint]
     }
 
-    private static func build(_ blocks: [ReplyBlock], allowsRichBlocks: Bool,
+    private static func build(_ blocks: [ReplyBlock], allowsRichBlocks: Bool, allowsTables: Bool = false,
                               initial: BuildResult? = nil, sourceOffset: Int = 0) -> BuildResult? {
         guard !blocks.isEmpty || initial != nil else { return nil }
+        // Streaming snapshots and table replies with a long code card keep the
+        // full renderer, including its secondary hover-copy control.
+        lazy var supportsTables = allowsTables && !blocks.contains {
+            if case .code(_, let code) = $0 { return CodeLineNumbers.count(in: code) > 8 }
+            return false
+        }
         var result = initial?.blocks ?? []
         var reusePoints = initial?.reusePoints ?? [ReusePoint(source: 0, native: 0)]
         var pending: [[ReplyInline]] = []
@@ -132,7 +153,7 @@ enum NativeAssistantContent {
                 reusePoints.append(ReusePoint(source: sourceIndex + 1, native: result.count))
             case .code(let language, let code):
                 // Mermaid renders asynchronously as a rasterized image; the
-                // message keeps the SwiftUI renderer, as tables and math do.
+                // message keeps the SwiftUI renderer, as display math does.
                 guard allowsRichBlocks, !MermaidSupport.isMermaid(language) else { return nil }
                 flush(after: sourceIndex)
                 result.append(.code(language: language, source: code, text: ReplyTextAttributes.code(code)))
@@ -152,7 +173,12 @@ enum NativeAssistantContent {
                 flush(after: sourceIndex)
                 result.append(.list(list))
                 reusePoints.append(ReusePoint(source: sourceIndex + 1, native: result.count))
-            case .table, .math, .alert:
+            case .table(let headers, let rows, let alignments):
+                guard allowsRichBlocks, supportsTables, !headers.isEmpty, headers.count == alignments.count else { return nil }
+                flush(after: sourceIndex)
+                result.append(.table(headers: headers, rows: rows, alignments: alignments, fontSize: ReplyStyle.tableCellSize))
+                reusePoints.append(ReusePoint(source: sourceIndex + 1, native: result.count))
+            case .math, .alert:
                 return nil
             }
         }
@@ -224,7 +250,7 @@ extension ReplyStyle.BlockKind {
         case .heading: self = .heading
         case .code: self = .code
         case .rule: self = .rule
-        case .quote, .list: self = .other
+        case .quote, .list, .table: self = .other
         }
     }
 }
@@ -247,7 +273,7 @@ private func nativeMarkerMetrics() -> (font: NSFont, firstBaseline: CGFloat) {
 private class NativeAssistantBlockView: NSView {
     let links: SelectableReplyText.Coordinator
     override var isFlipped: Bool { true }
-    init(links: SelectableReplyText.Coordinator) {
+    required init(links: SelectableReplyText.Coordinator) {
         self.links = links
         super.init(frame: .zero)
     }
@@ -257,6 +283,8 @@ private class NativeAssistantBlockView: NSView {
     func placeContent(width: CGFloat) {}
     /// Return every text view to the shared pool, cleared of content and selection.
     func teardown() {}
+    func resetMessageState() {}
+    func configureControls(enabled: Bool, locale: Locale) {}
     func textViews() -> [ReplyTextView] { [] }
 }
 
@@ -300,40 +328,133 @@ private final class NativeRuleBlockView: NativeAssistantBlockView {
     }
 }
 
+private struct BlockControls<Content: View>: View {
+    var content: Content
+    var generation = 0
+    var enabled = true
+    var locale = Locale.autoupdatingCurrent
+    var body: some View {
+        content.id(generation).disabled(!enabled).environment(\.locale, locale).tint(WorkbenchTheme.accent)
+    }
+}
+
+private extension NSHostingView {
+    func configure<Controls>(enabled: Bool, locale: Locale) where Content == BlockControls<Controls> {
+        guard rootView.enabled != enabled || rootView.locale != locale else { return }
+        var root = rootView
+        root.enabled = enabled
+        root.locale = locale
+        rootView = root
+    }
+}
+
+/// Code and tables scroll horizontally inside the vertical transcript. Their
+/// overlay scrollers never reserve a band or change the measured row height.
+private final class NativeBlockScrollView: NSScrollView {
+    private let fade = CAGradientLayer()
+    init(document: NSView) {
+        super.init(frame: .zero)
+        hasHorizontalScroller = true
+        hasVerticalScroller = false
+        scrollerStyle = .overlay
+        autohidesScrollers = true
+        drawsBackground = false
+        borderType = .noBorder
+        verticalScrollElasticity = .none
+        documentView = document
+        wantsLayer = true
+        fade.startPoint = CGPoint(x: 0, y: 0.5)
+        fade.endPoint = CGPoint(x: 1, y: 0.5)
+        fade.colors = [NSColor.black.cgColor, NSColor.black.cgColor, NSColor.clear.cgColor]
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+    func resetPosition() {
+        if contentView.bounds.origin != .zero {
+            contentView.scroll(to: .zero)
+            reflectScrolledClipView(contentView)
+        }
+    }
+    /// A layer mask on the viewport: frames and hit testing stay as they are.
+    func updateFade(overflows: Bool) {
+        guard let layer = self.layer else { return }
+        let size = self.bounds.size
+        guard overflows, size.width > ReplyStyle.overflowFadeWidth else {
+            if layer.mask != nil { layer.mask = nil }
+            return
+        }
+        // A standalone layer animates implicitly; the fade must track the frame.
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        fade.frame = CGRect(origin: .zero, size: size)
+        fade.locations = [0, NSNumber(value: Double(1 - ReplyStyle.overflowFadeWidth / size.width)), 1]
+        if layer.mask !== fade { layer.mask = fade }
+        CATransaction.commit()
+    }
+}
+
+private final class NativeTableBlockView: NativeAssistantBlockView {
+    private let actions = NSHostingView(rootView: BlockControls(content: ReplyTableActions(headers: [], rows: [], alignments: [])))
+    private let grid = TranscriptTableGrid.Grid()
+    private lazy var scroll = NativeBlockScrollView(document: grid)
+    private var minimumWidth: CGFloat = 0
+
+    required init(links: SelectableReplyText.Coordinator) {
+        super.init(links: links)
+        actions.identifier = NSUserInterfaceItemIdentifier("reply-table-actions")
+        actions.sizingOptions = []
+        actions.safeAreaRegions = []
+        addSubview(actions)
+        addSubview(scroll)
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func update(_ block: NativeAssistantBlock) {
+        guard case .table(let headers, let rows, let alignments, let fontSize) = block else { return }
+        grid.geometry = ReplyTableGeometry(fontSize: fontSize)
+        grid.widths = ReplyTableGeometry.contentWidths(headers: headers, rows: rows, fontSize: grid.geometry.fontSize)
+        minimumWidth = grid.geometry.minimumWidths(contentWidths: grid.widths).reduce(0, +)
+        grid.configure(headers: headers, rows: rows, alignments: alignments)
+        actions.rootView.content = ReplyTableActions(headers: headers, rows: rows, alignments: alignments)
+    }
+    override func contentHeight(width: CGFloat) -> CGFloat {
+        ReplyStyle.Table.gridTop + grid.measure(width: max(width, minimumWidth), place: false).height
+    }
+    override func placeContent(width: CGFloat) {
+        let height = max(0, bounds.height - ReplyStyle.Table.gridTop)
+        actions.frame = CGRect(x: 0, y: 0, width: width, height: ReplyStyle.Table.actionsHeight)
+        scroll.frame = CGRect(x: 0, y: ReplyStyle.Table.gridTop, width: width, height: height)
+        grid.frame = CGRect(x: 0, y: 0, width: max(width, minimumWidth), height: height)
+        scroll.updateFade(overflows: minimumWidth > width + 0.5)
+    }
+    override func configureControls(enabled: Bool, locale: Locale) { actions.configure(enabled: enabled, locale: locale) }
+    override func resetMessageState() {
+        scroll.resetPosition()
+        actions.rootView.generation += 1
+    }
+    override func teardown() { grid.trim(to: 0) }
+    override func textViews() -> [ReplyTextView] { grid.cells }
+}
+
 private final class NativeCodeCardView: NativeAssistantBlockView {
     private let label = NSTextField(labelWithString: "")
-    private let copy: NSHostingView<ReplyCopyButton>
-    private let scroll = NSScrollView()
+    private let copy: NSHostingView<BlockControls<ReplyCopyButton>>
+    private lazy var scroll = NativeBlockScrollView(document: document)
     private let document = NSView()
-    /// Masks the viewport while the code overflows, like the SwiftUI card's
-    /// `ReplyOverflowFade`: opaque, then clear across the trailing fade width.
-    private let fade = CAGradientLayer()
     private var codeText: ReplyTextView?
     private var gutter: ReplyTextView?
     private var source = ""
 
-    override init(links: SelectableReplyText.Coordinator) {
-        copy = NSHostingView(rootView: ReplyCopyButton(text: "", label: "复制代码"))
+    required init(links: SelectableReplyText.Coordinator) {
+        copy = NSHostingView(rootView: BlockControls(content: ReplyCopyButton(text: "", label: "复制代码", prominent: true)))
         super.init(links: links)
         // DSH banner: the language label is monospace 11 in primary ink.
         label.font = .monospacedSystemFont(ofSize: ReplyStyle.Code.labelSize, weight: .regular)
         // DSH's infostring reads at full label strength.
         label.textColor = .labelColor
         label.lineBreakMode = .byTruncatingTail
+        copy.identifier = NSUserInterfaceItemIdentifier("reply-code-copy")
         copy.sizingOptions = []
         copy.safeAreaRegions = []
-        scroll.hasVerticalScroller = false
-        scroll.hasHorizontalScroller = true
-        scroll.scrollerStyle = .overlay
-        scroll.autohidesScrollers = true
-        scroll.drawsBackground = false
-        scroll.borderType = .noBorder
-        scroll.verticalScrollElasticity = .none
-        scroll.documentView = document
-        scroll.wantsLayer = true
-        fade.startPoint = CGPoint(x: 0, y: 0.5)
-        fade.endPoint = CGPoint(x: 1, y: 0.5)
-        fade.colors = [NSColor.black.cgColor, NSColor.black.cgColor, NSColor.clear.cgColor]
         for view in [label, copy, scroll] { addSubview(view) }
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
@@ -351,7 +472,7 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
         }
         if source != self.source {
             self.source = source
-            copy.rootView = ReplyCopyButton(text: source, label: "复制代码", prominent: true)
+            copy.rootView.content = ReplyCopyButton(text: source, label: "复制代码", prominent: true)
         }
         let codeText = self.codeText ?? {
             let view = SelectableReplyText.acquire(delegate: links)
@@ -411,7 +532,7 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
         if scroll.frame != scrollFrame { scroll.frame = scrollFrame }
         let documentFrame = CGRect(x: 0, y: 0, width: codeX + text.width + Card.inset, height: text.height + Card.inset * 2)
         if document.frame != documentFrame { document.frame = documentFrame }
-        updateFade(overflows: documentFrame.width > scrollFrame.width + 0.5)
+        scroll.updateFade(overflows: documentFrame.width > scrollFrame.width + 0.5)
         if let gutterView = self.gutter {
             let frame = CGRect(x: Card.gutterLeading, y: Card.inset, width: gutter.width, height: gutter.height)
             if gutterView.frame != frame { gutterView.frame = frame }
@@ -421,21 +542,10 @@ private final class NativeCodeCardView: NativeAssistantBlockView {
             if codeText.frame != frame { codeText.frame = frame }
         }
     }
-    /// A layer mask on the viewport: frames and hit testing stay as they are.
-    private func updateFade(overflows: Bool) {
-        guard let layer = scroll.layer else { return }
-        let size = scroll.bounds.size
-        guard overflows, size.width > ReplyStyle.overflowFadeWidth else {
-            if layer.mask != nil { layer.mask = nil }
-            return
-        }
-        // A standalone layer animates implicitly; the fade must track the frame.
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        fade.frame = CGRect(origin: .zero, size: size)
-        fade.locations = [0, NSNumber(value: Double(1 - ReplyStyle.overflowFadeWidth / size.width)), 1]
-        if layer.mask !== fade { layer.mask = fade }
-        CATransaction.commit()
+    override func configureControls(enabled: Bool, locale: Locale) { copy.configure(enabled: enabled, locale: locale) }
+    override func resetMessageState() {
+        scroll.resetPosition()
+        copy.rootView.generation += 1
     }
     override func teardown() {
         if let gutter {
@@ -605,6 +715,8 @@ final class NativeAssistantStackView: NSView {
     private let links: SelectableReplyText.Coordinator
     private(set) var blocks: [NativeAssistantBlock] = []
     private var blockViews: [NativeAssistantBlockView] = []
+    private var controlsEnabled = true
+    private var controlsLocale = Locale.autoupdatingCurrent
     private var dirtyBlocks: Set<ObjectIdentifier> = []
     private var geometryWidth: CGFloat?
     private var geometryDirtyFrom: Int?
@@ -626,15 +738,6 @@ final class NativeAssistantStackView: NSView {
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    private func makeView(for block: NativeAssistantBlock) -> NativeAssistantBlockView {
-        switch block {
-        case .paragraphs, .heading: return NativeTextBlockView(links: links)
-        case .code: return NativeCodeCardView(links: links)
-        case .rule: return NativeRuleBlockView(links: links)
-        case .quote: return NativeQuoteBlockView(links: links)
-        case .list: return NativeListBlockView(links: links)
-        }
-    }
     func update(_ blocks: [NativeAssistantBlock], unchangedPrefix: Int = 0) {
         if unchangedPrefix == 0 && blocks == self.blocks { return }
         let stable = min(unchangedPrefix, blocks.count, self.blocks.count, blockViews.count)
@@ -657,7 +760,7 @@ final class NativeAssistantStackView: NSView {
                 #endif
                 continue
             }
-            if index < blockViews.count, type(of: blockViews[index]) == makeViewType(for: block) {
+            if index < blockViews.count, type(of: blockViews[index]) == block.viewType {
                 if index >= previous.count || previous[index] != block {
                     blockViews[index].update(block)
                     dirtyBlocks.insert(ObjectIdentifier(blockViews[index]))
@@ -672,7 +775,8 @@ final class NativeAssistantStackView: NSView {
                 }
                 next.append(blockViews[index])
             } else {
-                let view = makeView(for: block)
+                let view = block.viewType.init(links: links)
+                view.configureControls(enabled: controlsEnabled, locale: controlsLocale)
                 view.update(block)
                 dirtyBlocks.insert(ObjectIdentifier(view))
                 firstChange = min(firstChange, index)
@@ -696,15 +800,6 @@ final class NativeAssistantStackView: NSView {
         let views = blockViews.map { $0 as NSView }
         if subviews.count != views.count || !zip(subviews, views).allSatisfy(===) {
             subviews = views
-        }
-    }
-    private func makeViewType(for block: NativeAssistantBlock) -> NativeAssistantBlockView.Type {
-        switch block {
-        case .paragraphs, .heading: return NativeTextBlockView.self
-        case .code: return NativeCodeCardView.self
-        case .rule: return NativeRuleBlockView.self
-        case .quote: return NativeQuoteBlockView.self
-        case .list: return NativeListBlockView.self
         }
     }
     private func invalidateGeometry(from index: Int) {
@@ -768,6 +863,15 @@ final class NativeAssistantStackView: NSView {
         }
         dirtyBlocks.removeAll(keepingCapacity: true)
         placementDirtyFrom = nil
+    }
+    func configureControls(enabled: Bool, locale: Locale) {
+        guard enabled != controlsEnabled || locale != controlsLocale else { return }
+        controlsEnabled = enabled
+        controlsLocale = locale
+        for view in blockViews { view.configureControls(enabled: enabled, locale: locale) }
+    }
+    func resetMessageState() {
+        for view in blockViews { view.resetMessageState() }
     }
     /// Return all text views to the shared pool and detach every block view.
     func teardown() {

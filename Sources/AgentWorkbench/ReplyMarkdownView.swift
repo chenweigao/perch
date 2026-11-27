@@ -168,6 +168,9 @@ enum ReplyStyle {
     }
     /// Table cells and rules; horizontal cell padding lives in `tableGeometry`.
     enum Table {
+        static let actionsHeight: CGFloat = 24
+        static let actionSpacing: CGFloat = 2
+        static var gridTop: CGFloat { actionsHeight + actionSpacing }
         static let cellVerticalPadding: CGFloat = 10
         /// Cell text on the table line (22 pt at the default secondary size).
         static var cellLineHeight: CGFloat { ReplyStyle.scale.secondary + 9 }
@@ -1497,12 +1500,7 @@ final class NativeAssistantMessageView: NSView {
         #endif
         return recycled.popLast() ?? NativeAssistantMessageView(frame: .zero)
     }
-    func prepareForNewMessage() {
-        for case .code in stack.blocks {
-            stack.teardown()
-            break
-        }
-    }
+    func prepareForNewMessage() { stack.resetMessageState() }
     static func recycle(_ view: NativeAssistantMessageView) {
         view.removeFromSuperview()
         view.actionModel.update(source: nil)
@@ -1514,11 +1512,12 @@ final class NativeAssistantMessageView: NSView {
         view.stack.teardown()
         if recycled.count < 16 { recycled.append(view) }
     }
-    func update(_ blocks: [NativeAssistantBlock], source: String, dark: Bool, enabled: Bool = true,
+    func update(_ blocks: [NativeAssistantBlock], source: String, dark: Bool, enabled: Bool = true, locale: Locale = .autoupdatingCurrent,
                 actionContext: ConversationActionContext? = nil, messageID: String? = nil,
                 showsActions: Bool = true, unchangedPrefix: Int = 0) {
         let appearanceName: NSAppearance.Name = dark ? .darkAqua : .aqua
         if appearance?.name != appearanceName { appearance = NSAppearance(named: appearanceName) }
+        stack.configureControls(enabled: enabled, locale: locale)
         stack.update(blocks, unchangedPrefix: unchangedPrefix)
         self.showsActions = showsActions
         actions.isHidden = !showsActions
@@ -2267,33 +2266,17 @@ private struct ReplyTable: View {
     let alignments: [ReplyAlignment]
     /// The preview sheet renders the same cells without re-nesting its own bar.
     var showsActions = true
-    @State private var previewPresented = false
     private var cellSize: CGFloat { ReplyStyle.tableCellSize }
     private var geometry: ReplyTableGeometry {
         documentReadingStyle ? ReplyTableGeometry(fontSize: cellSize * documentFontScale) : ReplyStyle.tableGeometry
     }
-    /// Math/code content survives extraction from the rendered cell runs.
-    private var tableData: TableData {
-        TableData(headerCells: headers.map { TableCell(inlines: $0) },
-                  cellRows: rows.map { $0.map { TableCell(inlines: $0) } },
-                  alignments: alignments)
-    }
-
     var body: some View {
         let geometry = geometry
-        let data = tableData
         let contents = ReplyTableGeometry.contentWidths(headers: headers, rows: rows, fontSize: geometry.fontSize)
         let minimumTotal = geometry.minimumWidths(contentWidths: contents).reduce(0, +)
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: ReplyStyle.Table.actionSpacing) {
             if showsActions {
-                HStack(spacing: 2) {
-                    Spacer(minLength: 0)
-                    ReplyTableCopyButton(data: data)
-                    ReplyTableActionButton(symbol: "square.and.arrow.up", label: "导出 CSV") { exportTableCSV(data) }
-                    ReplyTableActionButton(symbol: "arrow.up.left.and.arrow.down.right", label: "放大表格") {
-                        previewPresented = true
-                    }
-                }
+                ReplyTableActions(headers: headers, rows: rows, alignments: alignments)
             }
             // Fit the viewport first; only the minimum column widths can cause overflow.
             ReplyHorizontalScroll {
@@ -2309,9 +2292,6 @@ private struct ReplyTable: View {
                 }
             }
             .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
-        }
-        .sheet(isPresented: $previewPresented) {
-            ReplyTablePreview(headers: headers, rows: rows, alignments: alignments, tableData: data)
         }
     }
 
@@ -2349,9 +2329,37 @@ private struct ReplyTable: View {
     }
 }
 
+struct ReplyTableActions: View {
+    let headers: [[ReplyInline]]
+    let rows: [[[ReplyInline]]]
+    let alignments: [ReplyAlignment]
+    @State private var previewPresented = false
+    /// Math/code content survives extraction from the rendered cell runs.
+    private var tableData: TableData {
+        TableData(headerCells: headers.map { TableCell(inlines: $0) },
+                  cellRows: rows.map { $0.map { TableCell(inlines: $0) } },
+                  alignments: alignments)
+    }
+
+    var body: some View {
+        let data = tableData
+        HStack(spacing: 2) {
+            Spacer(minLength: 0)
+            ReplyTableCopyButton(data: data)
+            ReplyTableActionButton(symbol: "square.and.arrow.up", label: "导出 CSV") { exportTableCSV(data) }
+            ReplyTableActionButton(symbol: "arrow.up.left.and.arrow.down.right", label: "放大表格") {
+                previewPresented = true
+            }
+        }
+        .sheet(isPresented: $previewPresented) {
+            ReplyTablePreview(headers: headers, rows: rows, alignments: alignments, tableData: data)
+        }
+    }
+}
+
 /// A transcript table owns one SwiftUI bridge. Its selectable cells share the
 /// same TextKit implementation and column-width calculation as the reader.
-private struct TranscriptTableGrid: NSViewRepresentable {
+struct TranscriptTableGrid: NSViewRepresentable {
     let headers: [[ReplyInline]]
     let rows: [[[ReplyInline]]]
     let alignments: [ReplyAlignment]
@@ -2373,7 +2381,7 @@ private struct TranscriptTableGrid: NSViewRepresentable {
         var widths: [CGFloat] = []
         var geometry = ReplyTableGeometry()
         private let links = SelectableReplyText.Coordinator()
-        private var cells: [ReplyTextView] = []
+        private(set) var cells: [ReplyTextView] = []
         private var rules: [CGFloat] = []
         private var alignments: [ReplyAlignment] = []
         override var isFlipped: Bool { true }
@@ -2477,7 +2485,7 @@ private struct ReplyTableActionButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: symbol).font(.system(size: ReplyStyle.captionSize))
-                .frame(width: 24, height: 24).contentShape(Rectangle())
+                .frame(width: 24, height: ReplyStyle.Table.actionsHeight).contentShape(Rectangle())
         }.buttonStyle(.plain).foregroundStyle(.secondary).help(label)
             .accessibilityLabel(label)
     }

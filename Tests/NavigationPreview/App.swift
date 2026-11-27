@@ -335,7 +335,7 @@ final class NavigationRunner {
         result["viewport_height"] = visible
         result["final_document_height"] = scroll.documentView?.bounds.height ?? 0
         if let stepPoints { result["step_points"] = stepPoints }
-        return ["scroll_step_ms": result, "steps": steps, "reversal": reversal, "render_stages": NavigationRenderMetrics.report,
+        return ["scroll_step_ms": result, "samples_ms": frames, "steps": steps, "reversal": reversal, "render_stages": NavigationRenderMetrics.report,
                 "note": "programmatic scroll steps, each including layout, display and transaction flush; not a display-link frame rate"]
     }
 

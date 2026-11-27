@@ -1207,18 +1207,20 @@ private final class ConversationDocumentView: NSView {
                 let measuredSize: (width: CGFloat, height: CGFloat)? = measuredSizes[id].flatMap {
                     $0.width == columnWidth && $0.content == content ? ($0.width, $0.height) : nil
                 }
+                let preparation = ConversationEntryController.prepareHistoryRow(content, appearance: appearance)
+                let shape = preparation?.shape
                 // Keep the nearest rows intact for a small reversal.
                 if let donor = controllers.first(where: { key, row in
                     guard !nextMounted.contains(key), let oldIndex = indices[key],
                           oldIndex < first - 2 || oldIndex >= end + 2 else { return false }
-                    return row.canReuse(for: content, hosted: measuredSizes[id]?.hosted)
+                    return row.reuseShape == shape && row.canReuse(for: content, hosted: measuredSizes[id]?.hosted)
                 }) {
                     controllers.removeValue(forKey: donor.key)
                     controller = donor.value
-                    controller.reuse(for: content, appearance: appearance, measuredSize: measuredSize)
+                    controller.reuse(for: content, appearance: appearance, measuredSize: measuredSize, preparation: preparation)
                 } else {
                     created += 1
-                    controller = ConversationEntryController(content: content, appearance: appearance, measuredSize: measuredSize,
+                    controller = ConversationEntryController(content: content, appearance: appearance, measuredSize: measuredSize, preparation: preparation,
                         disclosureChanged: { [weak self] in self?.beginDisclosureChange($0) },
                         heightChanged: { [weak self] in self?.rowHeightChanged($0, height: $1) })
                 }
@@ -1705,7 +1707,7 @@ private final class ConversationEntryController: NSViewController {
     private var streamParser = ReplyStreamParser()
     private var pendingStreamSource: String?
     private var pendingStreamReceivedAt: TimeInterval?
-    private var streamPreparation: (blocks: [ReplyBlock], size: CGFloat, rich: Bool,
+    private var streamPreparation: (blocks: [ReplyBlock], size: CGFloat, rich: Bool, settled: Bool,
                                     revision: Int, visibleUTF16: Int, value: NativeAssistantContent.Preparation)?
     private var revealIdentity: String?
     private var revealClock: ReplyFrameClock?
@@ -1730,7 +1732,7 @@ private final class ConversationEntryController: NSViewController {
     private let disclosureChanged: (String) -> Void
 
     init(content: ConversationEntryView, appearance: ConversationEntryAppearance,
-         measuredSize: (width: CGFloat, height: CGFloat)? = nil,
+         measuredSize: (width: CGFloat, height: CGFloat)? = nil, preparation: RowPreparation? = nil,
          disclosureChanged: @escaping (String) -> Void, heightChanged: @escaping (String, CGFloat) -> Void) {
         #if TRANSCRIPT_CHECKS
         let start = CACurrentMediaTime()
@@ -1746,7 +1748,36 @@ private final class ConversationEntryController: NSViewController {
         super.init(nibName: nil, bundle: nil)
         if let measuredSize { sizes.append(measuredSize) }
         updateTextReveal()
-        setRoot()
+        setRoot(preparation)
+    }
+    // The key describes the actual AppKit subviews. A long prompt needs more text
+    // views; a table and a list have different controls even at the same height.
+    enum ReuseShape: Equatable {
+        case user(Int)
+        case assistant([ObjectIdentifier])
+    }
+
+    typealias UserPreparation = (messageID: String, source: String, value: NativeParagraphContent.Preparation)
+    typealias AssistantPreparation = (messageID: String, source: String, value: NativeAssistantContent.Preparation)
+    enum RowPreparation {
+        case user(UserPreparation)
+        case assistant(AssistantPreparation)
+        var shape: ReuseShape? {
+            switch self {
+            case .user(let row): return row.value.content.map { .user($0.count) }
+            case .assistant(let row): return row.value.content.map { .assistant($0.map(\.viewTypeID)) }
+            }
+        }
+    }
+    private(set) var reuseShape: ReuseShape?
+    static func prepareHistoryRow(_ content: ConversationEntryView, appearance: ConversationEntryAppearance) -> RowPreparation? {
+        guard !content.isLive, content.streamingMessageID == nil else { return nil }
+        return prepareRow(content, appearance: appearance) { settledAssistant($0, session: content.sessionId) }
+    }
+    private static func prepareRow(_ content: ConversationEntryView, appearance: ConversationEntryAppearance,
+                                   assistant: (AssistantInput) -> AssistantPreparation) -> RowPreparation? {
+        if let user = nativeUserPreparation(content, appearance: appearance) { return .user(user) }
+        return assistantInput(content, appearance: appearance).map { .assistant(assistant($0)) }
     }
     var isHosted: Bool { host != nil }
 
@@ -1769,7 +1800,7 @@ private final class ConversationEntryController: NSViewController {
     }
 
     func reuse(for next: ConversationEntryView, appearance: ConversationEntryAppearance,
-               measuredSize: (width: CGFloat, height: CGFloat)?) {
+               measuredSize: (width: CGFloat, height: CGFloat)?, preparation: RowPreparation?) {
         generation += 1
         content = next
         self.appearance = appearance
@@ -1781,7 +1812,7 @@ private final class ConversationEntryController: NSViewController {
         // New messages start with fresh code-card scroll positions and controls.
         nativeAssistant?.prepareForNewMessage()
         updateTextReveal()
-        setRoot()
+        setRoot(preparation)
         #if TRANSCRIPT_CHECKS
         NavigationRenderMetrics.count("row_controller_reuse")
         #endif
@@ -2071,7 +2102,7 @@ private final class ConversationEntryController: NSViewController {
         sizes.removeAll(keepingCapacity: true)
         setRoot()
     }
-    private func nativeUserPreparation() -> (messageID: String, source: String, value: NativeParagraphContent.Preparation)? {
+    private static func nativeUserPreparation(_ content: ConversationEntryView, appearance: ConversationEntryAppearance) -> UserPreparation? {
         #if TRANSCRIPT_CHECKS
         if ProcessInfo.processInfo.environment["NAVIGATION_NATIVE_USER_ROWS"] == "0" { return nil }
         #endif
@@ -2087,14 +2118,15 @@ private final class ConversationEntryController: NSViewController {
         }
         return (message.id, source, preparation)
     }
-    private func nativeAssistantPreparation() -> (messageID: String, source: String, value: NativeAssistantContent.Preparation)? {
+    private typealias AssistantInput = (id: String, source: String)
+    #if TRANSCRIPT_CHECKS
+    private static let allowsRichBlocks = ProcessInfo.processInfo.environment["NAVIGATION_NATIVE_ASSISTANT_BLOCKS"] != "0"
+    #else
+    private static let allowsRichBlocks = true
+    #endif
+    private static func assistantInput(_ content: ConversationEntryView, appearance: ConversationEntryAppearance) -> AssistantInput? {
         #if TRANSCRIPT_CHECKS
         if ProcessInfo.processInfo.environment["NAVIGATION_NATIVE_ASSISTANT_ROWS"] == "0" { return nil }
-        let allowsRichBlocks = ProcessInfo.processInfo.environment["NAVIGATION_NATIVE_ASSISTANT_BLOCKS"] != "0"
-        let incrementalRendering = ProcessInfo.processInfo.environment["NAVIGATION_NATIVE_BODY_INCREMENTAL"] != "0"
-        #else
-        let allowsRichBlocks = true
-        let incrementalRendering = true
         #endif
         guard appearance.layoutDirection == .leftToRight, !content.isProgressNote,
               content.entry.presentation == .message || content.entry.presentation == .progress,
@@ -2103,33 +2135,46 @@ private final class ConversationEntryController: NSViewController {
               message.content.count == 1, let part = message.content.first,
               part.type == "text", !part.isRuntimeContext, part.skillContextSplit == nil,
               let rawSource = part.text else { return nil }
+        return (message.id, rawSource)
+    }
+    private static func settledAssistant(_ input: AssistantInput, session: String) -> AssistantPreparation {
+        let preparation = nativeRowPreparations.assistant(session: session, messageID: input.id,
+                                                          source: input.source, allowsRichBlocks: allowsRichBlocks) {
+            NativeAssistantContent.prepare(input.source, allowsRichBlocks: allowsRichBlocks)
+        }
+        return (input.id, input.source, preparation)
+    }
+    private func nativeAssistantPreparation(_ input: AssistantInput) -> AssistantPreparation {
+        #if TRANSCRIPT_CHECKS
+        let incrementalRendering = ProcessInfo.processInfo.environment["NAVIGATION_NATIVE_BODY_INCREMENTAL"] != "0"
+        #else
+        let incrementalRendering = true
+        #endif
+        let allowsRichBlocks = Self.allowsRichBlocks
         if let streamSnapshot, let textReveal {
             let visibleUTF16 = textReveal.text.utf16.count
+            let settled = content.streamingMessageID == nil && !textReveal.hasBacklog
             if let prepared = streamPreparation, prepared.revision == streamSnapshotRevision,
                prepared.visibleUTF16 == visibleUTF16, prepared.size == appearance.bodySize,
-               prepared.rich == allowsRichBlocks {
-                return (message.id, rawSource, prepared.value)
+               prepared.rich == allowsRichBlocks, prepared.settled == settled {
+                return (input.id, input.source, prepared.value)
             }
             let blocks = streamSnapshot.prefix(utf16Length: visibleUTF16)
             let value: NativeAssistantContent.Preparation
-            if incrementalRendering, let previous = streamPreparation, previous.size == appearance.bodySize,
-               previous.rich == allowsRichBlocks, !previous.blocks.isEmpty {
+            let settledTable = settled && blocks.contains { if case .table = $0 { true } else { false } }
+            if !settledTable, incrementalRendering, let previous = streamPreparation, previous.size == appearance.bodySize,
+               previous.rich == allowsRichBlocks, (!previous.settled || settled), !previous.blocks.isEmpty {
                 let stable = min(streamStableBlockCount, previous.blocks.count - 1)
                 value = NativeAssistantContent.prepare(blocks: blocks, allowsRichBlocks: allowsRichBlocks,
                                                        reusing: previous.value, stableBlockCount: stable)
             } else {
-                value = NativeAssistantContent.prepare(blocks: blocks, allowsRichBlocks: allowsRichBlocks)
+                value = NativeAssistantContent.prepare(blocks: blocks, allowsRichBlocks: allowsRichBlocks, allowsTables: settledTable)
             }
-            streamPreparation = (blocks, appearance.bodySize, allowsRichBlocks,
+            streamPreparation = (blocks, appearance.bodySize, allowsRichBlocks, settled,
                                  streamSnapshotRevision, visibleUTF16, value)
-            return (message.id, rawSource, value)
+            return (input.id, input.source, value)
         }
-        let source = rawSource
-        let preparation = nativeRowPreparations.assistant(session: content.sessionId, messageID: message.id,
-                                                          source: source, allowsRichBlocks: allowsRichBlocks) {
-            NativeAssistantContent.prepare(source, allowsRichBlocks: allowsRichBlocks)
-        }
-        return (message.id, source, preparation)
+        return Self.settledAssistant(input, session: content.sessionId)
     }
     private func fallbackPreparation(messageID: String, source: String, blocks: [ReplyBlock]) -> ReplyMarkdownPreparation {
         #if TRANSCRIPT_CHECKS
@@ -2159,7 +2204,7 @@ private final class ConversationEntryController: NSViewController {
                 self.setRoot()
             }
     }
-    private func setRoot() {
+    private func setRoot(_ preparation: RowPreparation? = nil) {
         #if TRANSCRIPT_CHECKS
         // Covers native admission probing (parse + attributed construction), native
         // view acquisition and text-storage replacement, and NSHostingController
@@ -2172,8 +2217,11 @@ private final class ConversationEntryController: NSViewController {
         placedWidth = nil
         replySource = nil
         var markdownPreparation: ReplyMarkdownPreparation?
-        if let user = nativeUserPreparation() {
+        reuseShape = nil
+        let row = preparation ?? Self.prepareRow(content, appearance: appearance, assistant: nativeAssistantPreparation)
+        if case .user(let user) = row {
             if let paragraphs = user.value.content {
+                reuseShape = .user(paragraphs.count)
                 if let nativeAssistant { NativeAssistantMessageView.recycle(nativeAssistant); self.nativeAssistant = nil }
                 if let host { host.view.removeFromSuperview(); host.removeFromParent(); self.host = nil }
                 if nativeUser == nil {
@@ -2223,7 +2271,7 @@ private final class ConversationEntryController: NSViewController {
             NativeUserMessageView.recycle(nativeUser)
             self.nativeUser = nil
         }
-        if let assistant = nativeAssistantPreparation() {
+        if case .assistant(let assistant) = row {
             replySource = content.entry.messages.first?.content.first?.text
             if let blocks = assistant.value.content {
                 // A hosted fallback may become native after its incomplete Markdown
@@ -2241,8 +2289,9 @@ private final class ConversationEntryController: NSViewController {
                         nativeAssistant = NativeAssistantMessageView.acquire()
                         if isViewLoaded { view.addSubview(nativeAssistant!) }
                     }
+                    reuseShape = .assistant(blocks.map(\.viewTypeID))
                     nativeAssistant!.update(blocks, source: assistant.source,
-                                            dark: appearance.colorScheme == .dark, enabled: appearance.isEnabled,
+                                            dark: appearance.colorScheme == .dark, enabled: appearance.isEnabled, locale: appearance.locale,
                                             actionContext: appearance.actionContext, messageID: assistant.messageID,
                                             showsActions: content.entry.presentation == .message,
                                             unchangedPrefix: assistant.value.reusedBlockCount)
