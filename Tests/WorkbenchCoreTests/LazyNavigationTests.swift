@@ -89,5 +89,150 @@ func checkLazyNavigation() throws {
                                 "content": [["type": "text", "text": "only answer"]]]])
     precondition(ConversationTurnSummary.lazy(noPrompt, entries: ConversationTimelineEntry.make(noPrompt)) == nil,
                  "lazy factory must mirror make's user-prompt guard")
-    print("PASS: lazy navigation — cold deferral (anti-blind), eager byte-equality, identity tracking, equality materialization")
+    precondition(ConversationTurnSummary.make(turns[0], entries: entries0)!.materialized,
+                 "the eager factory must extract at construction")
+
+    /// Groups a window into turns the way the projection does, and builds the
+    /// per-turn eager reference for it.
+    func eagerReference(_ window: [KimiMessage]) -> [ConversationTurnSummary] {
+        var groups: [[KimiMessage]] = [], current: [KimiMessage] = []
+        for message in window {
+            if message.isUserPrompt && !current.isEmpty { groups.append(current); current = [] }
+            current.append(message)
+        }
+        if !current.isEmpty { groups.append(current) }
+        return groups.compactMap { ConversationTurnSummary.make($0, entries: ConversationTimelineEntry.make($0)) }
+    }
+
+    // 7. Reflexive comparison must not extract. A viewport refresh re-compares
+    //    the navigation it already holds (ConversationTurnNavigation.update);
+    //    without an identity short-circuit the deferred walk moves into the
+    //    first scroll instead of disappearing.
+    do {
+        let reflexive = ConversationPresentationModel(key: "lazy-nav-reflexive")
+        let first = reflexive.update(.init(messages: messages, language: "zh")).navigation
+        let second = reflexive.update(.init(messages: messages, language: "zh")).navigation
+        precondition(zip(first, second).allSatisfy { $0 === $1 }, "input-equal update must keep instances")
+        precondition(first == second, "one navigation must equal itself")
+        for summary in first.dropLast() {
+            precondition(!summary.materialized, "reflexive equality must not extract earlier excerpts")
+        }
+        // Distinct instances with equal content still compare by value, and
+        // that comparison extracts: the short-circuit only skips self-comparison.
+        let rebuilt = eagerReference(messages)
+        for (summary, eager) in zip(first.dropLast(), rebuilt.dropLast()) {
+            precondition(summary !== eager, "the eager reference must be a distinct instance")
+            precondition(summary == eager, "distinct instances with equal content must compare equal")
+            precondition(summary.materialized, "a value comparison of distinct instances must extract")
+        }
+    }
+
+    // 8. Streaming delta: only the tail turn rebuilds; earlier summaries keep
+    //    their instances and stay deferred.
+    do {
+        let streaming = ConversationPresentationModel(key: "lazy-nav-stream")
+        let cold = streaming.update(.init(messages: messages, language: "zh")).navigation
+        let tail = try decode([
+            ["id": "a11", "role": "assistant", "created_at": "a11",
+             "content": [["type": "text", "text": "回答 11 结论。\n\n流式增量文本。"]]]])
+        let grown = Array(messages.dropLast()) + tail
+        let streamed = streaming.update(.init(messages: grown, isRunning: true, language: "zh")).navigation
+        precondition(streamed.count == cold.count, "a tail delta must not change the turn count")
+        precondition(zip(streamed.dropLast(), cold.dropLast()).allSatisfy { $0 === $1 },
+                     "a tail delta must keep earlier summary instances")
+        for summary in streamed.dropLast() {
+            precondition(!summary.materialized, "a tail delta must not extract earlier excerpts")
+        }
+        precondition(streamed.last !== cold.last, "the streamed turn must yield a new instance")
+    }
+
+    // 9. Prepended page: the window grows at the front, the reused suffix keeps
+    //    its instances and stays deferred.
+    do {
+        let paging = ConversationPresentationModel(key: "lazy-nav-prepend")
+        let cold = paging.update(.init(messages: messages, language: "zh")).navigation
+        let older = try decode([
+            ["id": "uOld", "role": "user", "created_at": "uOld",
+             "content": [["type": "text", "text": "更早的一轮问题。"]]],
+            ["id": "aOld", "role": "assistant", "created_at": "aOld",
+             "content": [["type": "text", "text": "更早的一轮回答。"]]]])
+        let prepended = paging.update(.init(messages: older + messages, language: "zh")).navigation
+        precondition(prepended.count == cold.count + 1, "a prepended turn must add one navigation entry")
+        let reference = eagerReference(older + messages)
+        precondition(prepended.map(\.id) == reference.map(\.id),
+                     "prepended navigation ids must equal the eager reference, got \(prepended.map(\.id))")
+        // The prepended turn becomes a history turn; the previous tail turn
+        // stays the tail and is rebuilt (eager) by every update.
+        precondition(zip(prepended.dropFirst().dropLast(), cold.dropLast()).allSatisfy { $0 === $1 },
+                     "a prepend must keep the reused history instances (identical=\(zip(prepended.dropFirst().dropLast(), cold.dropLast()).filter { $0 === $1 }.count)/\(cold.count - 1))")
+        precondition(prepended.last !== cold.last, "the tail summary is rebuilt per update")
+        for summary in prepended.dropLast() {
+            precondition(!summary.materialized, "a prepend must not extract history excerpts")
+        }
+    }
+
+    // 10. Language reset rebuilds every summary; the rebuilt excerpts equal the
+    //     eager reference, so no stale cached value survives the reset.
+    do {
+        let localized = ConversationPresentationModel(key: "lazy-nav-language")
+        let zh = localized.update(.init(messages: messages, language: "zh")).navigation
+        _ = zh.first!.prompt
+        precondition(zh.first!.materialized, "reading must materialize before the reset")
+        let en = localized.update(.init(messages: messages, language: "en")).navigation
+        precondition(en.count == zh.count, "a language reset must keep the turn count")
+        precondition(zip(en, zh).allSatisfy { $0 !== $1 }, "a language reset must rebuild every summary")
+        let reference = eagerReference(messages)
+        for (summary, eager) in zip(en, reference) {
+            precondition(summary.id == eager.id && summary.prompt == eager.prompt && summary.reply == eager.reply,
+                         "post-reset excerpts must equal the eager reference")
+        }
+    }
+
+    // 11. Same-ID interior edit: the rebuilt turn serves the edited text, not
+    //     the excerpt cached before the edit.
+    do {
+        let edited = ConversationPresentationModel(key: "lazy-nav-edit")
+        let cold = edited.update(.init(messages: messages, language: "zh")).navigation
+        _ = cold[0].reply
+        var changed = messages
+        if let index = changed.firstIndex(where: { $0.id == "a0" }) {
+            changed[index] = try decode([["id": "a0", "role": "assistant", "created_at": "a0",
+                                         "content": [["type": "text", "text": "编辑后的回答 0 结论。"]]]])[0]
+        }
+        let after = edited.update(.init(messages: changed, language: "zh")).navigation
+        precondition(after[0] !== cold[0], "an interior edit must rebuild the turn's summary")
+        precondition(after[0].reply.contains("编辑后的回答"), "the rebuilt summary must serve the edited text")
+        precondition(!after[0].reply.hasPrefix("回答 0"), "the pre-edit excerpt must not be served")
+        precondition(cold[0].reply.contains("回答 0"), "the retained pre-edit instance keeps its own excerpt")
+    }
+
+    // 12. UTF-8 byte oracle (errata 7): Swift String equality is canonical, so
+    //     pin the bytes on a normalization-sensitive fixture.
+    do {
+        let decomposed = "cafe\u{0301} nai\u{308}ve \u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467} 中文 \u{F900}"
+        precondition(Array(decomposed.precomposedStringWithCanonicalMapping.utf8) != Array(decomposed.utf8),
+                     "the byte fixture must be normalization-sensitive")
+        var raw: [[String: Any]] = []
+        for i in 0..<4 {
+            raw.append(["id": "b\(i)", "role": "user", "created_at": "b\(i)",
+                        "content": [["type": "text", "text": "问题 \(i)：\(decomposed)"]]])
+            raw.append(["id": "br\(i)", "role": "assistant", "created_at": "br\(i)",
+                        "content": [["type": "text", "text": "回答 \(i)：\(decomposed)\n\n```swift\nlet v = \(i)\n```"]]])
+        }
+        let window = try decode(raw)
+        let byteNav = ConversationPresentationModel(key: "lazy-nav-bytes")
+            .update(.init(messages: window, language: "zh")).navigation
+        let reference = eagerReference(window)
+        precondition(byteNav.count == reference.count, "byte fixture navigation count must match eager")
+        for (summary, eager) in zip(byteNav, reference) {
+            precondition(Array(summary.prompt.utf8) == Array(eager.prompt.utf8),
+                         "lazy prompt bytes must equal eager bytes")
+            precondition(Array(summary.reply.utf8) == Array(eager.reply.utf8),
+                         "lazy reply bytes must equal eager bytes")
+            precondition(summary.prompt.utf8.count > decomposed.utf8.count,
+                         "the byte fixture prompt must carry the sensitive text")
+        }
+    }
+
+    print("PASS: lazy navigation — cold deferral (anti-blind), byte-equality, identity tracking, reflexive/stream/prepend/language/edit deferral, UTF-8 oracle")
 }

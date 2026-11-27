@@ -315,7 +315,11 @@ public final class ConversationTurnSummary: Identifiable, Equatable {
                 answer.map(excerpt) ?? "")
     }
 
+    /// Reflexive without materializing: a viewport refresh re-compares the same
+    /// instances, and forcing every excerpt there would move the deferred walk
+    /// into the first scroll. Distinct instances still compare by value.
     public static func == (lhs: ConversationTurnSummary, rhs: ConversationTurnSummary) -> Bool {
-        lhs.id == rhs.id && lhs.prompt == rhs.prompt && lhs.reply == rhs.reply
+        if lhs === rhs { return true }
+        return lhs.id == rhs.id && lhs.prompt == rhs.prompt && lhs.reply == rhs.reply
     }
 }
