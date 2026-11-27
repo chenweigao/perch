@@ -249,13 +249,47 @@ public final class ConversationProjection {
 
 /// Plain, bounded excerpts computed with the existing per-turn cache. Hovering
 /// never parses Markdown, mounts a transcript row, or reads from a provider.
-public struct ConversationTurnSummary: Identifiable, Equatable {
+/// Round 2 shard A: a reference type whose excerpts materialize on first read
+/// (jump list / scroll indicator), so a cold projection builds identity-only
+/// summaries and defers the excerpt walk. Value equality materializes both
+/// sides; view change detection uses reference identity instead (a rebuilt
+/// turn yields a new instance, a reused turn keeps it).
+public final class ConversationTurnSummary: Identifiable, Equatable {
     public let id: String
-    public let prompt: String
-    public let reply: String
+    private var excerpts: (prompt: String, reply: String)?
+    private var deferred: (() -> (prompt: String, reply: String))?
 
-    static func make(_ messages: [KimiMessage], entries: [ConversationTimelineEntry]) -> Self? {
+    public var prompt: String { materialize().prompt }
+    public var reply: String { materialize().reply }
+    /// Diagnostic: whether the excerpts have been extracted (lazy pins).
+    public var materialized: Bool { excerpts != nil }
+
+    private init(id: String, excerpts: (prompt: String, reply: String)?,
+                 deferred: (() -> (prompt: String, reply: String))?) {
+        self.id = id; self.excerpts = excerpts; self.deferred = deferred
+    }
+
+    private func materialize() -> (prompt: String, reply: String) {
+        if let excerpts { return excerpts }
+        let value = deferred?() ?? ("", "")
+        excerpts = value; deferred = nil
+        return value
+    }
+
+    public static func make(_ messages: [KimiMessage], entries: [ConversationTimelineEntry]) -> Self? {
         guard let user = messages.first, user.isUserPrompt, let entry = entries.first else { return nil }
+        return Self(id: entry.id, excerpts: excerpts(messages, user: user), deferred: nil)
+    }
+
+    /// Identity now, excerpts on first read. The closure captures the turn's
+    /// messages and timeline, both already retained by the history turn, and
+    /// is released once materialized.
+    public static func lazy(_ messages: [KimiMessage], entries: [ConversationTimelineEntry]) -> Self? {
+        guard let user = messages.first, user.isUserPrompt, let entry = entries.first else { return nil }
+        return Self(id: entry.id, excerpts: nil, deferred: { excerpts(messages, user: user) })
+    }
+
+    private static func excerpts(_ messages: [KimiMessage], user: KimiMessage) -> (prompt: String, reply: String) {
         func excerpt(_ message: KimiMessage) -> String {
             if let cronFire = message.cronFire {
                 return String(cronFire.prompt.prefix(320)).collapsedWhitespace
@@ -277,8 +311,11 @@ public struct ConversationTurnSummary: Identifiable, Equatable {
         }
         let prompt = excerpt(user)
         let answer = messages.last { $0.role == "assistant" && $0.content.contains { $0.type == "text" && !$0.isRuntimeContext && !($0.text ?? "").isEmpty } }
-        return Self(id: entry.id,
-                    prompt: prompt.isEmpty ? String(user.content.compactMap(\.name).joined(separator: ", ").prefix(320)) : prompt,
-                    reply: answer.map(excerpt) ?? "")
+        return (prompt.isEmpty ? String(user.content.compactMap(\.name).joined(separator: ", ").prefix(320)) : prompt,
+                answer.map(excerpt) ?? "")
+    }
+
+    public static func == (lhs: ConversationTurnSummary, rhs: ConversationTurnSummary) -> Bool {
+        lhs.id == rhs.id && lhs.prompt == rhs.prompt && lhs.reply == rhs.reply
     }
 }
