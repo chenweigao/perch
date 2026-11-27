@@ -64,9 +64,12 @@ round31d 等）。
 5. **补丁重放须 tracked 还原 + untracked 清理双步**（round-1 门槛 v1 exit 1）：
    `git checkout -- <paths>` 不删未跟踪文件，遗留新文件使 `git apply` 报
    already exists；加 `git clean -fd <paths>`（gitignore 的 .local 不受影响）。
-6. **SSH 下 `open -n` 不可作冷启动存活门槛**（round-1 门槛 v2 5/5 假失败）：
-   LaunchServices 冷注册可在 12s 窗口内不拉起进程且 open 返回 0；直接 exec
-   app 二进制 + `$!` 精确 PID 确定性存活（隔离仍靠拷贝+独立 bundle ID+重签）。
+6. **本机对新 bundle ID app ~11s 准时 SIGKILL**（round-1 门槛 v2/v3 5/5 假失败）：
+   异步首启评估，与启动方式（open/直接 exec）、重签深度、entitlements、执行
+   上下文（SSH/Aqua LaunchAgent）均无关；同新 ID 复启仍死；已知 ID（acceptance
+   fixture，20x 循环反复使用）有评估缓存、存活。GUI 存活门槛须复用已知
+   bundle ID（候选 acceptance fixture），新 ID 拷贝隔离设计不可行。启动任何
+   app 前核验其偏好域无 hosts/远程连接配置（红线）。
 
 ## 候选队列
 
