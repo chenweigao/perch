@@ -96,8 +96,27 @@ round31d 等）。
   +`.done`，原始日志在 mini 工作树 `.local/struct-r1/probe-{16k,64k}.log`。
   探针为归因载体（base+probe，非产品候选）；显式循环 vs reduce(into:) 的
   codegen 差异与 DispatchTime.now() 开销（~2×20–40ns/调用）如实披露。
-- 下一步：收探针结果 → 算可转化份额（avgReduceNs/chain_total；firstWriteNs
-  随窗口缩放验证 O(窗口) 机制）→ 份额成立则 split 候选（base+overlay，
-  426 调用点 key 不相交→无 tombstone；Equatable 按有效映射）粗筛 → 正式
-  六对 → 评审 → 合并或记录否决；16k 亚噪声则以 64k 缩放场景为采纳面
-  （round-21 测量面扩展先例）或缓议。
+- 16k 探针结果（base=1c0d52e0+probe，Mac mini，job 同名单次运行）：
+  calls=1706 mapEntries=672922（avg 394.4，与 round-46 逐值同构）
+  foldedRows=61829 changes=61829（零空操作）；reduceNs=27,658,811
+  （avg 16.21µs/call）、firstWriteNs=3,706,180（avg 2.17µs/call）。
+  同跑 chain_total median 0.39ms、presentation_update 0.14ms、
+  older_page_full_chain 1.98ms、commentary_chain_total 0.4523ms。
+  **份额裁决（16k）：COW 拷贝本体 2.17µs/390µs≈0.56%，远低于噪声带；
+  reduce 全口径 4.2% 与停止报告 3.65% inclusive 吻合，但含探针自身
+  changed 计数查找开销（生产不付）与候选仍须付的 36 次插入——可转化
+  上限即拷贝本体**。split 假设在 16k 流式场景亚噪声，属 round-13/18/20/21
+  "份额≠可转化"家族。64k 档（STREAMING_TURNS=920）运行中，验证 O(窗口)
+  缩放是否改变裁决。
+- 设计走查（若 64k 翻盘或①依赖时复用）：FoldParents(base+overlay) 语义
+  等价（flattened 比较）+ 异构 `== [String:String]` 重载（PresentationHistoryTests
+  :174/:382 字面字典比较不改即过）+ isEmpty/keys；History memo 恒 flat
+  （joined/joinedIncremental/displayed 三路均 flat）→ :426 split 深度≤2；
+  joinedIncremental 用 flattened（overlay 空时 O(1) 返回 base）保持 round-36
+  行为；AgentWorkbench 仅 4 处类型标注（:430/:466/:536/:881），subscript 不动。
+  PrependIncrementalTests 跨构造路径 Presentation== 要求语义等价（round-27 N1）。
+- 战略注记：②本非 10x 候选（few-% 结构清理）；goal 的 10x+ 空间在①（冷首访）
+  与⑤（cf-match 调度）。若②缓议，round 2 优先转①盘点，避免在亚噪声候选上
+  消耗停止计数。①若立项懒投影，split 表示可能是其前置基础设施（届时以①的
+  A/B 承载，不单独立项）。
+- 下一步：收 64k 探针 → 终裁②（缓议附原因 / 翻盘则粗筛）→ 更新队列顺序。
