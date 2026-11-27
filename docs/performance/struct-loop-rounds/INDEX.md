@@ -61,6 +61,9 @@ round31d 等）。
    两处 fixture/语义缺陷经 debug 消息定位）。
 4. 20x 循环否定清单全部继承（见 ../20x-loop-rounds/INDEX.md「否定清单」），
    选题前反查。
+5. **补丁重放须 tracked 还原 + untracked 清理双步**（round-1 门槛 v1 exit 1）：
+   `git checkout -- <paths>` 不删未跟踪文件，遗留新文件使 `git apply` 报
+   already exists；加 `git clean -fd <paths>`（gitignore 的 .local 不受影响）。
 
 ## 候选队列
 
