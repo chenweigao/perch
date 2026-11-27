@@ -71,12 +71,16 @@ round31d 等）。
    fixture，20x 循环反复使用）存活。GUI 存活门槛须复用已知 bundle ID；
    生产入口门槛用原构建 + CFFIXED_USER_HOME/HOME 空目录隔离偏好域
    （hosts=[] → 零连接）。启动任何 app 前核验其偏好域无 hosts/远程连接配置。
+7. **apply --check 须在派发 job 前做**（round-2 归因派发）：PerfRunner 秒级
+   消费 job，派发后再 --check 会与 job 自身 apply 竞态→"patch does not
+   apply" 假失败（树已被 job 打上补丁）。job 内 set -e 自保，无实害；
+   核验顺序=scp 补丁→远端 --check→再 scp job。
 
 ## 候选队列
 
 | # | 候选 | 状态 | 依据 |
 | --- | --- | --- | --- |
-| ① | 大会话冷首访懒/视口投影 | 盘点中（Mac 冷基线 63.73ms@16k 已出；触发面走查完成；待相位归因 + acceptance 触发占比） | 20x 基线报告：16k 外推 ~580ms 模型层；100x 拉伸场景；Mac 实测 63.73ms@16k（round 2），大会话结构性不入缓存→每次重访均冷 |
+| ① | 大会话冷首访懒/视口投影 | 盘点中（方向已定：按 turn 懒物化为主 + tools/retained 配套；待 acceptance 触发占比 + 契约钉死→立候选） | Mac 实测 63.73ms@16k；相位归因 turns 83.8%/tools 10.9%/retained 5.2%（round 2）；大会话结构性不入缓存→每次重访均冷 |
 | ② | foldParents 整字典 COW 消除（split 表示，API 形态） | **已合并 60420b1a（2026-11-27）** | v2 探针翻盘：拷贝 44.4µs@16k / 308.7µs@64k，chain 份额 11.4%/17.4%；B 授权解锁；正式 16k chain -12.1%/presented -63.3%（6 对）；64k 三对缩放佐证 chain -28.9%/presented -83.9% + v2 独立重建佐证 3 对全负超带 median -30.4% |
 | ③ | displayMessages / Array.+ API 形态决策 | 待立项（round-1 附带代码走查） | round-38/42 遗留；Array.+ 8.58% inclusive；64k chain 残余嫌疑=`Snapshot.rows` getter :399 `history.rows+tail` 与 presented :453 `earlier.rows+rows` 每 delta 两次 O(窗口) 拼接（displayed() 空 activity 已有快路径）；②采纳后 64k chain 残余实测 1.09–1.20ms（formal cand，median 1.13）待归因探针定量 |
 | ④ | 验证族路径插桩（sameWindow 10.38% / canReuse 5.03% / input-compare 7.49%，重叠） | 待立项（先插桩出净收益下界） | 停止报告重启条件③ |
@@ -226,3 +230,48 @@ main 其后推进到 0c41b4ef（PR #379，仅 CI workflow + docs，Sources 零�
   row/summary/retainedCost/compare），cold bench 挂 metricsHandler 打印即可，
   tests-only 补丁、零产品改动，16k 档先出；(b) acceptance 触发占比探针；
   (c) 据 (a)(b) 立候选（懒边界按主导相位定）。
+
+### round 2 ① 冷相位归因（2026-11-27，base=fda922fa + cold-phase-16k.patch）
+
+job `struct-r2-cold-phase-20261127`（PerfRunner，exit=0，build 36.30s，
+跑后 porcelain 空）。补丁=.local/struct-round1/cold-phase-16k.patch
+（sha256 b49a4f40…，尺寸扩展 + metricsHandler 钉在中位冷跑，same-run；
+Linux release 编译筛选过 145.65s）。原始 log=
+.local/struct-round1/struct-r2-cold-phase-20261127.log。
+
+| slots | turns rebuilt | cold_median_ms | tools | turns | narrative | rows | retained | total | turns 份额 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 100 | 50 | 1.10 | 0.136 | 0.826 | 0.057 | 0.005 | 0.065 | 1.096 | 75.4% |
+| 500 | 250 | 2.78 | 0.322 | 2.262 | 0.002 | 0.000 | 0.176 | 2.762 | 81.9% |
+| 1000 | 500 | 3.52 | 0.412 | 2.854 | 0.015 | 0.002 | 0.214 | 3.498 | 81.6% |
+| 2000 | 1000 | 6.41 | 0.730 | 5.266 | 0.001 | 0.000 | 0.377 | 6.374 | 82.6% |
+| 8000 | 4000 | 26.05 | 3.034 | 21.317 | 0.007 | 0.000 | 1.541 | 25.901 | 82.3% |
+| 16000 | 8000 | 62.48 | 6.757 | **51.974** | 0.070 | 0.004 | 3.222 | 62.030 | **83.8%** |
+
+（单位 ms；compare/reset 全尺寸≈0；summary 全 0=bench 默认
+summariesEnabled=false，导航摘要在 turns 相位内建，非无成本。）
+
+- **裁决：turns（历史 turn 投影）主导，16k 份额 83.8%**（51.97/62.03），
+  份额随尺寸稳定（75–84%）；tools 10.9%、retained 5.2%、narrative+rows
+  <0.2%（已尾窗受限）。reused=0/rebuilt=8000 确认全冷。单 turn 成本
+  5.3µs@2k–8k → 6.5µs@16k（轻度超线性，与基线同族）。
+- 交叉核对：same-run total 62.030 vs cold_median 62.48，差 0.45ms（0.7%）
+  =metrics 回调+bracket 口径（回调在 updateEnded 后触发，total 不含、
+  bench bracket 含），披露。跨 job：基线 63.73 vs 本次 62.48（-2.0%），
+  不同构建（full 64.16s vs incremental 36.30s）——二进制布局变异家族，
+  绝对值不跨 job 混合统计；份额为 within-run，不受影响。
+- **①懒边界方向（据归因定）**：
+  1. 主边界=**按 turn 懒物化**：冷首访只投影可见尾窗 turn， earlier turn
+     按需物化（滚动/查找/导航跳转）。理论尾窗成本 ~0.1–0.5ms。
+  2. **仅 turns 懒不够 10x**：tools 6.76ms + retained 3.22ms ≈ 10ms 地板
+     → ~6×。10x+ 场景须配套：tools 全窗 O(n) 扫描→懒/增量/按需
+     （影响历史 tool 解析，需设计评审）；retained messageCosts 全窗 O(n)
+     值比较→大会话既结构性不入缓存，成本会计可延迟/上界化（cheap bound
+     替代精确 cost， retain 守卫语义不变）。
+  3. narrative/rows 已尾窗受限，无需动；导航摘要在 turns 内→懒边界须
+     覆盖（契约项 3）；②split 为 foldParents 子集基础设施（契约项 4）。
+- 立项门槛余项：acceptance 触发占比探针（真实使用视图重建频率；结构
+  走查已证大会话每次重访 100% 冷，频率未测）；契约草案→候选阶段钉死。
+- 下一步：设计 acceptance 触发占比探针（无真实用户数据，fixture 模拟
+  会话切换/恢复）→ 立①候选（分片：turns 懒物化先行，tools/retained 配套
+  同 PR 或分轮，按 A/B 证据定）。
