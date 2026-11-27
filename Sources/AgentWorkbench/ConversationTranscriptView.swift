@@ -535,6 +535,7 @@ private final class ConversationDocumentView: NSView {
     private var sessionId = ""
     private var readingIntent = 0
     private var restoreTarget: ConversationReadingMemory.Position?
+    private var firstDisplayAnchor: ConversationReadingMemory.Position?
     private var rowAppearance: ConversationEntryAppearance?
     private weak var viewport: ConversationViewport?
     private var foldParents = FoldParents()
@@ -969,6 +970,7 @@ private final class ConversationDocumentView: NSView {
             readingIntent += 1
             saveReadingPosition()
             saveReadingHeights()
+            firstDisplayAnchor = nil
             restoreTarget = ConversationReadingMemory.shared.following[sessionId] == false ? ConversationReadingMemory.shared.positions[sessionId] : nil
             for controller in controllers.values { controller.view.removeFromSuperview() }
             Self.retire(Array(controllers.values))
@@ -1421,6 +1423,13 @@ private final class ConversationDocumentView: NSView {
         // AppKit may clamp the clip origin after a height change, before the
         // coalesced viewport callback runs. Populate that visible range before
         // drawing, so a cached reply cannot disappear for one display pass.
+        // AppKit can move the clip once more when the incoming composer's
+        // inset settles. Pin the saved row in that final pre-display geometry.
+        if !preparingInitialViewport, !suspended, let anchor = firstDisplayAnchor {
+            firstDisplayAnchor = nil
+            if restoreTarget == nil { restoreTarget = anchor }
+            restoreReadingPosition()
+        }
         refreshVisibleRows(source: .willDraw)
         super.viewWillDraw()
         // Commit the visible rows first. Prepare a small strip below them on
@@ -1456,7 +1465,7 @@ private final class ConversationDocumentView: NSView {
         }.min() ?? geometry.readingRow(at: max(0, visible.minY))
     }
     private func saveReadingPosition() {
-        guard !suspended, !preparingInitialViewport, restoreTarget == nil, !sessionId.isEmpty, let clip = observedClip,
+        guard !suspended, !preparingInitialViewport, restoreTarget == nil, firstDisplayAnchor == nil, !sessionId.isEmpty, let clip = observedClip,
               let index = readingRowForAnchor(),
               contents.indices.contains(index) else { return }
         ConversationReadingMemory.shared.savePosition(.init(entry: contents[index].entry.id,
@@ -1471,6 +1480,7 @@ private final class ConversationDocumentView: NSView {
         preparingInitialViewport = false
         isHidden = false
         readingIntent += 1
+        firstDisplayAnchor = nil
         restoreTarget = nil
     }
     private func restoreReadingPosition() {
@@ -1487,6 +1497,7 @@ private final class ConversationDocumentView: NSView {
         let y = max(0, offsets[index] + target.offset + contentOriginY)
         clip.scroll(to: NSPoint(x: 0, y: y))
         enclosingScrollView?.reflectScrolledClipView(clip)
+        if preparingInitialViewport { firstDisplayAnchor = target }
         restoreTarget = nil
         refreshVisibleRows(source: .restore)
     }
