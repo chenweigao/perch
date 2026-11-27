@@ -527,6 +527,8 @@ private final class ConversationDocumentView: NSView {
     private var mounted: Set<String> = []
     private var laidOutRange: Range<Int>?
     private var lastScrollOrigin: CGFloat?
+    private var forwardBufferFraction: CGFloat = 0
+    private var needsInitialBuffer = true
     private var preloadsScrollEdges = false
     private static let retiredControllers = NSMutableArray()
     private static var drainingRetiredControllers = false
@@ -961,6 +963,8 @@ private final class ConversationDocumentView: NSView {
         }
         if changedSession {
             lastScrollOrigin = nil
+            needsInitialBuffer = true
+            forwardBufferFraction = 0
             preloadsScrollEdges = false
             readingIntent += 1
             saveReadingPosition()
@@ -1163,15 +1167,29 @@ private final class ConversationDocumentView: NSView {
         // above a requested turn can otherwise displace its reading anchor.
         if restoreTarget != nil || preparingInitialViewport || source == .reveal || source == .restore {
             preloadsScrollEdges = false
+            forwardBufferFraction = 0
+            if source == .restore || source == .reveal { needsInitialBuffer = false }
             lastScrollOrigin = visible.minY
         } else if source == .clipBounds {
             if let lastScrollOrigin, lastScrollOrigin != visible.minY {
-                preloadsScrollEdges = abs(visible.minY - lastScrollOrigin) < visible.height / 2
+                let travel = visible.minY - lastScrollOrigin
+                preloadsScrollEdges = abs(travel) < visible.height / 2
+                forwardBufferFraction = 0
+                // A page of fresh rows can introduce several new text and control
+                // types together. Share their first layout across neighboring pages.
+                if !preloadsScrollEdges, travel > 0, travel <= visible.height + 1 {
+                    let edge = geometry.end(before: visible.maxY)
+                    if edge < contents.count, measuredSizes[contents[edge].entry.id]?.width != columnWidth {
+                        forwardBufferFraction = 0.25
+                    }
+                }
+                needsInitialBuffer = false
             }
             lastScrollOrigin = visible.minY
         }
         let margin = preloadsScrollEdges ? min(96, visible.height / 4) : 0
-        let mountRect = visible.insetBy(dx: 0, dy: -margin)
+        var mountRect = visible.insetBy(dx: 0, dy: -margin)
+        mountRect.size.height += min(visible.height, ReplyStyle.readingWidth) * forwardBufferFraction
         var index = min(geometry.firstIntersecting(max(0, mountRect.minY)), contents.count - 1)
         let first = index
         let end = max(first, geometry.end(before: mountRect.maxY))
@@ -1405,6 +1423,22 @@ private final class ConversationDocumentView: NSView {
         // drawing, so a cached reply cannot disappear for one display pass.
         refreshVisibleRows(source: .willDraw)
         super.viewWillDraw()
+        // Commit the visible rows first. Prepare a small strip below them on
+        // the next turn only if the reader is still looking at that page.
+        if needsInitialBuffer, !suspended, !preparingInitialViewport, restoreTarget == nil,
+           let end = laidOutRange?.upperBound,
+           end < contents.count, measuredSizes[contents[end].entry.id] == nil {
+            needsInitialBuffer = false
+            let origin = viewportRect.minY
+            let intent = readingIntent
+            lastScrollOrigin = origin
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.window != nil, !self.suspended, self.readingIntent == intent, self.restoreTarget == nil,
+                      self.viewportRect.minY == origin, self.laidOutRange?.upperBound == end else { return }
+                self.forwardBufferFraction = 0.5
+                self.refreshVisibleRows(source: .viewport)
+            }
+        }
     }
     override func layout() {
         super.layout()

@@ -1141,6 +1141,12 @@ struct SelectableReplyText: NSViewRepresentable {
             #endif
         } else {
             view = ReplyTextView(usingTextLayoutManager: usesViewportLayout)
+            // The transcript measures row geometry separately. Typeset the
+            // read-only TextKit 1 cells as their glyphs become visible.
+            if !usesViewportLayout {
+                view.layoutManager?.backgroundLayoutEnabled = false
+                view.layoutManager?.allowsNonContiguousLayout = true
+            }
             view.isEditable = false
             view.enabledTextCheckingTypes = 0
             // Read-only prose: the spell/grammar checker's dotted underlines read as
@@ -1587,13 +1593,13 @@ final class ReplyTextView: NSTextView {
     /// as a floating band on a 24 pt line. Painted under the text; selection and
     /// find highlights still draw above.
     override func draw(_ dirtyRect: NSRect) {
-        paintChips()
+        paintChips(in: dirtyRect)
         super.draw(dirtyRect)
     }
     private static let traceChipPaint = ProcessInfo.processInfo.environment["CHIP_TRACE"] != nil
     private static let markChipsRed = ProcessInfo.processInfo.environment["CHIP_RED"] != nil
     private static let logChipBounds = ProcessInfo.processInfo.environment["CHIP_DEBUG"] != nil
-    private func paintChips() {
+    private func paintChips(in dirtyRect: NSRect) {
         guard let storage = textStorage else { return }
         var runs: [(color: NSColor, range: NSRange)] = []
         storage.enumerateAttribute(.replyChip, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
@@ -1629,14 +1635,17 @@ final class ReplyTextView: NSTextView {
             let snippet = storage.string.count > 30 ? String(storage.string.prefix(30)) : storage.string
             print("CHIP-PAINT view=\(Unmanaged.passUnretained(self).toOpaque()) runs=\(runs.count) bounds=\(NSStringFromRect(bounds)) text=«\(snippet)»")
         }
-        manager.ensureLayout(for: container)
+        let origin = textContainerOrigin
+        let area = dirtyRect.insetBy(dx: -ReplyStyle.Chip.horizontalPadding - 1, dy: -ReplyStyle.Chip.verticalPadding - 1)
+        let visibleGlyphs = manager.glyphRange(forBoundingRect: area.offsetBy(dx: -origin.x, dy: -origin.y), in: container)
+        let visibleCharacters = manager.characterRange(forGlyphRange: visibleGlyphs, actualGlyphRange: nil)
         let text = storage.string as NSString
-        for run in runs {
+        for run in runs where NSIntersectionRange(run.range, visibleCharacters).length > 0 {
             if Self.markChipsRed { NSColor.red.setFill() } else { run.color.setFill() }
             let glyphs = manager.glyphRange(forCharacterRange: run.range, actualCharacterRange: nil)
             let trailingKern = (storage.attribute(.kern, at: NSMaxRange(run.range) - 1, effectiveRange: nil) as? NSNumber)
                 .map { CGFloat($0.doubleValue) } ?? 0
-            manager.enumerateLineFragments(forGlyphRange: glyphs) { lineRect, _, _, lineGlyphs, _ in
+            manager.enumerateLineFragments(forGlyphRange: NSIntersectionRange(glyphs, visibleGlyphs)) { lineRect, _, _, lineGlyphs, _ in
                 let segment = NSIntersectionRange(glyphs, lineGlyphs)
                 guard segment.length > 0 else { return }
                 let charIndex = manager.characterIndexForGlyph(at: segment.location)
@@ -1851,7 +1860,7 @@ final class ReplyTextView: NSTextView {
         } else {
             storage.setAttributedString(value)
         }
-        if let retainedSelection { setSelectedRange(retainedSelection) }
+        if let retainedSelection, selectedRange() != retainedSelection { setSelectedRange(retainedSelection) }
         measurementContent = value
         measurements.removeAll(keepingCapacity: true)
         applyFindHighlight()
