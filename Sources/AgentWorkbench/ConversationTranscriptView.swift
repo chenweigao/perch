@@ -907,7 +907,7 @@ private final class ConversationDocumentView: NSView {
             reconciled = true
             restructured = structureChanged
         }
-        if structureChanged || self.navigation != navigation {
+        if structureChanged || !ConversationTurnSummary.sameNavigation(self.navigation, navigation) {
             self.navigation = navigation
             turnRows = navigation.compactMap { indices[$0.id] }
         }

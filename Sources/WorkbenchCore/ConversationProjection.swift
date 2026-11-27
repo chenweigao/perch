@@ -249,13 +249,52 @@ public final class ConversationProjection {
 
 /// Plain, bounded excerpts computed with the existing per-turn cache. Hovering
 /// never parses Markdown, mounts a transcript row, or reads from a provider.
-public struct ConversationTurnSummary: Identifiable, Equatable {
+/// Round 2 shard A: a reference type whose excerpts materialize on first read
+/// (jump list / scroll indicator), so a cold projection builds identity-only
+/// summaries and defers the excerpt walk.
+///
+/// Materialization mutates, so one owner must use a summary serially: every
+/// product path that reads or compares them runs on the main actor (the
+/// SwiftUI body that updates the projection, the native document and its rail).
+/// The type is deliberately not `Sendable` and makes no thread-safety claim.
+/// Comparing summaries must go through `sameNavigation`, which never extracts
+/// to answer a change-detection question; `==` materializes both sides.
+public final class ConversationTurnSummary: Identifiable, Equatable {
     public let id: String
-    public let prompt: String
-    public let reply: String
+    private var excerpts: (prompt: String, reply: String)?
+    private var deferred: (() -> (prompt: String, reply: String))?
 
-    static func make(_ messages: [KimiMessage], entries: [ConversationTimelineEntry]) -> Self? {
+    public var prompt: String { materialize().prompt }
+    public var reply: String { materialize().reply }
+    /// Diagnostic: whether the excerpts have been extracted (lazy pins).
+    public var materialized: Bool { excerpts != nil }
+
+    private init(id: String, excerpts: (prompt: String, reply: String)?,
+                 deferred: (() -> (prompt: String, reply: String))?) {
+        self.id = id; self.excerpts = excerpts; self.deferred = deferred
+    }
+
+    private func materialize() -> (prompt: String, reply: String) {
+        if let excerpts { return excerpts }
+        let value = deferred?() ?? ("", "")
+        excerpts = value; deferred = nil
+        return value
+    }
+
+    public static func make(_ messages: [KimiMessage], entries: [ConversationTimelineEntry]) -> Self? {
         guard let user = messages.first, user.isUserPrompt, let entry = entries.first else { return nil }
+        return Self(id: entry.id, excerpts: excerpts(messages, user: user), deferred: nil)
+    }
+
+    /// Identity now, excerpts on first read. The closure captures the turn's
+    /// messages and the one user message it read them from — both already
+    /// retained by the history turn — and is released once materialized.
+    public static func lazy(_ messages: [KimiMessage], entries: [ConversationTimelineEntry]) -> Self? {
+        guard let user = messages.first, user.isUserPrompt, let entry = entries.first else { return nil }
+        return Self(id: entry.id, excerpts: nil, deferred: { excerpts(messages, user: user) })
+    }
+
+    private static func excerpts(_ messages: [KimiMessage], user: KimiMessage) -> (prompt: String, reply: String) {
         func excerpt(_ message: KimiMessage) -> String {
             if let cronFire = message.cronFire {
                 return String(cronFire.prompt.prefix(320)).collapsedWhitespace
@@ -277,8 +316,33 @@ public struct ConversationTurnSummary: Identifiable, Equatable {
         }
         let prompt = excerpt(user)
         let answer = messages.last { $0.role == "assistant" && $0.content.contains { $0.type == "text" && !$0.isRuntimeContext && !($0.text ?? "").isEmpty } }
-        return Self(id: entry.id,
-                    prompt: prompt.isEmpty ? String(user.content.compactMap(\.name).joined(separator: ", ").prefix(320)) : prompt,
-                    reply: answer.map(excerpt) ?? "")
+        return (prompt.isEmpty ? String(user.content.compactMap(\.name).joined(separator: ", ").prefix(320)) : prompt,
+                answer.map(excerpt) ?? "")
+    }
+
+    /// Reflexive without materializing: a viewport refresh re-compares the same
+    /// instances, and forcing every excerpt there would move the deferred walk
+    /// into the first scroll. Distinct instances still compare by value.
+    public static func == (lhs: ConversationTurnSummary, rhs: ConversationTurnSummary) -> Bool {
+        if lhs === rhs { return true }
+        return lhs.id == rhs.id && lhs.prompt == rhs.prompt && lhs.reply == rhs.reply
+    }
+
+    /// Change detection for a whole navigation, and the only comparison callers
+    /// may run per viewport refresh. It never forces the deferred excerpt walk:
+    /// identical instances are equal, two turns whose excerpts are already
+    /// materialized compare by value — which keeps the pre-lazy behaviour of
+    /// skipping a refresh when a rebuilt tail carries the same text — and
+    /// anything else reports "changed" so the caller republishes instead of
+    /// materializing a whole window just to answer the question. That last case
+    /// is not rare: a language, epoch or connection reset rebuilds every summary
+    /// while leaving its text untouched.
+    public static func sameNavigation(_ lhs: [ConversationTurnSummary], _ rhs: [ConversationTurnSummary]) -> Bool {
+        guard lhs.count == rhs.count else { return false }
+        for (a, b) in zip(lhs, rhs) {
+            if a === b { continue }
+            guard a.materialized, b.materialized, a == b else { return false }
+        }
+        return true
     }
 }

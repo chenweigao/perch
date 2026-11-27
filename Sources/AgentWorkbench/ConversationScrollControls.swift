@@ -307,6 +307,14 @@ final class ConversationTurnNavigation: ObservableObject {
         var session = ""
         var turns: [ConversationTurnSummary] = []
         var current = 0
+        /// Synthesized equality would compare the turns by value and materialize
+        /// every lazy excerpt on the first refresh after a rebuild. Compare
+        /// through the non-materializing policy instead; `current` goes first
+        /// because a scroll changes it far more often than the turns.
+        static func == (lhs: Self, rhs: Self) -> Bool {
+            lhs.session == rhs.session && lhs.current == rhs.current
+                && ConversationTurnSummary.sameNavigation(lhs.turns, rhs.turns)
+        }
     }
     @Published private(set) var snapshot = Snapshot()
     @Published private(set) var selectedID: String?

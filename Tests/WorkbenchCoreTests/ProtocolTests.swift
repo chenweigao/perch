@@ -49,6 +49,7 @@ struct ProtocolTests {
         try checkConversationPrefixCache()
         try checkPrependIncremental()
         try checkFoldParentsSplit()
+        try checkLazyNavigation()
         try checkToolResolutionMemo()
         checkCollapsedWhitespace()
         try checkTurnExcerpt()
