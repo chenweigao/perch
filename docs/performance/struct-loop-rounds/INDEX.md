@@ -101,7 +101,7 @@ round31d 等）。
 
 | # | 候选 | 状态 | 依据 |
 | --- | --- | --- | --- |
-| ① | 大会话冷首访懒/视口投影 | **shard A（懒导航）已验证并采纳**（PR #380，16k 冷 −52.86%/2.11×，6/6 超带）；shard B（真 per-turn 懒物化 + tools/retained 配套）待立项 | Mac 63.73ms@16k；turns 83.8%；大会话每次重访 100% 冷（Linux+Mac 运行时证实），占切换成本 ~100%；**nav-split：Mac summary 54.6%/timeline 23%/rows 2%，Linux timeline 57.8%/summary 32.7%（主导跨平台翻转，全懒边界平台无关）**；契约 5 项钉死（查找扫源消息天然独立；几何纯值类型为估高接缝；跳转列表展开同步物化） |
+| ① | 大会话冷首访懒/视口投影 | **shard A（懒导航）模型层主收益已确认**（PR #380，16k 冷 −52.86%/2.11×，6/6 超带）；**产品采纳待独立评审 B1 修复复核 + B2 大会话 mounted 冷首访验收补齐**；shard B（真 per-turn 懒物化 + tools/retained 配套）待立项 | Mac 63.73ms@16k；turns 83.8%；大会话每次重访 100% 冷（Linux+Mac 运行时证实），占切换成本 ~100%；**nav-split（同跑口径）：Mac summary 53.07%（34.088/64.23）/timeline 22.4%/rows 2.0%，Linux timeline 57.8%/summary 32.7%（主导跨平台翻转，全懒边界平台无关）；旧 54.6% 混用跨 job 分母已勘误**；契约 5 项钉死（查找扫源消息天然独立；几何纯值类型为估高接缝；跳转列表展开同步物化） |
 | ② | foldParents 整字典 COW 消除（split 表示，API 形态） | **已合并 60420b1a（2026-11-27）** | v2 探针翻盘：拷贝 44.4µs@16k / 308.7µs@64k，chain 份额 11.4%/17.4%；B 授权解锁；正式 16k chain -12.1%/presented -63.3%（6 对）；64k 三对缩放佐证 chain -28.9%/presented -83.9% + v2 独立重建佐证 3 对全负超带 median -30.4% |
 | ③ | displayMessages / Array.+ API 形态决策 | 待立项（round-1 附带代码走查） | round-38/42 遗留；Array.+ 8.58% inclusive；64k chain 残余嫌疑=`Snapshot.rows` getter :399 `history.rows+tail` 与 presented :453 `earlier.rows+rows` 每 delta 两次 O(窗口) 拼接（displayed() 空 activity 已有快路径）；②采纳后 64k chain 残余实测 1.09–1.20ms（formal cand，median 1.13）待归因探针定量 |
 | ④ | 验证族路径插桩（sameWindow 10.38% / canReuse 5.03% / input-compare 7.49%，重叠） | 待立项（先插桩出净收益下界） | 停止报告重启条件③ |

@@ -251,9 +251,14 @@ public final class ConversationProjection {
 /// never parses Markdown, mounts a transcript row, or reads from a provider.
 /// Round 2 shard A: a reference type whose excerpts materialize on first read
 /// (jump list / scroll indicator), so a cold projection builds identity-only
-/// summaries and defers the excerpt walk. Value equality materializes both
-/// sides; view change detection uses reference identity instead (a rebuilt
-/// turn yields a new instance, a reused turn keeps it).
+/// summaries and defers the excerpt walk.
+///
+/// Materialization mutates, so one owner must use a summary serially: every
+/// product path that reads or compares them runs on the main actor (the
+/// SwiftUI body that updates the projection, the native document and its rail).
+/// The type is deliberately not `Sendable` and makes no thread-safety claim.
+/// Comparing summaries must go through `sameNavigation`, which never extracts
+/// to answer a change-detection question; `==` materializes both sides.
 public final class ConversationTurnSummary: Identifiable, Equatable {
     public let id: String
     private var excerpts: (prompt: String, reply: String)?
@@ -282,8 +287,8 @@ public final class ConversationTurnSummary: Identifiable, Equatable {
     }
 
     /// Identity now, excerpts on first read. The closure captures the turn's
-    /// messages and timeline, both already retained by the history turn, and
-    /// is released once materialized.
+    /// messages and the one user message it read them from — both already
+    /// retained by the history turn — and is released once materialized.
     public static func lazy(_ messages: [KimiMessage], entries: [ConversationTimelineEntry]) -> Self? {
         guard let user = messages.first, user.isUserPrompt, let entry = entries.first else { return nil }
         return Self(id: entry.id, excerpts: nil, deferred: { excerpts(messages, user: user) })
