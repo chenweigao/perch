@@ -82,7 +82,9 @@ round31d 等）。
    navigation），才等于生产里的比较形状。
 9. **懒化候选必须走查"值相等即求值"的消费点**（round-2 shard A BLOCKING 发现）：
    `Equatable` 的 `@Published` 快照每次 viewport refresh 都比较一次，值相等语义会
-   把延迟成本搬到首次滚动。修法=元素级 `==` 加 `lhs === rhs` 反射短路（不改变
+   把延迟成本搬到滚动路径（**限定**：并非任何纯刷新都触发——首发时旧导航为空、其后不变的刷新与上次
+    共享同一数组 buffer 被 `Array ==` 跳过；真实形状是尾 delta 等产生新 buffer 但共享历史实例后的
+    那次 refresh，以及 language/epoch/online 重建后的等值比较）。修法=元素级 `==` 加 `lhs === rhs` 反射短路（不改变
    Equatable 语义），并用第 8 条的形状钉死。凡引入懒/引用类型，先 grep 所有
    `Equatable`/`@Published`/`onChange`/`.task(id:)` 消费点。
 10. **非交替的 A/B 会把机器漂移记到候选头上**（round-2 shard A mounted 复测）：
@@ -102,10 +104,11 @@ round31d 等）。
 
 | # | 候选 | 状态 | 依据 |
 | --- | --- | --- | --- |
-| ① | 大会话冷首访懒/视口投影 | **shard A（懒导航）已验证**（PR #380；最终 head 模型层 16k 冷 −52.90%/2.117× 6/6 超带、mounted 冷首访 −11.14% 3/3 同向；评审 B1 已修、B2 已补；生产门槛 5/5）；**待第二轮评审复核 + CI 全绿后合并**；shard B（真 per-turn 懒物化 + tools/retained 配套）待立项，其"结构/内容相拆分"支线按否定清单反查缓议 | Mac 63.73ms@16k；turns 83.8%；大会话每次重访 100% 冷（Linux+Mac 运行时证实），占切换成本 ~100%；**nav-split（同跑口径）：Mac summary 53.07%（34.088/64.23）/timeline 22.4%/rows 2.0%，Linux timeline 57.8%/summary 32.7%（主导跨平台翻转，全懒边界平台无关）；旧 54.6% 混用跨 job 分母已勘误**；契约 5 项钉死（查找扫源消息天然独立；几何纯值类型为估高接缝；跳转列表展开同步物化） |
+| ① | 大会话冷首访懒/视口投影 | **shard A（懒导航）已验证**（PR #380；最终 head 模型层 16k 冷 −52.90%/2.117× 6/6 超带、mounted 冷首访 −11.67% 7 轮交替 6/7 超带；评审两轮：第一轮 2 BLOCKING（B1 等值重建全窗求值→`sameNavigation` 策略修复；B2 mounted 冷首访缺口→新增 `struct-cold` 模式补齐）、第二轮 **0 BLOCKING / 6 NONBLOCKING 全部处置**；生产门槛 5/5、portable 12/12）；**CI 15/15，待合并**；shard B（真 per-turn 懒物化 + tools/retained 配套）待立项，其"结构/内容相拆分"支线按否定清单反查缓议 | Mac 63.73ms@16k；turns 83.8%；大会话每次重访 100% 冷（Linux+Mac 运行时证实），占切换成本 ~100%；**nav-split（同跑口径）：Mac summary 53.07%（34.088/64.23）/timeline 22.4%/rows 2.0%，Linux timeline 57.8%/summary 32.7%（主导跨平台翻转，全懒边界平台无关）；旧 54.6% 混用跨 job 分母已勘误**；契约 5 项钉死（查找扫源消息天然独立；几何纯值类型为估高接缝；~~跳转列表展开同步物化~~ **该旧方案已撤回**：shard A 落地后产品无一次性全窗展开触发面——rail 只画刻度、hover 预览与 accessibilityValue 各读 1 条、bookmarks 菜单只读已收藏项且正常 toggle 路径上限 50） |
 | ② | foldParents 整字典 COW 消除（split 表示，API 形态） | **已合并 60420b1a（2026-11-27）** | v2 探针翻盘：拷贝 44.4µs@16k / 308.7µs@64k，chain 份额 11.4%/17.4%；B 授权解锁；正式 16k chain -12.1%/presented -63.3%（6 对）；64k 三对缩放佐证 chain -28.9%/presented -83.9% + v2 独立重建佐证 3 对全负超带 median -30.4% |
 | ③ | displayMessages / Array.+ API 形态决策 | 待立项（round-1 附带代码走查） | round-38/42 遗留；Array.+ 8.58% inclusive；64k chain 残余嫌疑=`Snapshot.rows` getter :399 `history.rows+tail` 与 presented :453 `earlier.rows+rows` 每 delta 两次 O(窗口) 拼接（displayed() 空 activity 已有快路径）；②采纳后 64k chain 残余实测 1.09–1.20ms（formal cand，median 1.13）待归因探针定量 |
 | ④ | 验证族路径插桩（sameWindow 10.38% / canReuse 5.03% / input-compare 7.49%，重叠） | 待立项（先插桩出净收益下界） | 停止报告重启条件③ |
+| ⑥ | `sameNavigation` 共享连续存储短路（round-2 评审 N4） | 缓议/建议并入 shard B 轮 | 已定量：8000 turn 下 ≈35µs/次刷新（同/异 buffer 0.03475/0.03621ms），不物化摘要；占滚动步 ~0.4%、帧预算 ~0.2%，单独看低于 2.5% 入口门槛；改它会动 WorkbenchCore 产品字节使本轮采纳批失效，故不在本轮做。shard B 会重写这条判变路径，届时一并处理 |
 | ⑤ | 冷首搜 cf-match 调度层（语义不动，改时机/范围） | 待立项（需设计评审） | round-31 归因 cf-match 79%，检测器输出语义红线 |
 
 ## 轮次记录
@@ -113,7 +116,7 @@ round31d 等）。
 | 轮 | 日期 | 场景 | 结论 | 报告 |
 | --- | --- | --- | --- | --- |
 | 1 | 2026-11-27 | ② foldParents COW：探针翻盘 + split 候选 | 候选 e40b7054；Linux 113 PASS+1 SKIP、portable、变异电池 4/4；粗筛 v2 通过；**16k 正式 PASS**（6 对 chain -12.1%/presented -63.3%，全负、中位数超带）；64k 三对缩放佐证（chain -28.9%/presented -83.9%，全对超带）+ v2 独立重建佐证 3 对（median -30.4%，全负超带）；**采纳**；评审两轮闭环（0 BLOCKING）；生产门槛 v5 5/5、fixture 门槛 v4 5/5 独立登记；PR [#378](https://github.com/chenweigao/perch/pull/378) **已合并 60420b1a**（复核 0 BLOCKING，CI 15/15，分支已删） | [round-1](2026-11-27-round-1.md) |
-| 2 | 2026-11-27 | ① 冷首访懒物化：盘点+契约+nav-split+**shard A 验证采纳** | 基线 63.73ms@16k、turns 83.8%、触发 100% 冷；契约钉死版立；nav-split 裁决 summary 主导 Mac 冷路径（**同跑口径 53.1%**，旧 54.6% 混用分母已勘误）；**shard A 懒导航：审查发现 `Equatable` 快照每次 viewport refresh 值比较会全窗物化（BLOCKING），加 `==` 身份短路修复；Mac 6 对交替 16k 冷 67.480→31.916ms（−52.86%，2.11×，6/6 超带 2.87%），2k −61.74%；延期成本 34.03ms 全量物化（与 nav-split summary 相位 34.088ms 差 0.2%）、单条 hover +9µs、无一次性全量触发面；footprint −3.4%、进程峰值 RSS −1.9%；delta/prepend 无回归；Linux 114 PASS+1 SKIP、变异电池 6/6、UTF-8 字节 oracle；生产门槛 5/5、acceptance paging/switching/dashboard 全 passed（switching 10 轮交替配对差中位 +0.8%，符号 5/5）；CI 15/15；独立评审第一轮 FINDINGS 2 BLOCKING → **B1 已修**（等值重建仍全窗求值：language/epoch 重置与 online 翻转重建全部实例、值比较两侧各物化一次；改为 Core `sameNavigation` 单一判变策略，电池 8/8）、**B2 已补**（tests-only `struct-cold` 模式：8000 turn 超缓存准入 → `restorations=[0,0,0]` 自证结构性冷；mounted 冷首访 197.470→175.475ms、首次滚动 −3.28%、全量导航读取延期 +24ms、RSS −2.29%）；**采纳集改为最终 head `21bd9597`：模型层 6 对 16k cold 65.611→30.995ms（−52.90%，6/6 超带 5.29%）、2k −62.07%、materialization 32.480ms、footprint −4.16%、RSS −2.08%，生产门槛 5/5**；前序两批（5958eb23 −52.86%、af42ec4c −52.28%）为独立佐证不合并统计；**待第二轮复核**；PR [#380](https://github.com/chenweigao/perch/pull/380) | [round-2](2026-11-27-round-2.md) |
+| 2 | 2026-11-27 | ① 冷首访懒物化：盘点+契约+nav-split+**shard A 验证采纳** | 基线 63.73ms@16k、turns 83.8%、触发 100% 冷；契约钉死版立；nav-split 裁决 summary 主导 Mac 冷路径（**同跑口径 53.1%**，旧 54.6% 混用分母已勘误）；**shard A 懒导航：审查发现 `Equatable` 快照每次 viewport refresh 值比较会全窗物化（BLOCKING），加 `==` 身份短路修复；Mac 6 对交替 16k 冷 67.480→31.916ms（−52.86%，2.11×，6/6 超带 2.87%），2k −61.74%；延期成本 34.03ms 全量物化（与 nav-split summary 相位 34.088ms 差 0.2%）、单条 hover +9µs、无一次性全量触发面；footprint −3.4%、进程峰值 RSS −1.9%；delta/prepend 无回归；Linux 114 PASS+1 SKIP、变异电池 6/6、UTF-8 字节 oracle；生产门槛 5/5、acceptance paging/switching/dashboard 全 passed（switching 10 轮交替配对差中位 +0.8%，符号 5/5）；CI 15/15；独立评审第一轮 FINDINGS 2 BLOCKING → **B1 已修**（等值重建仍全窗求值：language/epoch 重置与 online 翻转重建全部实例、值比较两侧各物化一次；改为 Core `sameNavigation` 单一判变策略，电池 8/8）、**B2 已补**（tests-only `struct-cold` 模式：8000 turn 超缓存准入 → `restorations=[0,0,0]` 自证结构性冷；mounted 冷首访 201.128→175.475ms（−11.67%，7 轮交替、restorations 全 0）、净物化中位 25.307ms、通用滚动步 +0.72%（0/7 超带）、RSS −1.86%）；N4（`sameNavigation` 失去共享 buffer 短路）已定量 ≈35µs/次刷新、不物化摘要，本轮不改并登记为微项；**采纳集改为最终 head `21bd9597`：模型层 6 对 16k cold 65.611→30.995ms（−52.90%，6/6 超带 5.29%）、2k −62.07%、materialization 32.480ms、footprint −4.16%、RSS −2.08%，生产门槛 5/5**；前序两批（5958eb23 −52.86%、af42ec4c −52.28%）为独立佐证不合并统计；**待第二轮复核**；PR [#380](https://github.com/chenweigao/perch/pull/380) | [round-2](2026-11-27-round-2.md) |
 
 ### round 1 侦察记录（base=1c0d52e0，drift=0）
 
