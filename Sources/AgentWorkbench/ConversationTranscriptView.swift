@@ -1168,7 +1168,7 @@ private final class ConversationDocumentView: NSView {
         if restoreTarget != nil || preparingInitialViewport || source == .reveal || source == .restore {
             preloadsScrollEdges = false
             forwardBufferFraction = 0
-            if source == .restore || source == .reveal { needsInitialBuffer = false }
+            if source == .reveal { needsInitialBuffer = false }
             lastScrollOrigin = visible.minY
         } else if source == .clipBounds {
             if let lastScrollOrigin, lastScrollOrigin != visible.minY {
