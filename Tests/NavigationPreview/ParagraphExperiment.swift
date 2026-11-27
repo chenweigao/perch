@@ -49,6 +49,88 @@ extension NavigationRunner {
                 host.layoutSubtreeIfNeeded(); host.displayIfNeeded(); CATransaction.flush()
             }
         }
+        let mixed = """
+        StartMarker
+
+        | HeaderLeft | HeaderCenter | HeaderRight |
+        | :--- | :---: | ---: |
+        | 中文段落需要换行以检查表格在窄窗口中的高度和位置 | [LinkMarker](https://example.com/table) | RightMarker |
+        | Emoji 👩🏽‍💻 é | CenterMarker | EndCell |
+
+        ```swift
+        let codeMarker = 42
+        print(codeMarker)
+        ```
+
+        EndMarker
+        """
+        let cellMarkers = ["HeaderLeft", "HeaderCenter", "HeaderRight", "中文段落", "LinkMarker", "RightMarker",
+                           "Emoji", "CenterMarker", "EndCell", "let codeMarker", "EndMarker"]
+        for width in [CGFloat(680), 220] {
+            var reference: [CGPoint] = []
+            for renderer in ["markdown", "transcript", "native"] {
+                let host: NSView
+                if renderer == "native" {
+                    let row = NativeAssistantMessageView.acquire()
+                    guard let blocks = NativeAssistantContent.make(mixed) else { throw NavigationError("Mixed table lost native admission") }
+                    row.update(blocks, source: mixed, dark: false)
+                    row.place(width: width)
+                    host = row
+                } else {
+                    let root = KimiMarkdown(text: mixed).environment(\.isConversationBodyText, renderer == "transcript")
+                        .frame(width: width, alignment: .leading)
+                    host = NSHostingView(rootView: root)
+                }
+                let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: width, height: 950),
+                                      styleMask: [.titled], backing: .buffered, defer: false)
+                window.isReleasedWhenClosed = false
+                window.contentView = host
+                window.orderFront(nil)
+                defer { window.close() }
+                try await settle(host)
+                let views = texts(host).filter { !$0.isHiddenOrHasHiddenAncestor }
+                func origin(_ marker: String) throws -> CGPoint {
+                    guard let view = views.first(where: { $0.string.contains(marker) }),
+                          let manager = view.layoutManager, let container = view.textContainer else {
+                        throw NavigationError("Missing mixed-row text: \(marker)")
+                    }
+                    let chars = (view.string as NSString).range(of: marker)
+                    let glyphs = manager.glyphRange(forCharacterRange: chars, actualCharacterRange: nil)
+                    let rect = view.convert(manager.boundingRect(forGlyphRange: glyphs, in: container), to: host)
+                    return CGPoint(x: rect.minX, y: host.isFlipped ? rect.minY : -rect.maxY)
+                }
+                let anchor = try origin("StartMarker")
+                let points = try cellMarkers.map { marker in
+                    let point = try origin(marker)
+                    return CGPoint(x: point.x - anchor.x, y: point.y - anchor.y)
+                }
+                if renderer != "markdown" {
+                    for (index, point) in points.enumerated() {
+                        guard abs(point.x - reference[index].x) <= 1, abs(point.y - reference[index].y) <= 1 else {
+                            throw NavigationError("\(renderer) mixed-row glyph shifted at \(width): \(cellMarkers[index]) \(reference[index]) -> \(point)")
+                        }
+                    }
+                    guard let cell = views.first(where: { $0.string == "LinkMarker" }), cell.isSelectable,
+                          (cell.textStorage?.attribute(.link, at: 0, effectiveRange: nil) as? URL)?.absoluteString == "https://example.com/table" else {
+                        throw NavigationError("Transcript table lost its selectable link")
+                    }
+                    if width == 220 {
+                        guard let scroll = cell.enclosingScrollView, let document = scroll.documentView,
+                              document.frame.width > scroll.contentView.bounds.width + 1 else {
+                            throw NavigationError("Narrow transcript table lost horizontal scrolling")
+                        }
+                        if let row = host as? NativeAssistantMessageView {
+                            scroll.contentView.scroll(to: CGPoint(x: 20, y: 0))
+                            guard scroll.contentView.bounds.minX > 0 else { throw NavigationError("Table did not scroll sideways") }
+                            row.prepareForNewMessage()
+                            guard scroll.contentView.bounds.minX == 0, texts(row).contains(where: { $0 === cell }) else {
+                                throw NavigationError("Rebinding lost the table cell or kept its old scroll position")
+                            }
+                        }
+                    }
+                } else { reference = points }
+            }
+        }
         var samples: [[String: Any]] = []
         for width in [CGFloat(700), 340] {
             var positions: [[String: CGFloat]] = []
@@ -136,7 +218,7 @@ extension NavigationRunner {
                               "median_ms": elapsed[elapsed.count / 2], "p95_ms": elapsed[Int(Double(elapsed.count - 1) * 0.95)],
                               "render_stages": NavigationRenderMetrics.report, "identity_preserved": true])
         }
-        return ["streaming_samples": streaming, "paragraph_samples": samples, "streaming_identity": stableIdentity, "streaming_selection": stableSelection,
+        return ["mixed_reply_geometry": true, "streaming_samples": streaming, "paragraph_samples": samples, "streaming_identity": stableIdentity, "streaming_selection": stableSelection,
                 "replacement": true]
     }
 }
@@ -303,7 +385,14 @@ extension NavigationRunner {
         }
         guard NativeParagraphContent.make("# Heading") == nil, NativeParagraphContent.make("```swift\nlet a = 1\n```") == nil else { throw NavigationError("Complex content did not keep its existing renderer") }
         if assistant {
-            guard NativeAssistantContent.make("| A | B |\n| --- | --- |\n| 1 | 2 |") == nil else { throw NavigationError("Assistant table escaped to the native renderer") }
+            let table = "| A | B |\n| --- | --- |\n| 1 | 2 |"
+            let longCard = String(repeating: "print(1)\n", count: 9)
+            guard NativeAssistantContent.make(table) != nil,
+                  NativeAssistantContent.make(table, allowsRichBlocks: false) == nil,
+                  NativeAssistantContent.prepare(blocks: ReplyDocument.parse(table)).content == nil,
+                  NativeAssistantContent.make(table + "\n\n```swift\n" + longCard + "```") == nil else {
+                throw NavigationError("Table admission lost the settled, streaming or long-code rendering contract")
+            }
             guard NativeAssistantContent.make("# Heading", allowsRichBlocks: false) == nil,
                   NativeAssistantContent.make("```swift\nlet a = 1\n```", allowsRichBlocks: false) == nil else {
                 throw NavigationError("Rich blocks were admitted with the A/B switch off")
@@ -497,8 +586,11 @@ extension NavigationRunner {
         let updateBefore = counter("native_assistant_block_update")
         let appended = streamingSource + " appended"
         host.rootView = root([try message(appended)], running: true)
-        try await settle()
-        guard nativeRows().first === initial, initial.superview === row,
+        // The display clock releases the tail asynchronously. Verify identity
+        // and selection after the appended text has actually reached the view.
+        let appendDeadline = CACurrentMediaTime() + 1
+        repeat { try await settle() } while !tail.string.hasSuffix(" appended") && CACurrentMediaTime() < appendDeadline
+        guard tail.string.hasSuffix(" appended"), nativeRows().first === initial, initial.superview === row,
               textViews().count == 2, textViews()[0] === prefix, textViews()[1] === tail,
               prefix.selectedRange() == selection, liveActions.isHidden,
               counter("native_assistant_block_stable") > stableBefore,
@@ -527,7 +619,7 @@ extension NavigationRunner {
         }
         let completedRow = row
         // Rich and partial-but-admitted blocks join the native path; unsupported shapes keep SwiftUI.
-        for admitted in ["# Heading", "```swift\nlet fallbackMarker = 1\n```", "```swift\nlet partial = \"中文 👩🏽‍💻\"", "**未闭合 中文 👩🏽‍💻", "- List item", "> Quote"] {
+        for admitted in ["# Heading", "```swift\nlet fallbackMarker = 1\n```", "```swift\nlet partial = \"中文 👩🏽‍💻\"", "**未闭合 中文 👩🏽‍💻", "- List item", "> Quote", "| 列 | 值 |\n| --- | --- |\n| 中文 👩🏽‍💻 | é |"] {
             host.rootView = root([try message(admitted)])
             try await settle()
             guard nativeRows().count == 1, nativeRows()[0].superview === completedRow else { throw NavigationError("Admitted assistant block lost the native row: \(admitted)") }
@@ -537,7 +629,7 @@ extension NavigationRunner {
                            "reparsed": counter("markdown_parse_rejected_fallback"),
                            "markdown": stageCount("markdown_parse")]
         let rejectedSources: [(source: String, marker: String?)] = [
-            ("| 列 | 值 |\n| --- | --- |\n| 中文 👩🏽‍💻 | é |", "中文 👩🏽‍💻"),
+            ("> [!NOTE]\n> 中文 👩🏽‍💻", "中文 👩🏽‍💻"),
             ("![](https://example.com/alt.png)", nil),
             ("- 列表项里的代码：\n  ```swift\n  let nested = 1\n  ```", "nested")
         ]
@@ -589,8 +681,8 @@ extension NavigationRunner {
               actions.frame.width == 24, actions.frame.height == 24 else { throw NavigationError("Assistant copy button lost its hit target") }
         window.makeKeyAndOrderFront(nil)
         try await settle()
-        func click(_ view: NSView) throws {
-            let location = view.convert(NSPoint(x: view.bounds.midX, y: view.bounds.midY), to: nil)
+        func click(_ view: NSView, at point: CGPoint? = nil) throws {
+            let location = view.convert(point ?? NSPoint(x: view.bounds.midX, y: view.bounds.midY), to: nil)
             let time = ProcessInfo.processInfo.systemUptime
             guard let down = NSEvent.mouseEvent(with: .leftMouseDown, location: location, modifierFlags: [], timestamp: time, windowNumber: window.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: 1),
                   let up = NSEvent.mouseEvent(with: .leftMouseUp, location: location, modifierFlags: [], timestamp: time + 0.01, windowNumber: window.windowNumber, context: nil, eventNumber: 2, clickCount: 1, pressure: 0) else { throw NavigationError("Cannot create copy-button mouse events") }
@@ -628,7 +720,7 @@ extension NavigationRunner {
         guard let cardScroll = descendants(codeRow).compactMap({ $0 as? NSScrollView }).first,
               let document = cardScroll.documentView else { throw NavigationError("Code card lost its horizontal scroll view") }
         guard document.frame.width > cardScroll.frame.width else { throw NavigationError("Long code line did not overflow horizontally") }
-        guard let codeCopy = descendants(codeRow).compactMap({ $0 as? NSHostingView<ReplyCopyButton> }).first(where: { $0 !== actions }) else { throw NavigationError("Code card lost its copy button") }
+        guard let codeCopy = descendants(codeRow).first(where: { $0.identifier?.rawValue == "reply-code-copy" }) else { throw NavigationError("Code card lost its copy button") }
         let codeSourceText = "print(\"codeMarker\")\n\(longLine)"
         try click(codeCopy)
         try await settle()
@@ -640,7 +732,7 @@ extension NavigationRunner {
             host.rootView = root([try message("前文段落。\n\n```" + language + "\n" + singleLine + "\n```")])
             try await settle()
             guard let row = nativeRows().first,
-                  let singleCopy = descendants(row).compactMap({ $0 as? NSHostingView<ReplyCopyButton> }).first(where: { $0 !== actions }),
+                  let singleCopy = descendants(row).first(where: { $0.identifier?.rawValue == "reply-code-copy" }),
                   let card = singleCopy.superview,
                   let scroll = descendants(card).compactMap({ $0 as? NSScrollView }).first,
                   let languageLabel = descendants(card).compactMap({ $0 as? NSTextField }).first else {
@@ -659,6 +751,28 @@ extension NavigationRunner {
                 throw NavigationError("Single-line code copy lost the complete source")
             }
         }
+        let table = "| Header | Count |\n| --- | ---: |\n| Unicode 👩🏽‍💻 | 42 |"
+        host.rootView = root([try message(table)])
+        try await settle()
+        guard let tableRow = nativeRows().first,
+              let bar = descendants(tableRow).first(where: { $0.identifier?.rawValue == "reply-table-actions" }),
+              bar.bounds.height == ReplyStyle.Table.actionsHeight else { throw NavigationError("Missing native table actions") }
+        let copyPoint = CGPoint(x: bar.bounds.maxX - 64, y: bar.bounds.midY)
+        let idleTable = try buttonImage(bar)
+        try click(bar, at: copyPoint)
+        try await settle()
+        ownChange = board.changeCount
+        guard board.string(forType: .string)?.contains("Unicode 👩🏽‍💻") == true, try buttonImage(bar) != idleTable else {
+            throw NavigationError("Table copy lost the selected message or its feedback")
+        }
+        tableRow.prepareForNewMessage()
+        try await settle()
+        guard try buttonImage(bar) == idleTable else { throw NavigationError("Table reuse leaked copy feedback") }
+        try click(bar, at: CGPoint(x: bar.bounds.maxX - 12, y: bar.bounds.midY))
+        try await settle()
+        guard let sheet = window.attachedSheet else { throw NavigationError("Table preview did not open on its reader") }
+        sheet.performClose(nil)
+        try await settle()
         for excluded in [try message(source, metadata: ["origin": ["kind": "compaction_summary"]]),
                          try message("<system-reminder>Runtime</system-reminder>"),
                          try message("Skill summary\n<skill-loaded trigger=\"user-slash\">Context</skill-loaded>")] {
@@ -666,7 +780,7 @@ extension NavigationRunner {
             try await settle()
             guard nativeRows().isEmpty else { throw NavigationError("Summary or runtime context entered plain assistant renderer") }
         }
-        let switchedSource = "| 会话 | 内容 |\n| --- | --- |\n| 会话乙 | Unicode 👩🏽‍💻 é |"
+        let switchedSource = "> [!NOTE]\n> 会话乙 Unicode 👩🏽‍💻 é"
         host.rootView = root([try message(switchedSource)], dark: true, sessionID: session + "-next")
         try await settle()
         let switchedText = textViews().map(\.string).joined(separator: "|")

@@ -155,16 +155,29 @@ private struct StreamingFixtureView: View {
     }
     model.reduceMotion = false
 
-    let fallback = "| A | B |\n| --- | --- |\n| 中文 👩🏽‍💻 | é |\n\nFINAL_CHUNK"
+    let table = "| A | B |\n| --- | --- |\n| 中文 👩🏽‍💻 | é |\n\nFINAL_CHUNK"
+    model.running = true
+    model.messages = try messages(table)
+    guard await waitForStreaming(host, { nativeRows(host).isEmpty && renderedText(host).contains("FINAL_CHUNK") }) else {
+        streamingRenderingFailure("Live tables must render their complete hosted snapshot")
+    }
+    model.running = false
+    guard await waitForStreaming(host, {
+        guard let row = nativeRows(host).first else { return false }
+        let strings = textViews(row).map(\.string)
+        return strings.contains("中文 👩🏽‍💻") && strings.contains("é") && strings.contains("FINAL_CHUNK")
+    }) else { streamingRenderingFailure("Settling a table must preserve its Unicode cells and trailing paragraph") }
+
+    let fallback = "> [!NOTE]\n> Hosted alert\n\nFALLBACK_END"
     model.running = true
     model.messages = try messages(fallback)
-    guard await waitForStreaming(host, { nativeRows(host).isEmpty && renderedText(host).contains("FINAL_CHUNK") }) else {
+    guard await waitForStreaming(host, { nativeRows(host).isEmpty && renderedText(host).contains("FALLBACK_END") }) else {
         streamingRenderingFailure("Unsupported live Markdown must render its complete hosted snapshot")
     }
     model.running = false
     await streamingSettle(host, milliseconds: 100)
-    streamingRenderingRequire(nativeRows(host).isEmpty && renderedText(host).contains("FINAL_CHUNK"),
-                 "Completion must not truncate or replace unsupported fallback content")
+    streamingRenderingRequire(nativeRows(host).isEmpty && renderedText(host).contains("FALLBACK_END"),
+                 "Completion must preserve unsupported hosted content")
 
     func thoughts(_ text: String, answer: String? = nil) throws -> [KimiMessage] {
         var parts: [[String: Any]] = [["type": "thinking", "thinking": text]]
